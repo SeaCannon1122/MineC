@@ -2,12 +2,12 @@ cmake_minimum_required(VERSION 3.15)
 project(blocks2)
 
 
-
 set(CLIENT_SOURCE_FILES
+    src/general/utils.c
+    src/client/gui/char_font.c
     src/client/platform.c
     src/client/main.c
     src/client/gui/menu.c
-    src/client/gui/char_font.c
 
     src/general/resource_manager.c
     src/general/parallel_computing.c
@@ -20,7 +20,7 @@ set(SERVER_SOURCE_FILES
     src/general/parallel_computing.c
 )
 
-include_directories(${PROJECT_SOURCE_DIR})
+include_directories(${PROJECT_SOURCE_DIR}/src)
 
 include_directories(${PROJECT_SOURCE_DIR}/dependencies/OpenCL/inc)
 link_directories(${PROJECT_SOURCE_DIR}/dependencies/OpenCL/lib/x64)

@@ -1,14 +1,9 @@
 #pragma once
 
-#include "src/general/argb_image.h"
+#include <stdbool.h>
 
-enum alignment {
-	ALIGNMENT_LEFT = 0,
-	ALIGNMENT_RIGHT = 1,
-	ALIGNMENT_TOP = 2,
-	ALIGNMENT_BOTTOM = 3,
-	ALIGNMENT_MIDDLE = 4,
-};
+#include "general/argb_image.h"
+#include "client/gui/char_font.h"
 
 enum menu_item_type {
 	MENU_ITEM_LABEL,
@@ -24,8 +19,8 @@ struct menu_label {
 	int y;
 	char alignment_x;
 	char alignment_y;
-	char text[256];
-	unsigned int color;
+	struct gui_character text[64];
+	char text_alignment;
 };
 
 struct menu_image {
@@ -34,12 +29,12 @@ struct menu_image {
 	int y;
 	char alignment_x;
 	char alignment_y;
-	struct arb_image* const image;
+	struct arb_image* image;
 };
 
 struct menu_button {
 	int z;
-	void (*event_function)();
+	bool* state;
 	int x_min;
 	int y_min;
 	int x_max;
@@ -47,11 +42,12 @@ struct menu_button {
 	char alignment_x;
 	char alignment_y;
 	unsigned int color;
+	struct arb_image* texture;
 };
 
 struct menu_slider {
 	int z;
-	void (*event_function)(float);
+	float* state;
 	int x_min;
 	int y_min;
 	int x_max;
@@ -63,20 +59,21 @@ struct menu_slider {
 
 struct menu_text_field {
 	int z;
-	void (*event_function)(char*);
+	char* buffer;
+	int buffer_size;
+	int current_length;
 	int x_min;
 	int y_min;
 	int x_max;
 	int y_max;
 	char alignment_x;
 	char alignment_y;
-	char text[256];
-	unsigned int color;
 };
 
 struct menu_item {
 	union {
 		struct menu_label label;
+		struct menu_image image;
 		struct menu_button button;
 		struct menu_slider slider;
 		struct menu_text_field text_field;
@@ -86,23 +83,23 @@ struct menu_item {
 };
 
 struct menu_scene {
-	struct menu_item menu_items[256];
+	struct menu_item menu_items[128];
 	
 	int menu_items_count;
 
-	struct argb_image* const background;
+	struct argb_image* background;
 	float background_scalar;
 };
 
-void write_char(char c, unsigned int* screen, int width, int height, int x, int y);
+void add_menu_label(struct menu_scene* scene, int z, int x, int y, char alignment_x, char alignment_y, struct gui_character* text, char text_alignment);
 
-void bind_menu_label(struct menu_scene* scene, struct menu_label* label);
+void add_menu_image(struct menu_scene* scene, int z, int x, int y, char alignment_x, char alignment_y, struct arb_image* image);
 
-void bind_menu_button(struct menu_scene* scene, struct menu_button* buttom);
+void add_menu_button(struct menu_scene* scene, int z, bool* state, int x_min, int y_min, int x_max, int y_max, char alignment_x, char alignment_y, unsigned int color, struct arb_image* texture);
 
-void bind_menu_slider(struct menu_scene* scene, struct menu_slider* slider);
+void add_menu_text_slider(struct menu_scene* scene, int z, float* state, int x_min, int y_min, int x_max, int y_max, char alignment_x, char alignment_y, unsigned int color);
 
-void bind_menu_text_field(struct menu_scene* scene, struct menu_text_field* text_field);
+void add_menu_text_field(struct menu_scene* scene, int z, char* buffer, int buffer_size, int x_min, int y_min, int x_max, int y_max, char alignment_x, char alignment_y);
 
-void render_menu_scene(struct menu_scene* scene, unsigned int* screen, int width, int height);
+void render_menu_scene(struct menu_scene* scene, int scale, unsigned int* screen, int width, int height);
 

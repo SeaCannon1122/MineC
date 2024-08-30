@@ -1,4 +1,4 @@
-
+#pragma once
 
 union argb_pixel {
 	unsigned int color_value;

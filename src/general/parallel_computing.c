@@ -4,7 +4,7 @@
 
 #include <CL/cl.h>
 
-#include "src/client/platform.h"
+#include "client/platform.h"
 
 #define MAX_KERNEL_ARGS 128
 
