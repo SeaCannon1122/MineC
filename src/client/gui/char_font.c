@@ -12,10 +12,10 @@
 struct char_font* load_char_font(char* src) {
 
 	char* bytes = parse_file(src);
-	if (bytes == NULL) return;
+	if (bytes == NULL) return NULL;
 
 	struct char_font* font = malloc(sizeof(struct char_font));
-	if (font == NULL) return;
+	if (font == NULL) { free(bytes);  return NULL; }
 
 	for (int i = 0; i < sizeof(struct char_font); i++) ((char*)font)[i] = bytes[i];
 	
@@ -63,6 +63,8 @@ struct gui_character* convert_string_to_gui_string(struct char_font* font, char*
 	for (; str[length] != '\0'; length++);
 	length++;
 	struct gui_character* gui_str = malloc(length * sizeof(struct gui_character));
+	if (gui_str == NULL) { return NULL; }
+
 
 	for (int i = 0; i < length; i++) {
 		gui_str[i].color = 0xffffffff;

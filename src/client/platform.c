@@ -165,17 +165,11 @@ void draw_to_window(struct window_state* state, unsigned int* buffer, int width,
 
 	if (is_window_active(state) == false) return;
 
-	unsigned int* buffer_flipped = malloc(width * height * sizeof(unsigned int));
+	((struct window_info*)state->window_handle)->bitmapInfo.bmiHeader.biWidth = width;
+	((struct window_info*)state->window_handle)->bitmapInfo.bmiHeader.biHeight = -height;
 
-	for (int i = 0; i < width; i++) {
-		for (int j = 0; j < height; j++) {
-			buffer_flipped[i + width * j] = buffer[i + width * (height - j - 1)];
-		}
-	}
+	SetDIBitsToDevice(((struct window_info*)state->window_handle)->hdc, 0, 0, width, height, 0, 0, 0, height, buffer, &(((struct window_info*)state->window_handle)->bitmapInfo), DIB_RGB_COLORS);
 
-	SetDIBitsToDevice(((struct window_info*)state->window_handle)->hdc, 0, 0, width, height, 0, 0, 0, height, buffer_flipped, &(((struct window_info*)state->window_handle)->bitmapInfo), DIB_RGB_COLORS);
-
-	free(buffer_flipped);
 }
 
 struct point2d_int get_mouse_cursor_position(struct window_state* state) {
@@ -233,13 +227,14 @@ void WindowControl() {
 			if (window_infos_length == max_window_infos) {
 				struct window_info** temp = window_infos;
 				window_infos = malloc(sizeof(void*) * (max_window_infos + 256));
+				if (window_infos == NULL) { printf("critical malloc fail!"), exit(EXIT_FAILURE); }
 				for (int i = 0; i < max_window_infos; i++) window_infos[i] = temp[i];
 				max_window_infos += 256;
 				free(temp);
 			}
 
 			window_infos[window_infos_length] = (struct window_info*)malloc(sizeof(struct window_info));
-
+			if (window_infos[window_infos_length] == NULL) { printf("critical malloc fail!"), exit(EXIT_FAILURE); }
 
 			HWND window = CreateWindowExW(
 				0,
@@ -302,11 +297,10 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 				window_infos[i]->state.window_height = rect.bottom - rect.top;
 
 				window_infos[i]->bitmapInfo.bmiHeader.biSize = sizeof(window_infos[i]->bitmapInfo);
-				window_infos[i]->bitmapInfo.bmiHeader.biWidth = window_infos[i]->state.window_width;
-				window_infos[i]->bitmapInfo.bmiHeader.biHeight = window_infos[i]->state.window_height;
 				window_infos[i]->bitmapInfo.bmiHeader.biPlanes = 1;
 				window_infos[i]->bitmapInfo.bmiHeader.biBitCount = 32;
 				window_infos[i]->bitmapInfo.bmiHeader.biCompression = BI_RGB;
+
 			} break;
 
 			case WM_MOUSEWHEEL: {
@@ -388,6 +382,7 @@ int WINAPI WinMain(
 	fflush(stdin);
 
 	window_infos = (struct window_info**)malloc(sizeof(void*) * 256);
+	if (window_infos == NULL) { printf("critical malloc fail!"), exit(EXIT_FAILURE); }
 
 	next_window.done_flag = true;
 
@@ -459,6 +454,7 @@ double get_time() {
 
 void* create_thread(void* address, void* args) {
 	pthread_t* thread = malloc(sizeof(pthread_t));
+	if (thread == NULL) { printf("critical malloc fail!"), exit(EXIT_FAILURE); }
 	pthread_create(thread, NULL, (void* (*)(void*))address, args);
 	return thread;
 }
@@ -516,16 +512,20 @@ struct window_state* create_window(int posx, int posy, int width, int height, un
 	if (window_infos_length == max_window_infos) {
 		struct window_info** temp = window_infos;
 		window_infos = malloc(sizeof(void*) * (max_window_infos + 256));
+		if (window_infos == NULL) { printf("critical malloc fail!"), exit(EXIT_FAILURE); }
 		for (int i = 0; i < max_window_infos; i++) window_infos[i] = temp[i];
 		max_window_infos += 256;
 		free(temp);
 	}
 
 	window_infos[window_infos_length] = (struct window_info*)malloc(sizeof(struct window_info));
+	if (window_infos[window_infos_length] == NULL) { printf("critical malloc fail!"), exit(EXIT_FAILURE); }
 
 	Window window = XCreateSimpleWindow(display, RootWindow(display, screen), posx, posy, width, height, 1, BlackPixel(display, screen), WhitePixel(display, screen));
 
 	unsigned int* pixels = malloc(display_width * display_height * sizeof(unsigned int));
+	if (pixels == NULL) { printf("critical malloc fail!"), exit(EXIT_FAILURE); }
+
 
 	XImage* image = XCreateImage(display, DefaultVisual(display, screen), DefaultDepth(display, screen), ZPixmap, 0, (char*)pixels, display_width, display_height, 32, 0);
 
@@ -680,6 +680,7 @@ int main(int argc, char* argv[]) {
 	wm_delete_window = XInternAtom(display, "WM_DELETE_WINDOW", False);
 
 	window_infos = (struct window_info**)malloc(sizeof(void*) * 256);
+	if (window_infos == NULL) { printf("critical malloc fail!"), exit(EXIT_FAILURE); }
 
 	running = true;
 

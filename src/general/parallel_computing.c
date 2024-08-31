@@ -61,6 +61,7 @@ sleep_for_ms(100);\
 
 void* create_kernel(char* src) {
     struct program_resources* resources = malloc(sizeof(struct program_resources));
+    if (resources == NULL) return NULL;
     resources->arg_count = 0;
 
     int i = 0;
@@ -99,6 +100,21 @@ void* create_kernel(char* src) {
         for (; src[i] == ' '; i++);
     }
 
+    i = 0;
+    for (; src[i] != 'd'; i++);
+    i++;
+    for (; src[i] == ' '; i++);
+
+    int kernel_name_start = i;
+
+    for (; src[i] != ' ' && src[i] != '('; i++);
+
+    char* kernel_name = malloc(i - (long long)kernel_name_start + 1);
+    if (kernel_name == NULL) {
+        free(resources);
+        return NULL;
+    }
+
     cl_platform_id platform;
     CL_CALL(clGetPlatformIDs(1, &platform, NULL));
 
@@ -111,18 +127,7 @@ void* create_kernel(char* src) {
     CL_OBJECT_CALL(, resources->program, clCreateProgramWithSource(resources->context, 1, (const char**)&src, NULL, &err));
 
     CL_CALL(clBuildProgram(resources->program, 1, &resources->device, NULL, NULL, NULL));
-
-    i = 0;
-    for (; src[i] != 'd'; i++);
-    i++;
-    for (; src[i] == ' '; i++);
-
-    int kernel_name_start = i;
-
-    for (; src[i] != ' ' && src[i] != '('; i++);
-
-    char* kernel_name = malloc(i - (long long)kernel_name_start + 1);
-
+    
     for (int j = kernel_name_start; j < i; j++) kernel_name[j - kernel_name_start] = src[j];
     kernel_name[i - kernel_name_start] = '\0';
 

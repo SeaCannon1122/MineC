@@ -7,7 +7,8 @@
 void add_menu_label(struct menu_scene* scene, int z, int x, int y, char alignment_x, char alignment_y, struct gui_character* text, char text_alignment) {
 	scene->menu_items[scene->menu_items_count].menu_item_type = MENU_ITEM_LABEL;
 	scene->menu_items[scene->menu_items_count].items.label = (struct menu_label){ z, x, y, alignment_x, alignment_y, {0}, text_alignment };
-	for (int i = 0; i < 64; i++) scene->menu_items[scene->menu_items_count].items.label.text[i] = text[i];
+	scene->menu_items[scene->menu_items_count].items.label.text[0] = text[0];
+	for (int i = 1; text[i-1].value != '\0'; i++) scene->menu_items[scene->menu_items_count].items.label.text[i] = text[i];
 	scene->menu_items_count++;
 }
 

@@ -13,5 +13,5 @@ union argb_pixel {
 struct argb_image {
 	int width;
 	int height;
-	union argb_pixel* const pixels;
+	union argb_pixel* pixels;
 };
