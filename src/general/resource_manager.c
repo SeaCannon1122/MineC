@@ -1,9 +1,9 @@
+#include "resource_manager.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "stb_image_include.h"
-
-#include "resource_manager.h"
+#include "stb_image.h"
 
 char* parse_file(const char* filename) {
 
@@ -34,7 +34,7 @@ char* parse_file(const char* filename) {
     return buffer;
 }
 
-struct argb_image* load_png(const char* file_name) {
+struct argb_image* load_argb_image_from_png(const char* file_name) {
     int width, height, channels;
     unsigned char* img = stbi_load(file_name, &width, &height, &channels, 4);
     if (!img) {
@@ -50,7 +50,7 @@ struct argb_image* load_png(const char* file_name) {
 
     image->width = width;
     image->height = height;
-    image->pixels = (unsigned long long) image + sizeof(struct argb_image);
+    image->pixels = (union argb_pixel*)((unsigned long long) image + sizeof(struct argb_image));
 
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {

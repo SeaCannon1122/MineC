@@ -26,7 +26,7 @@ include_directories(${PROJECT_SOURCE_DIR}/src)
 include_directories(${PROJECT_SOURCE_DIR}/dependencies/stb_image)
 
 include_directories(${PROJECT_SOURCE_DIR}/dependencies/OpenCL/inc)
-link_directories(${PROJECT_SOURCE_DIR}/dependencies/OpenCL/lib/x64)
+link_directories(${PROJECT_SOURCE_DIR}/dependencies/OpenCL/lib)
 
 add_executable(blocks_client ${CLIENT_SOURCE_FILES} )
 add_executable(blocks_server ${SERVER_SOURCE_FILES} )

@@ -57,7 +57,7 @@ int menu_y(int y, int alignment, int scale, int height) {
 
 void render_menu_scene(struct menu_scene* scene, int scale, unsigned int* screen, int width, int height, int mouse_x, int mouse_y) {
 
-	union argb_pixel* screen_argb = screen;
+	union argb_pixel* screen_argb = (union argb_pixel*)screen;
 
 	struct menu_item* items[128];
 
@@ -133,7 +133,7 @@ void render_menu_scene(struct menu_scene* scene, int scale, unsigned int* screen
 			if (mouse_x >= x_min && mouse_x < x_max && mouse_y >= y_min && mouse_y < y_max && *(button->enabled)) press_color = 0xffffffff;
 
 			unsigned int default_color = 0xff888888;
-			struct argb_image default_image = { 1, 1, &default_color };
+			struct argb_image default_image = { 1, 1, (union argb_pixel*) &default_color};
 
 			struct argb_image* texture = (*(button->enabled) ? (button->texture_enabled != NULL ? button->texture_enabled : &default_image) : (button->texture_disabled != NULL ? button->texture_disabled : &default_image));
 

@@ -19,10 +19,10 @@ void run_game(struct game* game, char* resource_path) {
 
 	struct window_state* window = create_window(200, 100, 1100, 700, "client");
 
-	struct argb_image* background = load_png("resources/gui/menu/background.png");
+	struct argb_image* background = load_argb_image_from_png("resources/gui/menu/background.png");
 
-	struct argb_image* button_texture_enabled = load_png("resources/gui/menu/button_texture_enabled.png");
-	struct argb_image* button_texture_disabled = load_png("resources/gui/menu/button_texture_disabled.png");
+	struct argb_image* button_texture_enabled = load_argb_image_from_png("resources/gui/menu/button_texture_enabled.png");
+	struct argb_image* button_texture_disabled = load_argb_image_from_png("resources/gui/menu/button_texture_disabled.png");
 
 	struct char_font* default_font = load_char_font("resources/gui/default.pixelfont");
 
