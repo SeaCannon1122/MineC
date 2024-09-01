@@ -1,10 +1,10 @@
+#include "parallel_computing.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
 
 #include <CL/cl.h>
-
-#include "client/platform.h"
 
 #define MAX_KERNEL_ARGS 128
 
@@ -17,7 +17,7 @@ enum arg_types {
     ARG_POINTER = 5
 };
 
-//Assumed that if arg is pointer, next arg is int length
+//Assumed that if arg is pointer, next arg is int length and next again is buffer properties
 
 struct program_resources {
     cl_context context;
@@ -35,11 +35,7 @@ do {\
 cl_int err = (call);\
 if (err != CL_SUCCESS) {\
 fprintf(stderr, "OpenCL error in\n     %s\n  at %s:%d: %d\n", #call, __FILE__, __LINE__, err);\
-while (1) {\
-if (get_key_state(KEY_ESCAPE) & 1) exit(1);\
-if (get_key_state('I') & 1) break;\
-sleep_for_ms(100);\
-}\
+exit(1);\
 }\
 } while(0)
 
@@ -50,11 +46,7 @@ cl_int err;\
 object = (call);\
 if (err != CL_SUCCESS) {\
 fprintf(stderr, "OpenCL error in \n     %s \n  at %s:%d: %d\n^\n",#call, __FILE__, __LINE__, err);\
-while (1) {\
-if (get_key_state(KEY_ESCAPE) & 1) exit(1);\
-if (get_key_state('I') & 1) break;\
-sleep_for_ms(100);\
-}\
+exit(1);\
 }\
 } while(0)
 
@@ -143,6 +135,7 @@ void run_kernel(void* kernel, char dimension, int dim_x, int dim_y, int dim_z, .
     cl_mem mem_objects[64];
     void* mem_pointers[64];
     int mem_object_sizes[64];
+    int buffer_properties[64];
     int mem_objects_count = 0;
 
     va_list args;
@@ -185,9 +178,13 @@ void run_kernel(void* kernel, char dimension, int dim_x, int dim_y, int dim_z, .
         case ARG_POINTER: {
             void* pointer_arg = va_arg(args, void*);
             int length_arg = va_arg(args, int);
+            int buffer_properties_arg = va_arg(args, int);
 
+            buffer_properties[mem_objects_count] = buffer_properties_arg;
             CL_OBJECT_CALL(, mem_objects[mem_objects_count], clCreateBuffer(resources->context, CL_MEM_READ_WRITE, length_arg, NULL, &err));
-            CL_CALL(clEnqueueWriteBuffer(resources->queue, mem_objects[mem_objects_count], CL_TRUE, 0, length_arg, pointer_arg, 0, NULL, NULL));
+
+            if(buffer_properties_arg & BUFFER_COPY) CL_CALL(clEnqueueWriteBuffer(resources->queue, mem_objects[mem_objects_count], CL_TRUE, 0, length_arg, pointer_arg, 0, NULL, NULL));
+
             mem_pointers[mem_objects_count] = pointer_arg;
             mem_object_sizes[mem_objects_count] = length_arg;
             
@@ -207,7 +204,8 @@ void run_kernel(void* kernel, char dimension, int dim_x, int dim_y, int dim_z, .
     CL_CALL(clFinish(resources->queue));
     
     for (int i = 0; i < mem_objects_count; i++) {
-        CL_CALL(clEnqueueReadBuffer(resources->queue, mem_objects[i], CL_TRUE, 0, mem_object_sizes[i], mem_pointers[i], 0, NULL, NULL));
+        
+        if (buffer_properties[i] & BUFFER_READ) CL_CALL(clEnqueueReadBuffer(resources->queue, mem_objects[i], CL_TRUE, 0, mem_object_sizes[i], mem_pointers[i], 0, NULL, NULL));
         CL_CALL(clReleaseMemObject(mem_objects[i]));
     }
         

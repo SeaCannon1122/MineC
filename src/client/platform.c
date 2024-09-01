@@ -165,11 +165,17 @@ void draw_to_window(struct window_state* state, unsigned int* buffer, int width,
 
 	if (is_window_active(state) == false) return;
 
-	((struct window_info*)state->window_handle)->bitmapInfo.bmiHeader.biWidth = width;
-	((struct window_info*)state->window_handle)->bitmapInfo.bmiHeader.biHeight = -height;
+	unsigned int* buffer_flipped = malloc(width * height * sizeof(unsigned int));
 
-	SetDIBitsToDevice(((struct window_info*)state->window_handle)->hdc, 0, 0, width, height, 0, 0, 0, height, buffer, &(((struct window_info*)state->window_handle)->bitmapInfo), DIB_RGB_COLORS);
+	for (int i = 0; i < width; i++) {
+		for (int j = 0; j < height; j++) {
+			buffer_flipped[i + width * j] = buffer[i + width * (height - j - 1)];
+		}
+	}
 
+	SetDIBitsToDevice(((struct window_info*)state->window_handle)->hdc, 0, 0, width, height, 0, 0, 0, height, buffer_flipped, &(((struct window_info*)state->window_handle)->bitmapInfo), DIB_RGB_COLORS);
+
+	free(buffer_flipped);
 }
 
 struct point2d_int get_mouse_cursor_position(struct window_state* state) {
@@ -227,14 +233,13 @@ void WindowControl() {
 			if (window_infos_length == max_window_infos) {
 				struct window_info** temp = window_infos;
 				window_infos = malloc(sizeof(void*) * (max_window_infos + 256));
-				if (window_infos == NULL) { printf("critical malloc fail!"), exit(EXIT_FAILURE); }
 				for (int i = 0; i < max_window_infos; i++) window_infos[i] = temp[i];
 				max_window_infos += 256;
 				free(temp);
 			}
 
 			window_infos[window_infos_length] = (struct window_info*)malloc(sizeof(struct window_info));
-			if (window_infos[window_infos_length] == NULL) { printf("critical malloc fail!"), exit(EXIT_FAILURE); }
+
 
 			HWND window = CreateWindowExW(
 				0,
@@ -297,10 +302,11 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 				window_infos[i]->state.window_height = rect.bottom - rect.top;
 
 				window_infos[i]->bitmapInfo.bmiHeader.biSize = sizeof(window_infos[i]->bitmapInfo);
+				window_infos[i]->bitmapInfo.bmiHeader.biWidth = window_infos[i]->state.window_width;
+				window_infos[i]->bitmapInfo.bmiHeader.biHeight = window_infos[i]->state.window_height;
 				window_infos[i]->bitmapInfo.bmiHeader.biPlanes = 1;
 				window_infos[i]->bitmapInfo.bmiHeader.biBitCount = 32;
 				window_infos[i]->bitmapInfo.bmiHeader.biCompression = BI_RGB;
-
 			} break;
 
 			case WM_MOUSEWHEEL: {
@@ -382,7 +388,6 @@ int WINAPI WinMain(
 	fflush(stdin);
 
 	window_infos = (struct window_info**)malloc(sizeof(void*) * 256);
-	if (window_infos == NULL) { printf("critical malloc fail!"), exit(EXIT_FAILURE); }
 
 	next_window.done_flag = true;
 
@@ -431,6 +436,7 @@ bool window_infos_reorder = false;
 bool running;
 
 bool keyStates[256 * 256] = { false };
+int last_mouse_scroll = 0;
 
 bool mouseButtons[3] = { false, false, false };
 
@@ -439,7 +445,7 @@ void show_console_window() { return; }
 void hide_console_window() { return; }
 
 void set_console_cursor_position(int x, int y) {
-	// X11 does not have direct console cursor manipulation; this is a placeholder
+	printf("\033[%d;%dH", y, x);
 }
 
 void sleep_for_ms(unsigned int _time_in_milliseconds) {
@@ -454,7 +460,6 @@ double get_time() {
 
 void* create_thread(void* address, void* args) {
 	pthread_t* thread = malloc(sizeof(pthread_t));
-	if (thread == NULL) { printf("critical malloc fail!"), exit(EXIT_FAILURE); }
 	pthread_create(thread, NULL, (void* (*)(void*))address, args);
 	return thread;
 }
@@ -501,31 +506,29 @@ char get_key_state(int key) {
 	return key_state;
 }
 
-int get_last_mouse_scroll() { return 0; }
+int get_last_mouse_scroll() {
+	int temp = last_mouse_scroll;
+	last_mouse_scroll = 0;
+	return temp;
+}
 
-void clear_mouse_scroll() { return; }
-
-//
+void clear_mouse_scroll() { last_mouse_scroll = 0; }
 
 struct window_state* create_window(int posx, int posy, int width, int height, unsigned char* name) {
 
 	if (window_infos_length == max_window_infos) {
 		struct window_info** temp = window_infos;
 		window_infos = malloc(sizeof(void*) * (max_window_infos + 256));
-		if (window_infos == NULL) { printf("critical malloc fail!"), exit(EXIT_FAILURE); }
 		for (int i = 0; i < max_window_infos; i++) window_infos[i] = temp[i];
 		max_window_infos += 256;
 		free(temp);
 	}
 
 	window_infos[window_infos_length] = (struct window_info*)malloc(sizeof(struct window_info));
-	if (window_infos[window_infos_length] == NULL) { printf("critical malloc fail!"), exit(EXIT_FAILURE); }
 
 	Window window = XCreateSimpleWindow(display, RootWindow(display, screen), posx, posy, width, height, 1, BlackPixel(display, screen), WhitePixel(display, screen));
 
 	unsigned int* pixels = malloc(display_width * display_height * sizeof(unsigned int));
-	if (pixels == NULL) { printf("critical malloc fail!"), exit(EXIT_FAILURE); }
-
 
 	XImage* image = XCreateImage(display, DefaultVisual(display, screen), DefaultDepth(display, screen), ZPixmap, 0, (char*)pixels, display_width, display_height, 32, 0);
 
@@ -539,7 +542,7 @@ struct window_state* create_window(int posx, int posy, int width, int height, un
 		}
 	};
 
-	XSelectInput(display, window, ExposureMask | KeyPressMask | KeyReleaseMask | StructureNotifyMask);
+	XSelectInput(display, window, ExposureMask | KeyPressMask | KeyReleaseMask | StructureNotifyMask | ButtonPressMask);
 	XStoreName(display, window, name);
 	XSetWMProtocols(display, window, &wm_delete_window, 1);
 	XMapWindow(display, window);
@@ -549,7 +552,12 @@ struct window_state* create_window(int posx, int posy, int width, int height, un
 }
 
 bool is_window_selected(struct window_state* state) {
-	return true;
+	Window focused_window;
+	int revert_to;
+
+	XGetInputFocus(display, &focused_window, &revert_to);
+
+	return (focused_window == ((struct window_info*)state->window_handle)->window);
 }
 
 bool is_window_active(struct window_state* state) {
@@ -583,7 +591,7 @@ void draw_to_window(struct window_state* state, unsigned int* buffer, int width,
 	if (is_window_active(state) == false) return;
 	for (int i = 0; i < width && i < display_width; i++) {
 		for (int j = 0; j < height && j < display_height; j++) {
-			((struct window_info*)state->window_handle)->pixels[i + display_width * (height - j - 1)] = buffer[i + width * j];
+			((struct window_info*)state->window_handle)->pixels[i + display_width * j] = buffer[i + width * j];
 		}
 	}
 
@@ -599,7 +607,7 @@ struct point2d_int get_mouse_cursor_position(struct window_state* state) {
 
 	XQueryPointer(display, ((struct window_info*)state->window_handle)->window, &root, &child, &root_x, &root_y, &win_x, &win_y, &mask);
 
-	struct point2d_int pos = { win_x - 2, state->window_height - win_y + 1 };
+	struct point2d_int pos = { win_x + 1, win_y + 1 };
 
 	return pos;
 }
@@ -613,7 +621,7 @@ void set_cursor_rel_window(struct window_state* state, int x, int y) {
 
 	XQueryPointer(display, ((struct window_info*)state->window_handle)->window, &root, &child, &root_x, &root_y, &win_x, &win_y, &mask);
 	XWarpPointer(display, None, DefaultRootWindow(display), 0, 0, 0, 0, root_x - win_x + x + 2, root_y - win_y + state->window_height - y + 1);
-	XFlush(display); 
+	XFlush(display);
 	return;
 }
 
@@ -644,10 +652,15 @@ void WindowControl() {
 						window_infos[index]->active = false;
 						XDestroyWindow(display, window_infos[index]->window);
 					}
+					break;
+				case ButtonPress:
+					if (event.xbutton.button == Button4) last_mouse_scroll++;
+					else if (event.xbutton.button == Button5) last_mouse_scroll--;
+					break;
 
 				}
-			}
 
+			}
 			msg_check = false;
 
 		}
@@ -680,7 +693,6 @@ int main(int argc, char* argv[]) {
 	wm_delete_window = XInternAtom(display, "WM_DELETE_WINDOW", False);
 
 	window_infos = (struct window_info**)malloc(sizeof(void*) * 256);
-	if (window_infos == NULL) { printf("critical malloc fail!"), exit(EXIT_FAILURE); }
 
 	running = true;
 

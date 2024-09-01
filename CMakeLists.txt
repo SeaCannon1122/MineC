@@ -5,9 +5,11 @@ project(blocks2)
 set(CLIENT_SOURCE_FILES
     src/general/utils.c
     src/client/gui/char_font.c
-    src/client/platform.c
-    src/client/main.c
     src/client/gui/menu.c
+    src/client/platform.c
+    src/client/game.c
+    src/client/main.c
+    
 
     src/general/resource_manager.c
     src/general/parallel_computing.c

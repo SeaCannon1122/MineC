@@ -29,7 +29,10 @@ struct menu_image {
 	int y;
 	char alignment_x;
 	char alignment_y;
-	struct arb_image* image;
+	char image_alignment_x;
+	char image_alignment_y;
+	struct argb_image* image;
+	int image_scalar;
 };
 
 struct menu_button {
@@ -41,8 +44,9 @@ struct menu_button {
 	int y_max;
 	char alignment_x;
 	char alignment_y;
-	unsigned int color;
-	struct arb_image* texture;
+	struct argb_image* texture_enabled;
+	struct argb_image* texture_disabled;
+	bool* enabled;
 };
 
 struct menu_slider {
@@ -84,22 +88,18 @@ struct menu_item {
 
 struct menu_scene {
 	struct menu_item menu_items[128];
-	
 	int menu_items_count;
-
-	struct argb_image* background;
-	float background_scalar;
 };
 
 void add_menu_label(struct menu_scene* scene, int z, int x, int y, char alignment_x, char alignment_y, struct gui_character* text, char text_alignment);
+  
+void add_menu_image(struct menu_scene* scene, int z, int x, int y, char alignment_x, char alignment_y, char image_alignment_x, char image_alignment_y, struct argb_image* image, int image_scalar);
 
-void add_menu_image(struct menu_scene* scene, int z, int x, int y, char alignment_x, char alignment_y, struct arb_image* image);
-
-void add_menu_button(struct menu_scene* scene, int z, bool* state, int x_min, int y_min, int x_max, int y_max, char alignment_x, char alignment_y, unsigned int color, struct arb_image* texture);
+void add_menu_button(struct menu_scene* scene, int z, bool* state, int x_min, int y_min, int x_max, int y_max, char alignment_x, char alignment_y, struct argb_image* texture_enabled, struct argb_image* texture_disabled, bool* enabled);
 
 void add_menu_text_slider(struct menu_scene* scene, int z, float* state, int x_min, int y_min, int x_max, int y_max, char alignment_x, char alignment_y, unsigned int color);
 
 void add_menu_text_field(struct menu_scene* scene, int z, char* buffer, int buffer_size, int x_min, int y_min, int x_max, int y_max, char alignment_x, char alignment_y);
 
-void render_menu_scene(struct menu_scene* scene, int scale, unsigned int* screen, int width, int height);
+void render_menu_scene(struct menu_scene* scene, int scale, unsigned int* screen, int width, int height, int mouse_x, int mouse_y);
 
