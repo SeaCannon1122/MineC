@@ -41,6 +41,7 @@ if(WIN32)
 elseif(UNIX)
     find_package(X11 REQUIRED)
     target_link_libraries(blocks_client X11 pthread m)
+    target_link_libraries(blocks_server pthread m)
 endif()
 
 set(RESOURCE_DIRECTORY "${CMAKE_SOURCE_DIR}/resources")
