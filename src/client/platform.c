@@ -329,7 +329,7 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 }
 
 void Entry_thread_function() {
-	Entry();
+	blocks_main();
 	running = false;
 	return;
 }
@@ -666,7 +666,7 @@ void WindowControl() {
 }
 
 void Entry_thread_function() {
-	Entry();
+	blocks_main();
 	running = false;
 }
 

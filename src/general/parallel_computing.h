@@ -1,8 +1,8 @@
 #pragma once
 
 enum buffer_properties {
-	BUFFER_COPY = 0b01,
-	BUFFER_READ = 0b10,
+	BUFFER_IN = 0b01,
+	BUFFER_OUT = 0b10,
 };
 
 void* create_kernel(char* src);

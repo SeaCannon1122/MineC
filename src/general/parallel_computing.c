@@ -183,7 +183,7 @@ void run_kernel(void* kernel, char dimension, int dim_x, int dim_y, int dim_z, .
             buffer_properties[mem_objects_count] = buffer_properties_arg;
             CL_OBJECT_CALL(, mem_objects[mem_objects_count], clCreateBuffer(resources->context, CL_MEM_READ_WRITE, length_arg, NULL, &err));
 
-            if(buffer_properties_arg & BUFFER_COPY) CL_CALL(clEnqueueWriteBuffer(resources->queue, mem_objects[mem_objects_count], CL_TRUE, 0, length_arg, pointer_arg, 0, NULL, NULL));
+            if(buffer_properties_arg & BUFFER_IN) CL_CALL(clEnqueueWriteBuffer(resources->queue, mem_objects[mem_objects_count], CL_TRUE, 0, length_arg, pointer_arg, 0, NULL, NULL));
 
             mem_pointers[mem_objects_count] = pointer_arg;
             mem_object_sizes[mem_objects_count] = length_arg;
@@ -205,7 +205,7 @@ void run_kernel(void* kernel, char dimension, int dim_x, int dim_y, int dim_z, .
     
     for (int i = 0; i < mem_objects_count; i++) {
         
-        if (buffer_properties[i] & BUFFER_READ) CL_CALL(clEnqueueReadBuffer(resources->queue, mem_objects[i], CL_TRUE, 0, mem_object_sizes[i], mem_pointers[i], 0, NULL, NULL));
+        if (buffer_properties[i] & BUFFER_OUT) CL_CALL(clEnqueueReadBuffer(resources->queue, mem_objects[i], CL_TRUE, 0, mem_object_sizes[i], mem_pointers[i], 0, NULL, NULL));
         CL_CALL(clReleaseMemObject(mem_objects[i]));
     }
         

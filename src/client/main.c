@@ -1,6 +1,6 @@
 ﻿#include "game.h"
 
-void Entry() {
+void blocks_main() {
 
 	struct game* game = new_game();
 

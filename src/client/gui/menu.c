@@ -2,12 +2,13 @@
 #include <stdio.h>
 
 #include "menu.h"
-
+#include "general/utils.h"
 
 
 void add_menu_label(struct menu_scene* scene, int z, int x, int y, char alignment_x, char alignment_y, struct gui_character* text, char text_alignment) {
 	scene->menu_items[scene->menu_items_count].menu_item_type = MENU_ITEM_LABEL;
-	scene->menu_items[scene->menu_items_count].items.label = (struct menu_label){ z, x, y, alignment_x, alignment_y, {0}, text_alignment };
+	scene->menu_items[scene->menu_items_count].z = z;
+	scene->menu_items[scene->menu_items_count].items.label = (struct menu_label){ x, y, alignment_x, alignment_y, {0}, text_alignment };
 	scene->menu_items[scene->menu_items_count].items.label.text[0] = text[0];
 	for (int i = 1; text[i-1].value != '\0'; i++) scene->menu_items[scene->menu_items_count].items.label.text[i] = text[i];
 	scene->menu_items_count++;
@@ -15,30 +16,34 @@ void add_menu_label(struct menu_scene* scene, int z, int x, int y, char alignmen
 
 void add_menu_image(struct menu_scene* scene, int z, int x, int y, char alignment_x, char alignment_y, char image_alignment_x, char image_alignment_y, struct argb_image* image, int image_scalar) {
 	scene->menu_items[scene->menu_items_count].menu_item_type = MENU_ITEM_IMAGE;
-	scene->menu_items[scene->menu_items_count].items.image = (struct menu_image){ z, x, y, alignment_x, alignment_y, image_alignment_x, image_alignment_y, image, image_scalar };
+	scene->menu_items[scene->menu_items_count].z = z;
+	scene->menu_items[scene->menu_items_count].items.image = (struct menu_image){ x, y, alignment_x, alignment_y, image_alignment_x, image_alignment_y, image, image_scalar };
 	scene->menu_items_count++;
 }
 
 void add_menu_button(struct menu_scene* scene, int z, bool* state, int x_min, int y_min, int x_max, int y_max, char alignment_x, char alignment_y, struct argb_image* texture_enabled, struct argb_image* texture_disabled, bool* enabled) {
 	scene->menu_items[scene->menu_items_count].menu_item_type = MENU_ITEM_BUTTON;
-	scene->menu_items[scene->menu_items_count].items.button = (struct menu_button){ z, state, x_min, y_min, x_max, y_max, alignment_x, alignment_y, texture_enabled, texture_disabled, enabled };
+	scene->menu_items[scene->menu_items_count].z = z;
+	scene->menu_items[scene->menu_items_count].items.button = (struct menu_button){ state, x_min, y_min, x_max, y_max, alignment_x, alignment_y, texture_enabled, texture_disabled, enabled };
 	scene->menu_items_count++;
 }
 
-void add_menu_text_slider(struct menu_scene* scene, int z, float* state, int x_min, int y_min, int x_max, int y_max, char alignment_x, char alignment_y, unsigned int color) {
+void add_menu_slider(struct menu_scene* scene, int z, float* state, int x_min, int y_min, int x_max, int y_max, char alignment_x, char alignment_y, struct argb_image* texture_background, struct argb_image* texture_slider, int slider_thickness) {
 	scene->menu_items[scene->menu_items_count].menu_item_type = MENU_ITEM_SLIDER;
-	scene->menu_items[scene->menu_items_count].items.slider = (struct menu_slider){ z, state, x_min, y_min, x_max, y_max, alignment_x, alignment_y, color};
+	scene->menu_items[scene->menu_items_count].z = z;
+	scene->menu_items[scene->menu_items_count].items.slider = (struct menu_slider){ state, x_min, y_min, x_max, y_max, alignment_x, alignment_y, texture_background, texture_slider, slider_thickness };
 	scene->menu_items_count++;
 }
 
 void add_menu_text_field(struct menu_scene* scene, int z, char* buffer, int buffer_size, int x_min, int y_min, int x_max, int y_max, char alignment_x, char alignment_y) {
 	scene->menu_items[scene->menu_items_count].menu_item_type = MENU_ITEM_TEXT_FIELD;
-	scene->menu_items[scene->menu_items_count].items.text_field = (struct menu_text_field){ z, buffer, buffer_size, 0, x_min, y_min, x_max, y_max, alignment_x, alignment_y };
+	scene->menu_items[scene->menu_items_count].z = z;
+	scene->menu_items[scene->menu_items_count].items.text_field = (struct menu_text_field){ buffer, buffer_size, 0, x_min, y_min, x_max, y_max, alignment_x, alignment_y };
 	scene->menu_items_count++;
 }
 
 int compare(const void* a, const void* b) {
-	return ((*(struct menu_item**)a)->items.button.z - (*(struct menu_item**)b)->items.button.z);
+	return ((*(struct menu_item**)a)->z - (*(struct menu_item**)b)->z);
 }
 
 int menu_x(int x, int alignment, int scale, int width) {
@@ -55,7 +60,7 @@ int menu_y(int y, int alignment, int scale, int height) {
 	else return 0;
 }
 
-void render_menu_scene(struct menu_scene* scene, int scale, unsigned int* screen, int width, int height, int mouse_x, int mouse_y) {
+void simulate_menu_scene(struct menu_scene* scene, int scale, unsigned int* screen, int width, int height, int mouse_x, int mouse_y, bool click) {
 
 	union argb_pixel* screen_argb = (union argb_pixel*)screen;
 
@@ -83,8 +88,8 @@ void render_menu_scene(struct menu_scene* scene, int scale, unsigned int* screen
 			print_gui_string(
 				text_copy,
 				scale,
-				menu_x(items[i]->items.label.x + 1, items[i]->items.label.alignment_x, scale, width),
-				menu_y(items[i]->items.label.y + 1, items[i]->items.label.alignment_y, scale, height),
+				menu_x(items[i]->items.label.x + items[i]->items.label.text[0].size, items[i]->items.label.alignment_x, scale, width),
+				menu_y(items[i]->items.label.y + items[i]->items.label.text[0].size, items[i]->items.label.alignment_y, scale, height),
 				items[i]->items.label.text_alignment,
 				screen,
 				width,
@@ -107,12 +112,17 @@ void render_menu_scene(struct menu_scene* scene, int scale, unsigned int* screen
 		case MENU_ITEM_IMAGE: {
 			struct menu_image* image = &(items[i]->items.image);
 
-			int x_start = menu_x(image->x, image->alignment_x, scale, width) - (image->image_alignment_x == ALIGNMENT_LEFT ? 0 : (image->image_alignment_x == ALIGNMENT_MIDDLE ? image->image->width * scale * image->image_scalar / 2 : image->image->width * scale * image->image_scalar));
-			int y_start = menu_x(image->x, image->alignment_x, scale, width) - (image->image_alignment_y == ALIGNMENT_TOP ? 0 : (image->image_alignment_y == ALIGNMENT_MIDDLE ? image->image->height * scale * image->image_scalar / 2 : image->image->height * scale * image->image_scalar));
+			int x_min_actually = menu_x(image->x, image->alignment_x, scale, width) - (image->image_alignment_x == ALIGNMENT_LEFT ? 0 : (image->image_alignment_x == ALIGNMENT_MIDDLE ? image->image->width * scale * image->image_scalar / 2 : image->image->width * scale * image->image_scalar));
+			int y_min_actually = menu_x(image->x, image->alignment_x, scale, width) - (image->image_alignment_y == ALIGNMENT_TOP ? 0 : (image->image_alignment_y == ALIGNMENT_MIDDLE ? image->image->height * scale * image->image_scalar / 2 : image->image->height * scale * image->image_scalar));
 
-			for (int x = (x_start < 0 ? 0 : x_start); x < image->image->width * scale * image->image_scalar && x < width; x++) {
-				for (int y = (y_start < 0 ? 0 : y_start); y < image->image->height * scale * image->image_scalar && y < height; y++) {
-					screen[x + y * width] = image->image->pixels[(x - x_start) / (scale * image->image_scalar) + image->image->width * ((y - y_start) / (scale * image->image_scalar))].color_value;
+			int x_min = clamp_int(x_min_actually, 0, width);
+			int x_max = clamp_int(x_min + image->image->width * scale * image->image_scalar, 0, width);
+			int y_min = clamp_int(y_min_actually, 0, height);
+			int y_max = clamp_int(y_min + image->image->height * scale * image->image_scalar, 0, height);
+
+			for (int x = x_min; x < x_max; x++) {
+				for (int y = y_min; y < y_max; y++) {
+					screen[x + y * width] = image->image->pixels[(x - x_min_actually) / (scale * image->image_scalar) + image->image->width * ((y - y_min_actually) / (scale * image->image_scalar))].color_value;
 				}
 			}
 
@@ -123,44 +133,54 @@ void render_menu_scene(struct menu_scene* scene, int scale, unsigned int* screen
 
 			struct menu_button* button = &(items[i]->items.button);
 
-			int x_min = menu_x(button->x_min, button->alignment_x, scale, width);
-			int x_max = menu_x(button->x_max, button->alignment_x, scale, width);
-			int y_min = menu_y(button->y_min, button->alignment_y, scale, height);
-			int y_max = menu_y(button->y_max, button->alignment_y, scale, height);
+			int x_min_actually = menu_x(button->x_min, button->alignment_x, scale, width);
+			int x_max_actually = menu_x(button->x_max, button->alignment_x, scale, width);
+			int y_min_actually = menu_y(button->y_min, button->alignment_y, scale, height);
+			int y_max_actually = menu_y(button->y_max, button->alignment_y, scale, height);
 
-		unsigned int press_color = 0xff000000;
+			int x_min = clamp_int(x_min_actually, 0, width);
+			int x_max = clamp_int(x_max_actually, 0, width);
+			int y_min = clamp_int(y_min_actually, 0, height);
+			int y_max = clamp_int(y_max_actually, 0, height);
 
-			if (mouse_x >= x_min && mouse_x < x_max && mouse_y >= y_min && mouse_y < y_max && *(button->enabled)) press_color = 0xffffffff;
 
-			unsigned int default_color = 0xff888888;
-			struct argb_image default_image = { 1, 1, (union argb_pixel*) &default_color};
+			unsigned int press_color = 0xff000000;
+			if (mouse_x >= x_min && mouse_x < x_max && mouse_y >= y_min && mouse_y < y_max && *(button->enabled)) { press_color = 0xffffffff; if (click) *button->state = true; }
 
-			struct argb_image* texture = (*(button->enabled) ? (button->texture_enabled != NULL ? button->texture_enabled : &default_image) : (button->texture_disabled != NULL ? button->texture_disabled : &default_image));
+			x_min = (x_min < 0 ? 0 : x_min);
 
-			for (int x = (x_min < 0 ? 0 : x_min); x < x_max && x < width; x++) {
-				for (int y = (y_min < 0 ? 0 : y_min); y < y_max && y < height; y++) {
-						
-					if (x >= x_min + 2 * scale && x < x_max - 2 * scale && y >= y_min + 2 * scale && y < y_max - 3 * scale) {
-						union argb_pixel top;
-						top.color_value = texture->pixels[((x) / scale) % texture->width + texture->width * (((y) / scale) % texture->height)].color_value;
-						union argb_pixel bottom;
-						bottom.color_value = screen[x + y * width];
+			unsigned int default_enabled_color = 0xff7f7f7f;
+			unsigned int default_disabled_color = 0xff424242;
+			struct argb_image default_enabled_image = { 1, 1, (union argb_pixel*) &default_enabled_color };
+			struct argb_image default_disabled_image = { 1, 1, (union argb_pixel*) &default_disabled_color };
+			struct argb_image* texture = (*(button->enabled) ? (button->texture_enabled != NULL ? button->texture_enabled : &default_enabled_image) : (button->texture_disabled != NULL ? button->texture_disabled : &default_disabled_image));
 
-						screen_argb[x + y * width].color.r = (char)(((unsigned int)top.color.r * (unsigned int)top.color.a + (0xff - (unsigned int)top.color.a) * (unsigned int)bottom.color.r) / 0xff);
-						screen_argb[x + y * width].color.g = (char)(((unsigned int)top.color.g * (unsigned int)top.color.a + (0xff - (unsigned int)top.color.a) * (unsigned int)bottom.color.g) / 0xff);
-						screen_argb[x + y * width].color.b = (char)(((unsigned int)top.color.b * (unsigned int)top.color.a + (0xff - (unsigned int)top.color.a) * (unsigned int)bottom.color.b) / 0xff);
+			if (*(button->enabled)) {
+				for (int x = x_min; x < x_max; x++) {
+					for (int y = y_min; y < y_max; y++) {
+
+						if (x >= x_min_actually + 2 * scale && x < x_max_actually - 2 * scale && y >= y_min_actually + 2 * scale && y < y_max_actually - 3 * scale) {
+							screen[x + y * width] = texture->pixels[((x - x_min_actually) / scale) % texture->width + texture->width * (((y - y_min_actually) / scale) % texture->height)].color_value;
+						}
+						else if (x < x_min_actually + scale || x >= x_max_actually - scale || y < y_min_actually + scale || y >= y_max_actually - scale) screen[x + width * y] = press_color;
+						else {
+							if (x < x_min_actually + 2 * scale) screen[x + width * y] = 0xffafafaf;
+							else if (y < y_min_actually + 2 * scale) screen[x + width * y] = 0xffafafaf;
+							if (x >= x_max_actually - 2 * scale) screen[x + width * y] = 0xff5c5c5c;
+							else if (y >= y_max_actually - 3 * scale) screen[x + width * y] = 0xff5c5c5c;
+						}
 					}
+				}
+			}
+			else {
+				for (int x = x_min; x < x_max; x++) {
+					for (int y = y_min; y < y_max; y++) {
 
-					else if (x < x_min + scale || x >= x_max - scale || y < y_min + scale || y >= y_max - scale) screen[x + width * y] = press_color;
-
-					else {
-						if (x < x_min + 2 * scale) screen[x + width * y] = 0xffafafaf;
-						else if (y < y_min + 2 * scale) screen[x + width * y] = 0xffafafaf;
-						if (x >= x_max - 2 * scale) screen[x + width * y] = 0xff5c5c5c;
-						else if (y >= y_max - 3 * scale) screen[x + width * y] = 0xff5c5c5c;
-					}	
-					
-					
+						if (x >= x_min_actually + scale && x < x_max_actually - scale && y >= y_min_actually + scale && y < y_max_actually - scale) {
+							screen[x + y * width] = texture->pixels[((x - x_min_actually) / scale) % texture->width + texture->width * (((y - y_min_actually) / scale) % texture->height)].color_value;
+						}
+						else screen[x + width * y] = 0xff000000;
+					}
 				}
 			}
 
@@ -168,6 +188,21 @@ void render_menu_scene(struct menu_scene* scene, int scale, unsigned int* screen
 		}
 
 		case MENU_ITEM_SLIDER: {
+			struct menu_slider* slider = &(items[i]->items.slider);
+
+			int x_min_actually = menu_x(slider->x_min, slider->alignment_x, scale, width);
+			int x_max_actually = menu_x(slider->x_max, slider->alignment_x, scale, width);
+			int y_min_actually = menu_y(slider->y_min, slider->alignment_y, scale, height);
+			int y_max_actually = menu_y(slider->y_max, slider->alignment_y, scale, height);
+
+			int x_min = clamp_int(x_min_actually, 0, width);
+			int x_max = clamp_int(x_max_actually, 0, width);
+			int y_min = clamp_int(y_min_actually, 0, height);
+			int y_max = clamp_int(y_max_actually, 0, height);
+			
+			unsigned int default_button_color = 0xff888888;
+			unsigned int default_color = 0xff888888;
+
 			break;
 		}
 

@@ -54,11 +54,11 @@ void set_cursor_rel_window(struct window_state* state, int x, int y);
 
 //Entry Method
 
-void Entry();
+void blocks_main();
 
 //Keysymbol Mapping
 
-#if defined(_WIN64)
+#if defined(_WIN32)
 
 #include <windows.h>
 

@@ -14,7 +14,6 @@ enum menu_item_type {
 };
 
 struct menu_label {
-	int z;
 	int x;
 	int y;
 	char alignment_x;
@@ -24,7 +23,6 @@ struct menu_label {
 };
 
 struct menu_image {
-	int z;
 	int x;
 	int y;
 	char alignment_x;
@@ -36,7 +34,6 @@ struct menu_image {
 };
 
 struct menu_button {
-	int z;
 	bool* state;
 	int x_min;
 	int y_min;
@@ -50,7 +47,6 @@ struct menu_button {
 };
 
 struct menu_slider {
-	int z;
 	float* state;
 	int x_min;
 	int y_min;
@@ -58,11 +54,12 @@ struct menu_slider {
 	int y_max;
 	char alignment_x;
 	char alignment_y;
-	unsigned int color;
+	struct argb_image* texture_background;
+	struct argb_image* texture_slider;
+	int slider_thickness;
 };
 
 struct menu_text_field {
-	int z;
 	char* buffer;
 	int buffer_size;
 	int current_length;
@@ -82,7 +79,7 @@ struct menu_item {
 		struct menu_slider slider;
 		struct menu_text_field text_field;
 	} items;
-
+	int z;
 	char menu_item_type;
 };
 
@@ -97,9 +94,9 @@ void add_menu_image(struct menu_scene* scene, int z, int x, int y, char alignmen
 
 void add_menu_button(struct menu_scene* scene, int z, bool* state, int x_min, int y_min, int x_max, int y_max, char alignment_x, char alignment_y, struct argb_image* texture_enabled, struct argb_image* texture_disabled, bool* enabled);
 
-void add_menu_text_slider(struct menu_scene* scene, int z, float* state, int x_min, int y_min, int x_max, int y_max, char alignment_x, char alignment_y, unsigned int color);
+void add_menu_slider(struct menu_scene* scene, int z, float* state, int x_min, int y_min, int x_max, int y_max, char alignment_x, char alignment_y, struct argb_image* texture_background, struct argb_image* texture_slider, int slider_thickness);
 
 void add_menu_text_field(struct menu_scene* scene, int z, char* buffer, int buffer_size, int x_min, int y_min, int x_max, int y_max, char alignment_x, char alignment_y);
 
-void render_menu_scene(struct menu_scene* scene, int scale, unsigned int* screen, int width, int height, int mouse_x, int mouse_y);
+void simulate_menu_scene(struct menu_scene* scene, int scale, unsigned int* screen, int width, int height, int mouse_x, int mouse_y, bool click);
 

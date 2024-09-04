@@ -6,21 +6,10 @@
 #include "client/platform.h"
 
 #include "general/argb_image.h"
-#include "general/resource_manager.h"
+#include "general/resource_loader.h"
 #include "general/utils.h"
 
-struct char_font* load_char_font(char* src) {
 
-	char* bytes = parse_file(src);
-	if (bytes == NULL) return NULL;
-
-	struct char_font* font = malloc(sizeof(struct char_font));
-	if (font == NULL) { free(bytes);  return NULL; }
-
-	for (int i = 0; i < sizeof(struct char_font); i++) ((char*)font)[i] = bytes[i];
-	
-	return font;
-}
 
 void print_char(struct char_font* font, char c, int text_size, unsigned int color, int x, int y, unsigned int* screen, int width, int height) {
 
@@ -58,7 +47,7 @@ void drop_font(struct char_font* font) {
 	free(font);
 }
 
-struct gui_character* convert_string_to_gui_string(struct char_font* font, char* str) {
+struct gui_character* convert_string_to_gui_string(struct char_font* font, char* str, int text_size) {
 	int length = 0;
 	for (; str[length] != '\0'; length++);
 	length++;
@@ -69,7 +58,7 @@ struct gui_character* convert_string_to_gui_string(struct char_font* font, char*
 	for (int i = 0; i < length; i++) {
 		gui_str[i].color = 0xffffffff;
 		gui_str[i].font = font;
-		gui_str[i].size = 1;
+		gui_str[i].size = text_size;
 		gui_str[i].value = str[i];
 	}
 

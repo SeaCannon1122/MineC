@@ -22,15 +22,13 @@ struct gui_character {
 	char value;
 };
 
-struct char_font* load_char_font(char* src);
-
 void print_char(struct char_font* font, char c, int font_width, unsigned int color, int x, int y, unsigned int* screen, int width, int height);
 
 void print_string(struct char_font* font, char* str, int text_size, unsigned int color, int x, int y, unsigned int* screen, int width, int height);
 
 void drop_font(struct char_font* font);
 
-struct gui_character* convert_string_to_gui_string(struct char_font* font, char* str);
+struct gui_character* convert_string_to_gui_string(struct char_font* font, char* str, int text_size);
 
 void print_gui_string(struct gui_character* str, int scale, int x, int y, char alignment, unsigned int* screen, int width, int height);
 
