@@ -1,6 +1,7 @@
 #pragma once
 
 int clamp_int(int val, int min, int max);
+float clamp_float(float val, float min, float max);
 
 int min_int(int a, int b);
 

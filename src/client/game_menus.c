@@ -27,7 +27,7 @@ void init_main_menu(struct menu_scene* menu, struct main_menu_flags* flags) {
 	struct gui_character* options_text_gui = convert_string_to_gui_string(default_font, "Options...", 1);
 	struct gui_character* quit_text_gui = convert_string_to_gui_string(default_font, "Quit Game", 1);
 
-	add_menu_image(menu, -1, 0, 0, ALIGNMENT_LEFT, ALIGNMENT_TOP, ALIGNMENT_LEFT, ALIGNMENT_TOP, background, 10);
+	add_menu_image(menu, -1, 0, 0, ALIGNMENT_LEFT, ALIGNMENT_TOP, ALIGNMENT_LEFT, ALIGNMENT_TOP, background, 7);
 
 	add_menu_label(menu, 10, 0, 60, ALIGNMENT_MIDDLE, ALIGNMENT_TOP, not_minecraft_text_gui, ALIGNMENT_MIDDLE);
 	add_menu_label(menu, 10, 0, 0, ALIGNMENT_MIDDLE, ALIGNMENT_MIDDLE, jg_text_gui, ALIGNMENT_MIDDLE);
@@ -54,7 +54,7 @@ void init_options_menu(struct menu_scene* menu, struct options_menu_flags* flags
 
 	struct gui_character* done_text_gui = convert_string_to_gui_string(default_font, "Done", 1);
 
-	add_menu_image(menu, -1, 0, 0, ALIGNMENT_LEFT, ALIGNMENT_TOP, ALIGNMENT_LEFT, ALIGNMENT_TOP, background, 10);
+	add_menu_image(menu, -1, 0, 0, ALIGNMENT_LEFT, ALIGNMENT_TOP, ALIGNMENT_LEFT, ALIGNMENT_TOP, background, 7);
 	add_menu_label(menu, 10, 0, 15, ALIGNMENT_MIDDLE, ALIGNMENT_TOP, options_text_gui, ALIGNMENT_MIDDLE);
 
 

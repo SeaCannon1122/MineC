@@ -19,10 +19,6 @@ struct game* new_game() {
 
 void run_game(struct game* game, char* resource_path) {
 
-	platform_init();
-
-	show_console_window();
-
 	struct window_state* window = create_window(200, 100, 1100, 700, "client");
 
 	resource_manager_init();
@@ -48,7 +44,7 @@ void run_game(struct game* game, char* resource_path) {
 
 		struct point2d_int mousepos = get_mouse_cursor_position(window);
 
-		bool click = get_key_state(KEY_MOUSE_LEFT) == 0b11;
+		char click = get_key_state(KEY_MOUSE_LEFT);
 
 		switch (active_menu) {
 
@@ -90,8 +86,6 @@ void run_game(struct game* game, char* resource_path) {
 	resource_manager_exit();
 
 	close_window(window);
-
-	//platform_exit();
 
 	return;
 }

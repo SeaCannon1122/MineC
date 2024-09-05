@@ -4,6 +4,10 @@ int clamp_int(int val, int min, int max) {
 	return (val < min ? min : (val > max ? max : val));
 }
 
+float clamp_float(float val, float min, float max) {
+	return (val < min ? min : (val > max ? max : val));
+}
+
 int min_int(int a, int b) {
 	return (a < b ? a : b);
 }

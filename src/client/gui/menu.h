@@ -98,5 +98,5 @@ void add_menu_slider(struct menu_scene* scene, int z, float* state, int x_min, i
 
 void add_menu_text_field(struct menu_scene* scene, int z, char* buffer, int buffer_size, int x_min, int y_min, int x_max, int y_max, char alignment_x, char alignment_y);
 
-void menu_scene_frame(struct menu_scene* scene, int scale, unsigned int* screen, int width, int height, int mouse_x, int mouse_y, bool click);
+void menu_scene_frame(struct menu_scene* scene, int scale, unsigned int* screen, int width, int height, int mouse_x, int mouse_y, char click);
 

@@ -58,7 +58,7 @@ int menu_y(int y, int alignment, int scale, int height) {
 	else return 0;
 }
 
-void menu_scene_frame(struct menu_scene* scene, int scale, unsigned int* screen, int width, int height, int mouse_x, int mouse_y, bool click) {
+void menu_scene_frame(struct menu_scene* scene, int scale, unsigned int* screen, int width, int height, int mouse_x, int mouse_y, char click) {
 
 	union argb_pixel* screen_argb = (union argb_pixel*)screen;
 
@@ -151,8 +151,8 @@ void menu_scene_frame(struct menu_scene* scene, int scale, unsigned int* screen,
 			int y_max = clamp_int(y_max_actually, 0, height);
 
 
-			unsigned int press_color = 0xff000000;
-			if (mouse_x >= x_min && mouse_x < x_max && mouse_y >= y_min && mouse_y < y_max && *(button->enabled)) { press_color = 0xffffffff; if (click) *button->state = true; }
+			unsigned int hover_color = 0xff000000;
+			if (mouse_x >= x_min && mouse_x < x_max && mouse_y >= y_min && mouse_y < y_max && *(button->enabled)) { hover_color = 0xffffffff; if (click == 0b11) *button->state = true; }
 
 			x_min = (x_min < 0 ? 0 : x_min);
 
@@ -169,7 +169,7 @@ void menu_scene_frame(struct menu_scene* scene, int scale, unsigned int* screen,
 						if (x >= x_min_actually + 2 * scale && x < x_max_actually - 2 * scale && y >= y_min_actually + 2 * scale && y < y_max_actually - 3 * scale) {
 							screen[x + y * width] = texture->pixels[((x - x_min_actually) / scale) % texture->width + texture->width * (((y - y_min_actually) / scale) % texture->height)].color_value;
 						}
-						else if (x < x_min_actually + scale || x >= x_max_actually - scale || y < y_min_actually + scale || y >= y_max_actually - scale) screen[x + width * y] = press_color;
+						else if (x < x_min_actually + scale || x >= x_max_actually - scale || y < y_min_actually + scale || y >= y_max_actually - scale) screen[x + width * y] = hover_color;
 						else {
 							if (x < x_min_actually + 2 * scale) screen[x + width * y] = 0xffafafaf;
 							else if (y < y_min_actually + 2 * scale) screen[x + width * y] = 0xffafafaf;
@@ -219,7 +219,40 @@ void menu_scene_frame(struct menu_scene* scene, int scale, unsigned int* screen,
 					else screen[x + width * y] = 0xff000000;
 				}
 			}
+
+			unsigned int hover_color = 0xff000000;
+
+			
+
+			int x_min_actually_slider = menu_x(slider->x_min + (int)(*slider->state * ((float)slider->x_max - (float)slider->x_min - (float)slider->slider_thickness)), slider->alignment_x, scale, width);
+			int x_max_actually_slider = menu_x(slider->x_min + slider->slider_thickness + (int)(*slider->state * ((float)slider->x_max - (float)slider->x_min - (float)slider->slider_thickness)), slider->alignment_x, scale, width);
+
+			int x_min_slider = clamp_int(x_min_actually_slider, 0, width);
+			int x_max_slider = clamp_int(x_max_actually_slider, 0, width);
 	
+			if (mouse_x >= x_min && mouse_x < x_max && mouse_y >= y_min && mouse_y < y_max) {
+				hover_color = 0xffffffff;
+				if (click) {
+					*slider->state = clamp_float(((float)mouse_x - (float)x_min_actually - (float)slider->slider_thickness * (float)scale / 2) / ((float)x_max_actually - (float)x_min_actually - (float)slider->slider_thickness * (float)scale), 0.f, 1.f);
+				}
+			}
+
+			for (int x = x_min_slider; x < x_max_slider; x++) {
+				for (int y = y_min; y < y_max; y++) {
+
+					if (x >= x_min_actually_slider + 2 * scale && x < x_max_actually_slider - 2 * scale && y >= y_min_actually + 2 * scale && y < y_max_actually - 3 * scale) {
+						screen[x + y * width] = slider->texture_slider->pixels[((x - x_min_actually_slider) / scale) % slider->texture_slider->width + slider->texture_slider->width * (((y - y_min_actually) / scale) % slider->texture_slider->height)].color_value;
+					}
+					else if (x < x_min_actually_slider + scale || x >= x_max_actually_slider - scale || y < y_min_actually + scale || y >= y_max_actually - scale) screen[x + width * y] = hover_color;
+					else {
+						if (x < x_min_actually_slider + 2 * scale) screen[x + width * y] = 0xffafafaf;
+						else if (y < y_min_actually + 2 * scale) screen[x + width * y] = 0xffafafaf;
+						if (x >= x_max_actually_slider - 2 * scale) screen[x + width * y] = 0xff5c5c5c;
+						else if (y >= y_max_actually - 3 * scale) screen[x + width * y] = 0xff5c5c5c;
+					}
+				}
+			}
+
 			break;
 		}
 
