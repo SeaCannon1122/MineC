@@ -1,3 +1,4 @@
+
 #include "game.h"
 
 #include <stdio.h>
@@ -12,13 +13,15 @@
 #include "general/networking/client.h"
 #include "client/game_menus.h"
 
-
 struct game* new_game() {
 	return NULL;
 }
 
 void run_game(struct game* game, char* resource_path) {
-	//show_console_window();
+
+	platform_init();
+
+	show_console_window();
 
 	struct window_state* window = create_window(200, 100, 1100, 700, "client");
 
@@ -27,14 +30,17 @@ void run_game(struct game* game, char* resource_path) {
 	struct menu_scene* menus = malloc(sizeof(struct menu_scene) * 3);
 
 	struct main_menu_flags main_menu_flags = { false, true, false , true, false, true };
+	struct options_menu_flags options_main_menu_flags = { 0, NULL, 0, NULL, false, true, false, true, false};
 
-	int menu;
+	int active_menu = MAIN_MENU;
 
 	init_main_menu(&menus[0], &main_menu_flags);
+	init_options_menu(&menus[1], &options_main_menu_flags);
 
 	while (get_key_state(KEY_MOUSE_LEFT) & 0b1) sleep_for_ms(10);
 
-	while (!get_key_state(KEY_ESCAPE) && is_window_active(window) && !main_menu_flags.quit_game) {
+	while (is_window_active(window) && !main_menu_flags.quit_game) {
+		
 		int width = window->window_width;
 		int height = window->window_height;
 
@@ -42,19 +48,50 @@ void run_game(struct game* game, char* resource_path) {
 
 		struct point2d_int mousepos = get_mouse_cursor_position(window);
 
-		bool click = get_key_state(KEY_MOUSE_LEFT) & 0b1;
+		bool click = get_key_state(KEY_MOUSE_LEFT) == 0b11;
 
-		simulate_menu_scene(&menus[0], 3, pixels, width, height, mousepos.x, mousepos.y, click);
+		switch (active_menu) {
 
+		case MAIN_MENU: {
+			menu_scene_frame(&menus[0], 2, pixels, width, height, mousepos.x, mousepos.y, click);
+			if (main_menu_flags.options) {
+				main_menu_flags.options = false;
+				active_menu = OPTIONS_MENU;
+			}
+			break;
+		}
+
+		case OPTIONS_MENU: {
+			menu_scene_frame(&menus[1], 2, pixels, width, height, mousepos.x, mousepos.y, click);
+			if (options_main_menu_flags.done) {
+				options_main_menu_flags.done = false;
+				active_menu = MAIN_MENU;
+			}
+			//else if (options_main_menu_flags);
+			break;
+		}
+
+		case JOIN_GAME_MENU: {
+
+		}
+
+		default:
+			break;
+		}
+
+		
 		draw_to_window(window, pixels, width, height);
 
 		free(pixels);
 
-		sleep_for_ms(10);
+		sleep_for_ms(20);
 	}
 
 	resource_manager_exit();
 
 	close_window(window);
+
+	//platform_exit();
+
 	return;
 }

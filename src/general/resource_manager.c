@@ -8,17 +8,18 @@ void* resource_manager = NULL;
 int resources_count = 0;
 
 void resource_manager_init() {
-#if defined(CLIENT_COMPILATION)
-	char layout_file_path[] = "../../../resources/client/assets/resourcelayout.keyvalue";
-	struct key_value_map* kvm = load_key_value_map(layout_file_path);
 
-	char layout_folder_path[] = "../../../resources/client/assets/";
-	int layout_folder_path_size = sizeof(layout_folder_path) - 1;
-#elif defined(SERVER_COMPILATION)
+#if defined(SERVER_COMPILATION)
 	char layout_file_path[] = "../../../resources/server/assets/resourcelayout.keyvalue";
 	struct key_value_map* kvm = load_key_value_map(layout_file_path);
 
 	char layout_folder_path[] = "../../../resources/server/assets/";
+	int layout_folder_path_size = sizeof(layout_folder_path) - 1;
+#else 
+	char layout_file_path[] = "resources/client/assets/resourcelayout.keyvalue";
+	struct key_value_map* kvm = load_key_value_map(layout_file_path);
+
+	char layout_folder_path[] = "resources/client/assets/";
 	int layout_folder_path_size = sizeof(layout_folder_path) - 1;
 #endif
 
@@ -39,11 +40,13 @@ void resource_manager_init() {
 		((struct resource_manager_entry*)resource_manager)[i].resource_token[j] = kvm->mappings[i].key[j];
 
 		char file_extension[64];
-		for (j = 0; kvm->mappings[i].key[j] != '.'; j++);
+		for (j = 0; kvm->mappings[i].value.s[j] != '.'; j++);
 		j++;
 		int extension_start = j;
-		for (; kvm->mappings[i].key[j] != '\0'; j++) file_extension[j-extension_start] = kvm->mappings[i].key[j];
-		file_extension[j - extension_start] = kvm->mappings[i].key[j];
+
+		for (; kvm->mappings[i].value.s[j] != '\0'; j++) file_extension[j-extension_start] = kvm->mappings[i].value.s[j];
+		
+		file_extension[j - extension_start] = kvm->mappings[i].value.s[j];
 
 		if (file_extension[0] == 'p' && file_extension[1] == 'n' && file_extension[2] == 'g' && file_extension[3] == '\0') {
 			((struct resource_manager_entry*)resource_manager)[i].resource_type = RESOURCE_ARGB_IMAGE;

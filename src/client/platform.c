@@ -44,6 +44,7 @@ bool msg_check = false;
 
 struct window_to_create next_window;
 
+void* window_control_thread;
 
 void show_console_window() {
 	HWND hwndConsole = GetConsoleWindow();
@@ -328,44 +329,7 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 
 }
 
-void Entry_thread_function() {
-	blocks_main();
-	running = false;
-	return;
-}
-
-int WINAPI WinMain(
-	_In_	 HINSTANCE hInstance,
-	_In_opt_ HINSTANCE hPrevInstance,
-	_In_     LPSTR     lpCmdLine,
-	_In_     int       nShowCmd
-)
-
-{
-	(void)hInstance;
-	(void)hPrevInstance;
-	(void)lpCmdLine;
-	(void)nShowCmd;
-
-	QueryPerformanceFrequency(&frequency);
-	QueryPerformanceCounter(&startTime);
-
-	HInstance = hInstance;
-
-	wc = (WNDCLASS){
-		CS_HREDRAW | CS_VREDRAW | CS_CLASSDC,
-		WinProc,
-		0,
-		0,
-		hInstance,
-		NULL,
-		LoadCursorW(NULL, IDC_ARROW),
-		NULL,
-		NULL,
-		L"BasicWindowClass"
-	};
-
-	RegisterClassW(&wc);
+void platform_init() {
 
 	AllocConsole();
 	hide_console_window();
@@ -381,17 +345,39 @@ int WINAPI WinMain(
 	fflush(stderr);
 	fflush(stdin);
 
+	QueryPerformanceFrequency(&frequency);
+	QueryPerformanceCounter(&startTime);
+
+	HInstance = GetModuleHandle(NULL);
+
+	wc = (WNDCLASS){
+		CS_HREDRAW | CS_VREDRAW | CS_CLASSDC,
+		WinProc,
+		0,
+		0,
+		HInstance,
+		NULL,
+		LoadCursorW(NULL, IDC_ARROW),
+		NULL,
+		NULL,
+		L"BasicWindowClass"
+	};
+
+	RegisterClassW(&wc);
+
+
 	window_infos = (struct window_info**)malloc(sizeof(void*) * 256);
 
 	next_window.done_flag = true;
 
-	void* main_thread = create_thread(Entry_thread_function, NULL);
+	window_control_thread = create_thread(WindowControl, NULL);
 
-	WindowControl();
+	return;
+}
 
-	join_thread(main_thread);
-
-	return 0;
+void platform_exit() {
+	running = false;
+	join_thread(window_control_thread);
 }
 
 #elif defined(__linux__)
@@ -433,6 +419,8 @@ bool keyStates[256 * 256] = { false };
 int last_mouse_scroll = 0;
 
 bool mouseButtons[3] = { false, false, false };
+
+void* window_control_thread;
 
 void show_console_window() { return; }
 
@@ -665,18 +653,13 @@ void WindowControl() {
 	return;
 }
 
-void Entry_thread_function() {
-	blocks_main();
-	running = false;
-}
-
-int main(int argc, char* argv[]) {
+void platform_init() {
 	XInitThreads();
 
 	display = XOpenDisplay(NULL);
 	if (display == NULL) {
 		fprintf(stderr, "Unable to open X display\n");
-		return 1;
+		return;
 	}
 
 	screen = DefaultScreen(display);
@@ -690,15 +673,15 @@ int main(int argc, char* argv[]) {
 
 	running = true;
 
-	void* mainthread = create_thread(Entry_thread_function, NULL);
+	window_control_thread = create_thread(WindowControl, NULL);
 
-	WindowControl();
+	return;
+}
 
-	join_thread(mainthread);
-
+void platform_exit() {
+	running = false;
+	join_thread(window_control_thread);
 	XCloseDisplay(display);
-
-	return 0;
 }
 
 #endif 

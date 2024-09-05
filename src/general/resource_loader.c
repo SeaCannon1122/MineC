@@ -10,7 +10,7 @@
 #include "keyvalue.h"
 
 
-void* load_file(const char* filename, int* size) {
+void* load_file(char* filename, int* size) {
 
     FILE* file = fopen(filename, "rb");
     if (file == NULL) return NULL;
@@ -34,7 +34,7 @@ void* load_file(const char* filename, int* size) {
     return buffer;
 }
 
-void* load_text_file(const char* filename) {
+char* load_text_file(char* filename) {
 
     FILE* file = fopen(filename, "r");
     if (file == NULL) return NULL;
@@ -43,21 +43,38 @@ void* load_text_file(const char* filename) {
     long fileSize = ftell(file);
     rewind(file);
 
-    char* buffer = (char*)malloc(fileSize + 1);
-    if (buffer == NULL) {
+    char* buffer_raw = (char*)malloc(fileSize);
+    if (buffer_raw == NULL) {
         fclose(file);
         return NULL;
     }
 
-    size_t bytesRead = fread(buffer, sizeof(char), fileSize, file);
-    buffer[fileSize] = '\0';
+    size_t bytesRead = fread(buffer_raw, sizeof(char), fileSize, file);
+
+    int carriage_return_count = 0;
+
+    for (int i = 0; i < fileSize; i++) if (buffer_raw[i] == '\r') carriage_return_count++;
+
+    char* buffer = (char*)malloc(fileSize + 1 - carriage_return_count);
+
+    int i = 0;
+
+    for (int raw_i = 0; raw_i < fileSize; raw_i++) {
+        if (buffer_raw[raw_i] != '\r') {
+            buffer[i] = buffer_raw[raw_i];
+            i++;
+        }
+    }
+
+    buffer[fileSize - carriage_return_count] = '\0';
+    free(buffer_raw);
 
     fclose(file);
 
     return buffer;
 }
 
-struct argb_image* load_argb_image_from_png(const char* file_name) {
+struct argb_image* load_argb_image_from_png(char* file_name) {
     int width, height, channels;
     unsigned char* img = stbi_load(file_name, &width, &height, &channels, 4);
     if (!img) return NULL;

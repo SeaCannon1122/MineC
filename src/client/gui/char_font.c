@@ -9,8 +9,6 @@
 #include "general/resource_loader.h"
 #include "general/utils.h"
 
-
-
 void print_char(struct char_font* font, char c, int text_size, unsigned int color, int x, int y, unsigned int* screen, int width, int height) {
 
 	for (int i = x; i < width && i < x + font->char_font_entries[c].width * text_size; i++) {
@@ -68,10 +66,11 @@ struct gui_character* convert_string_to_gui_string(struct char_font* font, char*
 
 void print_gui_string( struct gui_character* str, int scale, int x, int y, char alignment, unsigned int* screen, int width, int height) {
 
+	
+
 	int x_pos = 0;
 
 	int text_width = gui_text_width(str);
-
 	if (alignment == ALIGNMENT_LEFT) x_pos = x;
 	else if (alignment == ALIGNMENT_MIDDLE) x_pos = x - text_width * scale / 2;
 	else if (alignment == ALIGNMENT_RIGHT) x_pos = x - text_width * scale;
@@ -85,7 +84,9 @@ void print_gui_string( struct gui_character* str, int scale, int x, int y, char 
 int gui_text_width(struct gui_character* str) {
 	int total_width = 0;
 	int i = 0;
-	for (; str[i].value != '\0'; i++) total_width += str[i].size * (1 + str[i].font->char_font_entries[str[i].value].width);
+	for (; str[i].value != '\0'; i++) {
+		total_width += str[i].size * (1 + str[i].font->char_font_entries[str[i].value].width);
+	}
 	if(i != 0) total_width -= str[i].size;
 	return total_width;
 }

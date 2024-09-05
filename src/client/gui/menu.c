@@ -8,9 +8,7 @@
 void add_menu_label(struct menu_scene* scene, int z, int x, int y, char alignment_x, char alignment_y, struct gui_character* text, char text_alignment) {
 	scene->menu_items[scene->menu_items_count].menu_item_type = MENU_ITEM_LABEL;
 	scene->menu_items[scene->menu_items_count].z = z;
-	scene->menu_items[scene->menu_items_count].items.label = (struct menu_label){ x, y, alignment_x, alignment_y, {0}, text_alignment };
-	scene->menu_items[scene->menu_items_count].items.label.text[0] = text[0];
-	for (int i = 1; text[i-1].value != '\0'; i++) scene->menu_items[scene->menu_items_count].items.label.text[i] = text[i];
+	scene->menu_items[scene->menu_items_count].items.label = (struct menu_label){ x, y, alignment_x, alignment_y, text, text_alignment };
 	scene->menu_items_count++;
 }
 
@@ -60,7 +58,7 @@ int menu_y(int y, int alignment, int scale, int height) {
 	else return 0;
 }
 
-void simulate_menu_scene(struct menu_scene* scene, int scale, unsigned int* screen, int width, int height, int mouse_x, int mouse_y, bool click) {
+void menu_scene_frame(struct menu_scene* scene, int scale, unsigned int* screen, int width, int height, int mouse_x, int mouse_y, bool click) {
 
 	union argb_pixel* screen_argb = (union argb_pixel*)screen;
 
@@ -76,20 +74,28 @@ void simulate_menu_scene(struct menu_scene* scene, int scale, unsigned int* scre
 		switch (items[i]->menu_item_type) {
 
 		case MENU_ITEM_LABEL: {
-
+			if(items[i]->items.label.text == NULL) break;
 			struct gui_character text_copy[64];
-			for (int j = 0; j < 64; j++) {
+			int j = 0;
+			for (; items[i]->items.label.text[j].value != '\0' && j < 63; j++) {
 				text_copy[j].color = 0xff3b3b3b;
 				text_copy[j].font = items[i]->items.label.text[j].font;
 				text_copy[j].value = items[i]->items.label.text[j].value;
 				text_copy[j].size = items[i]->items.label.text[j].size;
 			}
 
+			text_copy[j].color = 0xff3b3b3b;
+			text_copy[j].font = items[i]->items.label.text[j].font;
+			text_copy[j].value = items[i]->items.label.text[j].value;
+			text_copy[j].size = items[i]->items.label.text[j].size;
+
+			
+
 			print_gui_string(
 				text_copy,
 				scale,
-				menu_x(items[i]->items.label.x + items[i]->items.label.text[0].size, items[i]->items.label.alignment_x, scale, width),
-				menu_y(items[i]->items.label.y + items[i]->items.label.text[0].size, items[i]->items.label.alignment_y, scale, height),
+				menu_x(items[i]->items.label.x + items[i]->items.label.text[0].size/3 + 1, items[i]->items.label.alignment_x, scale, width),
+				menu_y(items[i]->items.label.y + items[i]->items.label.text[0].size/3 + 1, items[i]->items.label.alignment_y, scale, height),
 				items[i]->items.label.text_alignment,
 				screen,
 				width,
@@ -106,6 +112,7 @@ void simulate_menu_scene(struct menu_scene* scene, int scale, unsigned int* scre
 				width, 
 				height
 			);
+
 			break;
 		}
 
@@ -202,7 +209,17 @@ void simulate_menu_scene(struct menu_scene* scene, int scale, unsigned int* scre
 			
 			unsigned int default_button_color = 0xff888888;
 			unsigned int default_color = 0xff888888;
+			
+			for (int x = x_min; x < x_max; x++) {
+				for (int y = y_min; y < y_max; y++) {
 
+					if (x >= x_min_actually + scale && x < x_max_actually - scale && y >= y_min_actually + scale && y < y_max_actually - scale) {
+						screen[x + y * width] = slider->texture_background->pixels[((x - x_min_actually) / scale) % slider->texture_background->width + slider->texture_background->width * (((y - y_min_actually) / scale) % slider->texture_background->height)].color_value;
+					}
+					else screen[x + width * y] = 0xff000000;
+				}
+			}
+	
 			break;
 		}
 

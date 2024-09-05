@@ -10,6 +10,7 @@ set(CLIENT_SOURCE_FILES
     src/client/game_menus.c
     src/client/main.c
     
+    src/general/keyvalue.c
     src/general/resource_manager.c
     src/general/resource_loader.c
     src/general/parallel_computing.c
@@ -30,6 +31,7 @@ set(TEST_SOURCE_FILES
     
     src/client/gui/char_font.c
     src/client/gui/menu.c
+    src/client/platform.c
     src/test/main.c
     
     src/general/utils.c
@@ -60,8 +62,8 @@ target_link_libraries(blocks_server OpenCL)
 target_link_libraries(blocks_test OpenCL)
 
 if(WIN32)
-    set_target_properties(blocks_client PROPERTIES
-    LINK_FLAGS "/SUBSYSTEM:WINDOWS"
+set_target_properties(blocks_client PROPERTIES
+    LINK_FLAGS "/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup"
 )
 elseif(UNIX)
     find_package(X11 REQUIRED)

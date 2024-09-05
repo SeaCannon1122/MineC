@@ -14,8 +14,11 @@ struct point2d_int {
 	int y;
 };
 
-//general
+void platform_init();
 
+void platform_exit();
+
+//general
 void show_console_window();
 
 void hide_console_window();
@@ -51,10 +54,6 @@ void draw_to_window(struct window_state* ws, unsigned int* buffer, int width, in
 struct point2d_int get_mouse_cursor_position(struct window_state* state);
 
 void set_cursor_rel_window(struct window_state* state, int x, int y);
-
-//Entry Method
-
-void blocks_main();
 
 //Keysymbol Mapping
 
