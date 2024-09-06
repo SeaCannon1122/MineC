@@ -19,7 +19,7 @@ struct game* new_game() {
 
 void run_game(struct game* game, char* resource_path) {
 
-	struct window_state* window = create_window(200, 100, 1100, 700, "client");
+	int window = create_window(200, 100, 1100, 700, "client");
 
 	resource_manager_init();
 	
@@ -37,8 +37,8 @@ void run_game(struct game* game, char* resource_path) {
 
 	while (is_window_active(window) && !main_menu_flags.quit_game) {
 		
-		int width = window->window_width;
-		int height = window->window_height;
+		int width = get_window_width(window);
+		int height = get_window_height(window);
 
 		unsigned int* pixels = malloc(width * height * sizeof(unsigned int));
 
@@ -80,7 +80,7 @@ void run_game(struct game* game, char* resource_path) {
 
 		free(pixels);
 
-		sleep_for_ms(20);
+		sleep_for_ms(10);
 	}
 
 	resource_manager_exit();
