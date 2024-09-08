@@ -8,6 +8,7 @@
 #include "stb_image.h"
 #include "general/argb_image.h"
 #include "keyvalue.h"
+#include "stddef.h"
 
 
 void* load_file(char* filename, int* size) {
@@ -88,7 +89,7 @@ struct argb_image* load_argb_image_from_png(char* file_name) {
 
     image->width = width;
     image->height = height;
-    image->pixels = (union argb_pixel*)((unsigned long long) image + sizeof(struct argb_image));
+    image->pixels = (union argb_pixel*)((size_t) image + sizeof(struct argb_image));
 
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
@@ -112,6 +113,10 @@ struct char_font* load_char_font(char* src) {
     if (size != 4096) { free(font); return NULL; }
 
     return font;
+}
+
+int compare_resource_manager_entrys(const void* a, const void* b) {
+    return strcmp(((struct key_value_map_entry*)a)->key, ((struct key_value_map_entry*)b)->key);
 }
 
 struct key_value_map* load_key_value_map(char* src) {
@@ -159,6 +164,8 @@ struct key_value_map* load_key_value_map(char* src) {
 
         line_begin_index = j + 1;
     }
+
+    qsort(map->mappings, map->mappings_count, sizeof(struct key_value_map_entry), compare_resource_manager_entrys);
 
     free(data);
 

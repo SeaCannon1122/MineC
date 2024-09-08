@@ -17,14 +17,13 @@ enum arg_types {
     ARG_POINTER = 5
 };
 
-//Assumed that if arg is pointer, next arg is int length and next again is buffer properties
+cl_context context;
+cl_device_id device;
+cl_command_queue queue;
 
 struct program_resources {
-    cl_context context;
-    cl_command_queue queue;
     cl_program program;
     cl_kernel kernel;
-    cl_device_id device;
 
     int arg_count;
     char arg_types[MAX_KERNEL_ARGS];
@@ -50,6 +49,21 @@ exit(1);\
 }\
 } while(0)
 
+void parallel_computing_init() {
+    cl_platform_id platform;
+    CL_CALL(clGetPlatformIDs(1, &platform, NULL));
+
+    CL_CALL(clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &device, NULL));
+
+    CL_OBJECT_CALL(, context, clCreateContext(NULL, 1, &device, NULL, NULL, &err));
+
+    CL_OBJECT_CALL(, queue, clCreateCommandQueue(context, device, 0, &err));
+}
+
+void parallel_computing_exit() {
+    clReleaseCommandQueue(queue);
+    clReleaseContext(context);
+}
 
 void* create_kernel(char* src) {
     struct program_resources* resources = malloc(sizeof(struct program_resources));
@@ -107,18 +121,9 @@ void* create_kernel(char* src) {
         return NULL;
     }
 
-    cl_platform_id platform;
-    CL_CALL(clGetPlatformIDs(1, &platform, NULL));
+    CL_OBJECT_CALL(, resources->program, clCreateProgramWithSource(context, 1, (const char**)&src, NULL, &err));
 
-    CL_CALL(clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &resources->device, NULL));
-
-    CL_OBJECT_CALL(, resources->context, clCreateContext(NULL, 1, &resources->device, NULL, NULL, &err));
-
-    CL_OBJECT_CALL(, resources->queue, clCreateCommandQueue(resources->context, resources->device, 0, &err));
-
-    CL_OBJECT_CALL(, resources->program, clCreateProgramWithSource(resources->context, 1, (const char**)&src, NULL, &err));
-
-    CL_CALL(clBuildProgram(resources->program, 1, &resources->device, NULL, NULL, NULL));
+    CL_CALL(clBuildProgram(resources->program, 1, &device, NULL, NULL, NULL));
     
     for (int j = kernel_name_start; j < i; j++) kernel_name[j - kernel_name_start] = src[j];
     kernel_name[i - kernel_name_start] = '\0';
@@ -129,14 +134,25 @@ void* create_kernel(char* src) {
     return resources;
 }
 
+void* create_device_buffer(size_t size) {
+    CL_OBJECT_CALL(cl_mem, device_buffer, clCreateBuffer(context, CL_MEM_READ_WRITE, size, NULL, &err));
+    return device_buffer;
+}
+
+void write_to_device_buffer(void* device_buffer, void* host_buffer, size_t size, size_t offset) {
+    clEnqueueWriteBuffer(queue, device_buffer, CL_FALSE, offset, size, host_buffer, 0, NULL, NULL);
+}
+
+void read_from_device_buffer(void* device_buffer, void* host_buffer, size_t size, size_t offset) {
+    clEnqueueReadBuffer(queue, device_buffer, CL_FALSE, offset, size, host_buffer, 0, NULL, NULL);
+}
+
+void destroy_device_buffer(void* memory_buffer) {
+    clReleaseMemObject(memory_buffer);
+}
+
 void run_kernel(void* kernel, char dimension, int dim_x, int dim_y, int dim_z, ...) {
     struct program_resources* resources = (struct program_resources*)kernel;
-
-    cl_mem mem_objects[64];
-    void* mem_pointers[64];
-    int mem_object_sizes[64];
-    int buffer_properties[64];
-    int mem_objects_count = 0;
 
     va_list args;
     va_start(args, dim_z);
@@ -177,20 +193,7 @@ void run_kernel(void* kernel, char dimension, int dim_x, int dim_y, int dim_z, .
 
         case ARG_POINTER: {
             void* pointer_arg = va_arg(args, void*);
-            int length_arg = va_arg(args, int);
-            int buffer_properties_arg = va_arg(args, int);
-
-            buffer_properties[mem_objects_count] = buffer_properties_arg;
-            CL_OBJECT_CALL(, mem_objects[mem_objects_count], clCreateBuffer(resources->context, CL_MEM_READ_WRITE, length_arg, NULL, &err));
-
-            if(buffer_properties_arg & BUFFER_IN) CL_CALL(clEnqueueWriteBuffer(resources->queue, mem_objects[mem_objects_count], CL_TRUE, 0, length_arg, pointer_arg, 0, NULL, NULL));
-
-            mem_pointers[mem_objects_count] = pointer_arg;
-            mem_object_sizes[mem_objects_count] = length_arg;
-            
-            CL_CALL(clSetKernelArg(resources->kernel, i, sizeof(cl_mem), &mem_objects[mem_objects_count]));
-            mem_objects_count++;
-
+            CL_CALL(clSetKernelArg(resources->kernel, i, sizeof(cl_mem), &pointer_arg));
             break;
         }
 
@@ -198,18 +201,13 @@ void run_kernel(void* kernel, char dimension, int dim_x, int dim_y, int dim_z, .
     }
 
     size_t globalItemSize[3] = { dim_x, dim_y, dim_z};
-    CL_CALL(clEnqueueNDRangeKernel(resources->queue, resources->kernel, dimension, NULL, globalItemSize, NULL, 0, NULL, NULL));
-
-    CL_CALL(clFlush(resources->queue));
-    CL_CALL(clFinish(resources->queue));
-    
-    for (int i = 0; i < mem_objects_count; i++) {
-        
-        if (buffer_properties[i] & BUFFER_OUT) CL_CALL(clEnqueueReadBuffer(resources->queue, mem_objects[i], CL_TRUE, 0, mem_object_sizes[i], mem_pointers[i], 0, NULL, NULL));
-        CL_CALL(clReleaseMemObject(mem_objects[i]));
-    }
+    CL_CALL(clEnqueueNDRangeKernel(queue, resources->kernel, dimension, NULL, globalItemSize, NULL, 0, NULL, NULL));
         
     return;
+}
+
+void wait_for_parallel_execution_completion() {
+    clFinish(queue);
 }
 
 void destroy_kernel(void* kernel) {
@@ -217,6 +215,4 @@ void destroy_kernel(void* kernel) {
 
     clReleaseKernel(resources->kernel);
     clReleaseProgram(resources->program);
-    clReleaseCommandQueue(resources->queue);
-    clReleaseContext(resources->context);
 }

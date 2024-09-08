@@ -5,12 +5,14 @@
 #include "general/argb_image.h"
 #include "client/gui/char_font.h"
 
+#define MAX_MENU_ITEMS 64
+
 enum menu_item_type {
-	MENU_ITEM_LABEL,
-	MENU_ITEM_IMAGE,
-	MENU_ITEM_BUTTON,
-	MENU_ITEM_SLIDER,
-	MENU_ITEM_TEXT_FIELD,
+	MENU_ITEM_LABEL = 0,
+	MENU_ITEM_IMAGE = 1,
+	MENU_ITEM_BUTTON = 2,
+	MENU_ITEM_SLIDER = 3,
+	MENU_ITEM_TEXT_FIELD = 4,
 };
 
 struct menu_label {
@@ -64,11 +66,10 @@ struct menu_text_field {
 	int buffer_size;
 	int current_length;
 	int x_min;
-	int y_min;
 	int x_max;
-	int y_max;
 	char alignment_x;
 	char alignment_y;
+	char text_alignment;
 };
 
 struct menu_item {
@@ -84,7 +85,7 @@ struct menu_item {
 };
 
 struct menu_scene {
-	struct menu_item menu_items[128];
+	struct menu_item menu_items[MAX_MENU_ITEMS];
 	int menu_items_count;
 };
 
@@ -96,7 +97,7 @@ void add_menu_button(struct menu_scene* scene, int z, bool* state, int x_min, in
 
 void add_menu_slider(struct menu_scene* scene, int z, float* state, int x_min, int y_min, int x_max, int y_max, char alignment_x, char alignment_y, struct argb_image* texture_background, struct argb_image* texture_slider, int slider_thickness);
 
-void add_menu_text_field(struct menu_scene* scene, int z, char* buffer, int buffer_size, int x_min, int y_min, int x_max, int y_max, char alignment_x, char alignment_y);
+void add_menu_text_field(struct menu_scene* scene, int z, char* buffer, int buffer_size, int x_min, int x_max, char alignment_x, char alignment_y, char text_alignment);
 
 void menu_scene_frame(struct menu_scene* scene, int scale, unsigned int* screen, int width, int height, int mouse_x, int mouse_y, char click);
 

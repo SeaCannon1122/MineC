@@ -28,9 +28,6 @@ struct {
 
 WNDCLASS wc;
 
-LARGE_INTEGER frequency;
-LARGE_INTEGER startTime;
-
 bool keyStates[256] = { 0 };
 int last_mouse_scroll = 0;
 
@@ -61,9 +58,11 @@ void sleep_for_ms(unsigned int _time_in_milliseconds) {
 }
 
 double get_time() {
-	LARGE_INTEGER current_time;
-	QueryPerformanceCounter(&current_time);
-	return (double)(current_time.QuadPart - startTime.QuadPart) * 1000 / (double)frequency.QuadPart;
+	LARGE_INTEGER frequency, start;
+	QueryPerformanceFrequency(&frequency);
+	QueryPerformanceCounter(&start);
+
+	return (double)1000 * ((double)start.QuadPart / (double)frequency.QuadPart);
 }
 
 void* create_thread(void* address, void* args) {
@@ -290,9 +289,6 @@ void platform_init() {
 	fflush(stdout);
 	fflush(stderr);
 	fflush(stdin);
-
-	QueryPerformanceFrequency(&frequency);
-	QueryPerformanceCounter(&startTime);
 
 	wc = (WNDCLASS) {
 		CS_HREDRAW | CS_VREDRAW | CS_CLASSDC,

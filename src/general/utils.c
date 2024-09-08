@@ -62,3 +62,49 @@ float string_to_float(char* src, int length) {
 
 	return floating * sign;
 }
+
+char digit_to_char(int digit) {
+	char c = '0';
+	switch (digit)
+	{
+
+	case 1: 
+		c = '1'; 
+		break;
+	case 2: 
+		c = '2';
+		break;
+	case 3: 
+		c = '3';
+		break;
+	case 4: 
+		c = '4';
+		break;
+	case 5: 
+		c = '5';
+		break;
+	case 6: 
+		c = '6';
+		break;
+	case 7:
+		c = '7';
+		break;
+	case 8: 
+		c = '8';
+		break;
+	case 9: 
+		c = '9';
+		break;
+	case 0: 
+		c = '0';
+		break;
+	}
+
+	return c;
+}
+
+int string_length(char* str) {
+	int length = 1;
+	for (; str[length - 1] != '\0'; length++);
+	return length;
+}

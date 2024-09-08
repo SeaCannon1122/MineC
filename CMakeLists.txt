@@ -6,8 +6,8 @@ set(CLIENT_SOURCE_FILES
     src/client/gui/char_font.c
     src/client/gui/menu.c
     src/client/platform.c
-    src/client/game.c
-    src/client/game_menus.c
+    src/client/game_body/game_client.c
+    src/client/game_body/game_menus.c
     src/client/main.c
     
     src/general/keyvalue.c

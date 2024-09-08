@@ -9,3 +9,7 @@ int max_int(int a, int b);
 
 int string_to_int(char* src, int length);
 float string_to_float(char* src, int length);
+
+char digit_to_char(int digit);
+
+int string_length(char* str);

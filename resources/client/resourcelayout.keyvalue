@@ -1,4 +1,5 @@
-default_pixelfont s:gui/default.pixelfont
 menu_background s:gui/menu/background.png
 menu_button_disabled s:gui/menu/button_texture_disabled.png
 menu_button_enabled s:gui/menu/button_texture_enabled.png
+default_pixelfont s:gui/default.pixelfont
+settings s:settings.keyvalue

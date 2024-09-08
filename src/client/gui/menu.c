@@ -33,10 +33,10 @@ void add_menu_slider(struct menu_scene* scene, int z, float* state, int x_min, i
 	scene->menu_items_count++;
 }
 
-void add_menu_text_field(struct menu_scene* scene, int z, char* buffer, int buffer_size, int x_min, int y_min, int x_max, int y_max, char alignment_x, char alignment_y) {
+void add_menu_text_field(struct menu_scene* scene, int z, char* buffer, int buffer_size, int x_min, int x_max, char alignment_x, char alignment_y, char text_alignment) {
 	scene->menu_items[scene->menu_items_count].menu_item_type = MENU_ITEM_TEXT_FIELD;
 	scene->menu_items[scene->menu_items_count].z = z;
-	scene->menu_items[scene->menu_items_count].items.text_field = (struct menu_text_field){ buffer, buffer_size, 0, x_min, y_min, x_max, y_max, alignment_x, alignment_y };
+	scene->menu_items[scene->menu_items_count].items.text_field = (struct menu_text_field){ buffer, buffer_size, 0, x_min, x_max, alignment_x, alignment_y, text_alignment };
 	scene->menu_items_count++;
 }
 
@@ -224,8 +224,8 @@ void menu_scene_frame(struct menu_scene* scene, int scale, unsigned int* screen,
 
 			
 
-			int x_min_actually_slider = menu_x(slider->x_min + (int)(*slider->state * ((float)slider->x_max - (float)slider->x_min - (float)slider->slider_thickness)), slider->alignment_x, scale, width);
-			int x_max_actually_slider = menu_x(slider->x_min + slider->slider_thickness + (int)(*slider->state * ((float)slider->x_max - (float)slider->x_min - (float)slider->slider_thickness)), slider->alignment_x, scale, width);
+			int x_min_actually_slider = menu_x(slider->x_min + (int)(clamp_float(*slider->state, 0.f, 1.f) * ((float)slider->x_max - (float)slider->x_min - (float)slider->slider_thickness)), slider->alignment_x, scale, width);
+			int x_max_actually_slider = menu_x(slider->x_min + slider->slider_thickness + (int)(clamp_float(*slider->state, 0.f, 1.f) * ((float)slider->x_max - (float)slider->x_min - (float)slider->slider_thickness)), slider->alignment_x, scale, width);
 
 			int x_min_slider = clamp_int(x_min_actually_slider, 0, width);
 			int x_max_slider = clamp_int(x_max_actually_slider, 0, width);

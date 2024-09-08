@@ -41,10 +41,6 @@ void print_string(struct char_font* font, char* str, int text_size, unsigned int
 	}
 }
 
-void drop_font(struct char_font* font) {
-	free(font);
-}
-
 struct gui_character* convert_string_to_gui_string(struct char_font* font, char* str, int text_size) {
 	int length = 0;
 	for (; str[length] != '\0'; length++);

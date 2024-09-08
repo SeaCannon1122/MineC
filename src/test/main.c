@@ -2,16 +2,18 @@
 #include <stdio.h>
 #include "general/keyvalue.h"
 #include "client/platform.h"
+#include "Windows.h"
 
-void blocks_main() {}
+
 
 int main() {
-    sleep_for_ms(10);
-    double time = get_time();
-    printf("%f", time);
     
+    double time = get_time();
+    printf("%f\n", time);
+    sleep_for_ms(10);
     double new_time = get_time();
-    printf("%f", new_time - time);
+    printf("%f\n", new_time - time);
+
 
     /*struct key_value_map map = key_value_map_from_file("../../../resources/client/assets/resourcelayout.keyvalue");
 
