@@ -35,19 +35,19 @@ void run_game_client(struct game_client* game) {
 
 	show_console_window();
 
-	int window = create_window(200, 100, 1100, 700, "client");
+	game->window = create_window(200, 100, 1100, 700, "client");
 
 	int active_menu = MAIN_MENU;
 
 	while (get_key_state(KEY_MOUSE_LEFT) & 0b1) sleep_for_ms(10);
 
-	while (is_window_active(window) && !game->game_menus.main_menu.quit_game_button_state) {
+	while (is_window_active(game->window) && !game->game_menus.main_menu.quit_game_button_state) {
 
-		int width = get_window_width(window);
-		int height = get_window_height(window);
+		int width = get_window_width(game->window);
+		int height = get_window_height(game->window);
 		unsigned int* pixels = malloc(width * height * sizeof(unsigned int));
 
-		struct point2d_int mousepos = get_mouse_cursor_position(window);
+		struct point2d_int mousepos = get_mouse_cursor_position(game->window);
 		char click = get_key_state(KEY_MOUSE_LEFT);
 
 		switch (active_menu) {
@@ -57,10 +57,12 @@ void run_game_client(struct game_client* game) {
 			if (game->game_menus.main_menu.options_button_state) {
 				game->game_menus.main_menu.options_button_state = false;
 				active_menu = OPTIONS_MENU;
+				break;
 			}
 			else if (game->game_menus.main_menu.join_game_button_state) {
 				game->game_menus.main_menu.join_game_button_state = false;
 				active_menu = JOIN_GAME_MENU;
+				break;
 			}
 			break;
 		}
@@ -74,9 +76,10 @@ void run_game_client(struct game_client* game) {
 
 			game->settings.render_distance = (float)RENDER_DISTANCE_MIN + (game->game_menus.options_menu.render_distance_slider_state * ((float)RENDER_DISTANCE_MAX - (float)RENDER_DISTANCE_MIN));
 
-			if (game->game_menus.options_menu.done_button_state) {
+			if (game->game_menus.options_menu.done_button_state || get_key_state(KEY_ESCAPE) == 0b11) {
 				game->game_menus.options_menu.done_button_state = false;
 				active_menu = MAIN_MENU;
+				break;
 			}
 			else if (game->game_menus.options_menu.gui_scale_button_state) {
 				game->game_menus.options_menu.gui_scale_button_state = false;
@@ -84,16 +87,43 @@ void run_game_client(struct game_client* game) {
 				game->game_menus.options_menu.gui_scale_text[11].value = digit_to_char(game->settings.gui_scale);
 			}
 
-			//else if (options_main_menu_flags);
 			break;
 		}
 
 		case JOIN_GAME_MENU: {
 			menu_scene_frame(&game->game_menus.join_game_menu.menu, game->settings.gui_scale, pixels, width, height, mousepos.x, mousepos.y, click);
-			if (game->game_menus.join_game_menu.back_button_state) {
+			if (game->game_menus.join_game_menu.back_button_state || get_key_state(KEY_ESCAPE) == 0b11) {
 				game->game_menus.join_game_menu.back_button_state = false;
+
+				if (game->game_menus.join_game_menu.ip_address_buffer_link != -1) {
+					unlink_keyboard_parse_buffer(game->window, game->game_menus.join_game_menu.ip_address_buffer_link);
+					game->game_menus.join_game_menu.ip_address_buffer_link = -1;
+				}
+				if (game->game_menus.join_game_menu.port_buffer_link != -1) {
+					unlink_keyboard_parse_buffer(game->window, game->game_menus.join_game_menu.port_buffer_link);
+					game->game_menus.join_game_menu.port_buffer_link = -1;
+				}
 				active_menu = MAIN_MENU;
+				break;
 			}
+			if (string_length(game->game_menus.join_game_menu.ip_address_buffer) != 1 && string_length(game->game_menus.join_game_menu.port_buffer) != 1) game->game_menus.join_game_menu.join_game_button_enabled = true;
+			else game->game_menus.join_game_menu.join_game_button_enabled = false;
+
+			if (game->game_menus.join_game_menu.ip_address_box_selected && game->game_menus.join_game_menu.ip_address_buffer_link == -1) {
+				game->game_menus.join_game_menu.ip_address_buffer_link = link_keyboard_parse_buffer(game->window, game->game_menus.join_game_menu.ip_address_buffer, sizeof(game->game_menus.join_game_menu.ip_address_buffer), string_length(game->game_menus.join_game_menu.ip_address_buffer) - 1);
+			}
+			else if (game->game_menus.join_game_menu.ip_address_box_selected == false && game->game_menus.join_game_menu.ip_address_buffer_link != -1) {
+				unlink_keyboard_parse_buffer(game->window, game->game_menus.join_game_menu.ip_address_buffer_link);
+				game->game_menus.join_game_menu.ip_address_buffer_link = -1;
+			}
+			if (game->game_menus.join_game_menu.port_box_selected && game->game_menus.join_game_menu.port_buffer_link == -1) {
+				game->game_menus.join_game_menu.port_buffer_link = link_keyboard_parse_buffer(game->window, game->game_menus.join_game_menu.port_buffer, sizeof(game->game_menus.join_game_menu.port_buffer), string_length(game->game_menus.join_game_menu.port_buffer) - 1);
+			}
+			else if (game->game_menus.join_game_menu.port_box_selected == false && game->game_menus.join_game_menu.port_buffer_link != -1) {
+				unlink_keyboard_parse_buffer(game->window, game->game_menus.join_game_menu.port_buffer_link);
+				game->game_menus.join_game_menu.port_buffer_link = -1;
+			}
+
 		}
 
 		default:
@@ -101,16 +131,20 @@ void run_game_client(struct game_client* game) {
 		}
 
 		
-		draw_to_window(window, pixels, width, height);
+		draw_to_window(game->window, pixels, width, height);
 
 		free(pixels);
 
 		sleep_for_ms(10);
 	}
 
-
-
-	close_window(window);
+	close_window(game->window);
 
 	return;
+}
+
+void delete_game_client(struct game_client* game) {
+	destroy_resource_manager(game->resource_manager);
+	delete_game_menus(game);
+	free(game);
 }

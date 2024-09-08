@@ -61,10 +61,14 @@ struct game_menus {
 		struct gui_character* ip_address_text;
 
 		char ip_address_buffer[16 + 1];
+		bool ip_address_box_selected;
+		int ip_address_buffer_link;
 
 		struct gui_character* port_text;
 
 		char port_buffer[5 + 1];
+		bool port_box_selected;
+		int port_buffer_link;
 
 		struct gui_character* join_game_text;
 		bool join_game_button_state;
@@ -82,4 +86,6 @@ struct game_menus {
 struct game_client;
 
 void init_game_menus(struct game_client* game);
+void delete_game_menus(struct game_client* game);
+
 #endif // !GAME_MENUS_H

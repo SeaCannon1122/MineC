@@ -13,6 +13,7 @@
 #define RENDER_DISTANCE_MAX 32
 
 struct game_client {
+	int window;
 	struct key_value_map* resource_manager;
 	struct {
 		int render_distance;
@@ -26,5 +27,7 @@ struct game_client {
 struct game_client* new_game_client(char* resource_path);
 
 void run_game_client(struct game_client* game);
+
+void delete_game_client(struct game_client* game);
 
 #endif // !GAME_CLIENT_H

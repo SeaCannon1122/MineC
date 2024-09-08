@@ -11,9 +11,12 @@ struct {
 	bool active;
 	int window_width;
 	int window_height;
+	struct {
+		char* buffer;
+		int buffer_size_width_termination;
+		int size_used;
+	} print_buffer[MAX_KEYBOARD_BUFFER_PARSERS_PER_WINDOW];
 } window_resources[MAX_WINDOW_COUNT];
-
-char window_resources_active[MAX_WINDOW_COUNT] = { 0 };
 
 struct {
 	int posx;
@@ -102,10 +105,9 @@ void clear_mouse_scroll() {
 int create_window(int posx, int posy, int width, int height, unsigned char* name) {
 
 	int next_free_window_index = 0;
-	for (; next_free_window_index < MAX_WINDOW_COUNT; next_free_window_index++) if (!window_resources_active[next_free_window_index]) break;
+	for (; next_free_window_index < MAX_WINDOW_COUNT; next_free_window_index++) if (window_resources[next_free_window_index].hwnd == NULL) break;
 	if (next_free_window_index == MAX_WINDOW_COUNT) return WINDOW_CREATION_FAILED;
 
-	window_resources_active[next_free_window_index] = 1;
 
 	next_window.posx = posx;
 	next_window.posy = posy;
@@ -140,7 +142,6 @@ void close_window(int window) {
 	if (window_resources[window].active) SendMessage(window_resources[window].hwnd, WM_CLOSE, 0, 0);
 	while (window_resources[window].active) Sleep(1);
 	window_resources[window].hwnd = NULL;
-	window_resources_active[window] = 0;
 }
 
 void draw_to_window(int window, unsigned int* buffer, int width, int height) {
@@ -183,12 +184,29 @@ void set_cursor_rel_window(int window, int x, int y) {
 	SetCursorPos(x + window_rect.left + 7, y + window_rect.top + 29);
 }
 
+int link_keyboard_parse_buffer(int window, char* buffer, int size, int used) {
+
+	int next_parser_index = 0;
+	for (; next_parser_index < MAX_KEYBOARD_BUFFER_PARSERS_PER_WINDOW; next_parser_index++) if (window_resources[window].print_buffer[next_parser_index].buffer == NULL) break;
+	if (next_parser_index == MAX_KEYBOARD_BUFFER_PARSERS_PER_WINDOW) return KEYBOARD_BUFFER_PARSER_CREATION_FAILED;
+
+	window_resources[window].print_buffer[next_parser_index].buffer = buffer;
+	window_resources[window].print_buffer[next_parser_index].buffer_size_width_termination = size;
+	window_resources[window].print_buffer[next_parser_index].size_used = used;
+
+	return next_parser_index;
+}
+
+void unlink_keyboard_parse_buffer(int window, int link) {
+	window_resources[window].print_buffer[link].buffer = NULL;
+}
+
 void WindowControl() {
 	while (running) {
 
 		for (int i = 0; i < MAX_WINDOW_COUNT; i++) {
 
-			if (window_resources[i].active && window_resources_active[i]) {
+			if (window_resources[i].active && window_resources[i].hwnd != NULL) {
 				MSG message;
 				while (PeekMessageW(&message, window_resources[i].hwnd, 0, 0, PM_REMOVE)) {
 					TranslateMessage(&message);
@@ -225,6 +243,7 @@ void WindowControl() {
 			);
 
 			window_resources[next_window.window_resources_index].hwnd = window;
+			for(int i = 0; i < MAX_KEYBOARD_BUFFER_PARSERS_PER_WINDOW; i++) window_resources[next_window.window_resources_index].print_buffer[i].buffer = NULL;
 			window_resources[next_window.window_resources_index].active = true;
 
 			SendMessage(window, WM_SIZE, 0, 0);
@@ -241,7 +260,7 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 
 	for (int i = 0; i < MAX_WINDOW_COUNT; i++) {
 
-		if (window_resources[i].hwnd == hwnd && window_resources_active[i]) {
+		if (window_resources[i].hwnd == hwnd && window_resources[i].hwnd != NULL) {
 
 			switch (uMsg) {
 
@@ -267,6 +286,24 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 
 				if (wheelDelta > 0) last_mouse_scroll++;
 				else if (wheelDelta < 0) last_mouse_scroll--;
+			} break;
+
+			case WM_CHAR: {
+
+				for (int i = 0; i < MAX_KEYBOARD_BUFFER_PARSERS_PER_WINDOW; i++) {
+					if (window_resources[i].print_buffer[i].buffer != NULL) {
+						char c = (char)wParam;
+						if (c >= ' ' && c <= '~' && window_resources[i].print_buffer[i].buffer_size_width_termination - 1 > window_resources[i].print_buffer[i].size_used) {
+							window_resources[i].print_buffer[i].buffer[window_resources[i].print_buffer[i].size_used] = c;
+							window_resources[i].print_buffer[i].size_used++;
+						}
+						else if (c == 0x08 /*delete*/ && window_resources[i].print_buffer[i].size_used != 0) {
+							window_resources[i].print_buffer[i].size_used--;
+							window_resources[i].print_buffer[i].buffer[window_resources[i].print_buffer[i].size_used] = '\0';
+						}
+					}
+				}
+
 			} break;
 
 			}
@@ -316,7 +353,7 @@ void platform_init() {
 }
 
 void platform_exit() {
-	for (int i = 0; i < MAX_WINDOW_COUNT; i++) if (window_resources_active[i]) close_window(i);
+	for (int i = 0; i < MAX_WINDOW_COUNT; i++) if (window_resources[i].hwnd != NULL) close_window(i);
 	running = false;
 	join_thread(window_control_thread);
 }
@@ -339,6 +376,11 @@ struct {
 	bool active;
 	int window_width;
 	int window_height;
+	struct {
+		char* buffer;
+		int buffer_size_width_termination;
+		int size_used;
+	} print_buffer[MAX_KEYBOARD_BUFFER_PARSERS_PER_WINDOW];
 } window_resources[MAX_WINDOW_COUNT];
 
 char window_resources_active[MAX_WINDOW_COUNT] = { 0 };
@@ -528,6 +570,23 @@ void set_cursor_rel_window(int window, int x, int y) {
 	return;
 }
 
+int link_keyboard_parse_buffer(int window, char* buffer, int size, int used) {
+
+	int next_parser_index = 0;
+	for (; next_parser_index < MAX_KEYBOARD_BUFFER_PARSERS_PER_WINDOW; next_parser_index++) if (window_resources[window].print_buffer[next_parser_index].buffer == NULL) break;
+	if (next_parser_index == MAX_KEYBOARD_BUFFER_PARSERS_PER_WINDOW) return KEYBOARD_BUFFER_PARSER_CREATION_FAILED;
+
+	window_resources[window].print_buffer[next_parser_index].buffer = buffer;
+	window_resources[window].print_buffer[next_parser_index].buffer_size_width_termination = size;
+	window_resources[window].print_buffer[next_parser_index].size_used = used;
+
+	return next_parser_index;
+}
+
+void unlink_keyboard_parse_buffer(int window, int link) {
+	window_resources[window].print_buffer[link].buffer = NULL;
+}
+
 void WindowControl() {
 	XEvent event;
 	while (running) {
@@ -559,6 +618,26 @@ void WindowControl() {
 				case ButtonPress: {
 					if (event.xbutton.button == Button4) last_mouse_scroll++;
 					else if (event.xbutton.button == Button5) last_mouse_scroll--;
+				} break;
+
+				case KeyPress: {
+					KeySym keysym;
+					char buf[32];
+					int len = XLookupString(&event.xkey, buf, sizeof(buf), &keysym, NULL);
+					if (len > 0) {
+						for (int i = 0; i < len; ++i) {
+							unsigned char c = (unsigned char)buf[i];
+							if (c >= ' ' && c <= '~' && window_resources[i].print_buffer[i].buffer_size_width_termination - 1 > window_resources[i].print_buffer[i].size_used) {
+								window_resources[i].print_buffer[i].buffer[window_resources[i].print_buffer[i].size_used] = c;
+								window_resources[i].print_buffer[i].size_used++;
+							}
+							else if (c == 0x08 /*delete*/ && window_resources[i].print_buffer[i].size_used != 0) {
+								window_resources[i].print_buffer[i].size_used--;
+								window_resources[i].print_buffer[i].buffer[window_resources[i].print_buffer[i].size_used] = '\0';
+							}
+						}
+					}
+
 				} break;
 
 				}

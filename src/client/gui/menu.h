@@ -63,13 +63,14 @@ struct menu_slider {
 
 struct menu_text_field {
 	char* buffer;
-	int buffer_size;
-	int current_length;
 	int x_min;
 	int x_max;
+	int y;
 	char alignment_x;
 	char alignment_y;
 	char text_alignment;
+	bool* selected;
+	struct char_font* font;
 };
 
 struct menu_item {
@@ -97,7 +98,7 @@ void add_menu_button(struct menu_scene* scene, int z, bool* state, int x_min, in
 
 void add_menu_slider(struct menu_scene* scene, int z, float* state, int x_min, int y_min, int x_max, int y_max, char alignment_x, char alignment_y, struct argb_image* texture_background, struct argb_image* texture_slider, int slider_thickness);
 
-void add_menu_text_field(struct menu_scene* scene, int z, char* buffer, int buffer_size, int x_min, int x_max, char alignment_x, char alignment_y, char text_alignment);
+void add_menu_text_field(struct menu_scene* scene, int z, char* buffer, int x_min, int x_max, int y, char alignment_x, char alignment_y, char text_alignment, bool* selected, struct char_font* font);
 
 void menu_scene_frame(struct menu_scene* scene, int scale, unsigned int* screen, int width, int height, int mouse_x, int mouse_y, char click);
 

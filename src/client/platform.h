@@ -3,9 +3,11 @@
 
 #include <stdbool.h>
 
-#define MAX_WINDOW_COUNT 4
+#define MAX_WINDOW_COUNT 1
+#define MAX_KEYBOARD_BUFFER_PARSERS_PER_WINDOW 1
 
 #define WINDOW_CREATION_FAILED -1
+#define KEYBOARD_BUFFER_PARSER_CREATION_FAILED -1
 
 struct point2d_int {
 	int x;
@@ -52,6 +54,9 @@ void draw_to_window(int window, unsigned int* buffer, int width, int height);
 
 struct point2d_int get_mouse_cursor_position(int window);
 void set_cursor_rel_window(int window, int x, int y);
+
+int link_keyboard_parse_buffer(int window, char* buffer, int size, int used);
+void unlink_keyboard_parse_buffer(int window, int link);
 
 //keysymbol Mapping
 

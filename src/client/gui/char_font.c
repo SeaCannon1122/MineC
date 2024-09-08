@@ -41,7 +41,7 @@ void print_string(struct char_font* font, char* str, int text_size, unsigned int
 	}
 }
 
-struct gui_character* convert_string_to_gui_string(struct char_font* font, char* str, int text_size) {
+struct gui_character* convert_string_to_gui_string(struct char_font* font, char* str, int text_size, int color) {
 	int length = 0;
 	for (; str[length] != '\0'; length++);
 	length++;
@@ -50,7 +50,7 @@ struct gui_character* convert_string_to_gui_string(struct char_font* font, char*
 
 
 	for (int i = 0; i < length; i++) {
-		gui_str[i].color = 0xffffffff;
+		gui_str[i].color = color;
 		gui_str[i].font = font;
 		gui_str[i].size = text_size;
 		gui_str[i].value = str[i];

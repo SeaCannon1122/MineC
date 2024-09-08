@@ -1,6 +1,9 @@
 #include "keyvalue.h"
 
+#include <string.h>
+
 #include "resource_loader.h"
+
 
 union multi_type get_value_from_key(struct key_value_map* manager, char* key) {
 

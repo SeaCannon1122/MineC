@@ -33,10 +33,10 @@ void add_menu_slider(struct menu_scene* scene, int z, float* state, int x_min, i
 	scene->menu_items_count++;
 }
 
-void add_menu_text_field(struct menu_scene* scene, int z, char* buffer, int buffer_size, int x_min, int x_max, char alignment_x, char alignment_y, char text_alignment) {
+void add_menu_text_field(struct menu_scene* scene, int z, char* buffer, int x_min, int x_max, int y, char alignment_x, char alignment_y, char text_alignment, bool* selected, struct char_font* font) {
 	scene->menu_items[scene->menu_items_count].menu_item_type = MENU_ITEM_TEXT_FIELD;
 	scene->menu_items[scene->menu_items_count].z = z;
-	scene->menu_items[scene->menu_items_count].items.text_field = (struct menu_text_field){ buffer, buffer_size, 0, x_min, x_max, alignment_x, alignment_y, text_alignment };
+	scene->menu_items[scene->menu_items_count].items.text_field = (struct menu_text_field){ buffer, x_min, x_max, y, alignment_x, alignment_y, text_alignment, selected, font };
 	scene->menu_items_count++;
 }
 
@@ -257,6 +257,76 @@ void menu_scene_frame(struct menu_scene* scene, int scale, unsigned int* screen,
 		}
 
 		case MENU_ITEM_TEXT_FIELD: {
+
+			struct menu_text_field* text_field = &(items[i]->items.text_field);
+
+			int x_min_actually = menu_x(text_field->x_min, text_field->alignment_x, scale, width);
+			int x_max_actually = menu_x(text_field->x_max, text_field->alignment_x, scale, width);
+			int y_min_actually = menu_y(text_field->y - 10, text_field->alignment_y, scale, height);
+			int y_max_actually = menu_y(text_field->y + 10, text_field->alignment_y, scale, height);
+
+			int x_min = clamp_int(x_min_actually, 0, width);
+			int x_max = clamp_int(x_max_actually, 0, width);
+			int y_min = clamp_int(y_min_actually, 0, height);
+			int y_max = clamp_int(y_max_actually, 0, height);
+
+			if (click) {
+				if (mouse_x >= x_min && mouse_x < x_max && mouse_y >= y_min && mouse_y < y_max) *text_field->selected = true;
+				else *text_field->selected = false;
+			}
+			
+			int frame_color = 0xffa0a0a0;
+
+			if (*text_field->selected) frame_color = 0xffffffff;
+
+			for (int x = x_min; x < x_max; x++) {
+				for (int y = y_min; y < y_max; y++) {
+
+					if (x >= x_min_actually + scale && x < x_max_actually - scale && y >= y_min_actually + scale && y < y_max_actually - scale) {
+						screen[x + y * width] = 0xff000000;
+					}
+					else screen[x + width * y] = frame_color;
+				}
+			}
+
+			if (text_field->buffer[0] != '\0') {
+				struct gui_character* text = convert_string_to_gui_string(text_field->font, text_field->buffer, 1, 0xffffffff );
+				struct gui_character* text_shadow = convert_string_to_gui_string(text_field->font, text_field->buffer, 1, 0xff3b3b3b);
+
+				int x = 0;
+
+				if (text_field->text_alignment == ALIGNMENT_LEFT) x = text_field->x_min + 3;
+				else if (text_field->text_alignment == ALIGNMENT_MIDDLE) x = (text_field->x_min + text_field->x_min) / 2;
+				else if (text_field->text_alignment == ALIGNMENT_RIGHT) x = text_field->x_max - 3;
+
+				print_gui_string(
+					text_shadow,
+					scale,
+					menu_x(x + 1, text_field->alignment_x, scale, width),
+					menu_y(text_field->y + 1, text_field->alignment_y, scale, height),
+					text_field->text_alignment,
+					screen,
+					width,
+					height
+				);
+
+				print_gui_string(
+					text,
+					scale,
+					menu_x(x, text_field->alignment_x, scale, width),
+					menu_y(text_field->y, text_field->alignment_y, scale, height),
+					text_field->text_alignment,
+					screen,
+					width,
+					height
+				);
+
+				free(text);
+				free(text_shadow);
+
+			}
+
+
 			break;
 		}
 
