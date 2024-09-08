@@ -42,7 +42,7 @@ void run_game_client(struct game_client* game) {
 	while (get_key_state(KEY_MOUSE_LEFT) & 0b1) sleep_for_ms(10);
 
 	while (is_window_active(window) && !game->game_menus.main_menu.quit_game_button_state) {
-		
+
 		int width = get_window_width(window);
 		int height = get_window_height(window);
 		unsigned int* pixels = malloc(width * height * sizeof(unsigned int));

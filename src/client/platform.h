@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-#define MAX_WINDOW_COUNT 1
+#define MAX_WINDOW_COUNT 4
 
 #define WINDOW_CREATION_FAILED -1
 

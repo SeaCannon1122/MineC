@@ -8,7 +8,6 @@
 
 struct {
 	HWND hwnd;
-	HDC hdc;
 	bool active;
 	int window_width;
 	int window_height;
@@ -23,7 +22,7 @@ struct {
 	int height;
 	unsigned char* name;
 	bool done_flag;
-	int window_return;
+	int window_resources_index;
 } next_window;
 
 WNDCLASS wc;
@@ -114,11 +113,11 @@ int create_window(int posx, int posy, int width, int height, unsigned char* name
 	next_window.height = height;
 	next_window.name = name;
 	next_window.done_flag = false;
-	next_window.window_return = next_free_window_index;
+	next_window.window_resources_index = next_free_window_index;
 
 	while (next_window.done_flag == false) Sleep(1);
 
-	return next_window.window_return;
+	return next_free_window_index;
 }
 
 int get_window_width(int window) {
@@ -148,6 +147,8 @@ void draw_to_window(int window, unsigned int* buffer, int width, int height) {
 
 	if (window_resources[window].active == false) return;
 
+	HDC hdc = GetDC(window_resources[window].hwnd);
+
 	BITMAPINFO bitmapInfo;
 
 	bitmapInfo.bmiHeader.biWidth = width;
@@ -157,7 +158,10 @@ void draw_to_window(int window, unsigned int* buffer, int width, int height) {
 	bitmapInfo.bmiHeader.biBitCount = 32;
 	bitmapInfo.bmiHeader.biCompression = BI_RGB;
 
-	SetDIBitsToDevice(window_resources[window].hdc, 0, 0, width, height, 0, 0, 0, height, buffer, &bitmapInfo, DIB_RGB_COLORS);
+	SetDIBitsToDevice(hdc, 0, 0, width, height, 0, 0, 0, height, buffer, &bitmapInfo, DIB_RGB_COLORS);
+
+	ReleaseDC(window_resources[window].hwnd, hdc);
+
 }
 
 struct point2d_int get_mouse_cursor_position(int window) {
@@ -220,11 +224,10 @@ void WindowControl() {
 				NULL
 			);
 
-			window_resources[next_window.window_return].hwnd = window;
-			window_resources[next_window.window_return].hdc = GetDC(window);
-			window_resources[next_window.window_return].active = true;
+			window_resources[next_window.window_resources_index].hwnd = window;
+			window_resources[next_window.window_resources_index].active = true;
 
-			SendMessage(window_resources[next_window.window_return].hwnd, WM_SIZE, 0, 0);
+			SendMessage(window, WM_SIZE, 0, 0);
 			next_window.done_flag = true;
 		}
 
@@ -313,6 +316,7 @@ void platform_init() {
 }
 
 void platform_exit() {
+	for (int i = 0; i < MAX_WINDOW_COUNT; i++) if (window_resources_active[i]) close_window(i);
 	running = false;
 	join_thread(window_control_thread);
 }
