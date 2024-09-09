@@ -27,7 +27,7 @@ void sleep_for_ms(unsigned int time_in_milliseconds);
 
 double get_time();
 
-void* create_thread(void* address, void* args);
+void* create_thread(void (address) (void*), void* args);
 
 void join_thread(void* thread_handle);
 
@@ -50,7 +50,7 @@ bool is_window_active(int window);
 
 void close_window(int window);
 
-void draw_to_window(int window, unsigned int* buffer, int width, int height);
+void draw_to_window(int window, unsigned int* buffer, int width, int height, int scalar);
 
 struct point2d_int get_mouse_cursor_position(int window);
 void set_cursor_rel_window(int window, int x, int y);

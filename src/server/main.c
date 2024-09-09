@@ -1,30 +1,26 @@
-#include <stdio.h>
+#include "game_server_body/game_server.h"
 
-#include "general/networking/server.h"
+#include "general/platformlib/parallel_computing.h"
+#include "general/platformlib/networking.h"
+#include "general/platformlib/platform.h"
 
-#define PORT 8080
-#define BUFFER_SIZE 1024
+int main(int argc, char* argv[]) {
 
-int main() {
-    void* server = server_init(PORT);
-    if (server == NULL) {
-        printf("Failed to initialize server\n");
-        return -1;
-    }
+	platform_init();
+	networking_init();
+	parallel_computing_init();
 
-    server_listen(server);
-    printf("Server listening on port %d\n", PORT);
 
-    server_accept(server);
-    printf("Client connected\n");
+	struct game_server* game = new_game_server("../../../resources/server/resourcelayout.keyvalue");
 
-    char buffer[BUFFER_SIZE] = { 0 };
-    int bytes_received = server_receive(server, buffer, BUFFER_SIZE);
-    if (bytes_received > 0) {
-        printf("Received: %s\n", buffer);
-        server_send(server, "Hello from server");
-    }
+	run_game_server(game);
 
-    server_close(server);
-    return 0;
+	delete_game_server(game);
+
+
+	parallel_computing_exit();
+	networking_exit();
+	platform_exit();
+
+	return 0;
 }

@@ -11,6 +11,10 @@
 
 void init_game_menus(struct game_client* game) {
 
+	game->game_menus.active_menu = MAIN_MENU;
+
+
+
 	struct argb_image* background = get_value_from_key(game->resource_manager, "menu_background").ptr;
 
 	struct argb_image* light_texture = get_value_from_key(game->resource_manager, "menu_button_enabled").ptr;
@@ -62,11 +66,30 @@ void init_game_menus(struct game_client* game) {
 
 	game->game_menus.options_menu.options_text = convert_string_to_gui_string(default_font, "Options", 2, 0xffffffff);
 	game->game_menus.options_menu.fov_text = convert_string_to_gui_string(default_font, "FOV:    ", 1, 0xffffffff);
+
+	game->game_menus.options_menu.fov_text[5].value = (game->settings.fov < 100 ? '\x1f' : digit_to_char(game->settings.fov / 100));
+	game->game_menus.options_menu.fov_text[6].value = (game->settings.fov < 10 ? '\x1f' : digit_to_char((game->settings.fov / 10) % 10));
+	game->game_menus.options_menu.fov_text[7].value = digit_to_char(game->settings.fov % 10);
+
 	game->game_menus.options_menu.render_distance_text = convert_string_to_gui_string(default_font, "Render Distance:    Chunks", 1, 0xffffffff);
-	game->game_menus.options_menu.render_distance_text[17].value = digit_to_char(game->settings.render_distance / 10);
+
+	game->game_menus.options_menu.render_distance_text[17].value = (game->settings.render_distance < 10 ? '\x1f' : digit_to_char(game->settings.render_distance / 10));
 	game->game_menus.options_menu.render_distance_text[18].value = digit_to_char(game->settings.render_distance % 10);
-	game->game_menus.options_menu.gui_scale_text = convert_string_to_gui_string(default_font, "GUI Scale:  ", 1, 0xffffffff);
-	game->game_menus.options_menu.gui_scale_text[11].value = digit_to_char(game->settings.gui_scale);
+
+	game->game_menus.options_menu.gui_scale_text = convert_string_to_gui_string(default_font, "GUI Scale:     ", 1, 0xffffffff);
+
+	if (game->settings.gui_scale > 0) {
+		game->game_menus.options_menu.gui_scale_text[11].value = digit_to_char(game->settings.gui_scale);
+		game->game_menus.options_menu.gui_scale_text[12].value = '\x1f';
+		game->game_menus.options_menu.gui_scale_text[13].value = '\x1f';
+		game->game_menus.options_menu.gui_scale_text[14].value = '\x1f';
+	}
+	else {
+		game->game_menus.options_menu.gui_scale_text[11].value = 'A';
+		game->game_menus.options_menu.gui_scale_text[12].value = 'u';
+		game->game_menus.options_menu.gui_scale_text[13].value = 't';
+		game->game_menus.options_menu.gui_scale_text[14].value = 'o';
+	}
 
 	game->game_menus.options_menu.done_text = convert_string_to_gui_string(default_font, "Done", 1, 0xffffffff);
 

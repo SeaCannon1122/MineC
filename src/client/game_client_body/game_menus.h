@@ -81,6 +81,8 @@ struct game_menus {
 		struct menu_scene menu;
 	} join_game_menu;
 
+
+	int active_menu;
 };
 
 struct game_client;

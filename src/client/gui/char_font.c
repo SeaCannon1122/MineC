@@ -1,13 +1,19 @@
-#include "stdlib.h"
-#include "string.h"
-
 #include "char_font.h"
 
-#include "client/platform.h"
+#include <stdlib.h>
+#include <string.h>
 
-#include "general/argb_image.h"
-#include "general/resource_loader.h"
 #include "general/utils.h"
+
+union char_font_argb_pixel {
+	unsigned int color_value;
+	struct {
+		unsigned char b;
+		unsigned char g;
+		unsigned char r;
+		unsigned char a;
+	} color;
+};
 
 void print_char(struct char_font* font, char c, int text_size, unsigned int color, int x, int y, unsigned int* screen, int width, int height) {
 
@@ -16,14 +22,14 @@ void print_char(struct char_font* font, char c, int text_size, unsigned int colo
 
 			if (font->char_font_entries[c].layout & (1LL << ((i - x) / text_size) + 8 * ((j - y) / text_size)) && i >= 0 && j >= 0) {
 
-				union argb_pixel top;
+				union char_font_argb_pixel top;
 				top.color_value = color;
-				union argb_pixel bottom;
+				union char_font_argb_pixel bottom;
 				bottom.color_value = screen[i + j * width];
 
-				((union argb_pixel*)screen)[i + j * width].color.r = (char)(((unsigned int)top.color.r * (unsigned int)top.color.a + ((unsigned int)0xff - (unsigned int)top.color.a) * (unsigned int)bottom.color.r) / ((unsigned int)0xff));
-				((union argb_pixel*)screen)[i + j * width].color.g = (char)(((unsigned int)top.color.g * (unsigned int)top.color.a + ((unsigned int)0xff - (unsigned int)top.color.a) * (unsigned int)bottom.color.g) / ((unsigned int)0xff));
-				((union argb_pixel*)screen)[i + j * width].color.b = (char)(((unsigned int)top.color.b * (unsigned int)top.color.a + ((unsigned int)0xff - (unsigned int)top.color.a) * (unsigned int)bottom.color.b) / ((unsigned int)0xff));
+				((union char_font_argb_pixel*)screen)[i + j * width].color.r = (char)(((unsigned int)top.color.r * (unsigned int)top.color.a + ((unsigned int)0xff - (unsigned int)top.color.a) * (unsigned int)bottom.color.r) / ((unsigned int)0xff));
+				((union char_font_argb_pixel*)screen)[i + j * width].color.g = (char)(((unsigned int)top.color.g * (unsigned int)top.color.a + ((unsigned int)0xff - (unsigned int)top.color.a) * (unsigned int)bottom.color.g) / ((unsigned int)0xff));
+				((union char_font_argb_pixel*)screen)[i + j * width].color.b = (char)(((unsigned int)top.color.b * (unsigned int)top.color.a + ((unsigned int)0xff - (unsigned int)top.color.a) * (unsigned int)bottom.color.b) / ((unsigned int)0xff));
 			}
 		}
 	}
@@ -37,7 +43,7 @@ void print_string(struct char_font* font, char* str, int text_size, unsigned int
 
 	for (int i = 0; str[i] != '\0'; i++) {
 		print_char(font, str[i], text_size, color, x_pos, y, screen, width, height);
-		x_pos += text_size + text_size * clamp_int(font->char_font_entries[str[i]].width, 0, 8);
+		x_pos += (font->char_font_entries[str[i]].width > 0 ? text_size + text_size * clamp_int(font->char_font_entries[str[i]].width, 0, 8) : 0);
 	}
 }
 
@@ -73,7 +79,7 @@ void print_gui_string( struct gui_character* str, int scale, int x, int y, char 
 
 	for (int i = 0; str[i].value != '\0'; i++) {
 		print_char(str[i].font, str[i].value, scale * str[i].size, str[i].color, x_pos, y - 4 * str[i].size * scale, screen, width, height);
-		x_pos += scale * str[i].size + scale * str[i].size * clamp_int(str[i].font->char_font_entries[str[i].value].width, 0, 8);
+		x_pos += (str[i].font->char_font_entries[str[i].value].width > 0 ? scale * str[i].size + scale * str[i].size * clamp_int(str[i].font->char_font_entries[str[i].value].width, 0, 8) : 0);
 	}
 }
 

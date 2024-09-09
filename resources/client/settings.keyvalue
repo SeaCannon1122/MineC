@@ -1,4 +1,4 @@
 fov i:80
-render_distance i:90
+render_distance i:6
 gui_scale i:2
 resolution_scale i:1

@@ -19,7 +19,7 @@ struct key_value_map* new_resource_manager(char* src_keyvalue) {
 	for (; src_keyvalue[layout_folder_path_size - 1] != '/'; layout_folder_path_size--);
 
 	struct key_value_map* manager = malloc(sizeof(struct key_value_map_entry) * kvm->mappings_count + sizeof(struct key_value_map));
-	manager->mappings = (size_t)manager + sizeof(struct key_value_map);
+	manager->mappings = (void*)((size_t)manager + sizeof(struct key_value_map));
 	manager->mappings_count = kvm->mappings_count;
 
 	for (int i = 0; i < kvm->mappings_count; i++) {

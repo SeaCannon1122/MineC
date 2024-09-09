@@ -43,10 +43,15 @@ def png_to_pixelfont(input_png):
         for i in range(256):
             block = img.crop((i*8, 0, (i+1)*8, 8))  # Crop the 8x8 block
             max_width, layout_bytes = process_8x8_block(block)
+            
+            if i == 31:
+                max_width = 0
 
             # Pack the data: first 8 bytes for max width, then 8 bytes for layout
             f.write(struct.pack('Q', max_width))  # Write max_width as a 64-bit integer
             f.write(layout_bytes)  # Write the 8 bytes of layout
+
+
 
     print(f"Output saved to: {output_pixelfont}")
 

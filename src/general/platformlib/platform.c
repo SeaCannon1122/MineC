@@ -28,7 +28,7 @@ struct {
 	int window_resources_index;
 } next_window;
 
-WNDCLASS wc;
+WNDCLASSW wc;
 
 bool keyStates[256] = { 0 };
 int last_mouse_scroll = 0;
@@ -67,7 +67,7 @@ double get_time() {
 	return (double)1000 * ((double)start.QuadPart / (double)frequency.QuadPart);
 }
 
-void* create_thread(void* address, void* args) {
+void* create_thread(void (address)(void*), void* args) {
 	return CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)address, args, 0, NULL);
 }
 
@@ -144,7 +144,7 @@ void close_window(int window) {
 	window_resources[window].hwnd = NULL;
 }
 
-void draw_to_window(int window, unsigned int* buffer, int width, int height) {
+void draw_to_window(int window, unsigned int* buffer, int width, int height, int scalar) {
 
 	if (window_resources[window].active == false) return;
 
@@ -159,13 +159,16 @@ void draw_to_window(int window, unsigned int* buffer, int width, int height) {
 	bitmapInfo.bmiHeader.biBitCount = 32;
 	bitmapInfo.bmiHeader.biCompression = BI_RGB;
 
-	SetDIBitsToDevice(hdc, 0, 0, width, height, 0, 0, 0, height, buffer, &bitmapInfo, DIB_RGB_COLORS);
+	SetStretchBltMode(hdc, COLORONCOLOR);
+	StretchDIBits(hdc, 0, 0, width * scalar, height * scalar, 0, 0, width, height, buffer, &bitmapInfo, DIB_RGB_COLORS, SRCCOPY);
 
 	ReleaseDC(window_resources[window].hwnd, hdc);
 
 }
 
 struct point2d_int get_mouse_cursor_position(int window) {
+	if (window_resources[window].hwnd != GetForegroundWindow()) return (struct point2d_int) {-1, -1};
+
 	POINT position;
 	GetCursorPos(&position);
 	RECT window_rect;
@@ -330,7 +333,7 @@ void platform_init() {
 	fflush(stderr);
 	fflush(stdin);
 
-	wc = (WNDCLASS) {
+	wc = (WNDCLASSW) {
 		CS_HREDRAW | CS_VREDRAW | CS_CLASSDC,
 		WinProc,
 		0,
@@ -419,7 +422,7 @@ double get_time() {
 	return (double)tv.tv_sec * 1000 + (double)tv.tv_usec / 1000;
 }
 
-void* create_thread(void* address, void* args) {
+void* create_thread(void (address)(void*), void* args) {
 	pthread_t* thread = malloc(sizeof(pthread_t));
 	pthread_create(thread, NULL, (void* (*)(void*))address, args);
 	return thread;
@@ -532,15 +535,15 @@ void close_window(int window) {
 	XDestroyImage(window_resources[window].image);
 }
 
-void draw_to_window(int window, unsigned int* buffer, int width, int height) {
+void draw_to_window(int window, unsigned int* buffer, int width, int height, int scalar) {
 	if (!window_resources[window].active) return;
-	for (int i = 0; i < width && i < display_width; i++) {
-		for (int j = 0; j < height && j < display_height; j++) {
-			window_resources[window].pixels[i + display_width * j] = buffer[i + width * j];
+	for (int i = 0; i < width * scalar && i < display_width; i++) {
+		for (int j = 0; j < height * scalar && j < display_height; j++) {
+			window_resources[window].pixels[i + display_width * j] = buffer[i / scalar + width * (j / scalar)];
 		}
 	}
 
-	XPutImage(display, window_resources[window].window, DefaultGC(display, screen), window_resources[window].image, 0, 0, 0, 0, width, height);
+	XPutImage(display, window_resources[window].window, DefaultGC(display, screen), window_resources[window].image, 0, 0, 0, 0, width * scalar, height * scalar);
 }
 
 struct point2d_int get_mouse_cursor_position(int window) {

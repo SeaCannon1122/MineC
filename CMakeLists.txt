@@ -5,43 +5,45 @@ set(CLIENT_SOURCE_FILES
     src/general/utils.c
     src/client/gui/char_font.c
     src/client/gui/menu.c
-    src/client/platform.c
-    src/client/game_body/game_client.c
-    src/client/game_body/game_menus.c
+    src/client/game_client_body/game_client.c
+    src/client/game_client_body/game_menus.c
     src/client/main.c
     
+    src/general/platformlib/platform.c
+    src/general/platformlib/parallel_computing.c
+    src/general/platformlib/networking.c
+
     src/general/keyvalue.c
     src/general/resource_manager.c
     src/general/resource_loader.c
-    src/general/parallel_computing.c
-    src/general/networking/client.c
+
 )
 
 set(SERVER_SOURCE_FILES
     src/server/main.c
 
-    src/general/utils.c
+    src/general/platformlib/platform.c
+    src/general/platformlib/parallel_computing.c
+    src/general/platformlib/networking.c
+
+    src/general/keyvalue.c
     src/general/resource_manager.c
     src/general/resource_loader.c
-    src/general/parallel_computing.c
-    src/general/networking/server.c
 )
 
 set(TEST_SOURCE_FILES
     
     src/client/gui/char_font.c
     src/client/gui/menu.c
-    src/client/platform.c
     src/test/main.c
     
-    src/general/utils.c
-    src/general/resource_loader.c
+    src/general/platformlib/platform.c
+    src/general/platformlib/parallel_computing.c
+    src/general/platformlib/networking.c
+
+    src/general/keyvalue.c
     src/general/resource_manager.c
-    src/general/parallel_computing.c
-    src/general/networking/client.c
-    src/general/networking/server.c
-    src/general/parallel_computing.c
-    src/general/rng.c
+    src/general/resource_loader.c
 )
 
 include_directories(${PROJECT_SOURCE_DIR}/src)
