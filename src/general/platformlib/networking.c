@@ -12,6 +12,7 @@ initialisation
 #ifdef _WIN32
 #include <winsock2.h>
 #include <windows.h>
+#pragma comment(lib, "ws2_32.lib")
 
 void networking_init() {
     WSADATA wsa;
@@ -42,15 +43,7 @@ server code
 #ifdef _WIN32
 #include <winsock2.h>
 #include <windows.h>
-
-void networking_init() {
-    WSADATA wsa;
-    WSAStartup(MAKEWORD(2, 2), &wsa);
-}
-
-void networking_exit() {
-    WSACleanup();
-}
+#pragma comment(lib, "ws2_32.lib")
 
 void* server_init(int port) {
     SOCKET server_socket;
@@ -88,8 +81,8 @@ void* server_accept(void* server_handle) {
     return (void*)client_socket;
 }
 
-int server_send(void* client_handle, const void* buffer) {
-    return send((SOCKET)client_handle, buffer, strlen((const char*)buffer), 0);
+int server_send(void* client_handle, const void* buffer, int size) {
+    return send((SOCKET)client_handle, buffer, size, 0);
 }
 
 int server_receive(void* client_handle, void* buffer, int size) {
@@ -106,10 +99,6 @@ void server_close(void* handle) {
 #include <netinet/in.h>
 #include <unistd.h>
 #include <arpa/inet.h>
-
-void networking_init() {}
-
-void networking_exit() {}
 
 void* server_init(int port) {
     int server_socket;
@@ -147,8 +136,8 @@ void* server_accept(void* server_handle) {
     return (void*)(intptr_t)client_socket;
 }
 
-int server_send(void* client_handle, const void* buffer) {
-    return send((intptr_t)client_handle, buffer, strlen((const char*)buffer), 0);
+int server_send(void* client_handle, const void* buffer, int size) {
+    return send((intptr_t)client_handle, buffer, size, 0);
 }
 
 int server_receive(void* client_handle, void* buffer, int size) {
@@ -175,6 +164,7 @@ client code
 #ifdef _WIN32
 #include <winsock2.h>
 #include <windows.h>
+#pragma comment(lib, "ws2_32.lib")
 
 void* client_connect(const char* ip, int port) {
     SOCKET client_socket;
@@ -197,8 +187,8 @@ void* client_connect(const char* ip, int port) {
     return (void*)client_socket;
 }
 
-int client_send(void* client_handle, const void* buffer) {
-    return send((SOCKET)client_handle, buffer, strlen((const char*)buffer), 0);
+int client_send(void* client_handle, const void* buffer, int size) {
+    return send((SOCKET)client_handle, buffer, size, 0);
 }
 
 int client_receive(void* client_handle, void* buffer, int size) {
@@ -237,8 +227,8 @@ void* client_connect(const char* ip, int port) {
     return (void*)(intptr_t)client_socket;
 }
 
-int client_send(void* client_handle, const void* buffer) {
-    return send((intptr_t)client_handle, buffer, strlen((const char*)buffer), 0);
+int client_send(void* client_handle, const void* buffer, int size) {
+    return send((intptr_t)client_handle, buffer, size, 0);
 }
 
 int client_receive(void* client_handle, void* buffer, int size) {

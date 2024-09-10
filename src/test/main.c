@@ -1,41 +1,67 @@
+#include "general/platformlib/networking.h"
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include "general/networking/client.h"
+#include "general/platformlib/platform.h"
+#include "general/utils.h"
 
-#define SERVER_IP "127.0.0.1"
-#define SERVER_PORT 12345
-#define BUFFER_SIZE 1024
+#include "game/networking_packets/networking_packets.h"
 
-int main() {
-    client_init();
 
-    void* client_handle = client_connect(SERVER_IP, SERVER_PORT);
-    if (!client_handle) {
-        fprintf(stderr, "Failed to connect to server.\n");
-        client_cleanup();
-        return EXIT_FAILURE;
+void send_packet(void* client_handle, int packet_type, const char* data) {
+
+    int packet_size = 0;
+
+    switch (packet_type) {
+    case NETWORKING_PACKET_MESSAGE_SMALL: packet_size = sizeof(struct networking_packet_message_small); break;
+    case NETWORKING_PACKET_MESSAGE_LARGE: packet_size = sizeof(struct networking_packet_message_large); break;
     }
 
-    char message[BUFFER_SIZE];
-    char response[BUFFER_SIZE];
+    char buffer[4069 + 4];
+    memcpy(buffer, &packet_type, 4); // Set packet type
+    memcpy(buffer + 4, data, packet_size); // Set packet data
 
-    printf("Enter a message to send to the server: ");
-    fgets(message, sizeof(message), stdin);
-    message[strcspn(message, "\n")] = '\0'; // Remove newline character
+    client_send(client_handle, buffer, 4 + packet_size);
+}
 
-    client_send(client_handle, message);
+void* client_thread(void* client_handle) {
+    char buffer[4096];
 
-    int received = client_receive(client_handle, response, sizeof(response) - 1);
-    if (received >= 0) {
-        response[received] = '\0'; // Null-terminate the received message
-        printf("Received response from server: %s\n", response);
-    }
-    else {
-        fprintf(stderr, "Error receiving response from server.\n");
+    int counter = 0;
+
+    char recieve_buffer[4069];
+
+    for (; 1; counter++) {
+        // Example packet sending
+        
+        snprintf(buffer, sizeof(buffer), "small message packet %d", counter);
+
+        send_packet(client_handle, NETWORKING_PACKET_MESSAGE_SMALL, buffer);
+
+        sleep_for_ms(1000);  // Send every 2 seconds
     }
 
     client_close(client_handle);
-    client_cleanup();
-    return EXIT_SUCCESS;
+    return NULL;
+}
+
+int main() {
+    networking_init();
+
+    void* client_handle = client_connect("127.0.0.1", 8080);
+    if (!client_handle) {
+        printf("Failed to connect to server.\n");
+        return 1;
+    }
+
+    printf("Connected to server.\n");
+
+    create_thread(client_thread, client_handle);
+
+    while (1) {
+        sleep_for_ms(5000);  // Keep the main thread alive
+    }
+
+    client_close(client_handle);
+    networking_exit();
+    return 0;
 }

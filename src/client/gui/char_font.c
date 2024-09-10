@@ -66,6 +66,23 @@ struct gui_character* convert_string_to_gui_string(struct char_font* font, char*
 
 }
 
+void convert_string_to_gui_string_in_buffer(struct char_font* font, char* str, int text_size, int color, struct gui_character* buffer, int buffer_length) {
+	int i = 0;
+	for (; i < buffer_length - 1 && str[i] != '\0'; i++) {
+		buffer[i].color = color;
+		buffer[i].font = font;
+		buffer[i].size = text_size;
+		buffer[i].value = str[i];
+	}
+
+	buffer[i].color = color;
+	buffer[i].font = font;
+	buffer[i].size = text_size;
+	buffer[i].value = str[i];
+
+	return;
+}
+
 void print_gui_string( struct gui_character* str, int scale, int x, int y, char alignment, unsigned int* screen, int width, int height) {
 
 	

@@ -27,6 +27,7 @@ void print_char(struct char_font* font, char c, int font_width, unsigned int col
 void print_string(struct char_font* font, char* str, int text_size, unsigned int color, int x, int y, unsigned int* screen, int width, int height);
 
 struct gui_character* convert_string_to_gui_string(struct char_font* font, char* str, int text_size, int color);
+void convert_string_to_gui_string_in_buffer(struct char_font* font, char* str, int text_size, int color, struct gui_character* buffer, int buffer_length);
 
 void print_gui_string(struct gui_character* str, int scale, int x, int y, char alignment, unsigned int* screen, int width, int height);
 

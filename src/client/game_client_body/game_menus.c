@@ -34,10 +34,10 @@ void init_game_menus(struct game_client* game) {
 	game->game_menus.main_menu.quit_game_button_enabled = true;
 	game->game_menus.main_menu.quit_game_button_state = false;
 
-	game->game_menus.main_menu.this_is_not_minecraft_text = convert_string_to_gui_string(default_font, "This is not Minecraft!!!", 4, 0xffffffff);
-	game->game_menus.main_menu.join_game_text = convert_string_to_gui_string(default_font, "Join Game", 1, 0xffffffff);
-	game->game_menus.main_menu.options_text = convert_string_to_gui_string(default_font, "Options...", 1, 0xffffffff);
-	game->game_menus.main_menu.quit_game_text = convert_string_to_gui_string(default_font, "Quit Game", 1, 0xffffffff);
+	convert_string_to_gui_string_in_buffer(default_font, "This is not Minecraft!!!", 4, 0xffffffff, game->game_menus.main_menu.this_is_not_minecraft_text, 25 );
+	convert_string_to_gui_string_in_buffer(default_font, "Join Game", 1, 0xffffffff, game->game_menus.main_menu.join_game_text, 10 );
+	convert_string_to_gui_string_in_buffer(default_font, "Options...", 1, 0xffffffff, game->game_menus.main_menu.options_text, 11 );
+	convert_string_to_gui_string_in_buffer(default_font, "Quit Game", 1, 0xffffffff, game->game_menus.main_menu.quit_game_text, 10);
 
 	add_menu_image(&game->game_menus.main_menu.menu, -1, 0, 0, ALIGNMENT_LEFT, ALIGNMENT_TOP, ALIGNMENT_LEFT, ALIGNMENT_TOP, background, 7);
 
@@ -58,25 +58,25 @@ void init_game_menus(struct game_client* game) {
 
 	game->game_menus.options_menu.done_button_enabled = true;
 	game->game_menus.options_menu.done_button_state = false;
-	game->game_menus.options_menu.fov_slider_state = ((float)game->settings.fov) / ((float)FOV_MAX - (float)FOV_MIN);
+	game->game_menus.options_menu.fov_slider_state = ((float)game->settings.fov - (float)FOV_MIN) / ((float)FOV_MAX - (float)FOV_MIN);
 	game->game_menus.options_menu.render_distance_slider_state = ((float)game->settings.render_distance - (float)RENDER_DISTANCE_MIN) / ((float)RENDER_DISTANCE_MAX - (float)RENDER_DISTANCE_MIN);
 	game->game_menus.options_menu.gui_scale_button_enabled = true;
 	game->game_menus.options_menu.gui_scale_button_state = false;
 	
 
-	game->game_menus.options_menu.options_text = convert_string_to_gui_string(default_font, "Options", 2, 0xffffffff);
-	game->game_menus.options_menu.fov_text = convert_string_to_gui_string(default_font, "FOV:    ", 1, 0xffffffff);
+	convert_string_to_gui_string_in_buffer(default_font, "Options", 2, 0xffffffff, game->game_menus.options_menu.options_text, 8);
+	convert_string_to_gui_string_in_buffer(default_font, "FOV:    ", 1, 0xffffffff, game->game_menus.options_menu.fov_text, 9);
 
 	game->game_menus.options_menu.fov_text[5].value = (game->settings.fov < 100 ? '\x1f' : digit_to_char(game->settings.fov / 100));
 	game->game_menus.options_menu.fov_text[6].value = (game->settings.fov < 10 ? '\x1f' : digit_to_char((game->settings.fov / 10) % 10));
 	game->game_menus.options_menu.fov_text[7].value = digit_to_char(game->settings.fov % 10);
 
-	game->game_menus.options_menu.render_distance_text = convert_string_to_gui_string(default_font, "Render Distance:    Chunks", 1, 0xffffffff);
+	convert_string_to_gui_string_in_buffer(default_font, "Render Distance:    Chunks", 1, 0xffffffff, game->game_menus.options_menu.render_distance_text, 27);
 
 	game->game_menus.options_menu.render_distance_text[17].value = (game->settings.render_distance < 10 ? '\x1f' : digit_to_char(game->settings.render_distance / 10));
 	game->game_menus.options_menu.render_distance_text[18].value = digit_to_char(game->settings.render_distance % 10);
 
-	game->game_menus.options_menu.gui_scale_text = convert_string_to_gui_string(default_font, "GUI Scale:     ", 1, 0xffffffff);
+	convert_string_to_gui_string_in_buffer(default_font, "GUI Scale:     ", 1, 0xffffffff, game->game_menus.options_menu.gui_scale_text, 16);
 
 	if (game->settings.gui_scale > 0) {
 		game->game_menus.options_menu.gui_scale_text[11].value = digit_to_char(game->settings.gui_scale);
@@ -91,7 +91,7 @@ void init_game_menus(struct game_client* game) {
 		game->game_menus.options_menu.gui_scale_text[14].value = 'o';
 	}
 
-	game->game_menus.options_menu.done_text = convert_string_to_gui_string(default_font, "Done", 1, 0xffffffff);
+	convert_string_to_gui_string_in_buffer(default_font, "Done", 1, 0xffffffff, game->game_menus.options_menu.done_text, 5);
 
 	add_menu_image(&game->game_menus.options_menu.menu, -1, 0, 0, ALIGNMENT_LEFT, ALIGNMENT_TOP, ALIGNMENT_LEFT, ALIGNMENT_TOP, background, 7);
 
@@ -124,14 +124,23 @@ void init_game_menus(struct game_client* game) {
 	game->game_menus.join_game_menu.ip_address_box_selected = false;
 	for (int i = 0; i < sizeof(game->game_menus.join_game_menu.port_buffer); i++) game->game_menus.join_game_menu.port_buffer[i] = '\0';
 	game->game_menus.join_game_menu.port_buffer_link = -1;
+	game->game_menus.join_game_menu.port_box_selected = false;
+	for (int i = 0; i < sizeof(game->game_menus.join_game_menu.username_buffer); i++) game->game_menus.join_game_menu.username_buffer[i] = '\0';
+	game->game_menus.join_game_menu.username_buffer_link = -1;
+	game->game_menus.join_game_menu.username_box_selected = false;
+	for (int i = 0; i < sizeof(game->game_menus.join_game_menu.password_buffer); i++) game->game_menus.join_game_menu.password_buffer[i] = '\0';
+	game->game_menus.join_game_menu.password_buffer_link = -1;
+	game->game_menus.join_game_menu.password_box_selected = false;
 
-	game->game_menus.join_game_menu.back_text = convert_string_to_gui_string(default_font, "Back", 1, 0xffffffff);
-	game->game_menus.join_game_menu.join_a_multiplayer_game_text = convert_string_to_gui_string(default_font, "Join a multiplayer game", 2, 0xffffffff);
+	convert_string_to_gui_string_in_buffer(default_font, "Back", 1, 0xffffffff, game->game_menus.join_game_menu.back_text, 5);
+	convert_string_to_gui_string_in_buffer(default_font, "Join a multiplayer game", 2, 0xffffffff, game->game_menus.join_game_menu.join_a_multiplayer_game_text, 24);
 
-	game->game_menus.join_game_menu.ip_address_text = convert_string_to_gui_string(default_font, "IP-address:", 1, 0xffa0a0a0);
-	game->game_menus.join_game_menu.port_text = convert_string_to_gui_string(default_font, "Port:", 1, 0xffa0a0a0);
+	convert_string_to_gui_string_in_buffer(default_font, "IP-address:", 1, 0xffa0a0a0, game->game_menus.join_game_menu.ip_address_text, 12);
+	convert_string_to_gui_string_in_buffer(default_font, "Port:", 1, 0xffa0a0a0, game->game_menus.join_game_menu.port_text, 6);
+	convert_string_to_gui_string_in_buffer(default_font, "Username:", 1, 0xffa0a0a0, game->game_menus.join_game_menu.username_text, 10);
+	convert_string_to_gui_string_in_buffer(default_font, "Password:", 1, 0xffa0a0a0, game->game_menus.join_game_menu.password_text, 10);
 
-	game->game_menus.join_game_menu.join_game_text = convert_string_to_gui_string(default_font, "Join Game", 1, 0xffffffff);
+	convert_string_to_gui_string_in_buffer(default_font, "Join Game", 1, 0xffffffff, game->game_menus.join_game_menu.join_game_text, 10);
 
 	add_menu_image(&game->game_menus.join_game_menu.menu, -1, 0, 0, ALIGNMENT_LEFT, ALIGNMENT_TOP, ALIGNMENT_LEFT, ALIGNMENT_TOP, background, 7);
 
@@ -140,34 +149,25 @@ void init_game_menus(struct game_client* game) {
 	add_menu_label(&game->game_menus.join_game_menu.menu, 11, 0, -15, ALIGNMENT_MIDDLE, ALIGNMENT_BOTTOM, game->game_menus.join_game_menu.back_text, ALIGNMENT_MIDDLE);
 	add_menu_button(&game->game_menus.join_game_menu.menu, 10, &game->game_menus.join_game_menu.back_button_state, -100, -25, 100, -5, ALIGNMENT_MIDDLE, ALIGNMENT_BOTTOM, light_texture, dark_texture, &game->game_menus.join_game_menu.back_button_enabled);
 
-	add_menu_label(&game->game_menus.join_game_menu.menu, 2, -98, -48, ALIGNMENT_MIDDLE, ALIGNMENT_MIDDLE, game->game_menus.join_game_menu.ip_address_text, ALIGNMENT_LEFT);
-	add_menu_text_field(&game->game_menus.join_game_menu.menu, 2, game->game_menus.join_game_menu.ip_address_buffer,  -100, 100, -30, ALIGNMENT_MIDDLE, ALIGNMENT_MIDDLE, ALIGNMENT_LEFT, &game->game_menus.join_game_menu.ip_address_box_selected, default_font);
+	add_menu_label(&game->game_menus.join_game_menu.menu, 2, -123, -48, ALIGNMENT_MIDDLE, ALIGNMENT_MIDDLE, game->game_menus.join_game_menu.ip_address_text, ALIGNMENT_LEFT);
+	add_menu_text_field(&game->game_menus.join_game_menu.menu, 2, game->game_menus.join_game_menu.ip_address_buffer,  -125, 45, -30, ALIGNMENT_MIDDLE, ALIGNMENT_MIDDLE, ALIGNMENT_LEFT, &game->game_menus.join_game_menu.ip_address_box_selected, default_font);
 
-	add_menu_label(&game->game_menus.join_game_menu.menu, 2, -98, -8, ALIGNMENT_MIDDLE, ALIGNMENT_MIDDLE, game->game_menus.join_game_menu.port_text, ALIGNMENT_LEFT);
-	add_menu_text_field(&game->game_menus.join_game_menu.menu, 2, game->game_menus.join_game_menu.port_buffer, -100, 100, 10, ALIGNMENT_MIDDLE, ALIGNMENT_MIDDLE, ALIGNMENT_LEFT, &game->game_menus.join_game_menu.port_box_selected, default_font);
+	add_menu_label(&game->game_menus.join_game_menu.menu, 2, 57, -48, ALIGNMENT_MIDDLE, ALIGNMENT_MIDDLE, game->game_menus.join_game_menu.port_text, ALIGNMENT_LEFT);
+	add_menu_text_field(&game->game_menus.join_game_menu.menu, 2, game->game_menus.join_game_menu.port_buffer, 55, 125, -30, ALIGNMENT_MIDDLE, ALIGNMENT_MIDDLE, ALIGNMENT_LEFT, &game->game_menus.join_game_menu.port_box_selected, default_font);
+
+	add_menu_label(&game->game_menus.join_game_menu.menu, 2, -123, -3, ALIGNMENT_MIDDLE, ALIGNMENT_MIDDLE, game->game_menus.join_game_menu.username_text, ALIGNMENT_LEFT);
+	add_menu_text_field(&game->game_menus.join_game_menu.menu, 2, game->game_menus.join_game_menu.username_buffer, -125, -5, 15, ALIGNMENT_MIDDLE, ALIGNMENT_MIDDLE, ALIGNMENT_LEFT, &game->game_menus.join_game_menu.username_box_selected, default_font);
+
+	add_menu_label(&game->game_menus.join_game_menu.menu, 2, 7, -3, ALIGNMENT_MIDDLE, ALIGNMENT_MIDDLE, game->game_menus.join_game_menu.password_text, ALIGNMENT_LEFT);
+	add_menu_text_field(&game->game_menus.join_game_menu.menu, 2, game->game_menus.join_game_menu.password_buffer, 5, 125, 15, ALIGNMENT_MIDDLE, ALIGNMENT_MIDDLE, ALIGNMENT_LEFT, &game->game_menus.join_game_menu.password_box_selected, default_font);
+
 
 	add_menu_label(&game->game_menus.join_game_menu.menu, 3, 0, 40, ALIGNMENT_MIDDLE, ALIGNMENT_MIDDLE, game->game_menus.join_game_menu.join_game_text, ALIGNMENT_MIDDLE);
 	add_menu_button(&game->game_menus.join_game_menu.menu, 2, &game->game_menus.join_game_menu.join_game_button_state, -100, 30, 100, 50, ALIGNMENT_MIDDLE, ALIGNMENT_MIDDLE, light_texture, dark_texture, &game->game_menus.join_game_menu.join_game_button_enabled);
 
 
-}
-void delete_game_menus(struct game_client* game) {
 
-	free(game->game_menus.main_menu.join_game_text);
-	free(game->game_menus.main_menu.options_text);
-	free(game->game_menus.main_menu.quit_game_text);
-	free(game->game_menus.main_menu.this_is_not_minecraft_text);
 
-	free(game->game_menus.options_menu.options_text);
-	free(game->game_menus.options_menu.render_distance_text);
-	free(game->game_menus.options_menu.fov_text);
-	free(game->game_menus.options_menu.gui_scale_text);
-	free(game->game_menus.options_menu.done_text);
 
-	free(game->game_menus.join_game_menu.back_text);
-	free(game->game_menus.join_game_menu.ip_address_text);
-	free(game->game_menus.join_game_menu.port_text);
-	free(game->game_menus.join_game_menu.join_a_multiplayer_game_text);
-	free(game->game_menus.join_game_menu.join_game_text);
 
 }

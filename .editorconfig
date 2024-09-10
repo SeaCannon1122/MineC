@@ -1,5 +1,0 @@
-root = true
-
-# Unix-style LF line endings for all files
-[*]
-end_of_line = lf

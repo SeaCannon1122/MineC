@@ -12,7 +12,7 @@
 struct game_client {
 	int window;
 	struct key_value_map* resource_manager;
-	void* client_handle;
+	void* network_handle;
 	struct {
 		int render_distance;
 		int fov;

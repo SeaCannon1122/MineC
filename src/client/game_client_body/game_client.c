@@ -29,15 +29,12 @@ struct game_client* new_game_client(char* resource_path) {
 	game->settings.resolution_scale = get_value_from_key(settings_map, "resolution_scale").i;
 	game->settings.fov = get_value_from_key(settings_map, "fov").i;
 
-	game->settings.resolution_scale = 2;
-
 	init_game_menus(game);
 
 	return game;
 }
 
 void run_game_client(struct game_client* game) {
-
 	show_console_window();
 
 	game->window = create_window(200, 100, 1100, 700, "client");
@@ -86,6 +83,7 @@ void run_game_client(struct game_client* game) {
 				game->game_menus.active_menu = MAIN_MENU;
 				break;
 			}
+
 			else if (game->game_menus.options_menu.gui_scale_button_state) {
 				game->game_menus.options_menu.gui_scale_button_state = false;
 				game->settings.gui_scale = (game->settings.gui_scale + 1) % ((width + 350) / 350);
@@ -117,8 +115,43 @@ void run_game_client(struct game_client* game) {
 		case JOIN_GAME_MENU: {
 
 			menu_scene_frame(&game->game_menus.join_game_menu.menu, render_gui_scale, pixels, width, height, mousepos.x, mousepos.y, click);
+
+			//ip address
+			if (game->game_menus.join_game_menu.ip_address_box_selected && game->game_menus.join_game_menu.ip_address_buffer_link == -1) {
+				game->game_menus.join_game_menu.ip_address_buffer_link = link_keyboard_parse_buffer(game->window, game->game_menus.join_game_menu.ip_address_buffer, sizeof(game->game_menus.join_game_menu.ip_address_buffer), string_length(game->game_menus.join_game_menu.ip_address_buffer) - 1);
+			}
+			else if (game->game_menus.join_game_menu.ip_address_box_selected == false && game->game_menus.join_game_menu.ip_address_buffer_link != -1) {
+				unlink_keyboard_parse_buffer(game->window, game->game_menus.join_game_menu.ip_address_buffer_link);
+				game->game_menus.join_game_menu.ip_address_buffer_link = -1;
+			}
+			//port
+			if (game->game_menus.join_game_menu.port_box_selected && game->game_menus.join_game_menu.port_buffer_link == -1) {
+				game->game_menus.join_game_menu.port_buffer_link = link_keyboard_parse_buffer(game->window, game->game_menus.join_game_menu.port_buffer, sizeof(game->game_menus.join_game_menu.port_buffer), string_length(game->game_menus.join_game_menu.port_buffer) - 1);
+			}
+			else if (game->game_menus.join_game_menu.port_box_selected == false && game->game_menus.join_game_menu.port_buffer_link != -1) {
+				unlink_keyboard_parse_buffer(game->window, game->game_menus.join_game_menu.port_buffer_link);
+				game->game_menus.join_game_menu.port_buffer_link = -1;
+			}
+			//username
+			if (game->game_menus.join_game_menu.username_box_selected && game->game_menus.join_game_menu.username_buffer_link == -1) {
+				game->game_menus.join_game_menu.username_buffer_link = link_keyboard_parse_buffer(game->window, game->game_menus.join_game_menu.username_buffer, sizeof(game->game_menus.join_game_menu.username_buffer), string_length(game->game_menus.join_game_menu.username_buffer) - 1);
+			}
+			else if (game->game_menus.join_game_menu.username_box_selected == false && game->game_menus.join_game_menu.username_buffer_link != -1) {
+				unlink_keyboard_parse_buffer(game->window, game->game_menus.join_game_menu.username_buffer_link);
+				game->game_menus.join_game_menu.username_buffer_link = -1;
+			}
+			//password
+			if (game->game_menus.join_game_menu.password_box_selected && game->game_menus.join_game_menu.password_buffer_link == -1) {
+				game->game_menus.join_game_menu.password_buffer_link = link_keyboard_parse_buffer(game->window, game->game_menus.join_game_menu.password_buffer, sizeof(game->game_menus.join_game_menu.password_buffer), string_length(game->game_menus.join_game_menu.password_buffer) - 1);
+			}
+			else if (game->game_menus.join_game_menu.password_box_selected == false && game->game_menus.join_game_menu.password_buffer_link != -1) {
+				unlink_keyboard_parse_buffer(game->window, game->game_menus.join_game_menu.password_buffer_link);
+				game->game_menus.join_game_menu.password_buffer_link = -1;
+			}
+
 			if (game->game_menus.join_game_menu.back_button_state || get_key_state(KEY_ESCAPE) == 0b11) {
 				game->game_menus.join_game_menu.back_button_state = false;
+				game->game_menus.active_menu = MAIN_MENU;
 
 				if (game->game_menus.join_game_menu.ip_address_buffer_link != -1) {
 					unlink_keyboard_parse_buffer(game->window, game->game_menus.join_game_menu.ip_address_buffer_link);
@@ -128,26 +161,25 @@ void run_game_client(struct game_client* game) {
 					unlink_keyboard_parse_buffer(game->window, game->game_menus.join_game_menu.port_buffer_link);
 					game->game_menus.join_game_menu.port_buffer_link = -1;
 				}
-				game->game_menus.active_menu = MAIN_MENU;
+				if (game->game_menus.join_game_menu.username_buffer_link != -1) {
+					unlink_keyboard_parse_buffer(game->window, game->game_menus.join_game_menu.username_buffer_link);
+					game->game_menus.join_game_menu.username_buffer_link = -1;
+				}
+				if (game->game_menus.join_game_menu.password_buffer_link != -1) {
+					unlink_keyboard_parse_buffer(game->window, game->game_menus.join_game_menu.password_buffer_link);
+					game->game_menus.join_game_menu.password_buffer_link = -1;
+				}
+
 				break;
+
 			}
-			if (string_length(game->game_menus.join_game_menu.ip_address_buffer) != 1 && string_length(game->game_menus.join_game_menu.port_buffer) != 1) game->game_menus.join_game_menu.join_game_button_enabled = true;
+
+			else if (game->game_menus.join_game_menu.join_game_button_state);
+
+			if (string_length(game->game_menus.join_game_menu.ip_address_buffer) != 1 && string_length(game->game_menus.join_game_menu.port_buffer) != 1 && string_length(game->game_menus.join_game_menu.username_buffer) != 1 && string_length(game->game_menus.join_game_menu.password_buffer) != 1) game->game_menus.join_game_menu.join_game_button_enabled = true;
 			else game->game_menus.join_game_menu.join_game_button_enabled = false;
 
-			if (game->game_menus.join_game_menu.ip_address_box_selected && game->game_menus.join_game_menu.ip_address_buffer_link == -1) {
-				game->game_menus.join_game_menu.ip_address_buffer_link = link_keyboard_parse_buffer(game->window, game->game_menus.join_game_menu.ip_address_buffer, sizeof(game->game_menus.join_game_menu.ip_address_buffer), string_length(game->game_menus.join_game_menu.ip_address_buffer) - 1);
-			}
-			else if (game->game_menus.join_game_menu.ip_address_box_selected == false && game->game_menus.join_game_menu.ip_address_buffer_link != -1) {
-				unlink_keyboard_parse_buffer(game->window, game->game_menus.join_game_menu.ip_address_buffer_link);
-				game->game_menus.join_game_menu.ip_address_buffer_link = -1;
-			}
-			if (game->game_menus.join_game_menu.port_box_selected && game->game_menus.join_game_menu.port_buffer_link == -1) {
-				game->game_menus.join_game_menu.port_buffer_link = link_keyboard_parse_buffer(game->window, game->game_menus.join_game_menu.port_buffer, sizeof(game->game_menus.join_game_menu.port_buffer), string_length(game->game_menus.join_game_menu.port_buffer) - 1);
-			}
-			else if (game->game_menus.join_game_menu.port_box_selected == false && game->game_menus.join_game_menu.port_buffer_link != -1) {
-				unlink_keyboard_parse_buffer(game->window, game->game_menus.join_game_menu.port_buffer_link);
-				game->game_menus.join_game_menu.port_buffer_link = -1;
-			}
+			
 
 		}
 
@@ -168,6 +200,5 @@ void run_game_client(struct game_client* game) {
 
 void delete_game_client(struct game_client* game) {
 	destroy_resource_manager(game->resource_manager);
-	delete_game_menus(game);
 	free(game);
 }
