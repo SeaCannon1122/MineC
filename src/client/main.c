@@ -10,11 +10,13 @@ int main(int argc, char* argv[]) {
 	networking_init();
 	parallel_computing_init();
 
-	struct game_client* game = new_game_client("resources/client/resourcelayout.keyvalue");
+	struct game_client game;
 
-	run_game_client(game);
+	new_game_client(&game, "resources/client/resourcelayout.keyvalue");
 
-	delete_game_client(game);
+	run_game_client(&game);
+
+	delete_game_client(&game);
 
 
 	parallel_computing_exit();

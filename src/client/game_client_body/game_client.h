@@ -12,7 +12,10 @@
 struct game_client {
 	int window;
 	struct key_value_map* resource_manager;
-	void* network_handle;
+	struct {
+		int requested_networking_state;
+		int networking_state;
+	} networker;
 	struct {
 		int render_distance;
 		int fov;
@@ -22,7 +25,7 @@ struct game_client {
 	struct game_menus game_menus;
 };
 
-struct game_client* new_game_client(char* resource_path);
+void new_game_client(struct game_client* game, char* resource_path);
 
 void run_game_client(struct game_client* game);
 

@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <string.h>
 
 #include <CL/cl.h>
 
@@ -14,12 +15,15 @@ enum arg_types {
     ARG_INT = 2,
     ARG_LONG = 3,
     ARG_FLOAT = 4,
-    ARG_POINTER = 5
+    ARG_DOUBLE = 5,
+    ARG_POINTER = 6,
 };
 
 cl_context context;
 cl_device_id device;
 cl_command_queue queue;
+
+bool double_support = false;
 
 struct program_resources {
     cl_program program;
@@ -49,6 +53,8 @@ exit(1);\
 }\
 } while(0)
 
+
+
 void parallel_computing_init() {
     cl_platform_id platform;
     CL_CALL(clGetPlatformIDs(1, &platform, NULL));
@@ -58,12 +64,21 @@ void parallel_computing_init() {
     CL_OBJECT_CALL(, context, clCreateContext(NULL, 1, &device, NULL, NULL, &err));
 
     CL_OBJECT_CALL(, queue, clCreateCommandQueue(context, device, 0, &err));
+
+    char extensions[1024];
+    clGetDeviceInfo(device, CL_DEVICE_EXTENSIONS, sizeof(extensions), extensions, NULL);
+    if (strstr(extensions, "cl_khr_fp64") != NULL) double_support = true;
 }
 
 void parallel_computing_exit() {
     clReleaseCommandQueue(queue);
     clReleaseContext(context);
 }
+
+bool is_double_supported() {
+    return double_support;
+}
+
 
 void* create_kernel(char* src) {
     struct program_resources* resources = malloc(sizeof(struct program_resources));
@@ -95,6 +110,10 @@ void* create_kernel(char* src) {
             i += 5;
             resources->arg_types[resources->arg_count] = ARG_FLOAT;
         }
+        else if (src[i] == 'd' && src[i + 1] == 'o' && src[i + 2] == 'u' && src[i + 3] == 'b' && src[i + 4] == 'l' && src[i + 5] == 'e') {
+            i += 6;
+            resources->arg_types[resources->arg_count] = ARG_DOUBLE;
+        }
         else {
             for (; src[i] != '*'; i++);
             i++;
@@ -107,6 +126,15 @@ void* create_kernel(char* src) {
     }
 
     i = 0;
+    for (; src[i] != '_'; i++);
+    for (; src[i] != '_'; i++);
+    for (; src[i] != 'k'; i++);
+    for (; src[i] != 'e'; i++);
+    for (; src[i] != 'r'; i++);
+    for (; src[i] != 'n'; i++);
+    for (; src[i] != 'e'; i++);
+    for (; src[i] != 'l'; i++);
+
     for (; src[i] != 'd'; i++);
     i++;
     for (; src[i] == ' '; i++);
@@ -191,6 +219,12 @@ void run_kernel(void* kernel, char dimension, int dim_x, int dim_y, int dim_z, .
             break;
         }
 
+        case ARG_DOUBLE: {
+            double double_arg = va_arg(args, double);
+            CL_CALL(clSetKernelArg(resources->kernel, i, sizeof(double), &double_arg));
+            break;
+        }
+
         case ARG_POINTER: {
             void* pointer_arg = va_arg(args, void*);
             CL_CALL(clSetKernelArg(resources->kernel, i, sizeof(cl_mem), &pointer_arg));
@@ -202,7 +236,7 @@ void run_kernel(void* kernel, char dimension, int dim_x, int dim_y, int dim_z, .
 
     size_t globalItemSize[3] = { dim_x, dim_y, dim_z};
     CL_CALL(clEnqueueNDRangeKernel(queue, resources->kernel, dimension, NULL, globalItemSize, NULL, 0, NULL, NULL));
-        
+
     return;
 }
 

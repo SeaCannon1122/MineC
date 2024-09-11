@@ -1,9 +1,18 @@
 #pragma once
 
-#include "stddef.h"
+#include <stddef.h>
+#include <stdbool.h>
+
+#include <CL/cl.h>
+
+extern cl_context context;
+extern cl_device_id device;
+extern cl_command_queue queue;
 
 void parallel_computing_init();
 void parallel_computing_exit();
+
+bool is_double_supported();
 
 void* create_kernel(char* src);
 void run_kernel(void* kernel, char dimension, int dim_x, int dim_y, int dim_z, ...);

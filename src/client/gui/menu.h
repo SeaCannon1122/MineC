@@ -5,7 +5,7 @@
 #include "general/argb_image.h"
 #include "client/gui/char_font.h"
 
-#define MAX_MENU_ITEMS 64
+#define MAX_MENU_ITEMS 32
 
 enum menu_item_type {
 	MENU_ITEM_LABEL = 0,

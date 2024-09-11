@@ -96,6 +96,11 @@ struct game_menus {
 
 	struct {
 
+		struct gui_character networking_message[64];
+
+		bool back_button_state;
+		bool back_button_enabled;
+		struct gui_character back_text[5];
 
 		struct menu_scene menu;
 	} connection_waiting_menu;
@@ -106,5 +111,7 @@ struct game_menus {
 struct game_client;
 
 void init_game_menus(struct game_client* game);
+
+void game_menus_frame(struct game_client* game, unsigned int* pixels, int width, int height);
 
 #endif // !GAME_MENUS_H

@@ -3,17 +3,14 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "general/resource_manager.h"
+
 #include "general/platformlib/platform.h"
 #include "general/platformlib/networking.h"
 
 #include "game/networking_packets/networking_packets.h"
 
-#define BUFFER_SIZE 1024
-
-struct game_server* new_game_server(char* resource_path) {
-    struct game_server* game = malloc(sizeof(struct game_server));
-    if (game == NULL) return NULL;
-
+void new_game_server(struct game_server* game, char* resource_path) {
     game->resource_manager = new_resource_manager(resource_path);
 }
 

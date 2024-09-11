@@ -9,12 +9,12 @@ int main(int argc, char* argv[]) {
 	networking_init();
 	parallel_computing_init();
 
+	struct game_server game;
+	new_game_server(&game, "../../../resources/server/resourcelayout.keyvalue");
 
-	struct game_server* game = new_game_server("../../../resources/server/resourcelayout.keyvalue");
+	run_game_server(&game);
 
-	run_game_server(game);
-
-	delete_game_server(game);
+	delete_game_server(&game);
 
 
 	parallel_computing_exit();

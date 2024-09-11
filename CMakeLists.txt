@@ -7,6 +7,7 @@ set(CLIENT_SOURCE_FILES
     src/client/gui/menu.c
     src/client/game_client_body/game_client.c
     src/client/game_client_body/game_menus.c
+    src/client/game_client_body/game_client_networker.c
     src/client/main.c
     
     src/general/platformlib/platform.c
@@ -51,7 +52,6 @@ set(TEST_SOURCE_FILES
 
 include_directories(${PROJECT_SOURCE_DIR}/src)
 include_directories(${PROJECT_SOURCE_DIR}/dependencies/stb_image)
-
 include_directories(${PROJECT_SOURCE_DIR}/dependencies/OpenCL/inc)
 link_directories(${PROJECT_SOURCE_DIR}/dependencies/OpenCL/lib)
 
@@ -59,20 +59,26 @@ add_executable(blocks_client ${CLIENT_SOURCE_FILES})
 add_executable(blocks_server ${SERVER_SOURCE_FILES})
 add_executable(blocks_test ${TEST_SOURCE_FILES})
 
-target_compile_definitions(blocks_client PRIVATE CLIENT_COMPILATION)
-target_compile_definitions(blocks_server PRIVATE SERVER_COMPILATION)
 
 target_link_libraries(blocks_client OpenCL)
 target_link_libraries(blocks_server OpenCL)
 target_link_libraries(blocks_test OpenCL)
 
 if(WIN32)
-set_target_properties(blocks_client PROPERTIES
-    LINK_FLAGS "/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup"
-)
+
+    target_link_libraries(blocks_client opengl32)
+
+    set_target_properties(blocks_client PROPERTIES
+        LINK_FLAGS "/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup"
+    )
+
 elseif(UNIX)
+    find_package(OpenGL REQUIRED)
     find_package(X11 REQUIRED)
-    target_link_libraries(blocks_client X11 pthread m)
+    
+    include_directories(${OPENGL_INCLUDE_DIRS} ${X11_INCLUDE_DIR})
+
+    target_link_libraries(blocks_client ${OPENGL_LIBRARIES} X11 pthread m)
     target_link_libraries(blocks_server pthread m)
     target_link_libraries(blocks_test pthread m)
 endif()
