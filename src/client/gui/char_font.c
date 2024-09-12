@@ -104,7 +104,7 @@ int gui_text_width(struct gui_character* str) {
 	int total_width = 0;
 	int i = 0;
 	for (; str[i].value != '\0'; i++) {
-		total_width += str[i].size * (1 + str[i].font->char_font_entries[str[i].value].width);
+		total_width += str[i].size * (str[i].font->char_font_entries[str[i].value].width ? (1 + str[i].font->char_font_entries[str[i].value].width) : 0);
 	}
 	if(i != 0) total_width -= str[i].size;
 	return total_width;

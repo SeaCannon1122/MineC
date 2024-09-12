@@ -59,6 +59,8 @@ void* handle_client(void* client_handle) {
 
 void run_game_server(struct game_server* game) {
 
+    bool interrupt = false;
+
     void* server_handle = server_init(8080);
     if (!server_handle) {
         printf("Failed to initialize server.\n");
@@ -68,7 +70,7 @@ void run_game_server(struct game_server* game) {
     printf("Server started on port 8080.\n");
 
     while (!get_key_state(KEY_ESCAPE)) {
-        void* client_handle = server_accept(server_handle);
+        void* client_handle = server_accept(server_handle, &interrupt);
         if (!client_handle) {
             printf("Failed to accept client.\n");
             continue;

@@ -1,13 +1,10 @@
 #include "networking.h"
 #include <stdio.h>
-
-
-
+#include <stdbool.h>
 
 /*
 initialisation
 */
-
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -31,14 +28,9 @@ void networking_exit() {}
 
 #endif
 
-
-
-
-
 /*
 server code
 */
-
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -50,7 +42,7 @@ void* server_init(int port) {
     struct sockaddr_in server_addr;
 
     if ((server_socket = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET) {
-        printf("Could not create socket.\n");
+        if (NETWORKING_VERBOSE) printf("Could not create socket.\n");
         return NULL;
     }
 
@@ -59,7 +51,7 @@ void* server_init(int port) {
     server_addr.sin_port = htons(port);
 
     if (bind(server_socket, (struct sockaddr*)&server_addr, sizeof(server_addr)) == SOCKET_ERROR) {
-        printf("Bind failed.\n");
+        if (NETWORKING_VERBOSE) printf("Bind failed.\n");
         return NULL;
     }
 
@@ -67,18 +59,36 @@ void* server_init(int port) {
     return (void*)server_socket;
 }
 
-void* server_accept(void* server_handle) {
+void* server_accept(void* server_handle, bool* interrupt) {
     SOCKET client_socket;
     struct sockaddr_in client_addr;
     int addr_len = sizeof(struct sockaddr_in);
 
-    client_socket = accept((SOCKET)server_handle, (struct sockaddr*)&client_addr, &addr_len);
-    if (client_socket == INVALID_SOCKET) {
-        printf("Accept failed.\n");
-        return NULL;
-    }
+    fd_set readfds;
+    struct timeval timeout;
 
-    return (void*)client_socket;
+    while (true) {
+        if (*interrupt) {
+            if (NETWORKING_VERBOSE) printf("Server accept interrupted.\n");
+            return NULL;
+        }
+
+        FD_ZERO(&readfds);
+        FD_SET((SOCKET)server_handle, &readfds);
+        timeout.tv_sec = 0;
+        timeout.tv_usec = 100000;  // 100 ms
+
+        int activity = select(0, &readfds, NULL, NULL, &timeout);
+
+        if (activity > 0 && FD_ISSET((SOCKET)server_handle, &readfds)) {
+            client_socket = accept((SOCKET)server_handle, (struct sockaddr*)&client_addr, &addr_len);
+            if (client_socket == INVALID_SOCKET) {
+                if (NETWORKING_VERBOSE) printf("Accept failed.\n");
+                return NULL;
+            }
+            return (void*)client_socket;
+        }
+    }
 }
 
 int server_send(void* client_handle, const void* buffer, int size) {
@@ -105,7 +115,7 @@ void* server_init(int port) {
     struct sockaddr_in server_addr;
 
     if ((server_socket = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-        perror("Could not create socket");
+        if (NETWORKING_VERBOSE) perror("Could not create socket");
         return NULL;
     }
 
@@ -114,7 +124,7 @@ void* server_init(int port) {
     server_addr.sin_port = htons(port);
 
     if (bind(server_socket, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
-        perror("Bind failed");
+        if (NETWORKING_VERBOSE) perror("Bind failed");
         return NULL;
     }
 
@@ -122,18 +132,36 @@ void* server_init(int port) {
     return (void*)(intptr_t)server_socket;
 }
 
-void* server_accept(void* server_handle) {
+void* server_accept(void* server_handle, bool* interrupt) {
     int client_socket;
     struct sockaddr_in client_addr;
     socklen_t addr_len = sizeof(struct sockaddr_in);
 
-    client_socket = accept((intptr_t)server_handle, (struct sockaddr*)&client_addr, &addr_len);
-    if (client_socket < 0) {
-        perror("Accept failed");
-        return NULL;
-    }
+    fd_set readfds;
+    struct timeval timeout;
 
-    return (void*)(intptr_t)client_socket;
+    while (true) {
+        if (*interrupt) {
+            if (NETWORKING_VERBOSE) printf("Server accept interrupted.\n");
+            return NULL;
+        }
+
+        FD_ZERO(&readfds);
+        FD_SET((intptr_t)server_handle, &readfds);
+        timeout.tv_sec = 0;
+        timeout.tv_usec = 100000;  // 100 ms
+
+        int activity = select((intptr_t)server_handle + 1, &readfds, NULL, NULL, &timeout);
+
+        if (activity > 0 && FD_ISSET((intptr_t)server_handle, &readfds)) {
+            client_socket = accept((intptr_t)server_handle, (struct sockaddr*)&client_addr, &addr_len);
+            if (client_socket < 0) {
+                if (NETWORKING_VERBOSE) perror("Accept failed");
+                return NULL;
+            }
+            return (void*)(intptr_t)client_socket;
+        }
+    }
 }
 
 int server_send(void* client_handle, const void* buffer, int size) {
@@ -150,28 +178,21 @@ void server_close(void* handle) {
 
 #endif
 
-
-
-
-
-
-
 /*
 client code
 */
-
 
 #ifdef _WIN32
 #include <winsock2.h>
 #include <windows.h>
 #pragma comment(lib, "ws2_32.lib")
 
-void* client_connect(const char* ip, int port) {
+void* client_connect(const char* ip, int port, bool* interrupt) {
     SOCKET client_socket;
     struct sockaddr_in server_addr;
 
     if ((client_socket = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET) {
-        printf("Could not create socket.\n");
+        if (NETWORKING_VERBOSE) printf("Could not create socket.\n");
         return NULL;
     }
 
@@ -179,12 +200,36 @@ void* client_connect(const char* ip, int port) {
     server_addr.sin_addr.s_addr = inet_addr(ip);
     server_addr.sin_port = htons(port);
 
-    if (connect(client_socket, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
-        printf("Connection failed.\n");
+    u_long mode = 1;
+    ioctlsocket(client_socket, FIONBIO, &mode);  // Set non-blocking
+
+    if (connect(client_socket, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0 && WSAGetLastError() != WSAEWOULDBLOCK) {
+        if (NETWORKING_VERBOSE) printf("Connection failed.\n");
         return NULL;
     }
 
-    return (void*)client_socket;
+    fd_set writefds;
+    struct timeval timeout;
+
+    while (true) {
+        if (*interrupt) {
+            if (NETWORKING_VERBOSE) printf("Client connect interrupted.\n");
+            closesocket(client_socket);
+            return NULL;
+        }
+
+        FD_ZERO(&writefds);
+        FD_SET(client_socket, &writefds);
+        timeout.tv_sec = 0;
+        timeout.tv_usec = 100000;  // 100 ms
+
+        int activity = select(0, NULL, &writefds, NULL, &timeout);
+
+        if (activity > 0 && FD_ISSET(client_socket, &writefds)) {
+            // Connection successful
+            return (void*)client_socket;
+        }
+    }
 }
 
 int client_send(void* client_handle, const void* buffer, int size) {
@@ -206,12 +251,12 @@ void client_close(void* handle) {
 #include <unistd.h>
 #include <arpa/inet.h>
 
-void* client_connect(const char* ip, int port) {
+void* client_connect(const char* ip, int port, bool* interrupt) {
     int client_socket;
     struct sockaddr_in server_addr;
 
     if ((client_socket = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-        perror("Could not create socket");
+        if (NETWORKING_VERBOSE) perror("Could not create socket");
         return NULL;
     }
 
@@ -219,12 +264,35 @@ void* client_connect(const char* ip, int port) {
     server_addr.sin_addr.s_addr = inet_addr(ip);
     server_addr.sin_port = htons(port);
 
-    if (connect(client_socket, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
-        perror("Connection failed");
+    fcntl(client_socket, F_SETFL, O_NONBLOCK);  // Set non-blocking
+
+    if (connect(client_socket, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0 && errno != EINPROGRESS) {
+        if (NETWORKING_VERBOSE) perror("Connection failed");
         return NULL;
     }
 
-    return (void*)(intptr_t)client_socket;
+    fd_set writefds;
+    struct timeval timeout;
+
+    while (true) {
+        if (*interrupt) {
+            if (NETWORKING_VERBOSE) printf("Client connect interrupted.\n");
+            close(client_socket);
+            return NULL;
+        }
+
+        FD_ZERO(&writefds);
+        FD_SET(client_socket, &writefds);
+        timeout.tv_sec = 0;
+        timeout.tv_usec = 100000;  // 100 ms
+
+        int activity = select(client_socket + 1, NULL, &writefds, NULL, &timeout);
+
+        if (activity > 0 && FD_ISSET(client_socket, &writefds)) {
+            // Connection successful
+            return (void*)(intptr_t)client_socket;
+        }
+    }
 }
 
 int client_send(void* client_handle, const void* buffer, int size) {

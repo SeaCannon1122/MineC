@@ -25,11 +25,11 @@ int string_to_int(char* src, int length) {
 	int i = 0;
 	if (src[0] == '-') { sign = -1; i++; }
 
-	for (; i < length; i++) {
+	for (; i < length && src[i] != '\0'; i++) {
 		integer *= 10;
 
 		if (src[i] < '0' || src[i] > '9') return 0;
-		integer += src[i] - '0';
+		integer += clamp_int(src[i] - '0', 0, 9);
 	}
 
 	return integer * sign;

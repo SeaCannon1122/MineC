@@ -15,6 +15,7 @@
 #include "client/gui/menu.h"
 #include "game_menus.h"
 #include "game_client_networker.h"
+#include "debug.h"
 
 void new_game_client(struct game_client* game, char* resource_path) {
 
@@ -27,8 +28,11 @@ void new_game_client(struct game_client* game, char* resource_path) {
 	game->settings.resolution_scale = get_value_from_key(settings_map, "resolution_scale").i;
 	game->settings.fov = get_value_from_key(settings_map, "fov").i;
 
+	game->running = false;
+
 	init_game_menus(game);
 	init_networker(game);
+	debug_init(game);
 
 	return game;
 }
@@ -36,7 +40,12 @@ void new_game_client(struct game_client* game, char* resource_path) {
 void run_game_client(struct game_client* game) {
 	show_console_window();
 
+	game->running = true;
+
 	game->window = create_window(200, 100, 1100, 700, "client");
+
+	void* networking_thread = create_thread(networker_thread, game);
+	//void* rendering_thread;
 
 	while (get_key_state(KEY_MOUSE_LEFT) & 0b1) sleep_for_ms(10);
 
@@ -52,7 +61,32 @@ void run_game_client(struct game_client* game) {
 		
 		game_menus_frame(game, pixels, width, height);
 
-		
+		switch (game->game_flag)
+		{
+
+		case SHOULD_CONNECT: {
+			game->networker.port = string_to_int(game->game_menus.join_game_menu.port_buffer, sizeof(game->game_menus.join_game_menu.port_buffer) - 1);
+			for (int i = 0; i < 16; i++) game->networker.ip[i] = game->game_menus.join_game_menu.ip_address_buffer[i];
+			game->networker.request = CONNECT_TO_SERVER;
+			break;
+		}
+
+		case SHOULD_ABORT_CONNECTING: {
+			int port = -1;
+			for (int i = 0; i < 16; i++) game->networker.ip[i] = '\0';
+			game->networker.close_connection_flag = true;
+			break;
+		}
+
+			
+
+		default:
+			break;
+		}
+
+		game->game_flag = NULL_FLAG;
+
+
 		draw_to_window(game->window, pixels, width, height, game->settings.resolution_scale);
 
 		free(pixels);
@@ -60,7 +94,15 @@ void run_game_client(struct game_client* game) {
 		sleep_for_ms(10);
 	}
 
+
+
 	close_window(game->window);
+
+	game->running = false;
+
+	//join_thread(rendering_thread);
+	join_thread(networking_thread);
+
 
 	return;
 }

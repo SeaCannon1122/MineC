@@ -61,11 +61,11 @@ struct game_menus {
 
 		struct gui_character ip_address_text[12];
 
-		char ip_address_buffer[16 + 1];
+		char ip_address_buffer[15 + 1];
 		bool ip_address_box_selected;
 		int ip_address_buffer_link;
 
-		struct gui_character port_text[6];
+		struct gui_character port_text[5 + 1];
 
 		char port_buffer[5 + 1];
 		bool port_box_selected;

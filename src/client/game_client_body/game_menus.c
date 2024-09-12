@@ -8,6 +8,7 @@
 #include "client/gui/char_font.h"
 #include "client/gui/menu.h"
 #include "game_client.h"
+#include "game_client_networker.h"
 
 
 void init_game_menus(struct game_client* game) {
@@ -176,7 +177,7 @@ void init_game_menus(struct game_client* game) {
 	game->game_menus.connection_waiting_menu.back_button_state = false;
 
 	convert_string_to_gui_string_in_buffer(default_font, "Back", 1, 0xffffffff, game->game_menus.connection_waiting_menu.back_text, 5);
-	convert_string_to_gui_string_in_buffer(default_font, "                                                               ", 2, 0xffffffff, game->game_menus.connection_waiting_menu.networking_message, 64);
+	convert_string_to_gui_string_in_buffer(default_font, "                                                               ", 1, 0xffffffff, game->game_menus.connection_waiting_menu.networking_message, 64);
 
 	for(int i = 0; i < 63; i++) game->game_menus.connection_waiting_menu.networking_message[i].value = '\x1f';
 
@@ -342,10 +343,10 @@ void game_menus_frame(struct game_client* game, unsigned int* pixels, int width,
 				game->game_menus.join_game_menu.password_buffer_link = -1;
 			}
 
+			game->game_flag = SHOULD_CONNECT;
+
 			break;
 		}
-
-		else if (game->game_menus.join_game_menu.join_game_button_state);
 
 		if (string_length(game->game_menus.join_game_menu.ip_address_buffer) != 1 && string_length(game->game_menus.join_game_menu.port_buffer) != 1 && string_length(game->game_menus.join_game_menu.username_buffer) != 1 && string_length(game->game_menus.join_game_menu.password_buffer) != 1) game->game_menus.join_game_menu.join_game_button_enabled = true;
 		else game->game_menus.join_game_menu.join_game_button_enabled = false;
@@ -357,9 +358,55 @@ void game_menus_frame(struct game_client* game, unsigned int* pixels, int width,
 	case CONNECTION_WAITING_MENU: {
 		menu_scene_frame(&game->game_menus.connection_waiting_menu.menu, render_gui_scale, pixels, width, height, mousepos.x, mousepos.y, click);
 
+		switch (game->networker.message)
+		{
+
+		case NETWORKER_MESSAGE_CONNECTING: {
+			for (int i = 0; i < 63; i++) game->game_menus.connection_waiting_menu.networking_message[i].value = '\x1f';
+			game->game_menus.connection_waiting_menu.networking_message[0].value = 'C';
+			game->game_menus.connection_waiting_menu.networking_message[1].value = 'o';
+			game->game_menus.connection_waiting_menu.networking_message[2].value = 'n';
+			game->game_menus.connection_waiting_menu.networking_message[3].value = 'n';
+			game->game_menus.connection_waiting_menu.networking_message[4].value = 'e';
+			game->game_menus.connection_waiting_menu.networking_message[5].value = 'c';
+			game->game_menus.connection_waiting_menu.networking_message[6].value = 't';
+			game->game_menus.connection_waiting_menu.networking_message[7].value = 'i';
+			game->game_menus.connection_waiting_menu.networking_message[8].value = 'n';
+			game->game_menus.connection_waiting_menu.networking_message[9].value = 'g';
+			game->game_menus.connection_waiting_menu.networking_message[10].value = '.';
+			game->game_menus.connection_waiting_menu.networking_message[11].value = '.';
+			game->game_menus.connection_waiting_menu.networking_message[12].value = '.';
+
+		} break;
+
+		case NETWORKER_MESSAGE_CONNECTION_FAILED: {
+			for (int i = 0; i < 63; i++) game->game_menus.connection_waiting_menu.networking_message[i].value = '\x1f';
+			game->game_menus.connection_waiting_menu.networking_message[0].value = 'C';
+			game->game_menus.connection_waiting_menu.networking_message[1].value = 'o';
+			game->game_menus.connection_waiting_menu.networking_message[2].value = 'n';
+			game->game_menus.connection_waiting_menu.networking_message[3].value = 'n';
+			game->game_menus.connection_waiting_menu.networking_message[4].value = 'e';
+			game->game_menus.connection_waiting_menu.networking_message[5].value = 'c';
+			game->game_menus.connection_waiting_menu.networking_message[6].value = 't';
+			game->game_menus.connection_waiting_menu.networking_message[7].value = 'i';
+			game->game_menus.connection_waiting_menu.networking_message[8].value = 'o';
+			game->game_menus.connection_waiting_menu.networking_message[9].value = 'n';
+			game->game_menus.connection_waiting_menu.networking_message[10].value = ' ';
+			game->game_menus.connection_waiting_menu.networking_message[11].value = 'f';
+			game->game_menus.connection_waiting_menu.networking_message[12].value = 'a';
+			game->game_menus.connection_waiting_menu.networking_message[13].value = 'i';
+			game->game_menus.connection_waiting_menu.networking_message[14].value = 'l';
+			game->game_menus.connection_waiting_menu.networking_message[15].value = 'e';
+			game->game_menus.connection_waiting_menu.networking_message[16].value = 'd';
+		}
+
+		}
+
 		if (game->game_menus.connection_waiting_menu.back_button_state) {
 			game->game_menus.connection_waiting_menu.back_button_state = false;
 			game->game_menus.active_menu = JOIN_GAME_MENU;
+			game->game_flag = SHOULD_ABORT_CONNECTING;
+
 			break;
 		}
 

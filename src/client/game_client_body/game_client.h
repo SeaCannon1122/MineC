@@ -9,13 +9,26 @@
 #define RENDER_DISTANCE_MIN 2
 #define RENDER_DISTANCE_MAX 32
 
+enum game_request {
+	NULL_FLAG,
+	SHOULD_CONNECT,
+	SHOULD_ABORT_CONNECTING,
+};
+
 struct game_client {
+	bool running;
 	int window;
 	struct key_value_map* resource_manager;
 	struct {
-		int requested_networking_state;
-		int networking_state;
+		void* network_handle;
+		int status;
+		int message;
+		int request;
+		int port;
+		char ip[15 + 1];
+		bool close_connection_flag;
 	} networker;
+	int game_flag;
 	struct {
 		int render_distance;
 		int fov;
