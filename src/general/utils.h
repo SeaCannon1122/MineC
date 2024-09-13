@@ -1,5 +1,7 @@
 #pragma once
 
+#define parse_string_into_gui_string(src, gui_str) { char psigs[] = src; for(int i = 0; psigs[i] != '\0'; i++) gui_str[i].value = psigs[i];}
+
 int clamp_int(int val, int min, int max);
 float clamp_float(float val, float min, float max);
 

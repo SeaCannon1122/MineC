@@ -2,12 +2,7 @@
 
 #include "general/keyvalue.h"
 #include "game_menus.h"
-
-#define FOV_MIN 30
-#define FOV_MAX 120
-
-#define RENDER_DISTANCE_MIN 2
-#define RENDER_DISTANCE_MAX 32
+#include "game/game_constants.h"
 
 enum game_request {
 	NULL_FLAG,
@@ -26,6 +21,8 @@ struct game_client {
 		int request;
 		int port;
 		char ip[15 + 1];
+		char username[MAX_USERNAME_LENGTH + 1];
+		char password[MAX_PASSWORD_LENGTH + 1];
 		bool close_connection_flag;
 	} networker;
 	int game_flag;

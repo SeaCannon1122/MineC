@@ -363,49 +363,26 @@ void game_menus_frame(struct game_client* game, unsigned int* pixels, int width,
 
 		case NETWORKER_MESSAGE_CONNECTING: {
 			for (int i = 0; i < 63; i++) game->game_menus.connection_waiting_menu.networking_message[i].value = '\x1f';
-			game->game_menus.connection_waiting_menu.networking_message[0].value = 'C';
-			game->game_menus.connection_waiting_menu.networking_message[1].value = 'o';
-			game->game_menus.connection_waiting_menu.networking_message[2].value = 'n';
-			game->game_menus.connection_waiting_menu.networking_message[3].value = 'n';
-			game->game_menus.connection_waiting_menu.networking_message[4].value = 'e';
-			game->game_menus.connection_waiting_menu.networking_message[5].value = 'c';
-			game->game_menus.connection_waiting_menu.networking_message[6].value = 't';
-			game->game_menus.connection_waiting_menu.networking_message[7].value = 'i';
-			game->game_menus.connection_waiting_menu.networking_message[8].value = 'n';
-			game->game_menus.connection_waiting_menu.networking_message[9].value = 'g';
-			game->game_menus.connection_waiting_menu.networking_message[10].value = '.';
-			game->game_menus.connection_waiting_menu.networking_message[11].value = '.';
-			game->game_menus.connection_waiting_menu.networking_message[12].value = '.';
+			parse_string_into_gui_string("Connecting...", game->game_menus.connection_waiting_menu.networking_message);
 
 		} break;
 
 		case NETWORKER_MESSAGE_CONNECTION_FAILED: {
 			for (int i = 0; i < 63; i++) game->game_menus.connection_waiting_menu.networking_message[i].value = '\x1f';
-			game->game_menus.connection_waiting_menu.networking_message[0].value = 'C';
-			game->game_menus.connection_waiting_menu.networking_message[1].value = 'o';
-			game->game_menus.connection_waiting_menu.networking_message[2].value = 'n';
-			game->game_menus.connection_waiting_menu.networking_message[3].value = 'n';
-			game->game_menus.connection_waiting_menu.networking_message[4].value = 'e';
-			game->game_menus.connection_waiting_menu.networking_message[5].value = 'c';
-			game->game_menus.connection_waiting_menu.networking_message[6].value = 't';
-			game->game_menus.connection_waiting_menu.networking_message[7].value = 'i';
-			game->game_menus.connection_waiting_menu.networking_message[8].value = 'o';
-			game->game_menus.connection_waiting_menu.networking_message[9].value = 'n';
-			game->game_menus.connection_waiting_menu.networking_message[10].value = ' ';
-			game->game_menus.connection_waiting_menu.networking_message[11].value = 'f';
-			game->game_menus.connection_waiting_menu.networking_message[12].value = 'a';
-			game->game_menus.connection_waiting_menu.networking_message[13].value = 'i';
-			game->game_menus.connection_waiting_menu.networking_message[14].value = 'l';
-			game->game_menus.connection_waiting_menu.networking_message[15].value = 'e';
-			game->game_menus.connection_waiting_menu.networking_message[16].value = 'd';
-		}
+			parse_string_into_gui_string("Connection failed", game->game_menus.connection_waiting_menu.networking_message);
+		} break;
+
+		case NETWORKER_MESSAGE_AUTHENTICATING: {
+			for (int i = 0; i < 63; i++) game->game_menus.connection_waiting_menu.networking_message[i].value = '\x1f';
+			parse_string_into_gui_string("Authenticating...", game->game_menus.connection_waiting_menu.networking_message);
+		} break;
 
 		}
 
 		if (game->game_menus.connection_waiting_menu.back_button_state) {
 			game->game_menus.connection_waiting_menu.back_button_state = false;
 			game->game_menus.active_menu = JOIN_GAME_MENU;
-			game->game_flag = SHOULD_ABORT_CONNECTING;
+			game->game_flag = SHOULD_ABORT_CONNECTING; 
 
 			break;
 		}

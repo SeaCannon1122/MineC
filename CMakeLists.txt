@@ -80,8 +80,8 @@ elseif(UNIX)
     include_directories(${OPENGL_INCLUDE_DIRS} ${X11_INCLUDE_DIR})
 
     target_link_libraries(blocks_client ${OPENGL_LIBRARIES} X11 pthread m)
-    target_link_libraries(blocks_server pthread m)
-    target_link_libraries(blocks_test pthread m)
+    target_link_libraries(blocks_server ${OPENGL_LIBRARIES} X11 pthread m)
+    target_link_libraries(blocks_test ${OPENGL_LIBRARIES} X11 pthread m)
 endif()
 
 set(RESOURCE_DIRECTORY "${CMAKE_SOURCE_DIR}/resources")

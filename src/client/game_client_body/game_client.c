@@ -33,8 +33,6 @@ void new_game_client(struct game_client* game, char* resource_path) {
 	init_game_menus(game);
 	init_networker(game);
 	debug_init(game);
-
-	return game;
 }
 
 void run_game_client(struct game_client* game) {
@@ -44,7 +42,7 @@ void run_game_client(struct game_client* game) {
 
 	game->window = create_window(200, 100, 1100, 700, "client");
 
-	void* networking_thread = create_thread(networker_thread, game);
+	void* networking_thread = create_thread((void(*)(void*))networker_thread, game);
 	//void* rendering_thread;
 
 	while (get_key_state(KEY_MOUSE_LEFT) & 0b1) sleep_for_ms(10);
@@ -58,6 +56,7 @@ void run_game_client(struct game_client* game) {
 		int height = (get_window_height(game->window) + game->settings.resolution_scale - 1) / game->settings.resolution_scale;
 		unsigned int* pixels = malloc(width * height * sizeof(unsigned int));
 
+		//render_ingame_frame(game, pixels, width, height);
 		
 		game_menus_frame(game, pixels, width, height);
 
@@ -65,15 +64,16 @@ void run_game_client(struct game_client* game) {
 		{
 
 		case SHOULD_CONNECT: {
-			game->networker.port = string_to_int(game->game_menus.join_game_menu.port_buffer, sizeof(game->game_menus.join_game_menu.port_buffer) - 1);
-			for (int i = 0; i < 16; i++) game->networker.ip[i] = game->game_menus.join_game_menu.ip_address_buffer[i];
-			game->networker.request = CONNECT_TO_SERVER;
-			break;
-		}
+			if(game->networker.status == NETWORK_INACTIVE) {
+				game->networker.port = string_to_int(game->game_menus.join_game_menu.port_buffer, sizeof(game->game_menus.join_game_menu.port_buffer) - 1);
+				for (int i = 0; i < 16; i++) game->networker.ip[i] = game->game_menus.join_game_menu.ip_address_buffer[i];
+				for (int i = 0; i < MAX_USERNAME_LENGTH; i++) game->networker.username[i] = game->game_menus.join_game_menu.username_buffer[i];
+				for (int i = 0; i < MAX_PASSWORD_LENGTH; i++) game->networker.password[i] = game->game_menus.join_game_menu.password_buffer[i];
+				game->networker.request = CONNECT_TO_SERVER;
+			}
+		} break;
 
 		case SHOULD_ABORT_CONNECTING: {
-			int port = -1;
-			for (int i = 0; i < 16; i++) game->networker.ip[i] = '\0';
 			game->networker.close_connection_flag = true;
 			break;
 		}

@@ -1,0 +1,10 @@
+#pragma omnce 
+
+#define FOV_MIN 30
+#define FOV_MAX 120
+
+#define RENDER_DISTANCE_MIN 2
+#define RENDER_DISTANCE_MAX 32
+
+#define MAX_USERNAME_LENGTH 16
+#define MAX_PASSWORD_LENGTH 16

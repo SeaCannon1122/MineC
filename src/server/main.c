@@ -6,6 +6,7 @@
 
 int main(int argc, char* argv[]) {
 
+	platform_init();
 	networking_init();
 	parallel_computing_init();
 
@@ -16,9 +17,9 @@ int main(int argc, char* argv[]) {
 
 	delete_game_server(&game);
 
-
 	parallel_computing_exit();
 	networking_exit();
+	platform_exit();
 
 	return 0;
 }

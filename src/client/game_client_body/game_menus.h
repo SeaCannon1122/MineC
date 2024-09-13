@@ -7,6 +7,7 @@
 
 #include "client/gui/menu.h"
 #include "client/gui/char_font.h"
+#include "game/game_constants.h"
 
 #include "general/keyvalue.h"
 
@@ -73,13 +74,13 @@ struct game_menus {
 
 		struct gui_character username_text[10];
 
-		char username_buffer[16 + 1];
+		char username_buffer[MAX_USERNAME_LENGTH + 1];
 		bool username_box_selected;
 		int username_buffer_link;
 
 		struct gui_character password_text[10];
 
-		char password_buffer[16 + 1];
+		char password_buffer[MAX_PASSWORD_LENGTH + 1];
 		bool password_box_selected;
 		int password_buffer_link;
 

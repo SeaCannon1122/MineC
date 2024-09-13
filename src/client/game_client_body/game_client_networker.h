@@ -13,15 +13,16 @@ enum networker_message {
 	NETWORKER_MESSAGE_CONNECTION_FAILED,
 	NETWORKER_MESSAGE_AUTHENTICATING,
 	NETWORKER_MESSAGE_AUTHENTICATION_FAILED,
-	BANNEDNETWORKER_MESSAGE_,
 };
 
 enum networker_request_type {
 	NULL_REQUEST,
-	CONNECT_TO_SERVER,
+	CONNECT_TO_SERVER, 
 	DISCONNECT_FROM_SERVER,
 	SEND_GAME_PACKET,
 };
+
+struct game_client;
 
 void init_networker(struct game_client* game);
 
