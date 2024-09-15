@@ -16,7 +16,11 @@ union multi_type get_value_from_key(struct key_value_map* manager, char* key) {
 		int cmp_result = strcmp(manager->mappings[mid].key, key);
 
 		if (cmp_result == 0) {
-				return *(union multi_type*)&manager->mappings[mid].value.ptr;
+			if (manager->mappings[mid].value_type == VALUE_STRING) {
+				char* str = manager->mappings[mid].value.s;
+				return *(union multi_type*)&str;
+			}
+			else return *(union multi_type*)&manager->mappings[mid].value.ptr;
 		}
 		else if (cmp_result < 0) {
 			left = mid + 1;
@@ -26,7 +30,7 @@ union multi_type get_value_from_key(struct key_value_map* manager, char* key) {
 		}
 	}
 
-	int ret = 0;
+	void* ret = 0;
 
 	return *(union multi_type*)&ret;
 }

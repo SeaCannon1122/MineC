@@ -8,17 +8,17 @@ void networking_init();
 void networking_exit();
 
 int is_connected(void* socket_handle);
+void get_ip_address_and_port(void* client_handle, char* address_buffer, unsigned short* port_buffer);
+
+int receive_data(void* socket_handle, void* buffer, int size, bool* interrupt, unsigned int timeout_milliseconds);
+int send_data(void* socket_handle, void* buffer, int size);
+
+void close_connection(void* handle);
 
 // Server functions
 void* server_init(int port);
-void* server_accept(void* server_handle, bool* interrupt);
-int server_send(void* client_handle, const void* data, int size);
-int server_receive(void* client_handle, void* buffer, int size);
-void server_close_client(void* client_handle);
+void* server_accept(void* server_handle, bool* interrupt, unsigned int timeout_milliseconds);
 void server_close(void* handle);
 
 // Client functions
-void* client_connect(const char* server_ip, int port, bool* interrupt);
-int client_send(void* client_handle, const void* data, int size);
-int client_receive(void* client_handle, void* buffer, int size);
-void client_close(void* client_handle);
+void* client_connect(const char* ip, int port, bool* interrupt, unsigned int timeout_milliseconds);
