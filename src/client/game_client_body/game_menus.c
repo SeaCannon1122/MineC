@@ -348,7 +348,7 @@ void game_menus_frame(struct game_client* game, unsigned int* pixels, int width,
 			break;
 		}
 
-		if (string_length(game->game_menus.join_game_menu.ip_address_buffer) != 1 && string_length(game->game_menus.join_game_menu.port_buffer) != 1 && string_length(game->game_menus.join_game_menu.username_buffer) != 1 && string_length(game->game_menus.join_game_menu.password_buffer) != 1) game->game_menus.join_game_menu.join_game_button_enabled = true;
+		if (string_length(game->game_menus.join_game_menu.ip_address_buffer) != 1 && string_length(game->game_menus.join_game_menu.port_buffer) != 1 && string_length(game->game_menus.join_game_menu.username_buffer) != 1) game->game_menus.join_game_menu.join_game_button_enabled = true;
 		else game->game_menus.join_game_menu.join_game_button_enabled = false;
 
 
@@ -362,19 +362,32 @@ void game_menus_frame(struct game_client* game, unsigned int* pixels, int width,
 		{
 
 		case NETWORKER_MESSAGE_CONNECTING: {
-			for (int i = 0; i < 63; i++) game->game_menus.connection_waiting_menu.networking_message[i].value = '\x1f';
 			parse_string_into_gui_string("Connecting...", game->game_menus.connection_waiting_menu.networking_message);
 
 		} break;
 
 		case NETWORKER_MESSAGE_CONNECTION_FAILED: {
-			for (int i = 0; i < 63; i++) game->game_menus.connection_waiting_menu.networking_message[i].value = '\x1f';
 			parse_string_into_gui_string("Connection failed", game->game_menus.connection_waiting_menu.networking_message);
 		} break;
 
 		case NETWORKER_MESSAGE_AUTHENTICATING: {
-			for (int i = 0; i < 63; i++) game->game_menus.connection_waiting_menu.networking_message[i].value = '\x1f';
 			parse_string_into_gui_string("Authenticating...", game->game_menus.connection_waiting_menu.networking_message);
+		} break;
+		
+		case NETWORKER_MESSAGE_WRONG_PASSWORD: {
+			parse_string_into_gui_string("Incorrect Password", game->game_menus.connection_waiting_menu.networking_message);
+		} break;
+
+		case NETWORKER_MESSAGE_NOT_AUTHORIZED: {
+			parse_string_into_gui_string("You are not allowed to join this server", game->game_menus.connection_waiting_menu.networking_message);
+		} break;
+
+		case NETWORKER_MESSAGE_CONNECTED: {
+			parse_string_into_gui_string("Connected successfully", game->game_menus.connection_waiting_menu.networking_message);
+		} break;
+
+		case NETWORKER_MESSAGE_DISCONNECTED: {
+			parse_string_into_gui_string("Connection lost", game->game_menus.connection_waiting_menu.networking_message);
 		} break;
 
 		}
@@ -383,7 +396,6 @@ void game_menus_frame(struct game_client* game, unsigned int* pixels, int width,
 			game->game_menus.connection_waiting_menu.back_button_state = false;
 			game->game_menus.active_menu = JOIN_GAME_MENU;
 			game->game_flag = SHOULD_ABORT_CONNECTING; 
-
 			break;
 		}
 

@@ -37,21 +37,28 @@ void run_game_server(struct game_server* game) {
     printf("Server started on port 8080.\n");
 
     while (!get_key_state(KEY_ESCAPE)) {
-        void* client_handle = server_accept(server_handle, NULL, 100);
+        void* client_handle = server_accept(server_handle);
         if (client_handle) {
             
             int packet_type = -1;
             struct networking_packet_client_auth auth_packet;
             int recieved;
 
-            recieved = receive_data(client_handle, &packet_type, sizeof(int), NULL, -1);
+            if (receive_data(client_handle, &packet_type, sizeof(int), NULL, -1) == -2) {
+                close_connection(client_handle);
+                continue;
+            }
 
             if (packet_type != NETWORKING_PACKET_CLIENT_AUTH) {
                 close_connection(client_handle);
                 continue;
             }
 
-            recieved = receive_data(client_handle, &auth_packet, sizeof(struct networking_packet_client_auth), NULL, -1);
+            if (receive_data(client_handle, &auth_packet, sizeof(struct networking_packet_client_auth), NULL, -1) == -2) {
+                close_connection(client_handle);
+                continue;
+            }
+
             char* password = get_value_from_key(game->username_password_map, auth_packet.username).ptr;
 
             if (password == NULL) {
@@ -81,6 +88,8 @@ void run_game_server(struct game_server* game) {
         }
 
         for (int i = 0; i < MAX_CLIENTS; i++) if (game->clients[i].client_handle != NULL) {
+            char buffer;
+
             if (!is_connected(game->clients[i].client_handle)) {
                 close_connection(game->clients[i].client_handle);
                 printf("%s from %s:%u disconnected from the server\n", game->clients[i].username, game->clients[i].ip_address, game->clients[i].port);
@@ -88,7 +97,7 @@ void run_game_server(struct game_server* game) {
             } 
         }
 
-        sleep_for_ms(1);
+        sleep_for_ms(10);
     }
 
     for (int i = 0; i < MAX_CLIENTS; i++) if (game->clients[i].client_handle != NULL) close_connection(game->clients[i].client_handle);

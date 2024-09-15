@@ -3,7 +3,7 @@
 #include "general/keyvalue.h"
 #include "game/game_constants.h"
 
-#define MAX_CLIENTS 16
+#define MAX_CLIENTS 4
 
 struct game_server {
 	struct key_value_map* resource_manager;

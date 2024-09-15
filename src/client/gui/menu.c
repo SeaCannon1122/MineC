@@ -4,6 +4,15 @@
 #include "menu.h"
 #include "general/utils.h"
 
+union menu_argb_pixel {
+	unsigned int color_value;
+	struct {
+		unsigned char b;
+		unsigned char g;
+		unsigned char r;
+		unsigned char a;
+	} color;
+};
 
 void add_menu_label(struct menu_scene* scene, int z, int x, int y, char alignment_x, char alignment_y, struct gui_character* text, char text_alignment) {
 	scene->menu_items[scene->menu_items_count].menu_item_type = MENU_ITEM_LABEL;
@@ -129,7 +138,15 @@ void menu_scene_frame(struct menu_scene* scene, int scale, unsigned int* screen,
 
 			for (int x = x_min; x < x_max; x++) {
 				for (int y = y_min; y < y_max; y++) {
-					screen[x + y * width] = image->image->pixels[(x - x_min_actually) / (scale * image->image_scalar) + image->image->width * ((y - y_min_actually) / (scale * image->image_scalar))].color_value;
+					union menu_argb_pixel top;
+					top.color_value = image->image->pixels[(x - x_min_actually) / (scale * image->image_scalar) + image->image->width * ((y - y_min_actually) / (scale * image->image_scalar))].color_value;
+					union menu_argb_pixel bottom;
+					bottom.color_value = screen[x + y * width];
+
+					((union menu_argb_pixel*)screen)[x + y * width].color.r = (unsigned char)(((unsigned int)top.color.r * (unsigned int)top.color.a + (255 - (unsigned int)top.color.a ) * (unsigned int)bottom.color.r) / 255);
+					((union menu_argb_pixel*)screen)[x + y * width].color.g = (unsigned char)(((unsigned int)top.color.g * (unsigned int)top.color.a + (255 - (unsigned int)top.color.a ) * (unsigned int)bottom.color.g) / 255);
+					((union menu_argb_pixel*)screen)[x + y * width].color.b = (unsigned char)(((unsigned int)top.color.b * (unsigned int)top.color.a + (255 - (unsigned int)top.color.a ) * (unsigned int)bottom.color.b) / 255);
+					
 				}
 			}
 

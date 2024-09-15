@@ -43,26 +43,24 @@ void networking_exit() {
 }
 
 
-int is_connected(void* socket_handle) {
-    char buffer;
-    int result;
+bool is_connected(void* socket_handle) {
+    SOCKET sock = (SOCKET)socket_handle;
+    struct sockaddr_in addr;
+    int addr_len = sizeof(addr);
 
-    result = recv((SOCKET)socket_handle, &buffer, 1, MSG_PEEK);
+    // Try to get the peer name (address) to check if the socket is connected
+    int result = getpeername(sock, (struct sockaddr*)&addr, &addr_len);
     if (result == 0) {
-        // Connection closed
-        return 0;
-    } else if (result == SOCKET_ERROR) {
-        int error_code = WSAGetLastError();
-        if (error_code == WSAEWOULDBLOCK || error_code == WSAEINPROGRESS) {
-            // No data available, but still connected
-            return 1;
-        } else {
-            // Error, connection probably closed
-            return 0;
-        }
+        return 1; // Socket is connected
     }
 
-    return 1;  // Socket is still connected
+    // If getpeername fails, check the specific error
+    if (WSAGetLastError() == WSAENOTCONN) {
+        return 0; // Socket is not connected
+    }
+
+    // For other errors, consider the socket as disconnected
+    return 0;
 }
 
 void get_ip_address_and_port(void* client_handle, char* address_buffer, unsigned short* port_buffer) {
@@ -148,35 +146,31 @@ void networking_init() {}
 
 void networking_exit() {}
 
-int is_connected(void* socket_handle) {
-    char buffer;
-    int result;
+bool is_connected(void* socket_handle) {
+    int sock = (int)(intptr_t)socket_handle;
+    struct sockaddr_in addr;
+    socklen_t addr_len = sizeof(addr);
 
-    result = recv(*(int*)&socket_handle, &buffer, 1, MSG_PEEK);
-    if (result == 0) {
-        // Connection closed
-        return 0;
-    }
-    else if (result == -1) {
-        if (errno == EAGAIN || errno == EWOULDBLOCK) {
-            // No data available, but still connected
-            return 1;
-        }
-        else {
-            // Error, connection probably closed
-            return 0;
-        }
+    // Try to get the peer name (address) to check if the socket is connected
+    if (getpeername(sock, (struct sockaddr*)&addr, &addr_len) == 0) {
+        return 1; // Socket is connected
     }
 
-    return 1;  // Socket is still connected
+    // Check if the error is because the socket is not connected
+    if (errno == ENOTCONN) {
+        return 0; // Socket is not connected
+    }
+
+    // For other errors, consider the socket as disconnected
+    return 0;
 }
 
-void get_ip_address_and_port(int client_handle, char* address_buffer, unsigned short* port_buffer) {
+void get_ip_address_and_port(void* client_handle, char* address_buffer, unsigned short* port_buffer) {
     struct sockaddr_in client_addr;
     socklen_t addr_len = sizeof(client_addr);
 
     // Retrieve the client's address information from the socket
-    if (getpeername(client_handle, (struct sockaddr*)&client_addr, &addr_len) == -1) {
+    if (getpeername((int)client_handle, (struct sockaddr*)&client_addr, &addr_len) == -1) {
         if (NETWORKING_VERBOSE) perror("Failed to get client address info");
         return;
     }
@@ -303,28 +297,19 @@ void* server_init(int port) {
     return (void*)server_socket;
 }
 
-void* server_accept(void* server_handle, bool* interrupt, unsigned int timeout_milliseconds) {
+void* server_accept(void* server_handle) {
     SOCKET client_socket;
     struct sockaddr_in client_addr;
     int addr_len = sizeof(struct sockaddr_in);
 
-    bool false_bool = false;
-    if (interrupt == NULL) { interrupt = &false_bool; }
-
-    unsigned int start_time = (unsigned int)networking_get_time();
-
-    while (!*interrupt && (unsigned int)networking_get_time() - start_time <= timeout_milliseconds) {
-        client_socket = accept((SOCKET)server_handle, (struct sockaddr*)&client_addr, &addr_len);
-        if (client_socket == INVALID_SOCKET) {
-            if (*interrupt) break;
-            if (NETWORKING_VERBOSE) printf("Accept failed.\n");
-            continue;
-        }
-
-        return (void*)client_socket;
+    client_socket = accept((SOCKET)server_handle, (struct sockaddr*)&client_addr, &addr_len);
+    if (client_socket == INVALID_SOCKET) {
+        if (NETWORKING_VERBOSE) printf("Accept failed.\n");
+        return NULL;
     }
 
-    return NULL;
+    return (void*)client_socket;
+    
 }
 
 void server_close(void* handle) {
@@ -398,35 +383,26 @@ void* server_init(int port) {
     return (void*)(intptr_t)server_socket;
 }
 
-void* server_accept(void* server_handle, bool* interrupt, unsigned int timeout_milliseconds) {
+void* server_accept(void* server_handle) {
     int client_socket = -1; // Initialize with an invalid socket value
     struct sockaddr_in client_addr;
     socklen_t addr_len = sizeof(struct sockaddr_in);
 
-    bool false_bool = false;
-    if (interrupt == NULL) { interrupt = &false_bool; }
+    client_socket = accept((intptr_t)server_handle, (struct sockaddr*)&client_addr, &addr_len);
+    if (client_socket < 0) {
 
-    unsigned int start_time = (unsigned int)networking_get_time();
-
-    while (!*interrupt && (unsigned int)networking_get_time() - start_time <= timeout_milliseconds) {
-        client_socket = accept((intptr_t)server_handle, (struct sockaddr*)&client_addr, &addr_len);
-        if (client_socket < 0) {
-            if (*interrupt) break;
-
-            // Handle specific errors
-            if (errno == EINTR) {
-                // Interrupted system call, retry accept
-                continue;
-            }
-
-            if (NETWORKING_VERBOSE) perror("Accept failed");
-            continue;
+        // Handle specific errors
+        if (errno == EINTR) {
+            // Interrupted system call, retry accept
+            return NULL;
         }
 
-        return (void*)(intptr_t)client_socket;
+        if (NETWORKING_VERBOSE) perror("Accept failed");
+        return NULL;
     }
 
-    return NULL;
+    return (void*)(intptr_t)client_socket;
+
 }
 
 
@@ -544,8 +520,8 @@ void* client_connect(const char* ip, int port, bool* interrupt, unsigned int tim
 
     // Set up server address
     server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(server_port);
-    if (inet_pton(AF_INET, server_ip, &server_addr.sin_addr) <= 0) {
+    server_addr.sin_port = htons(port);
+    if (inet_pton(AF_INET, ip, &server_addr.sin_addr) <= 0) {
         perror("Invalid address");
         close(client_socket);
         return NULL;

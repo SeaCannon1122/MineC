@@ -16,29 +16,16 @@ void init_networker(struct game_client* game) {
 	game->networker.close_connection_flag = false;
 }
 
-void send_packet(struct game_client* game, int packet_type, void* packet) {
-	size_t packet_size = 0;
-	
-	switch (packet_type)
-	{
-		
-	case NETWORKING_PACKET_CLIENT_AUTH: packet_size = sizeof(struct networking_packet_client_auth); break;
-	case NETWORKING_PACKET_DISCONNECT: packet_size = 0;
-
-	default: packet_size = 0;
-	}
-
-	send_data(game->networker.network_handle, &packet_type, sizeof(int), &game->networker.close_connection_flag);
-	if(packet_size > 0) send_data(game->networker.network_handle, packet, packet_size, &game->networker.close_connection_flag);
-}
-
 void networker_disconnect_and_cleanup(struct game_client* game) {
 	if (game->networker.status == NETWORK_CONNECTED) {
-		send_packet(game, NETWORKING_PACKET_DISCONNECT, NULL);
+		int packet_type = NETWORKING_PACKET_DISCONNECT;
+		send_data(game->networker.network_handle, &packet_type, sizeof(int));
 		game->networker.status = NETWORK_INACTIVE;
 	}
 
-	if (game->networker.network_handle != NULL) close_connection(game->networker.network_handle);
+	if (game->networker.network_handle != NULL) {
+		close_connection(game->networker.network_handle);
+	}
 	game->networker.network_handle = NULL;
 
 	
@@ -56,8 +43,7 @@ void networker_thread(struct game_client* game) {
 				printf("[NETWORKER] Disconnected from server %s:%u\n", game->networker.ip, game->networker.port);
 			}
 			else if (!is_connected(game->networker.network_handle)) {
-				game->networker.status = NETWORK_INACTIVE;
-				game->networker.network_handle = NULL;
+				game->networker.message = NETWORKER_MESSAGE_DISCONNECTED;
 				networker_disconnect_and_cleanup(game);
 				printf("[NETWORKER] Disconnected from server %s:%u\n", game->networker.ip, game->networker.port);
 			}
@@ -76,9 +62,13 @@ void networker_thread(struct game_client* game) {
 					game->networker.message = NETWORKER_MESSAGE_CONNECTION_FAILED;
 					printf("[NETWORKER] Failed to connect to server %s:%u\n", game->networker.ip, game->networker.port);
 					networker_disconnect_and_cleanup(game);
+					continue;
 				}
 
-				if (game->networker.close_connection_flag) networker_disconnect_and_cleanup(game);
+				if (game->networker.close_connection_flag) {
+					networker_disconnect_and_cleanup(game);
+					continue;
+				}
 
 				game->networker.message = NETWORKER_MESSAGE_AUTHENTICATING;
 
@@ -87,14 +77,34 @@ void networker_thread(struct game_client* game) {
 				for (int i = 0; i < MAX_PASSWORD_LENGTH; i++) auth_packet.password[i] = game->networker.password[i];
 
 				int packet_type = NETWORKING_PACKET_CLIENT_AUTH;
-				send_data(game->networker.network_handle, &packet_type, sizeof(int), &game->networker.close_connection_flag);
-				send_data(game->networker.network_handle, &auth_packet, sizeof(struct networking_packet_client_auth), &game->networker.close_connection_flag);
+				send_data(game->networker.network_handle, &packet_type, sizeof(int));
+				send_data(game->networker.network_handle, &auth_packet, sizeof(struct networking_packet_client_auth));
 				
-				//client_receive()
+				receive_data(game->networker.network_handle, &packet_type, sizeof(int), &game->networker.close_connection_flag, -1);
 
+				if (game->networker.close_connection_flag) {
+					networker_disconnect_and_cleanup(game);
+					continue;
+				}
 
-				game->networker.status = NETWORK_CONNECTED;
-				printf("[NETWORKER] Connected to server %s:%u\n", game->networker.ip, game->networker.port);
+				if (packet_type == NETWORKING_PACKET_LOGGED_IN) {
+
+					game->networker.message = NETWORKER_MESSAGE_CONNECTED;
+					game->networker.status = NETWORK_CONNECTED;
+					printf("[NETWORKER] Connected to server %s:%u\n", game->networker.ip, game->networker.port);
+				}
+				else if (packet_type == NETWORKING_PACKET_NOT_AUTHORIZED_TO_JOIN) {
+					game->networker.message = NETWORKER_MESSAGE_NOT_AUTHORIZED;
+					printf("[NETWORKER] Not authorized to join server %s:%u\n", game->networker.ip, game->networker.port);
+					networker_disconnect_and_cleanup(game);
+				}
+				else if (packet_type == NETWORKER_MESSAGE_WRONG_PASSWORD) {
+					game->networker.message = NETWORKER_MESSAGE_WRONG_PASSWORD;
+					printf("[NETWORKER] Incorrect password for user %s on server %s:%u\n", game->networker.username, game->networker.ip, game->networker.port);
+					networker_disconnect_and_cleanup(game);
+				}
+
+				
 			}
 
 			

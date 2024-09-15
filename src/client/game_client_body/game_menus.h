@@ -12,10 +12,12 @@
 #include "general/keyvalue.h"
 
 enum blocks_menus {
-	MAIN_MENU = 0,
-	OPTIONS_MENU = 1,
-	JOIN_GAME_MENU = 3,
-	CONNECTION_WAITING_MENU = 4,
+	NO_MENU,
+	MAIN_MENU,
+	OPTIONS_MENU,
+	JOIN_GAME_MENU,
+	CONNECTION_WAITING_MENU,
+	CHAT_MENU,
 };
 
 struct game_menus {
@@ -105,6 +107,13 @@ struct game_menus {
 
 		struct menu_scene menu;
 	} connection_waiting_menu;
+
+	struct {
+
+		char message_buffer[255 + 1];
+
+		struct menu_scene menu;
+	} chat_menu;
 
 	int active_menu;
 };

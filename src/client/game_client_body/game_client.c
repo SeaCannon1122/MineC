@@ -78,13 +78,14 @@ void run_game_client(struct game_client* game) {
 			break;
 		}
 
-			
 
 		default:
 			break;
 		}
 
 		game->game_flag = NULL_FLAG;
+
+		
 
 
 		draw_to_window(game->window, pixels, width, height, game->settings.resolution_scale);
