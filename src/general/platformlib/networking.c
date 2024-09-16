@@ -88,7 +88,7 @@ int receive_data(void* socket_handle, void* buffer, int size, bool* interrupt, u
 
     unsigned int start_time = (unsigned int)networking_get_time();
 
-    while (!*interrupt && (unsigned int)networking_get_time() - start_time <= timeout_milliseconds) {
+    do {
         // Check how much data is available to read
         if (ioctlsocket((SOCKET)socket_handle, FIONREAD, &available) == SOCKET_ERROR) {
             if (NETWORKING_VERBOSE) perror("ioctlsocket failed");
@@ -102,7 +102,7 @@ int receive_data(void* socket_handle, void* buffer, int size, bool* interrupt, u
 
         // Sleep for a short time to avoid busy-waiting
         Sleep(10);
-    }
+    } while (!*interrupt && (unsigned int)networking_get_time() - start_time <= timeout_milliseconds);
 
     // Return -2 if interrupted
     return -2;
@@ -190,7 +190,7 @@ int receive_data(void* socket_handle, void* buffer, int size, bool* interrupt, u
 
     unsigned int start_time = (unsigned int)networking_get_time();
 
-    while (!*interrupt && (unsigned int)networking_get_time() - start_time <= timeout_milliseconds) {
+    do {
         // Check how much data is available to read
         if (ioctl((intptr_t)socket_handle, FIONREAD, &available) == -1) {
             if (NETWORKING_VERBOSE) perror("ioctl failed");
@@ -204,7 +204,7 @@ int receive_data(void* socket_handle, void* buffer, int size, bool* interrupt, u
 
         // Sleep for a short time to avoid busy-waiting
         usleep(10000);  // Sleep for 10 milliseconds
-    }
+    } while (!*interrupt && (unsigned int)networking_get_time() - start_time <= timeout_milliseconds);
 
     // Return -2 if interrupted
     return -2;

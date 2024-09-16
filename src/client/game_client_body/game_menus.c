@@ -390,6 +390,10 @@ void game_menus_frame(struct game_client* game, unsigned int* pixels, int width,
 			parse_string_into_gui_string("Connection lost", game->game_menus.connection_waiting_menu.networking_message);
 		} break;
 
+		case NETWORKER_MESSAGE_SERVER_FULL: {
+			parse_string_into_gui_string("Server is at full capacity", game->game_menus.connection_waiting_menu.networking_message);
+		} break;
+
 		}
 
 		if (game->game_menus.connection_waiting_menu.back_button_state) {

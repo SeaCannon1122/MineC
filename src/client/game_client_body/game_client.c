@@ -71,12 +71,13 @@ void run_game_client(struct game_client* game) {
 				for (int i = 0; i < MAX_PASSWORD_LENGTH; i++) game->networker.password[i] = game->game_menus.join_game_menu.password_buffer[i];
 				game->networker.request = CONNECT_TO_SERVER;
 			}
+			game->game_flag = NULL_FLAG;
 		} break;
 
 		case SHOULD_ABORT_CONNECTING: {
-			game->networker.close_connection_flag = true;
-			break;
-		}
+			if (game->networker.status == NETWORK_CONNECTED) game->networker.close_connection_flag = true;
+			game->game_flag = NULL_FLAG;
+		} break;
 
 
 		default:
@@ -95,9 +96,10 @@ void run_game_client(struct game_client* game) {
 		sleep_for_ms(10);
 	}
 
-
-
 	close_window(game->window);
+	game->networker.close_connection_flag = true;
+
+	while (game->networker.network_handle != NULL) sleep_for_ms(1);
 
 	game->running = false;
 
@@ -107,6 +109,8 @@ void run_game_client(struct game_client* game) {
 
 	return;
 }
+
+
 
 void delete_game_client(struct game_client* game) {
 	destroy_resource_manager(game->resource_manager);

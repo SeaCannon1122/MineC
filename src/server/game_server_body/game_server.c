@@ -22,7 +22,65 @@ void new_game_server(struct game_server* game, char* resource_path) {
     game->currently_connected = 0;
 }
 
+void accept_next_client(struct game_server* game, void* client_handle) {
+    int client_index = 0;
+    for (; client_index < MAX_CLIENTS && game->clients[client_index].client_handle != NULL; client_index++);
 
+    int packet_type = -1;
+    struct networking_packet_client_auth auth_packet;
+    int recieved;
+
+    if (receive_data(client_handle, &packet_type, sizeof(int), NULL, 1000) == -2) {
+        close_connection(client_handle);
+        return;
+    }
+
+    if (packet_type != NETWORKING_PACKET_CLIENT_AUTH) {
+        close_connection(client_handle);
+        return;
+    }
+
+    if (receive_data(client_handle, &auth_packet, sizeof(struct networking_packet_client_auth), NULL, 1000) == -2) {
+        close_connection(client_handle);
+        return;
+    }
+
+    char* password = get_value_from_key(game->username_password_map, auth_packet.username).ptr;
+
+    if (password == NULL) {
+        int packet_type = NETWORKING_PACKET_NOT_AUTHORIZED_TO_JOIN;
+        send_data(client_handle, &packet_type, sizeof(int));
+        close_connection(client_handle);
+        printf("%s: not autherized to join\n", auth_packet.username);
+    }
+    else if (strcmp(auth_packet.password, password)) {
+        int packet_type = NETWORKING_PACKET_INVALID_PASSWORD;
+        send_data(client_handle, &packet_type, sizeof(int));
+        close_connection(client_handle);
+        printf("%s: incorrect password\n", auth_packet.username);
+    }
+    else if (client_index == MAX_CLIENTS) {
+        int packet_type = NETWORKING_PACKET_SERVER_FULL;
+        send_data(client_handle, &packet_type, sizeof(int));
+        close_connection(client_handle);
+    }
+    else {
+        int packet_type = NETWORKING_PACKET_LOGGED_IN;
+        send_data(client_handle, &packet_type, sizeof(int));
+        game->clients[client_index].client_handle = client_handle;
+        get_ip_address_and_port(client_handle, game->clients[client_index].ip_address, &game->clients[client_index].port);
+        int j = 0;
+        for (; auth_packet.username[j] != '\0'; j++) game->clients[client_index].username[j] = auth_packet.username[j];
+        game->clients[client_index].username[j] = auth_packet.username[j];
+        printf("%s from %s:%u connected to the server\n", game->clients[client_index].username, game->clients[client_index].ip_address, game->clients[client_index].port);
+    }
+}
+
+void disconnect_client(struct game_server* game, int client_index) {
+    close_connection(game->clients[client_index].client_handle);
+    printf("%s from %s:%u disconnected from the server\n", game->clients[client_index].username, game->clients[client_index].ip_address, game->clients[client_index].port);
+    game->clients[client_index].client_handle = NULL;
+}
 
 void run_game_server(struct game_server* game) {
 
@@ -37,64 +95,28 @@ void run_game_server(struct game_server* game) {
     printf("Server started on port 8080.\n");
 
     while (!get_key_state(KEY_ESCAPE)) {
-        void* client_handle = server_accept(server_handle);
-        if (client_handle) {
-            
-            int packet_type = -1;
-            struct networking_packet_client_auth auth_packet;
-            int recieved;
-
-            if (receive_data(client_handle, &packet_type, sizeof(int), NULL, -1) == -2) {
-                close_connection(client_handle);
-                continue;
-            }
-
-            if (packet_type != NETWORKING_PACKET_CLIENT_AUTH) {
-                close_connection(client_handle);
-                continue;
-            }
-
-            if (receive_data(client_handle, &auth_packet, sizeof(struct networking_packet_client_auth), NULL, -1) == -2) {
-                close_connection(client_handle);
-                continue;
-            }
-
-            char* password = get_value_from_key(game->username_password_map, auth_packet.username).ptr;
-
-            if (password == NULL) {
-                int packet_type = NETWORKING_PACKET_NOT_AUTHORIZED_TO_JOIN;
-                send_data(client_handle, &packet_type, sizeof(int));
-                close_connection(client_handle);
-                printf("%s: not autherized to join\n", auth_packet.username);
-            }
-            else if (strcmp(auth_packet.password, password)) {
-                int packet_type = NETWORKING_PACKET_INVALID_PASSWORD;
-                send_data(client_handle, &packet_type, sizeof(int));
-                close_connection(client_handle);
-                printf("%s: incorrect password\n", auth_packet.username);
-            }
-            else {
-                int packet_type = NETWORKING_PACKET_LOGGED_IN;
-                send_data(client_handle, &packet_type, sizeof(int));
-                for (int i = 0; i < MAX_CLIENTS; i++) if (game->clients[i].client_handle == NULL) {
-                    game->clients[i].client_handle = client_handle;
-                    get_ip_address_and_port(client_handle, game->clients[i].ip_address, &game->clients[i].port);
-                    for (int j = 0; auth_packet.username[j] != '\0'; j++) game->clients[i].username[j] = auth_packet.username[j];
-                    printf("%s from %s:%u connected to the server\n", game->clients[i].username, game->clients[i].ip_address, game->clients[i].port);
-                    break;
-                }
-            }
-
+        
+        void* client_handle;
+        while ((client_handle = server_accept(server_handle)) != NULL) {    
+            accept_next_client(game, client_handle);
         }
 
         for (int i = 0; i < MAX_CLIENTS; i++) if (game->clients[i].client_handle != NULL) {
-            char buffer;
 
-            if (!is_connected(game->clients[i].client_handle)) {
-                close_connection(game->clients[i].client_handle);
-                printf("%s from %s:%u disconnected from the server\n", game->clients[i].username, game->clients[i].ip_address, game->clients[i].port);
-                game->clients[i].client_handle = NULL;
-            } 
+            for (int packet_count = 0; packet_count < 5; packet_count++) {
+                int packet_type = -1;
+                if(receive_data(game->clients[i].client_handle, &packet_type, sizeof(int), NULL, 0) == 0) {
+                    disconnect_client(game, i);
+                    continue;
+                }
+
+                if (packet_type == NETWORKING_PACKET_DISCONNECT) {
+                    disconnect_client(game, i);
+                    continue;
+                }
+
+            }
+
         }
 
         sleep_for_ms(10);
