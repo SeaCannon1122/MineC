@@ -60,8 +60,8 @@ void init_game_menus(struct game_client* game) {
 
 	game->game_menus.options_menu.done_button_enabled = true;
 	game->game_menus.options_menu.done_button_state = false;
-	game->game_menus.options_menu.fov_slider_state = ((float)game->settings.fov - (float)FOV_MIN) / ((float)FOV_MAX - (float)FOV_MIN);
-	game->game_menus.options_menu.render_distance_slider_state = ((float)game->settings.render_distance - (float)RENDER_DISTANCE_MIN) / ((float)RENDER_DISTANCE_MAX - (float)RENDER_DISTANCE_MIN);
+	game->game_menus.options_menu.fov_slider_state = ((float)game->settings.fov - (float)game->constants.fov_min) / ((float)game->constants.fov_max - (float)game->constants.fov_min);
+	game->game_menus.options_menu.render_distance_slider_state = ((float)game->settings.render_distance - (float)game->constants.render_distance_min) / ((float)game->constants.render_distance_max - (float)game->constants.render_distance_min);
 	game->game_menus.options_menu.gui_scale_button_enabled = true;
 	game->game_menus.options_menu.gui_scale_button_state = false;
 	
@@ -221,8 +221,8 @@ void game_menus_frame(struct game_client* game, unsigned int* pixels, int width,
 
 		menu_scene_frame(&game->game_menus.options_menu.menu, render_gui_scale, pixels, width, height, mousepos.x, mousepos.y, click);
 
-		game->settings.render_distance = (float)RENDER_DISTANCE_MIN + (game->game_menus.options_menu.render_distance_slider_state * ((float)RENDER_DISTANCE_MAX - (float)RENDER_DISTANCE_MIN));
-		game->settings.fov = (float)FOV_MIN + (game->game_menus.options_menu.fov_slider_state * ((float)FOV_MAX - (float)FOV_MIN));
+		game->settings.render_distance = (float)game->constants.render_distance_min + (game->game_menus.options_menu.render_distance_slider_state * ((float)game->constants.render_distance_max - (float)game->constants.render_distance_min));
+		game->settings.fov = (float)game->constants.fov_min + (game->game_menus.options_menu.fov_slider_state * ((float)game->constants.fov_max - (float)game->constants.fov_min));
 
 		if (game->game_menus.options_menu.done_button_state || get_key_state(KEY_ESCAPE) == 0b11) {
 			game->game_menus.options_menu.done_button_state = false;

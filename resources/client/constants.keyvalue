@@ -1,0 +1,5 @@
+render_distance_min i:2
+render_distance_max i:32
+fov_min i:30
+fov_max i:120
+client_connection_timeout i:5000

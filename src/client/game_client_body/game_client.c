@@ -17,18 +17,44 @@
 #include "game_client_networker.h"
 #include "debug.h"
 
-void new_game_client(struct game_client* game, char* resource_path) {
+int new_game_client(struct game_client* game, char* resource_path) {
 
 	game->resource_manager = new_resource_manager(resource_path);
+	if (game->resource_manager == NULL) {
+		printf("Couldn't find critical resourclayout file at expected path %s", resource_path);
+		return 1;
+	}
 
 	struct key_value_map* settings_map = get_value_from_key(game->resource_manager, "settings").ptr;
+	if (settings_map == NULL) {
+		printf("Couldn't find critical settings file link 'settings' in resourcelayout\n");
+		return 2;
+	}
 
 	game->settings.render_distance = get_value_from_key(settings_map, "render_distance").i;
 	game->settings.gui_scale = get_value_from_key(settings_map, "gui_scale").i;
 	game->settings.resolution_scale = get_value_from_key(settings_map, "resolution_scale").i;
 	game->settings.fov = get_value_from_key(settings_map, "fov").i;
 
+	free(settings_map);
+
+	struct key_value_map* constants_map = get_value_from_key(game->resource_manager, "constants").ptr;
+	if (constants_map == NULL) {
+		printf("Couldn't find critical settings file link 'constants' in resourcelayout\n");
+		return 2;
+	}
+
+	game->constants.render_distance_min = get_value_from_key(constants_map, "render_distance_min").i;
+	game->constants.render_distance_max = get_value_from_key(constants_map, "render_distance_max").i;
+	game->constants.fov_min = get_value_from_key(constants_map, "fov_min").i;
+	game->constants.fov_max = get_value_from_key(constants_map, "fov_max").i;
+	game->constants.client_connection_timeout = get_value_from_key(constants_map, "client_connection_timeout").i;
+
+	free(constants_map);
+
 	game->running = false;
+
+
 
 	init_game_menus(game);
 	init_networker(game);

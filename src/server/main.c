@@ -11,7 +11,7 @@ int main(int argc, char* argv[]) {
 	parallel_computing_init();
 
 	struct game_server game;
-	new_game_server(&game, "../../../resources/server/resourcelayout.keyvalue");
+	new_game_server(&game, "resources/server/resourcelayout.keyvalue");
 
 	run_game_server(&game);
 

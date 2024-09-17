@@ -56,7 +56,7 @@ void networker_thread(struct game_client* game) {
 				printf("[NETWORKER] Connecting to server %s:%u ...\n", game->networker.ip, game->networker.port);
 				game->networker.message = NETWORKER_MESSAGE_CONNECTING;
 				
-				game->networker.network_handle = client_connect(game->networker.ip, game->networker.port, &game->networker.close_connection_flag, CLIENT_CONNECTION_TIMEOUT_TIME);
+				game->networker.network_handle = client_connect(game->networker.ip, game->networker.port, &game->networker.close_connection_flag, game->constants.client_connection_timeout);
 
 				if (game->networker.network_handle == NULL) {
 					game->networker.message = NETWORKER_MESSAGE_CONNECTION_FAILED;

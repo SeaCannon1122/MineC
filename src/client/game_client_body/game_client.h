@@ -32,10 +32,17 @@ struct game_client {
 		int gui_scale;
 		int resolution_scale;
 	} settings;
+	struct {
+		int render_distance_min;
+		int render_distance_max;
+		int fov_min;
+		int fov_max;
+		int client_connection_timeout;
+	} constants;
 	struct game_menus game_menus;
 };
 
-void new_game_client(struct game_client* game, char* resource_path);
+int new_game_client(struct game_client* game, char* resource_path);
 
 void run_game_client(struct game_client* game);
 

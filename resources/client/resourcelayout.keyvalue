@@ -1,5 +1,4 @@
-menu_background s:gui/menu/background.png
-menu_button_disabled s:gui/menu/button_texture_disabled.png
-menu_button_enabled s:gui/menu/button_texture_enabled.png
-default_pixelfont s:gui/debug.pixelfont
-settings s:settings.keyvalue
+default_pixelfont l:fonts/debug.pixelfont
+settings l:settings.keyvalue
+constants l:constants.keyvalue
+texture_manager r:assets/textures.keyvalue

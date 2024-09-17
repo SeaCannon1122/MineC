@@ -24,7 +24,8 @@ set(CLIENT_SOURCE_FILES
 set(SERVER_SOURCE_FILES
     src/server/main.c
     src/server/game_server_body/game_server.c
-    
+    src/server/game_server_body/game_simulator.c
+
     src/general/platformlib/platform.c
     src/general/platformlib/parallel_computing.c
     src/general/platformlib/networking.c
