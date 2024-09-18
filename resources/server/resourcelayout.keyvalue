@@ -1,1 +1,2 @@
-passwords s:auth.keyvalue
+passwords l:auth.keyvalue
+settings l:settings.keyvalue

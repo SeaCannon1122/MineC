@@ -80,7 +80,7 @@ void networker_thread(struct game_client* game) {
 				send_data(game->networker.network_handle, &packet_type, sizeof(int));
 				send_data(game->networker.network_handle, &auth_packet, sizeof(struct networking_packet_client_auth));
 
-				if (receive_data(game->networker.network_handle, &packet_type, sizeof(int), &game->networker.close_connection_flag, 1000) <= 0) {
+				if (receive_data(game->networker.network_handle, &packet_type, sizeof(int), &game->networker.close_connection_flag, game->constants.packet_awaiting_timeout) <= 0) {
 					networker_disconnect_and_cleanup(game);
 					continue;
 				}
@@ -94,7 +94,21 @@ void networker_thread(struct game_client* game) {
 
 					game->networker.message = NETWORKER_MESSAGE_CONNECTED;
 					game->networker.status = NETWORK_CONNECTED;
+					if (receive_data(game->networker.network_handle, &packet_type, sizeof(int), &game->networker.close_connection_flag, game->constants.packet_awaiting_timeout) <= 0) {
+						networker_disconnect_and_cleanup(game);
+						continue;
+					}
+					struct networking_packet_server_settings server_settings;
+					if (receive_data(game->networker.network_handle, &server_settings, sizeof(struct networking_packet_server_settings), &game->networker.close_connection_flag, game->constants.packet_awaiting_timeout) <= 0) {
+						networker_disconnect_and_cleanup(game);
+						continue;
+					}
+					game->server_settings.max_message_length = server_settings.max_message_length;
+					game->server_settings.max_render_distance = server_settings.max_render_distance;
 					printf("[NETWORKER] Connected to server %s:%u\n", game->networker.ip, game->networker.port);
+					printf("[NETWORKER] Max render distance %d\n", game->server_settings.max_render_distance);
+					printf("[NETWORKER] Max message length %d\n", game->server_settings.max_message_length);
+
 				}
 				else if (packet_type == NETWORKING_PACKET_NOT_AUTHORIZED_TO_JOIN) {
 					game->networker.message = NETWORKER_MESSAGE_NOT_AUTHORIZED;

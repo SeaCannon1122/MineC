@@ -94,3 +94,10 @@ add_custom_command(TARGET blocks_client POST_BUILD
     "${OUTPUT_DIRECTORY}"
     COMMENT "Copying resources from ${RESOURCE_DIRECTORY} to ${OUTPUT_DIRECTORY}"
 )
+
+add_custom_command(TARGET blocks_server POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    "${RESOURCE_DIRECTORY}"
+    "${OUTPUT_DIRECTORY}"
+    COMMENT "Copying resources from ${RESOURCE_DIRECTORY} to ${OUTPUT_DIRECTORY}"
+)

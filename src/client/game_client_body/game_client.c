@@ -47,7 +47,7 @@ int new_game_client(struct game_client* game, char* resource_path) {
 	game->constants.fov_min = get_value_from_key(constants_map, "fov_min").i;
 	game->constants.fov_max = get_value_from_key(constants_map, "fov_max").i;
 	game->constants.client_connection_timeout = get_value_from_key(constants_map, "client_connection_timeout").i;
-
+	game->constants.packet_awaiting_timeout = get_value_from_key(constants_map, "packet_awaiting_timeout").i;
 	game->running = false;
 
 

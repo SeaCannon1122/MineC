@@ -1,0 +1,3 @@
+max_clients i:4
+max_render_distance i:16
+max_message_length i:255

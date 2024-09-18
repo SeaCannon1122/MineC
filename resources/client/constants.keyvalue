@@ -3,3 +3,4 @@ render_distance_max i:32
 fov_min i:30
 fov_max i:120
 client_connection_timeout i:5000
+packet_awaiting_timeout i:2000

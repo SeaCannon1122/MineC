@@ -33,11 +33,16 @@ struct game_client {
 		int resolution_scale;
 	} settings;
 	struct {
+		int max_render_distance;
+		int max_message_length;
+	} server_settings;
+	struct {
 		int render_distance_min;
 		int render_distance_max;
 		int fov_min;
 		int fov_max;
 		int client_connection_timeout;
+		int packet_awaiting_timeout;
 	} constants;
 	struct game_menus game_menus;
 };
