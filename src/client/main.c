@@ -12,7 +12,9 @@ int main(int argc, char* argv[]) {
 
 	struct game_client game;
 
-	new_game_client(&game, "resources/client/resourcelayout.keyvalue");
+	if (new_game_client(&game, "resources/client/resourcelayout.keyvalue") != 0) exit(1);
+
+
 
 	run_game_client(&game);
 

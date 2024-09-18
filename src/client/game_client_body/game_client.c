@@ -36,8 +36,6 @@ int new_game_client(struct game_client* game, char* resource_path) {
 	game->settings.resolution_scale = get_value_from_key(settings_map, "resolution_scale").i;
 	game->settings.fov = get_value_from_key(settings_map, "fov").i;
 
-	free(settings_map);
-
 	struct key_value_map* constants_map = get_value_from_key(game->resource_manager, "constants").ptr;
 	if (constants_map == NULL) {
 		printf("Couldn't find critical settings file link 'constants' in resourcelayout\n");
@@ -50,8 +48,6 @@ int new_game_client(struct game_client* game, char* resource_path) {
 	game->constants.fov_max = get_value_from_key(constants_map, "fov_max").i;
 	game->constants.client_connection_timeout = get_value_from_key(constants_map, "client_connection_timeout").i;
 
-	free(constants_map);
-
 	game->running = false;
 
 
@@ -59,6 +55,8 @@ int new_game_client(struct game_client* game, char* resource_path) {
 	init_game_menus(game);
 	init_networker(game);
 	debug_init(game);
+
+	return 0;
 }
 
 void run_game_client(struct game_client* game) {

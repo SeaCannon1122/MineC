@@ -15,7 +15,7 @@ int rm_compare_resource_manager_entrys(const void* a, const void* b) {
 
 
 struct key_value_map* new_resource_manager(char* src_keyvalue) {
-	int value_key_value_map = 999;
+	int value_key_value_map = 99;
 
 	char* data = load_text_file(src_keyvalue);
 	if (data == NULL) return NULL;
@@ -63,7 +63,7 @@ struct key_value_map* new_resource_manager(char* src_keyvalue) {
 			if (split_index != 0) split_index++;
 
 			int k = 0;
-			for (; k < split_index; k++) file_path[k] == src_keyvalue[k];
+			for (; k < split_index; k++) file_path[k] = src_keyvalue[k];
 			for (k = 0; temp_value[k] != '\0'; k++) file_path[split_index + k] = temp_value[k];
 			file_path[split_index + k] = '\0';
 
@@ -92,7 +92,7 @@ struct key_value_map* new_resource_manager(char* src_keyvalue) {
 				if (split_index != 0) split_index++;
 
 				int k = 0;
-				for (; k < split_index; k++) file_path[k] == src_keyvalue[k];
+				for (; k < split_index; k++) file_path[k] = src_keyvalue[k];
 				for (k = 0; temp_value[k] != '\0'; k++) file_path[split_index + k] = temp_value[k];
 				file_path[split_index + k] = '\0';
 			}
@@ -134,13 +134,9 @@ struct key_value_map* new_resource_manager(char* src_keyvalue) {
 
 			for (int k = 0; k < sub_map->mappings_count; k++) {
 
-				for (int j = 0; j < MAX_KEY_SIZE; j++) {
-					combind_map->mappings[combind_map_index].key[j] = map->mappings[k].key[j];
-				}
-				for (int j = 0; j < MAX_VALUE_SIZE; j++) {
-					combind_map->mappings[combind_map_index].value.s[j] = map->mappings[k].value.s[j];
-				}
-				combind_map->mappings[combind_map_index].value_type = map->mappings[k].value_type;
+				for (int j = 0; j < MAX_KEY_SIZE; j++) combind_map->mappings[combind_map_index].key[j] = sub_map->mappings[k].key[j];
+				for (int j = 0; j < MAX_VALUE_SIZE; j++) combind_map->mappings[combind_map_index].value.s[j] = sub_map->mappings[k].value.s[j];
+				combind_map->mappings[combind_map_index].value_type = sub_map->mappings[k].value_type;
 				combind_map_index++;
 			}
 
@@ -148,14 +144,10 @@ struct key_value_map* new_resource_manager(char* src_keyvalue) {
 
 		}
 		else {
-			for (int j = 0; j < MAX_KEY_SIZE; j++) {
-				combind_map->mappings[combind_map_index].key[j] = map->mappings[i].key[j];
-			}
-			for (int j = 0; j < MAX_VALUE_SIZE; j++) {
-				combind_map->mappings[combind_map_index].value.s[j] = map->mappings[i].value.s[j];
-			}
+			for (int j = 0; j < MAX_KEY_SIZE; j++) combind_map->mappings[combind_map_index].key[j] = map->mappings[i].key[j];
+			for (int j = 0; j < MAX_VALUE_SIZE; j++) combind_map->mappings[combind_map_index].value.s[j] = map->mappings[i].value.s[j];
 			combind_map->mappings[combind_map_index].value_type = map->mappings[i].value_type;
-
+			combind_map_index++;
 		}
 	}
 
@@ -166,6 +158,8 @@ struct key_value_map* new_resource_manager(char* src_keyvalue) {
 }
 
 void destroy_resource_manager(struct key_value_map* manager) {
-	for (int i = 0; i < manager->mappings_count; i++) free(manager->mappings[i].value.ptr);
+	for (int i = 0; i < manager->mappings_count; i++) {
+		free(manager->mappings[i].value.ptr);
+	}
 	free(manager);
 }
