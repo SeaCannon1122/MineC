@@ -15,3 +15,7 @@ float string_to_float(char* src, int length);
 char digit_to_char(int digit);
 
 int string_length(char* str);
+
+void get_time_in_string(char* buffer);
+
+void time_printf(char* format, ...);

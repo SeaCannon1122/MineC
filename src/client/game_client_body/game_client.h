@@ -15,6 +15,18 @@ struct game_client {
 	int window;
 	struct key_value_map* resource_manager;
 	struct {
+		struct {
+			int year;
+			int month;
+			int day;
+			int hour;
+			int minute;
+			int second;
+			long long unix_time;
+		} start_time;
+		char start_time_str[20];
+	} session;
+	struct {
 		void* network_handle;
 		int status;
 		int message;

@@ -14,6 +14,7 @@ union multi_type {
 	int i;
 	float f;
 	void* ptr;
+	char* s;
 };
 
 struct key_value_map_entry {

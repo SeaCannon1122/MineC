@@ -42,10 +42,10 @@ void add_menu_slider(struct menu_scene* scene, int z, float* state, int x_min, i
 	scene->menu_items_count++;
 }
 
-void add_menu_text_field(struct menu_scene* scene, int z, char* buffer, int x_min, int x_max, int y, char alignment_x, char alignment_y, char text_alignment, bool* selected, struct char_font* font) {
+void add_menu_text_field(struct menu_scene* scene, int z, char* buffer, int x_min, int x_max, int y, char alignment_x, char alignment_y, char text_alignment, bool* selected, struct char_font* font, bool* field_visible) {
 	scene->menu_items[scene->menu_items_count].menu_item_type = MENU_ITEM_TEXT_FIELD;
 	scene->menu_items[scene->menu_items_count].z = z;
-	scene->menu_items[scene->menu_items_count].items.text_field = (struct menu_text_field){ buffer, x_min, x_max, y, alignment_x, alignment_y, text_alignment, selected, font };
+	scene->menu_items[scene->menu_items_count].items.text_field = (struct menu_text_field){ buffer, x_min, x_max, y, alignment_x, alignment_y, text_alignment, selected, font, field_visible };
 	scene->menu_items_count++;
 }
 
@@ -292,17 +292,20 @@ void menu_scene_frame(struct menu_scene* scene, int scale, unsigned int* screen,
 				else *text_field->selected = false;
 			}
 			
-			int frame_color = 0xffa0a0a0;
+			if (*text_field->field_visible) {
 
-			if (*text_field->selected) frame_color = 0xffffffff;
+				int frame_color = 0xffa0a0a0;
 
-			for (int x = x_min; x < x_max; x++) {
-				for (int y = y_min; y < y_max; y++) {
+				if (*text_field->selected) frame_color = 0xffffffff;
 
-					if (x >= x_min_actually + scale && x < x_max_actually - scale && y >= y_min_actually + scale && y < y_max_actually - scale) {
-						screen[x + y * width] = 0xff000000;
+				for (int x = x_min; x < x_max; x++) {
+					for (int y = y_min; y < y_max; y++) {
+
+						if (x >= x_min_actually + scale && x < x_max_actually - scale && y >= y_min_actually + scale && y < y_max_actually - scale) {
+							screen[x + y * width] = 0xff000000;
+						}
+						else screen[x + width * y] = frame_color;
 					}
-					else screen[x + width * y] = frame_color;
 				}
 			}
 

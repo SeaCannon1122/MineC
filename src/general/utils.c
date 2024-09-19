@@ -1,5 +1,9 @@
 #include "utils.h"
 
+#include <stdio.h>
+#include <time.h>
+#include <stdarg.h>
+
 int clamp_int(int val, int min, int max) {
 	return (val < min ? min : (val > max ? max : val));
 }
@@ -108,3 +112,43 @@ int string_length(char* str) {
 	for (; str[length - 1] != '\0'; length++);
 	return length;
 }
+
+void get_time_in_string(char* buffer) {
+	time_t raw_time = time(NULL);
+
+	struct tm* time_info = localtime(&raw_time);
+
+	buffer[0] = digit_to_char((time_info->tm_mon + 1) / 10);
+	buffer[1] = digit_to_char((time_info->tm_mon + 1) % 10);
+	buffer[2] = '/';
+	buffer[3] = digit_to_char(time_info->tm_mday / 10);
+	buffer[4] = digit_to_char(time_info->tm_mday % 10);
+	buffer[5] = '/';
+	buffer[6] = digit_to_char((time_info->tm_year + 1900) / 1000);
+	buffer[7] = digit_to_char(((time_info->tm_year + 1900) / 100) % 10);
+	buffer[8] = digit_to_char(((time_info->tm_year + 1900) / 10) % 10);
+	buffer[9] = digit_to_char((time_info->tm_year + 1900) % 10);
+	buffer[10] = ' ';
+	buffer[11] = digit_to_char(time_info->tm_hour / 10);
+	buffer[12] = digit_to_char(time_info->tm_hour % 10);
+	buffer[13] = ':';
+	buffer[14] = digit_to_char(time_info->tm_min / 10);
+	buffer[15] = digit_to_char(time_info->tm_min % 10);
+	buffer[16] = ':';
+	buffer[17] = digit_to_char(time_info->tm_sec / 10);
+	buffer[18] = digit_to_char(time_info->tm_sec % 10);
+}
+
+void time_printf(char* format, ...) {
+	va_list args;
+	va_start(args, format);
+	char time_buffer[20];
+	get_time_in_string(time_buffer);
+	time_buffer[19] = '\0';
+	printf("%s ", time_buffer);
+
+	vprintf(format, args);
+
+	va_end(args);
+};
+

@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include "general/platformlib/platform.h"
 #include "general/platformlib/networking.h"
@@ -59,8 +60,31 @@ int new_game_client(struct game_client* game, char* resource_path) {
 	return 0;
 }
 
+
+
+void set_start_time(struct game_client* game) {
+		time_t raw_time = time(NULL);
+
+		struct tm* time_info = localtime(&raw_time);
+
+		game->session.start_time.unix_time = raw_time;
+
+		game->session.start_time.year = time_info->tm_year + 1900;
+		game->session.start_time.month = time_info->tm_mon + 1;
+		game->session.start_time.day = time_info->tm_mday;
+		game->session.start_time.hour = time_info->tm_hour;
+		game->session.start_time.minute = time_info->tm_min;
+		game->session.start_time.second = time_info->tm_sec;
+
+		get_time_in_string(game->session.start_time_str);
+		game->session.start_time_str[19] = '\0';
+
+}
+
 void run_game_client(struct game_client* game) {
 	show_console_window();
+
+	set_start_time(game);
 
 	game->running = true;
 
@@ -99,7 +123,7 @@ void run_game_client(struct game_client* game) {
 		} break;
 
 		case SHOULD_ABORT_CONNECTING: {
-			if (game->networker.status == NETWORK_CONNECTED) game->networker.close_connection_flag = true;
+			if (game->networker.status != NETWORK_INACTIVE) game->networker.close_connection_flag = true;
 			game->game_flag = NULL_FLAG;
 		} break;
 
@@ -123,9 +147,8 @@ void run_game_client(struct game_client* game) {
 	close_window(game->window);
 	game->networker.close_connection_flag = true;
 
-	while (game->networker.network_handle != NULL) sleep_for_ms(1);
-
 	game->running = false;
+	while (game->networker.network_handle != NULL) sleep_for_ms(1);
 
 	//join_thread(rendering_thread);
 	join_thread(networking_thread);

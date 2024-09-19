@@ -159,7 +159,7 @@ struct key_value_map* new_resource_manager(char* src_keyvalue) {
 
 void destroy_resource_manager(struct key_value_map* manager) {
 	for (int i = 0; i < manager->mappings_count; i++) {
-		free(manager->mappings[i].value.ptr);
+		if(manager->mappings[i].value_type == VALUE_PTR) free(manager->mappings[i].value.ptr);
 	}
 	free(manager);
 }

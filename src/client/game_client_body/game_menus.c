@@ -124,15 +124,19 @@ void init_game_menus(struct game_client* game) {
 	for (int i = 0; i < sizeof(game->game_menus.join_game_menu.ip_address_buffer); i++) game->game_menus.join_game_menu.ip_address_buffer[i] = '\0';
 	game->game_menus.join_game_menu.ip_address_buffer_link = -1;
 	game->game_menus.join_game_menu.ip_address_box_selected = false;
+	game->game_menus.join_game_menu.ip_address_field_visible = true;
 	for (int i = 0; i < sizeof(game->game_menus.join_game_menu.port_buffer); i++) game->game_menus.join_game_menu.port_buffer[i] = '\0';
 	game->game_menus.join_game_menu.port_buffer_link = -1;
 	game->game_menus.join_game_menu.port_box_selected = false;
+	game->game_menus.join_game_menu.password_field_visible = true;
 	for (int i = 0; i < sizeof(game->game_menus.join_game_menu.username_buffer); i++) game->game_menus.join_game_menu.username_buffer[i] = '\0';
 	game->game_menus.join_game_menu.username_buffer_link = -1;
 	game->game_menus.join_game_menu.username_box_selected = false;
+	game->game_menus.join_game_menu.username_field_visible = true;
 	for (int i = 0; i < sizeof(game->game_menus.join_game_menu.password_buffer); i++) game->game_menus.join_game_menu.password_buffer[i] = '\0';
 	game->game_menus.join_game_menu.password_buffer_link = -1;
 	game->game_menus.join_game_menu.password_box_selected = false;
+	game->game_menus.join_game_menu.password_field_visible = true;
 
 	convert_string_to_gui_string_in_buffer(default_font, "Back", 1, 0xffffffff, game->game_menus.join_game_menu.back_text, 5);
 	convert_string_to_gui_string_in_buffer(default_font, "Join a multiplayer game", 2, 0xffffffff, game->game_menus.join_game_menu.join_a_multiplayer_game_text, 24);
@@ -152,16 +156,16 @@ void init_game_menus(struct game_client* game) {
 	add_menu_button(&game->game_menus.join_game_menu.menu, 10, &game->game_menus.join_game_menu.back_button_state, -100, -25, 100, -5, ALIGNMENT_MIDDLE, ALIGNMENT_BOTTOM, light_texture, dark_texture, &game->game_menus.join_game_menu.back_button_enabled);
 
 	add_menu_label(&game->game_menus.join_game_menu.menu, 2, -123, -48, ALIGNMENT_MIDDLE, ALIGNMENT_MIDDLE, game->game_menus.join_game_menu.ip_address_text, ALIGNMENT_LEFT);
-	add_menu_text_field(&game->game_menus.join_game_menu.menu, 2, game->game_menus.join_game_menu.ip_address_buffer,  -125, 45, -30, ALIGNMENT_MIDDLE, ALIGNMENT_MIDDLE, ALIGNMENT_LEFT, &game->game_menus.join_game_menu.ip_address_box_selected, default_font);
+	add_menu_text_field(&game->game_menus.join_game_menu.menu, 2, game->game_menus.join_game_menu.ip_address_buffer,  -125, 45, -30, ALIGNMENT_MIDDLE, ALIGNMENT_MIDDLE, ALIGNMENT_LEFT, &game->game_menus.join_game_menu.ip_address_box_selected, default_font, &game->game_menus.join_game_menu.ip_address_field_visible );
 
 	add_menu_label(&game->game_menus.join_game_menu.menu, 2, 57, -48, ALIGNMENT_MIDDLE, ALIGNMENT_MIDDLE, game->game_menus.join_game_menu.port_text, ALIGNMENT_LEFT);
-	add_menu_text_field(&game->game_menus.join_game_menu.menu, 2, game->game_menus.join_game_menu.port_buffer, 55, 125, -30, ALIGNMENT_MIDDLE, ALIGNMENT_MIDDLE, ALIGNMENT_LEFT, &game->game_menus.join_game_menu.port_box_selected, default_font);
+	add_menu_text_field(&game->game_menus.join_game_menu.menu, 2, game->game_menus.join_game_menu.port_buffer, 55, 125, -30, ALIGNMENT_MIDDLE, ALIGNMENT_MIDDLE, ALIGNMENT_LEFT, &game->game_menus.join_game_menu.port_box_selected, default_font, &game->game_menus.join_game_menu.port_field_visible);
 
 	add_menu_label(&game->game_menus.join_game_menu.menu, 2, -123, -3, ALIGNMENT_MIDDLE, ALIGNMENT_MIDDLE, game->game_menus.join_game_menu.username_text, ALIGNMENT_LEFT);
-	add_menu_text_field(&game->game_menus.join_game_menu.menu, 2, game->game_menus.join_game_menu.username_buffer, -125, -5, 15, ALIGNMENT_MIDDLE, ALIGNMENT_MIDDLE, ALIGNMENT_LEFT, &game->game_menus.join_game_menu.username_box_selected, default_font);
+	add_menu_text_field(&game->game_menus.join_game_menu.menu, 2, game->game_menus.join_game_menu.username_buffer, -125, -5, 15, ALIGNMENT_MIDDLE, ALIGNMENT_MIDDLE, ALIGNMENT_LEFT, &game->game_menus.join_game_menu.username_box_selected, default_font, &game->game_menus.join_game_menu.username_field_visible);
 
 	add_menu_label(&game->game_menus.join_game_menu.menu, 2, 7, -3, ALIGNMENT_MIDDLE, ALIGNMENT_MIDDLE, game->game_menus.join_game_menu.password_text, ALIGNMENT_LEFT);
-	add_menu_text_field(&game->game_menus.join_game_menu.menu, 2, game->game_menus.join_game_menu.password_buffer, 5, 125, 15, ALIGNMENT_MIDDLE, ALIGNMENT_MIDDLE, ALIGNMENT_LEFT, &game->game_menus.join_game_menu.password_box_selected, default_font);
+	add_menu_text_field(&game->game_menus.join_game_menu.menu, 2, game->game_menus.join_game_menu.password_buffer, 5, 125, 15, ALIGNMENT_MIDDLE, ALIGNMENT_MIDDLE, ALIGNMENT_LEFT, &game->game_menus.join_game_menu.password_box_selected, default_font, &game->game_menus.join_game_menu.password_field_visible);
 
 
 	add_menu_label(&game->game_menus.join_game_menu.menu, 3, 0, 40, ALIGNMENT_MIDDLE, ALIGNMENT_MIDDLE, game->game_menus.join_game_menu.join_game_text, ALIGNMENT_MIDDLE);

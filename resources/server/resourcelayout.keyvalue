@@ -1,2 +1,4 @@
 passwords l:auth.keyvalue
 settings l:settings.keyvalue
+chat_dump s:dump/chat/
+debug_dump s:dump/error_and_log/

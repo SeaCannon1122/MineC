@@ -170,7 +170,7 @@ void get_ip_address_and_port(void* client_handle, char* address_buffer, unsigned
     socklen_t addr_len = sizeof(client_addr);
 
     // Retrieve the client's address information from the socket
-    if (getpeername((int)client_handle, (struct sockaddr*)&client_addr, &addr_len) == -1) {
+    if (getpeername((intptr_t)client_handle, (struct sockaddr*)&client_addr, &addr_len) == -1) {
         if (NETWORKING_VERBOSE) perror("Failed to get client address info");
         return;
     }

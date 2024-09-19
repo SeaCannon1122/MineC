@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdbool.h>
+#include <stdio.h>
 
 #include "general/keyvalue.h"
 #include "game/game_constants.h"
@@ -13,6 +14,9 @@ struct client_on_server {
 };
 
 struct game_server {
+	char resource_folder_path[1024];
+	FILE* debug_log_file;
+	FILE* chat_log_file;
 	struct key_value_map* resource_manager;
 	struct key_value_map* username_password_map;
 	void* server_handle;

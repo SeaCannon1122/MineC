@@ -4,6 +4,7 @@
 #define GAME_MENUS_H
 
 #include <stdbool.h>
+#include <stdio.h>
 
 #include "client/gui/menu.h"
 #include "client/gui/char_font.h"
@@ -67,24 +68,28 @@ struct game_menus {
 		char ip_address_buffer[15 + 1];
 		bool ip_address_box_selected;
 		int ip_address_buffer_link;
+		bool ip_address_field_visible;
 
 		struct gui_character port_text[5 + 1];
 
 		char port_buffer[5 + 1];
 		bool port_box_selected;
 		int port_buffer_link;
+		bool port_field_visible;
 
 		struct gui_character username_text[10];
 
 		char username_buffer[MAX_USERNAME_LENGTH + 1];
 		bool username_box_selected;
 		int username_buffer_link;
+		bool username_field_visible;
 
 		struct gui_character password_text[10];
 
 		char password_buffer[MAX_PASSWORD_LENGTH + 1];
 		bool password_box_selected;
 		int password_buffer_link;
+		bool password_field_visible;
 
 		struct gui_character join_game_text[10];
 		bool join_game_button_state;
@@ -110,7 +115,9 @@ struct game_menus {
 
 	struct {
 
+		FILE* chat;
 		char message_buffer[255 + 1];
+
 
 		struct menu_scene menu;
 	} chat_menu;
