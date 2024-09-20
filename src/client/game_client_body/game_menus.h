@@ -19,6 +19,7 @@ enum blocks_menus {
 	JOIN_GAME_MENU,
 	CONNECTION_WAITING_MENU,
 	CHAT_MENU,
+	INGAME_OPTIONS_MENU,
 };
 
 struct game_menus {
@@ -115,12 +116,36 @@ struct game_menus {
 
 	struct {
 
-		FILE* chat;
 		char message_buffer[255 + 1];
-
+		int port_buffer_link;
+		bool port_field_visible;
 
 		struct menu_scene menu;
 	} chat_menu;
+
+	struct {
+		struct gui_character options_text[8];
+
+		bool back_to_game_button_state;
+		bool back_to_game_button_enabled;
+		struct gui_character back_to_game_text[13];
+
+		float fov_slider_state;
+		struct gui_character fov_text[9];
+
+		float render_distance_slider_state;
+		struct gui_character render_distance_text[27];
+
+		bool gui_scale_button_state;
+		bool gui_scale_button_enabled;
+		struct gui_character gui_scale_text[16];
+
+		bool disconnect_button_state;
+		bool disconnect_button_enabled;
+		struct gui_character disconnect_text[11];
+
+		struct menu_scene menu;
+	} in_game_options_menu;
 
 	int active_menu;
 };

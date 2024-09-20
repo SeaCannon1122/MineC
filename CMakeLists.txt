@@ -7,6 +7,9 @@ set(CLIENT_SOURCE_FILES
     src/client/gui/menu.c
     src/client/game_client_body/game_client.c
     src/client/game_client_body/game_menus.c
+    src/client/game_client_body/game_client_control.c
+    src/client/game_client_body/game_client_renderer.c
+    src/client/game_client_body/game_client_simulator.c
     src/client/game_client_body/game_client_networker.c
     src/client/game_client_body/debug.c
     src/client/main.c

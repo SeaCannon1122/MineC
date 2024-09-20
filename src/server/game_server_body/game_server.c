@@ -11,7 +11,7 @@
 
 #include "game/networking_packets/networking_packets.h"
 
-void log_chat_message(struct game_server* game, const char* format, ...) {
+void server_log_chat_message(struct game_server* game, const char* format, ...) {
     char time_buffer[20];
     get_time_in_string(time_buffer);
     time_buffer[19] = '\0';
@@ -29,7 +29,7 @@ void log_chat_message(struct game_server* game, const char* format, ...) {
     fflush(game->chat_log_file);
 }
 
-void log_debug_message(struct game_server* game, const char* format, ...) {
+void server_log_debug_message(struct game_server* game, const char* format, ...) {
     char time_buffer[20];
     get_time_in_string(time_buffer);
     time_buffer[19] = '\0';
@@ -77,11 +77,6 @@ void new_game_server(struct game_server* game, char* resource_path) {
     game->resource_folder_path[i] = '\0';
 }
 
-void logging_init(struct game_server* game) {
-    char chat_log_file_path[1024];
-    
-
-}
 
 void client_auth_thread_function(struct game_server* game) {
 
@@ -120,13 +115,13 @@ void client_auth_thread_function(struct game_server* game) {
                 int packet_type = NETWORKING_PACKET_NOT_AUTHORIZED_TO_JOIN;
                 send_data(client_handle, &packet_type, sizeof(int));
                 close_connection(client_handle);
-                log_debug_message(game, "%s: not autherized to join\n", auth_packet.username);
+                server_log_debug_message(game, "%s: not autherized to join\n", auth_packet.username);
             }
             else if (strcmp(auth_packet.password, password)) {
                 int packet_type = NETWORKING_PACKET_INVALID_PASSWORD;
                 send_data(client_handle, &packet_type, sizeof(int));
                 close_connection(client_handle);
-                log_debug_message(game, "%s: incorrect password\n", auth_packet.username);
+                server_log_debug_message(game, "%s: incorrect password\n", auth_packet.username);
             }
             else if (client_index == game->settings.max_clients) {
                 int packet_type = NETWORKING_PACKET_SERVER_FULL;
@@ -149,20 +144,20 @@ void client_auth_thread_function(struct game_server* game) {
                 game->clients[client_index].username[j] = auth_packet.username[j];
                 game->clients[client_index].client_handle = client_handle;
                 game->clients_connected_count++;
-                log_debug_message(game, "%s from %s:%u connected to the server\n", game->clients[client_index].username, game->clients[client_index].ip_address, game->clients[client_index].port);
+                server_log_debug_message(game, "%s from %s:%u connected to the server\n", game->clients[client_index].username, game->clients[client_index].ip_address, game->clients[client_index].port);
             }
         }
 
         sleep_for_ms(100);
     }
 
-    log_debug_message(game, "stopped accepting new clients\n");
+    server_log_debug_message(game, "stopped accepting new clients\n");
 
 }
 
 void disconnect_client(struct game_server* game, int client_index) {
     close_connection(game->clients[client_index].client_handle);
-    log_debug_message(game, "%s from %s:%u disconnected from the server\n", game->clients[client_index].username, game->clients[client_index].ip_address, game->clients[client_index].port);
+    server_log_debug_message(game, "%s from %s:%u disconnected from the server\n", game->clients[client_index].username, game->clients[client_index].ip_address, game->clients[client_index].port);
     game->clients[client_index].client_handle = NULL;
     game->clients_connected_count--;
 }
@@ -234,18 +229,18 @@ void run_game_server(struct game_server* game) {
 
     server_log_init(game);
 
-    log_debug_message(game, "Server starting...\n");
+    server_log_debug_message(game, "Server starting...\n");
     show_console_window();
 
 
 
     game->server_handle = server_init(8080);
     if (!game->server_handle) {
-        log_debug_message(game, "Failed to initialize server.\n");
+        server_log_debug_message(game, "Failed to initialize server.\n");
         return;
         exit(1);
     }
-    log_debug_message(game, "Server started on port 8080.\n");
+    server_log_debug_message(game, "Server started on port 8080.\n");
 
     game->running = true;
 
@@ -290,19 +285,24 @@ void run_game_server(struct game_server* game) {
                 } break;
 
             }
+
+            if(!is_connected(game->clients[i].client_handle)) disconnect_client(game, i);
+
         _connection_closed:
             1 == 1;
         }
 
+
+
         sleep_for_ms(10);
-        if (get_key_state(KEY_ESCAPE)) game->running = false;
+        if (get_key_state('P')) game->running = false;
     }
 
     join_thread(client_auth_thread);
 
     for (int i = 0; i < game->clients_length; i++) if (game->clients[i].client_handle != NULL) close_connection(game->clients[i].client_handle);
 
-    log_debug_message(game, "\n\nserver_closing\n");
+    server_log_debug_message(game, "\n\nserver_closing\n");
     server_close(game->server_handle);
 
     fclose(game->chat_log_file);
@@ -311,5 +311,5 @@ void run_game_server(struct game_server* game) {
 }
 
 void delete_game_server(struct game_server* game) {
-
+    destroy_resource_manager(game->resource_manager);
 }

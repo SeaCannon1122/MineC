@@ -192,6 +192,69 @@ void init_game_menus(struct game_client* game) {
 	add_menu_label(&game->game_menus.connection_waiting_menu.menu, 11, 0, -15, ALIGNMENT_MIDDLE, ALIGNMENT_BOTTOM, game->game_menus.connection_waiting_menu.back_text, ALIGNMENT_MIDDLE);
 	add_menu_button(&game->game_menus.connection_waiting_menu.menu, 10, &game->game_menus.connection_waiting_menu.back_button_state, -100, -25, 100, -5, ALIGNMENT_MIDDLE, ALIGNMENT_BOTTOM, light_texture, dark_texture, &game->game_menus.connection_waiting_menu.back_button_enabled);
 
+
+
+
+
+
+	game->game_menus.in_game_options_menu.menu.menu_items_count = 0;
+
+	game->game_menus.in_game_options_menu.back_to_game_button_enabled = true;
+	game->game_menus.in_game_options_menu.back_to_game_button_state = false;
+	game->game_menus.in_game_options_menu.disconnect_button_enabled = true;
+	game->game_menus.in_game_options_menu.disconnect_button_state = false;
+	game->game_menus.in_game_options_menu.fov_slider_state = ((float)game->settings.fov - (float)game->constants.fov_min) / ((float)game->constants.fov_max - (float)game->constants.fov_min);
+	game->game_menus.in_game_options_menu.render_distance_slider_state = ((float)game->settings.render_distance - (float)game->constants.render_distance_min) / ((float)game->constants.render_distance_max - (float)game->constants.render_distance_min);
+	game->game_menus.in_game_options_menu.gui_scale_button_enabled = true;
+	game->game_menus.in_game_options_menu.gui_scale_button_state = false;
+
+
+	convert_string_to_gui_string_in_buffer(default_font, "Options", 2, 0xffffffff, game->game_menus.in_game_options_menu.options_text, 8);
+	convert_string_to_gui_string_in_buffer(default_font, "FOV:    ", 1, 0xffffffff, game->game_menus.in_game_options_menu.fov_text, 9);
+
+	game->game_menus.in_game_options_menu.fov_text[5].value = (game->settings.fov < 100 ? '\x1f' : digit_to_char(game->settings.fov / 100));
+	game->game_menus.in_game_options_menu.fov_text[6].value = (game->settings.fov < 10 ? '\x1f' : digit_to_char((game->settings.fov / 10) % 10));
+	game->game_menus.in_game_options_menu.fov_text[7].value = digit_to_char(game->settings.fov % 10);
+
+	convert_string_to_gui_string_in_buffer(default_font, "Render Distance:    Chunks", 1, 0xffffffff, game->game_menus.in_game_options_menu.render_distance_text, 27);
+
+	game->game_menus.in_game_options_menu.render_distance_text[17].value = (game->settings.render_distance < 10 ? '\x1f' : digit_to_char(game->settings.render_distance / 10));
+	game->game_menus.in_game_options_menu.render_distance_text[18].value = digit_to_char(game->settings.render_distance % 10);
+
+	convert_string_to_gui_string_in_buffer(default_font, "GUI Scale:     ", 1, 0xffffffff, game->game_menus.in_game_options_menu.gui_scale_text, 16);
+
+	if (game->settings.gui_scale > 0) {
+		game->game_menus.in_game_options_menu.gui_scale_text[11].value = digit_to_char(game->settings.gui_scale);
+		game->game_menus.in_game_options_menu.gui_scale_text[12].value = '\x1f';
+		game->game_menus.in_game_options_menu.gui_scale_text[13].value = '\x1f';
+		game->game_menus.in_game_options_menu.gui_scale_text[14].value = '\x1f';
+	}
+	else {
+		game->game_menus.in_game_options_menu.gui_scale_text[11].value = 'A';
+		game->game_menus.in_game_options_menu.gui_scale_text[12].value = 'u';
+		game->game_menus.in_game_options_menu.gui_scale_text[13].value = 't';
+		game->game_menus.in_game_options_menu.gui_scale_text[14].value = 'o';
+	}
+
+	convert_string_to_gui_string_in_buffer(default_font, "Back to Game", 1, 0xffffffff, game->game_menus.in_game_options_menu.back_to_game_text, 13);
+	convert_string_to_gui_string_in_buffer(default_font, "Disconnect", 1, 0xffffffff, game->game_menus.in_game_options_menu.disconnect_text, 11);
+
+	add_menu_label(&game->game_menus.in_game_options_menu.menu, 2, -79, 85, ALIGNMENT_MIDDLE, ALIGNMENT_TOP, game->game_menus.in_game_options_menu.fov_text, ALIGNMENT_MIDDLE); //fov
+	add_menu_label(&game->game_menus.in_game_options_menu.menu, 2, 79, 85, ALIGNMENT_MIDDLE, ALIGNMENT_TOP, game->game_menus.in_game_options_menu.render_distance_text, ALIGNMENT_MIDDLE); //render distance
+	add_menu_label(&game->game_menus.in_game_options_menu.menu, 2, -79, 110, ALIGNMENT_MIDDLE, ALIGNMENT_TOP, game->game_menus.in_game_options_menu.gui_scale_text, ALIGNMENT_MIDDLE); //gui_scale
+
+	add_menu_label(&game->game_menus.in_game_options_menu.menu, 0, 0, 25, ALIGNMENT_MIDDLE, ALIGNMENT_TOP, game->game_menus.in_game_options_menu.options_text, ALIGNMENT_MIDDLE);
+
+	add_menu_label(&game->game_menus.in_game_options_menu.menu, 10, 0, 60, ALIGNMENT_MIDDLE, ALIGNMENT_TOP, game->game_menus.in_game_options_menu.disconnect_text, ALIGNMENT_MIDDLE);
+	add_menu_button(&game->game_menus.in_game_options_menu.menu, 2, &game->game_menus.in_game_options_menu.disconnect_button_state, -100, 50, 100, 70, ALIGNMENT_MIDDLE, ALIGNMENT_TOP, light_texture, dark_texture, &game->game_menus.in_game_options_menu.disconnect_button_enabled);
+
+	add_menu_slider(&game->game_menus.in_game_options_menu.menu, 1, &game->game_menus.in_game_options_menu.fov_slider_state, -154, 75, -4, 95, ALIGNMENT_MIDDLE, ALIGNMENT_TOP, dark_texture, light_texture, 10);
+	add_menu_slider(&game->game_menus.in_game_options_menu.menu, 1, &game->game_menus.in_game_options_menu.render_distance_slider_state, 4, 75, 154, 95, ALIGNMENT_MIDDLE, ALIGNMENT_TOP, dark_texture, light_texture, 10);
+
+	add_menu_button(&game->game_menus.in_game_options_menu.menu, 1, &game->game_menus.in_game_options_menu.gui_scale_button_state, -154, 100, -4, 120, ALIGNMENT_MIDDLE, ALIGNMENT_TOP, light_texture, dark_texture, &game->game_menus.in_game_options_menu.gui_scale_button_enabled);
+
+	add_menu_label(&game->game_menus.in_game_options_menu.menu, 10, 0, -15, ALIGNMENT_MIDDLE, ALIGNMENT_BOTTOM, game->game_menus.in_game_options_menu.back_to_game_text, ALIGNMENT_MIDDLE);
+	add_menu_button(&game->game_menus.in_game_options_menu.menu, 2, &game->game_menus.in_game_options_menu.back_to_game_button_state, -100, -25, 100, -5, ALIGNMENT_MIDDLE, ALIGNMENT_BOTTOM, light_texture, dark_texture, &game->game_menus.in_game_options_menu.back_to_game_button_enabled);
 }
 
 
@@ -347,7 +410,13 @@ void game_menus_frame(struct game_client* game, unsigned int* pixels, int width,
 				game->game_menus.join_game_menu.password_buffer_link = -1;
 			}
 
-			game->game_flag = SHOULD_CONNECT;
+			if (game->networker.status == NETWORK_INACTIVE) {
+				game->networker.port = string_to_int(game->game_menus.join_game_menu.port_buffer, sizeof(game->game_menus.join_game_menu.port_buffer) - 1);
+				for (int i = 0; i < 16; i++) game->networker.ip[i] = game->game_menus.join_game_menu.ip_address_buffer[i];
+				for (int i = 0; i < MAX_USERNAME_LENGTH; i++) game->networker.username[i] = game->game_menus.join_game_menu.username_buffer[i];
+				for (int i = 0; i < MAX_PASSWORD_LENGTH; i++) game->networker.password[i] = game->game_menus.join_game_menu.password_buffer[i];
+				game->networker.request = CONNECT_TO_SERVER;
+			}
 
 			break;
 		}
@@ -391,6 +460,10 @@ void game_menus_frame(struct game_client* game, unsigned int* pixels, int width,
 		} break;
 
 		case NETWORKER_MESSAGE_DISCONNECTED: {
+			parse_string_into_gui_string("Disconnected", game->game_menus.connection_waiting_menu.networking_message);
+		} break;
+
+		case NETWORKER_MESSAGE_CONNECTION_LOST: {
 			parse_string_into_gui_string("Connection lost", game->game_menus.connection_waiting_menu.networking_message);
 		} break;
 
@@ -403,9 +476,60 @@ void game_menus_frame(struct game_client* game, unsigned int* pixels, int width,
 		if (game->game_menus.connection_waiting_menu.back_button_state) {
 			game->game_menus.connection_waiting_menu.back_button_state = false;
 			game->game_menus.active_menu = JOIN_GAME_MENU;
-			game->game_flag = SHOULD_ABORT_CONNECTING; 
+			if (game->networker.status != NETWORK_INACTIVE) game->networker.close_connection_flag = true;
 			break;
 		}
+
+		break;
+	}
+
+	case CHAT_MENU: {
+
+	}
+
+	case INGAME_OPTIONS_MENU: {
+
+		menu_scene_frame(&game->game_menus.in_game_options_menu.menu, render_gui_scale, pixels, width, height, mousepos.x, mousepos.y, click);
+
+		game->settings.render_distance = (float)game->constants.render_distance_min + (game->game_menus.in_game_options_menu.render_distance_slider_state * ((float)game->constants.render_distance_max - (float)game->constants.render_distance_min));
+		game->settings.fov = (float)game->constants.fov_min + (game->game_menus.in_game_options_menu.fov_slider_state * ((float)game->constants.fov_max - (float)game->constants.fov_min));
+
+		if (game->game_menus.in_game_options_menu.back_to_game_button_state || get_key_state(KEY_ESCAPE) == 0b11) {
+			game->game_menus.in_game_options_menu.back_to_game_button_state = false;
+			game->game_menus.active_menu = NO_MENU;
+			break;
+		}
+
+		if (game->game_menus.in_game_options_menu.disconnect_button_state) {
+			game->game_menus.in_game_options_menu.disconnect_button_state = false;
+			game->networker.close_connection_flag = true;
+			break;
+		}
+
+		else if (game->game_menus.in_game_options_menu.gui_scale_button_state) {
+			game->game_menus.in_game_options_menu.gui_scale_button_state = false;
+			game->settings.gui_scale = (game->settings.gui_scale + 1) % ((width + 350) / 350);
+
+			if (game->settings.gui_scale > 0) {
+				game->game_menus.in_game_options_menu.gui_scale_text[11].value = digit_to_char(game->settings.gui_scale);
+				game->game_menus.in_game_options_menu.gui_scale_text[12].value = '\x1f';
+				game->game_menus.in_game_options_menu.gui_scale_text[13].value = '\x1f';
+				game->game_menus.in_game_options_menu.gui_scale_text[14].value = '\x1f';
+			}
+			else {
+				game->game_menus.in_game_options_menu.gui_scale_text[11].value = 'A';
+				game->game_menus.in_game_options_menu.gui_scale_text[12].value = 'u';
+				game->game_menus.in_game_options_menu.gui_scale_text[13].value = 't';
+				game->game_menus.in_game_options_menu.gui_scale_text[14].value = 'o';
+			}
+		}
+
+		game->game_menus.in_game_options_menu.render_distance_text[17].value = (game->settings.render_distance < 10 ? '\x1f' : digit_to_char(game->settings.render_distance / 10));
+		game->game_menus.in_game_options_menu.render_distance_text[18].value = digit_to_char(game->settings.render_distance % 10);
+
+		game->game_menus.in_game_options_menu.fov_text[5].value = (game->settings.fov < 100 ? '\x1f' : digit_to_char(game->settings.fov / 100));
+		game->game_menus.in_game_options_menu.fov_text[6].value = (game->settings.fov < 10 ? '\x1f' : digit_to_char((game->settings.fov / 10) % 10));
+		game->game_menus.in_game_options_menu.fov_text[7].value = digit_to_char(game->settings.fov % 10);
 
 		break;
 	}

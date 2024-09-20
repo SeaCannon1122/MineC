@@ -16,7 +16,79 @@
 #include "client/gui/menu.h"
 #include "game_menus.h"
 #include "game_client_networker.h"
+#include "game_client_renderer.h"
+#include "game_client_simulator.h"
+#include "game_client_control.h"
+
 #include "debug.h"
+#include "general/logging.h"
+
+int client_log_init(struct game_client* game) {
+	time_t raw_time = time(NULL);
+	struct tm* time_info = localtime(&raw_time);
+
+	char* chat_log_path_rel = get_value_from_key(game->resource_manager, "chat_dump").s;
+	if (chat_log_path_rel == NULL) return 1;
+	char* debug_log_path_rel = get_value_from_key(game->resource_manager, "debug_dump").s;
+	if (debug_log_path_rel == NULL) return 2;
+
+	char chat_log_path[1024];
+	int i = 0;
+	if (chat_log_path_rel[0] != '/')for (; game->resource_folder_path[i] != '\0'; i++) chat_log_path[i] = game->resource_folder_path[i];
+	int j = 0;
+	for (; chat_log_path_rel[j] != '\0'; j++) chat_log_path[j + i] = chat_log_path_rel[j];
+
+	chat_log_path[i + j] = digit_to_char((time_info->tm_mon + 1) / 10);
+	chat_log_path[i + j + 1] = digit_to_char((time_info->tm_mon + 1) % 10);
+	chat_log_path[i + j + 2] = digit_to_char(time_info->tm_mday / 10);
+	chat_log_path[i + j + 3] = digit_to_char(time_info->tm_mday % 10);
+	chat_log_path[i + j + 4] = digit_to_char((time_info->tm_year + 1900) / 1000);
+	chat_log_path[i + j + 5] = digit_to_char(((time_info->tm_year + 1900) / 100) % 10);
+	chat_log_path[i + j + 6] = digit_to_char(((time_info->tm_year + 1900) / 10) % 10);
+	chat_log_path[i + j + 7] = digit_to_char((time_info->tm_year + 1900) % 10);
+	chat_log_path[i + j + 8] = digit_to_char(time_info->tm_hour / 10);
+	chat_log_path[i + j + 9] = digit_to_char(time_info->tm_hour % 10);
+	chat_log_path[i + j + 10] = digit_to_char(time_info->tm_min / 10);
+	chat_log_path[i + j + 11] = digit_to_char(time_info->tm_min % 10);
+	chat_log_path[i + j + 12] = digit_to_char(time_info->tm_sec / 10);
+	chat_log_path[i + j + 13] = digit_to_char(time_info->tm_sec % 10);
+	chat_log_path[i + j + 14] = '.';
+	chat_log_path[i + j + 15] = 'l';
+	chat_log_path[i + j + 16] = 'o';
+	chat_log_path[i + j + 17] = 'g';
+	chat_log_path[i + j + 18] = '\0';
+
+	char debug_log_path[1024];
+	i = 0;
+	if (debug_log_path_rel[0] != '/') for (; game->resource_folder_path[i] != '\0'; i++) debug_log_path[i] = game->resource_folder_path[i];
+	j = 0;
+	for (; debug_log_path_rel[j] != '\0'; j++) debug_log_path[j + i] = debug_log_path_rel[j];
+
+	debug_log_path[i + j] = digit_to_char((time_info->tm_mon + 1) / 10);
+	debug_log_path[i + j + 1] = digit_to_char((time_info->tm_mon + 1) % 10);
+	debug_log_path[i + j + 2] = digit_to_char(time_info->tm_mday / 10);
+	debug_log_path[i + j + 3] = digit_to_char(time_info->tm_mday % 10);
+	debug_log_path[i + j + 4] = digit_to_char((time_info->tm_year + 1900) / 1000);
+	debug_log_path[i + j + 5] = digit_to_char(((time_info->tm_year + 1900) / 100) % 10);
+	debug_log_path[i + j + 6] = digit_to_char(((time_info->tm_year + 1900) / 10) % 10);
+	debug_log_path[i + j + 7] = digit_to_char((time_info->tm_year + 1900) % 10);
+	debug_log_path[i + j + 8] = digit_to_char(time_info->tm_hour / 10);
+	debug_log_path[i + j + 9] = digit_to_char(time_info->tm_hour % 10);
+	debug_log_path[i + j + 10] = digit_to_char(time_info->tm_min / 10);
+	debug_log_path[i + j + 11] = digit_to_char(time_info->tm_min % 10);
+	debug_log_path[i + j + 12] = digit_to_char(time_info->tm_sec / 10);
+	debug_log_path[i + j + 13] = digit_to_char(time_info->tm_sec % 10);
+	debug_log_path[i + j + 14] = '.';
+	debug_log_path[i + j + 15] = 'l';
+	debug_log_path[i + j + 16] = 'o';
+	debug_log_path[i + j + 17] = 'g';
+	debug_log_path[i + j + 18] = '\0';
+
+	game->chat_log_file = fopen(chat_log_path, "w");
+	game->debug_log_file = fopen(debug_log_path, "w");
+
+	return 0;
+}
 
 int new_game_client(struct game_client* game, char* resource_path) {
 
@@ -26,9 +98,24 @@ int new_game_client(struct game_client* game, char* resource_path) {
 		return 1;
 	}
 
+	int i = 0;
+	for (; resource_path[i] != '\0'; i++);
+	for (; resource_path[i] != '/' && i > 0; i--);
+	if (resource_path[i] == '/') i++;
+
+	for (int j = 0; j < i; j++) game->resource_folder_path[j] = resource_path[j];
+	game->resource_folder_path[i] = '\0';
+
+	if (client_log_init(game) != 0) {
+		printf("Couldn't find log directory paths in resource_manager\n");
+		destroy_resource_manager(game->resource_manager);
+		return 2;
+	}
+
 	struct key_value_map* settings_map = get_value_from_key(game->resource_manager, "settings").ptr;
 	if (settings_map == NULL) {
-		printf("Couldn't find critical settings file link 'settings' in resourcelayout\n");
+		log_message(game->debug_log_file, "Couldn't find critical settings file link 'settings' in resourcelayout\n");
+		destroy_resource_manager(game->resource_manager);
 		return 2;
 	}
 
@@ -39,7 +126,8 @@ int new_game_client(struct game_client* game, char* resource_path) {
 
 	struct key_value_map* constants_map = get_value_from_key(game->resource_manager, "constants").ptr;
 	if (constants_map == NULL) {
-		printf("Couldn't find critical settings file link 'constants' in resourcelayout\n");
+		log_message(game->debug_log_file, "Couldn't find critical settings file link 'constants' in resourcelayout\n");
+		destroy_resource_manager(game->resource_manager);
 		return 2;
 	}
 
@@ -51,7 +139,7 @@ int new_game_client(struct game_client* game, char* resource_path) {
 	game->constants.packet_awaiting_timeout = get_value_from_key(constants_map, "packet_awaiting_timeout").i;
 	game->running = false;
 
-
+	game->in_game_flag = false;
 
 	init_game_menus(game);
 	init_networker(game);
@@ -90,67 +178,66 @@ void run_game_client(struct game_client* game) {
 
 	game->window = create_window(200, 100, 1100, 700, "client");
 
+	log_message(game->debug_log_file, "Created window\n");
+
 	void* networking_thread = create_thread((void(*)(void*))networker_thread, game);
-	//void* rendering_thread;
+	void* simulation_thread = create_thread((void(*)(void*))game_client_simulator_thread_function, game);
+	void* control_thread = create_thread((void(*)(void*))game_client_control_thread_function, game);
 
 	while (get_key_state(KEY_MOUSE_LEFT) & 0b1) sleep_for_ms(10);
 
-	int render_width = (get_window_width(game->window) + game->settings.resolution_scale - 1) / game->settings.resolution_scale;
-	int render_height = (get_window_height(game->window) + game->settings.resolution_scale - 1) / game->settings.resolution_scale;
+	game->render_state.width = (get_window_width(game->window) + game->settings.resolution_scale - 1) / game->settings.resolution_scale;
+	game->render_state.height = (get_window_height(game->window) + game->settings.resolution_scale - 1) / game->settings.resolution_scale;
+	game->render_state.pixels = malloc(game->render_state.width * game->render_state.height * sizeof(unsigned int));
+
+	log_message(game->debug_log_file, "Entering main Game Loop\n");
+
 
 	while (is_window_active(game->window) && !game->game_menus.main_menu.quit_game_button_state) {
-
-		int width = (get_window_width(game->window) + game->settings.resolution_scale - 1) / game->settings.resolution_scale;
-		int height = (get_window_height(game->window) + game->settings.resolution_scale - 1) / game->settings.resolution_scale;
-		unsigned int* pixels = malloc(width * height * sizeof(unsigned int));
-
-		//render_ingame_frame(game, pixels, width, height);
 		
-		game_menus_frame(game, pixels, width, height);
-
-		switch (game->game_flag)
-		{
-
-		case SHOULD_CONNECT: {
-			if(game->networker.status == NETWORK_INACTIVE) {
-				game->networker.port = string_to_int(game->game_menus.join_game_menu.port_buffer, sizeof(game->game_menus.join_game_menu.port_buffer) - 1);
-				for (int i = 0; i < 16; i++) game->networker.ip[i] = game->game_menus.join_game_menu.ip_address_buffer[i];
-				for (int i = 0; i < MAX_USERNAME_LENGTH; i++) game->networker.username[i] = game->game_menus.join_game_menu.username_buffer[i];
-				for (int i = 0; i < MAX_PASSWORD_LENGTH; i++) game->networker.password[i] = game->game_menus.join_game_menu.password_buffer[i];
-				game->networker.request = CONNECT_TO_SERVER;
-			}
-			game->game_flag = NULL_FLAG;
-		} break;
-
-		case SHOULD_ABORT_CONNECTING: {
-			if (game->networker.status != NETWORK_INACTIVE) game->networker.close_connection_flag = true;
-			game->game_flag = NULL_FLAG;
-		} break;
-
-
-		default:
-			break;
+		int new_width = (get_window_width(game->window) + game->settings.resolution_scale - 1) / game->settings.resolution_scale;
+		int new_height = (get_window_height(game->window) + game->settings.resolution_scale - 1) / game->settings.resolution_scale;
+		if (new_width != game->render_state.width || new_height != game->render_state.height) {
+			free(game->render_state.pixels);
+			game->render_state.pixels = malloc(new_width * new_height * sizeof(unsigned int));
+			game->render_state.width = new_width;
+			game->render_state.height = new_height;
+		}
+		
+		if (game->networker.status == NETWORK_CONNECTED && game->in_game_flag == false) {
+			game->in_game_flag = true;
+			game->game_menus.active_menu = NO_MENU;
 		}
 
-		game->game_flag = NULL_FLAG;
 
-		
+		if (game->in_game_flag) { 
 
+			if (game->networker.status != NETWORK_CONNECTED && game->in_game_flag == true) {
+				game->in_game_flag = false;
+				game->game_menus.active_menu = CONNECTION_WAITING_MENU;
+			}
 
-		draw_to_window(game->window, pixels, width, height, game->settings.resolution_scale);
+			client_render_world(game); 
+		}
 
-		free(pixels);
+		game_menus_frame(game, game->render_state.pixels, game->render_state.width, game->render_state.height);
+
+		draw_to_window(game->window, game->render_state.pixels, game->render_state.width, game->render_state.height, game->settings.resolution_scale);
 
 		sleep_for_ms(10);
 	}
 
+	free(game->render_state.pixels);
+
 	close_window(game->window);
 	game->networker.close_connection_flag = true;
+	game->in_game_flag = false;
 
 	game->running = false;
 	while (game->networker.network_handle != NULL) sleep_for_ms(1);
 
-	//join_thread(rendering_thread);
+	join_thread(control_thread);
+	join_thread(simulation_thread);
 	join_thread(networking_thread);
 
 

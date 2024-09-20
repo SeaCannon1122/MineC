@@ -11,6 +11,9 @@ enum game_request {
 };
 
 struct game_client {
+	char resource_folder_path[1024];
+	FILE* debug_log_file;
+	FILE* chat_log_file;
 	bool running;
 	int window;
 	struct key_value_map* resource_manager;
@@ -37,7 +40,12 @@ struct game_client {
 		char password[MAX_PASSWORD_LENGTH + 1];
 		bool close_connection_flag;
 	} networker;
-	int game_flag;
+	bool in_game_flag;
+	struct {
+		int width;
+		int height;
+		unsigned int* pixels;
+	} render_state;
 	struct {
 		int render_distance;
 		int fov;
