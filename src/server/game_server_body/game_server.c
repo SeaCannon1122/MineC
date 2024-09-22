@@ -10,44 +10,9 @@
 #include "general/platformlib/platform.h"
 #include "general/platformlib/networking.h"
 #include "general/utils.h"
+#include "general/logging.h"
 
 #include "game/networking_packets/networking_packets.h"
-
-void server_log_chat_message(struct game_server* game, const char* format, ...) {
-    char time_buffer[20];
-    get_time_in_string(time_buffer);
-    time_buffer[19] = '\0';
-
-    va_list args;
-    va_start(args, format);
-    printf("%s [CHAT] ", time_buffer);
-    vprintf(format, args);
-    va_end(args);
-
-    va_start(args, format);
-    fprintf(game->chat_log_file, "%s [CHAT] ", time_buffer);
-    vfprintf(game->chat_log_file, format, args);
-    va_end(args);
-    fflush(game->chat_log_file);
-}
-
-void server_log_debug_message(struct game_server* game, const char* format, ...) {
-    char time_buffer[20];
-    get_time_in_string(time_buffer);
-    time_buffer[19] = '\0';
-
-    va_list args;
-    va_start(args, format);
-    printf("%s [DEBUG] ", time_buffer);
-    vprintf(format, args);
-    va_end(args);
-
-    va_start(args, format);
-    fprintf(game->debug_log_file, "%s [DEBUG] ", time_buffer);
-    vfprintf(game->debug_log_file, format, args);
-    va_end(args);
-    fflush(game->debug_log_file);
-}
 
 void new_game_server(struct game_server* game, char* resource_path) {
     game->resource_manager = new_resource_manager(resource_path);
@@ -66,6 +31,7 @@ void new_game_server(struct game_server* game, char* resource_path) {
 
     for (int i = 0; i < game->settings.max_clients; i++) {
         game->clients[i].client_handle = NULL;
+        game->clients[i].next_packet_type = -1;
         for (int j = 0; j < 22 + 1; j++) game->clients[i].ip_address[j] = '\0';
         for (int j = 0; j < MAX_USERNAME_LENGTH + 1; j++) game->clients[i].username[j] = '\0';
     }
@@ -117,13 +83,13 @@ void client_auth_thread_function(struct game_server* game) {
                 int packet_type = NETWORKING_PACKET_NOT_AUTHORIZED_TO_JOIN;
                 send_data(client_handle, &packet_type, sizeof(int));
                 close_connection(client_handle);
-                server_log_debug_message(game, "%s: not autherized to join\n", auth_packet.username);
+                log_message(game->debug_log_file, "[CLIENT HANDLER] %s not autherized to join", auth_packet.username);
             }
             else if (strcmp(auth_packet.password, password)) {
                 int packet_type = NETWORKING_PACKET_INVALID_PASSWORD;
                 send_data(client_handle, &packet_type, sizeof(int));
                 close_connection(client_handle);
-                server_log_debug_message(game, "%s: incorrect password\n", auth_packet.username);
+                log_message(game->debug_log_file, "[CLIENT HANDLER] %s incorrect password", auth_packet.username);
             }
             else if (client_index == game->settings.max_clients) {
                 int packet_type = NETWORKING_PACKET_SERVER_FULL;
@@ -136,8 +102,7 @@ void client_auth_thread_function(struct game_server* game) {
                 packet_type = NETWORKING_PACKET_SERVER_SETTINGS;
                 send_data(client_handle, &packet_type, sizeof(int));
                 struct networking_packet_server_settings server_settings = {
-                    game->settings.max_render_distance,
-                    game->settings.max_message_length,
+                    game->settings.max_render_distance
                 };
                 send_data(client_handle, &server_settings, sizeof(struct networking_packet_server_settings));
                 get_ip_address_and_port(client_handle, game->clients[client_index].ip_address, &game->clients[client_index].port);
@@ -146,20 +111,20 @@ void client_auth_thread_function(struct game_server* game) {
                 game->clients[client_index].username[j] = auth_packet.username[j];
                 game->clients[client_index].client_handle = client_handle;
                 game->clients_connected_count++;
-                server_log_debug_message(game, "%s from %s:%u connected to the server\n", game->clients[client_index].username, game->clients[client_index].ip_address, game->clients[client_index].port);
+                log_message(game->debug_log_file, "[CLIENT HANDLER] %s from %s:%u connected to the server", game->clients[client_index].username, game->clients[client_index].ip_address, game->clients[client_index].port);
             }
         }
 
         sleep_for_ms(100);
     }
 
-    server_log_debug_message(game, "stopped accepting new clients\n");
+    log_message(game->debug_log_file, "[CLIENT HANDLER] Stopped accepting new clients");
 
 }
 
 void disconnect_client(struct game_server* game, int client_index) {
     close_connection(game->clients[client_index].client_handle);
-    server_log_debug_message(game, "%s from %s:%u disconnected from the server\n", game->clients[client_index].username, game->clients[client_index].ip_address, game->clients[client_index].port);
+    log_message(game->debug_log_file, "[CLIENT HANDLER] %s from %s:%u disconnected from the server", game->clients[client_index].username, game->clients[client_index].ip_address, game->clients[client_index].port);
     game->clients[client_index].client_handle = NULL;
     game->clients_connected_count--;
 }
@@ -231,18 +196,17 @@ void run_game_server(struct game_server* game) {
 
     server_log_init(game);
 
-    server_log_debug_message(game, "Server starting...\n");
+    log_message(game->debug_log_file, "[SERVER] Server starting ...");
     show_console_window();
 
 
 
     game->server_handle = server_init(8080);
     if (!game->server_handle) {
-        server_log_debug_message(game, "Failed to initialize server.\n");
+        log_message(game->debug_log_file, "[SERVER] Failed to initialize server");
         return;
-        exit(1);
     }
-    server_log_debug_message(game, "Server started on port 8080.\n");
+    log_message(game->debug_log_file, "[SERVER] Server listening on port 8080");
 
     game->running = true;
 
@@ -257,15 +221,11 @@ void run_game_server(struct game_server* game) {
         for (int i = 0; i < game->clients_length; i++) if (game->clients[i].client_handle != NULL) {
 
             for (int packet_count = 0; packet_count < 5; packet_count++) {
-                int packet_type = -1;
-                if(receive_data(game->clients[i].client_handle, &packet_type, sizeof(int), NULL, 0) == 0) {
-                    disconnect_client(game, i);
-                    break;
-                }
+                if (game->clients[i].next_packet_type == -1) receive_data(game->clients[i].client_handle, &game->clients[i].next_packet_type, sizeof(int), NULL, 0);
 
-                if (packet_type == -1) break;
+                if (game->clients[i].next_packet_type == -1) break;
 
-                switch (packet_type) {
+                switch (game->clients[i].next_packet_type) {
 
 
                 case NETWORKING_PACKET_DISCONNECT: {
@@ -273,8 +233,13 @@ void run_game_server(struct game_server* game) {
                     goto _connection_closed;
                 } break;
 
-                case 1: {
+                case NETWORKING_PACKET_MESSAGE: {
+                    char message[MAX_CHAT_MESSSAGE_LENGTH + 1];
+                    if (receive_data(game->clients[i].client_handle, message, MAX_CHAT_MESSSAGE_LENGTH + 1, NULL, 0) > 0) {
+                        log_message(game->chat_log_file, "[%s] %s", game->clients[i].username, message);
 
+                        game->clients[i].next_packet_type = -1;
+                    }
                 } break;
 
                 case 2: {
@@ -313,7 +278,7 @@ void run_game_server(struct game_server* game) {
         close_connection(game->clients[i].client_handle); 
     }
 
-    server_log_debug_message(game, "\n\nserver_closing\n");
+    log_message(game->debug_log_file, "[SERVER] Server closing");
     server_close(game->server_handle);
 
     fclose(game->chat_log_file);

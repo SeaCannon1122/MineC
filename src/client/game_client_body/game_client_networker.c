@@ -16,6 +16,16 @@ void init_networker(struct game_client* game) {
 	game->networker.close_connection_flag = false;
 	game->networker.status_updates_missed = 0;
 	game->networker.next_packet_type = -1;
+
+	game->networker.send_packet_type = -1;
+
+	for (int i = 0; i < 3; i++) {
+		game->networker.send_data[i].data = NULL;
+		game->networker.send_data[i].size = 0;
+	}
+
+	game->networker.should_send_chat_message = false;
+	
 }
 
 void networker_disconnect_and_cleanup(struct game_client* game) {
@@ -31,11 +41,16 @@ void networker_disconnect_and_cleanup(struct game_client* game) {
 	game->networker.network_handle = NULL;
 
 	
+	
 	game->networker.request = NULL_REQUEST;
 	game->networker.close_connection_flag = false;
 }
 
-void networker_thread(struct game_client* game) {
+int send_packet(struct game_client* game, int packet_type, void* data_0, size_t size_0, void* data_1, size_t size_1, void* data_2, size_t size_2) {
+	if(game->networker.send_packet_type == -1);
+}
+
+void networker_thread_function(struct game_client* game) {
 
 	log_message(game->debug_log_file, "[NETWORKER] Started Networking Thread");
 
@@ -105,11 +120,9 @@ void networker_thread(struct game_client* game) {
 					networker_disconnect_and_cleanup(game);
 					continue;
 				}
-				game->server_settings.max_message_length = server_settings.max_message_length;
 				game->server_settings.max_render_distance = server_settings.max_render_distance;
 				log_message(game->debug_log_file, "[NETWORKER] Connected to server %s:%u", game->networker.ip, game->networker.port);
 				log_message(game->debug_log_file, "[NETWORKER] Max render distance %d", game->server_settings.max_render_distance);
-				log_message(game->debug_log_file, "[NETWORKER] Max message length %d", game->server_settings.max_message_length);
 				
 				parse_string(" ", game->game_menus.connection_waiting_menu.networking_message);
 
@@ -144,6 +157,15 @@ void networker_thread(struct game_client* game) {
 
 
 					}
+
+					if (game->networker.should_send_chat_message) {
+						int packet_type = NETWORKING_PACKET_MESSAGE;
+						send_data(game->networker.network_handle, &packet_type, sizeof(int));
+						send_data(game->networker.network_handle, game->networker.send_chat_message, MAX_CHAT_MESSSAGE_LENGTH + 1);
+						game->networker.should_send_chat_message = false;
+					}
+
+
 
 
 					if (game->networker.close_connection_flag) {

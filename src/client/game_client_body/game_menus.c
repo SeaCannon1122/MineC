@@ -10,7 +10,7 @@
 #include "client/gui/menu.h"
 #include "game_client.h"
 #include "game_client_networker.h"
-
+#include "game/networking_packets/networking_packets.h"
 
 void init_game_menus(struct game_client* game) {
 
@@ -295,7 +295,7 @@ void game_menus_frame(struct game_client* game, unsigned int* pixels, int width,
 		game->settings.render_distance = (float)game->constants.render_distance_min + (game->game_menus.options_menu.render_distance_slider_state * ((float)game->constants.render_distance_max - (float)game->constants.render_distance_min));
 		game->settings.fov = (float)game->constants.fov_min + (game->game_menus.options_menu.fov_slider_state * ((float)game->constants.fov_max - (float)game->constants.fov_min));
 
-		if (game->game_menus.options_menu.done_button_state || get_key_state(KEY_ESCAPE) == 0b11) {
+		if (game->game_menus.options_menu.done_button_state || (get_key_state(KEY_ESCAPE) == 0b11 && is_window_selected(game->window))) {
 			game->game_menus.options_menu.done_button_state = false;
 			game->game_menus.active_menu = MAIN_MENU;
 			break;
@@ -368,7 +368,7 @@ void game_menus_frame(struct game_client* game, unsigned int* pixels, int width,
 
 
 
-		if (game->game_menus.join_game_menu.back_button_state || get_key_state(KEY_ESCAPE) == 0b11) {
+		if (game->game_menus.join_game_menu.back_button_state || (get_key_state(KEY_ESCAPE) == 0b11 && is_window_selected(game->window))) {
 			game->game_menus.join_game_menu.back_button_state = false;
 			game->game_menus.active_menu = MAIN_MENU;
 
@@ -450,18 +450,23 @@ void game_menus_frame(struct game_client* game, unsigned int* pixels, int width,
 
 	case CHAT_MENU: {
 
-		if (get_key_state(KEY_ENTER) == 0b11) {
+		if (get_key_state(KEY_ENTER) == 0b11 && is_window_selected(game->window)) {
 			if (game->game_menus.chat_menu.message_link != -1) unlink_keyboard_parse_buffer(game->window, game->game_menus.chat_menu.message_link);
 			game->game_menus.active_menu = NO_MENU;
 
-			log_message(game->chat_log_file, game->game_menus.chat_menu.message_buffer);
+			if (game->networker.should_send_chat_message == false) {
+				for (int i = 0; i < MAX_CHAT_MESSSAGE_LENGTH + 1; i++) game->networker.send_chat_message[i] = game->game_menus.chat_menu.message_buffer[i];
+				game->networker.should_send_chat_message = true;
 
-			for (int i = 0; i < sizeof(game->game_menus.chat_menu.message_buffer); i++) game->game_menus.chat_menu.message_buffer[i] = '\0';
+				for (int i = 0; i < sizeof(game->game_menus.chat_menu.message_buffer); i++) game->game_menus.chat_menu.message_buffer[i] = '\0';
+			}
+
+			
 			game->game_menus.chat_menu.message_link = -1;
 			break;
 		}
 
-		else if (get_key_state(KEY_ESCAPE) == 0b11) {
+		else if (get_key_state(KEY_ESCAPE) == 0b11 && is_window_selected(game->window)) {
 			if (game->game_menus.chat_menu.message_link != -1) unlink_keyboard_parse_buffer(game->window, game->game_menus.chat_menu.message_link);
 			game->game_menus.active_menu = NO_MENU;
 			game->game_menus.chat_menu.message_link = -1;
@@ -470,7 +475,7 @@ void game_menus_frame(struct game_client* game, unsigned int* pixels, int width,
 		}
 
 
-		if(game->game_menus.chat_menu.message_link == -1) game->game_menus.chat_menu.message_link = link_keyboard_parse_buffer(game->window, game->game_menus.chat_menu.message_buffer, sizeof(game->game_menus.chat_menu.message_buffer), 0);
+		if (game->game_menus.chat_menu.message_link == -1 && game->networker.should_send_chat_message == false) game->game_menus.chat_menu.message_link = link_keyboard_parse_buffer(game->window, game->game_menus.chat_menu.message_buffer, sizeof(game->game_menus.chat_menu.message_buffer), string_length(game->game_menus.chat_menu.message_buffer) - 1);
 
 
 		//commandline background
@@ -536,7 +541,7 @@ void game_menus_frame(struct game_client* game, unsigned int* pixels, int width,
 		game->settings.render_distance = (float)game->constants.render_distance_min + (game->game_menus.in_game_options_menu.render_distance_slider_state * ((float)game->constants.render_distance_max - (float)game->constants.render_distance_min));
 		game->settings.fov = (float)game->constants.fov_min + (game->game_menus.in_game_options_menu.fov_slider_state * ((float)game->constants.fov_max - (float)game->constants.fov_min));
 
-		if (game->game_menus.in_game_options_menu.back_to_game_button_state || get_key_state(KEY_ESCAPE) == 0b11) {
+		if (game->game_menus.in_game_options_menu.back_to_game_button_state || (get_key_state(KEY_ESCAPE) == 0b11) && is_window_selected(game->window)) {
 			game->game_menus.in_game_options_menu.back_to_game_button_state = false;
 			game->game_menus.active_menu = NO_MENU;
 			break;
@@ -544,7 +549,7 @@ void game_menus_frame(struct game_client* game, unsigned int* pixels, int width,
 
 		if (game->game_menus.in_game_options_menu.disconnect_button_state) {
 			game->game_menus.in_game_options_menu.disconnect_button_state = false;
-			game->disconnect_flag = 2;
+			game->disconnect_flag = 2; 
 			break;
 		}
 

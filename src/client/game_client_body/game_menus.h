@@ -1,8 +1,5 @@
 #pragma once
 
-#ifndef GAME_MENUS_H
-#define GAME_MENUS_H
-
 #include <stdbool.h>
 #include <stdio.h>
 
@@ -11,6 +8,7 @@
 #include "game/game_constants.h"
 
 #include "general/keyvalue.h"
+
 
 enum blocks_menus {
 	NO_MENU,
@@ -117,7 +115,7 @@ struct game_menus {
 
 	struct {
 
-		char message_buffer[255 + 1];
+		char message_buffer[MAX_CHAT_MESSSAGE_LENGTH + 1];
 		int message_link;
 		struct char_font* font;
 
@@ -156,5 +154,3 @@ struct game_client;
 void init_game_menus(struct game_client* game);
 
 void game_menus_frame(struct game_client* game, unsigned int* pixels, int width, int height);
-
-#endif // !GAME_MENUS_H

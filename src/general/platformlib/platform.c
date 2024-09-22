@@ -200,6 +200,10 @@ int link_keyboard_parse_buffer(int window, char* buffer, int size, int used) {
 	return next_parser_index;
 }
 
+int get_linked_buffer_size(int window, int link) {
+	return window_resources[window].print_buffer[link].size_used;
+}
+
 void unlink_keyboard_parse_buffer(int window, int link) {
 	window_resources[window].print_buffer[link].buffer = NULL;
 }
@@ -584,6 +588,10 @@ int link_keyboard_parse_buffer(int window, char* buffer, int size, int used) {
 	window_resources[window].print_buffer[next_parser_index].size_used = used;
 
 	return next_parser_index;
+}
+
+int get_linked_buffer_size(int window, int link) {
+	return window_resources[window].print_buffer[link].size_used;
 }
 
 void unlink_keyboard_parse_buffer(int window, int link) {

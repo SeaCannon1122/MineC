@@ -56,6 +56,7 @@ struct point2d_int get_mouse_cursor_position(int window);
 void set_cursor_rel_window(int window, int x, int y);
 
 int link_keyboard_parse_buffer(int window, char* buffer, int size, int used);
+int get_linked_buffer_size(int window, int link);
 void unlink_keyboard_parse_buffer(int window, int link);
 
 //keysymbol Mapping

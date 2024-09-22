@@ -158,7 +158,7 @@ void run_game_client(struct game_client* game) {
 
 	log_message(game->debug_log_file, "Created window");
 
-	void* networking_thread = create_thread((void(*)(void*))networker_thread, game);
+	void* networking_thread = create_thread((void(*)(void*))networker_thread_function, game);
 	void* simulation_thread = create_thread((void(*)(void*))game_client_simulator_thread_function, game);
 	void* control_thread = create_thread((void(*)(void*))game_client_control_thread_function, game);
 

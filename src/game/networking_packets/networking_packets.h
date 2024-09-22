@@ -3,7 +3,6 @@
 #include "game/game_constants.h"
 
 enum networking_packet_type {
-	NETWORKING_PACKET_MESSAGE,
 	NETWORKING_PACKET_CLIENT_AUTH,
 	NETWORKING_PACKET_SERVER_FULL,
 	NETWORKING_PACKET_NOT_AUTHORIZED_TO_JOIN,
@@ -15,6 +14,7 @@ enum networking_packet_type {
 
 	
 	NETWORKING_PACKET_CLOCK,
+	NETWORKING_PACKET_MESSAGE,
 };
 
 
@@ -25,7 +25,6 @@ struct networking_packet_client_auth {
 
 struct networking_packet_server_settings {
 	int max_render_distance;
-	int max_message_length;
 };
 
 struct networking_packet_clock {
@@ -35,3 +34,7 @@ struct networking_packet_clock {
 struct networking_packet_kick {
 	char kick_message[CONECTION_CLOSE_MESSAGE_LENGTH + 1];
 };
+
+//networking packet message
+//size_t size_with_null_termination
+//char[] data

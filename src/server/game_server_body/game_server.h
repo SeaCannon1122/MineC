@@ -11,6 +11,7 @@ struct client_on_server {
 	char username[MAX_USERNAME_LENGTH + 1];
 	char ip_address[22 + 1];
 	unsigned short port;
+	int next_packet_type;
 };
 
 struct game_server {

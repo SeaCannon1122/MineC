@@ -3,6 +3,7 @@
 #include "general/keyvalue.h"
 #include "game_menus.h"
 #include "game/game_constants.h"
+#include "game_client_networker.h"
 
 enum game_request {
 	NULL_FLAG,
@@ -17,18 +18,7 @@ struct game_client {
 	bool running;
 	int window;
 	struct key_value_map* resource_manager;
-	struct {
-		void* network_handle;
-		int next_packet_type;
-		int status;
-		int request;
-		int port;
-		char ip[15 + 1];
-		char username[MAX_USERNAME_LENGTH + 1];
-		char password[MAX_PASSWORD_LENGTH + 1];
-		bool close_connection_flag;
-		int status_updates_missed;
-	} networker;
+	struct game_networker networker;
 	bool in_game_flag;
 	int disconnect_flag;
 	struct {
@@ -44,7 +34,6 @@ struct game_client {
 	} settings;
 	struct {
 		int max_render_distance;
-		int max_message_length;
 	} server_settings;
 	struct {
 		int render_distance_min;
