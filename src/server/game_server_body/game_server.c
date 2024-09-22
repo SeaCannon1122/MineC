@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+#include <stdarg.h>
+#include <stdlib.h>
 
 #include "general/resource_manager.h"
 #include "general/platformlib/platform.h"
@@ -286,6 +288,8 @@ void run_game_server(struct game_server* game) {
 
             }
 
+
+
             if(!is_connected(game->clients[i].client_handle)) disconnect_client(game, i);
 
         _connection_closed:
@@ -300,7 +304,14 @@ void run_game_server(struct game_server* game) {
 
     join_thread(client_auth_thread);
 
-    for (int i = 0; i < game->clients_length; i++) if (game->clients[i].client_handle != NULL) close_connection(game->clients[i].client_handle);
+    int kick_packet_type;
+    struct networking_packet_kick kick_packet = { "Server stopped" };
+
+    for (int i = 0; i < game->clients_length; i++) if (game->clients[i].client_handle != NULL) { 
+        send_data(game->clients[i].client_handle, &kick_packet_type, sizeof(int));
+        send_data(game->clients[i].client_handle, &kick_packet, sizeof(struct networking_packet_kick));
+        close_connection(game->clients[i].client_handle); 
+    }
 
     server_log_debug_message(game, "\n\nserver_closing\n");
     server_close(game->server_handle);

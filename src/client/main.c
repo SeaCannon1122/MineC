@@ -12,14 +12,11 @@ int main(int argc, char* argv[]) {
 
 	struct game_client game;
 
-	if (new_game_client(&game, "resources/client/resourcelayout.keyvalue") != 0) exit(1);
+	if (new_game_client(&game, "resources/client/resourcelayout.keyvalue") == 0) {
 
-
-
-	run_game_client(&game);
-
-	delete_game_client(&game);
-
+		run_game_client(&game);
+		delete_game_client(&game);
+	}
 
 	parallel_computing_exit();
 	networking_exit();

@@ -2,6 +2,8 @@
 
 #define parse_string_into_gui_string(src, gui_str) { char psigs[] = src; int psigs_i = 0; for(; psigs[psigs_i] != '\0'; psigs_i++) {gui_str[psigs_i].value = psigs[psigs_i];} gui_str[psigs_i].value = psigs[psigs_i];}
 
+#define parse_string(src, dest) {char _src_str[] = src; int _str_i = 0; for(; _src_str[_str_i] != '\0'; _str_i++) {dest[_str_i] = _src_str[_str_i];} dest[_str_i] = _src_str[_str_i];}
+
 int clamp_int(int val, int min, int max);
 float clamp_float(float val, float min, float max);
 

@@ -12,9 +12,7 @@ void game_client_control_thread_function(struct game_client* game) {
 
 			if (game->game_menus.active_menu == NO_MENU) {
 				if (get_key_state(KEY_ESCAPE) == 0b11) game->game_menus.active_menu = INGAME_OPTIONS_MENU;
-				else {
-
-				}
+				else if (get_key_state('T') == 0b11) game->game_menus.active_menu = CHAT_MENU;
 
 			}
 

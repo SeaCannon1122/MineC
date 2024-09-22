@@ -103,3 +103,6 @@ void add_menu_text_field(struct menu_scene* scene, int z, char* buffer, int x_mi
 
 void menu_scene_frame(struct menu_scene* scene, int scale, unsigned int* screen, int width, int height, int mouse_x, int mouse_y, char click);
 
+int menu_x(int x, int alignment, int scale, int width);
+
+int menu_y(int y, int alignment, int scale, int height);

@@ -11,6 +11,10 @@ enum networking_packet_type {
 	NETWORKING_PACKET_LOGGED_IN,
 	NETWORKING_PACKET_SERVER_SETTINGS,
 	NETWORKING_PACKET_DISCONNECT,
+	NETWORKING_PACKET_KICK,
+
+	
+	NETWORKING_PACKET_CLOCK,
 };
 
 
@@ -22,4 +26,12 @@ struct networking_packet_client_auth {
 struct networking_packet_server_settings {
 	int max_render_distance;
 	int max_message_length;
+};
+
+struct networking_packet_clock {
+	long long tick;
+};
+
+struct networking_packet_kick {
+	char kick_message[CONECTION_CLOSE_MESSAGE_LENGTH + 1];
 };

@@ -15,11 +15,13 @@ static void log_message(FILE* log_file, const char* format, ...) {
 	va_start(args, format);
 	printf(time_buffer);
 	vprintf(format, args);
+	printf("\n");
 	va_end(args);
 
 	va_start(args, format);
 	fprintf(log_file, time_buffer);
 	vfprintf(log_file, format, args);
+	fprintf(log_file, "\n");
 	va_end(args);
 	fflush(log_file);
 }

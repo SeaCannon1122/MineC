@@ -94,7 +94,7 @@ int new_game_client(struct game_client* game, char* resource_path) {
 
 	game->resource_manager = new_resource_manager(resource_path);
 	if (game->resource_manager == NULL) {
-		printf("Couldn't find critical resourclayout file at expected path %s", resource_path);
+		printf("Couldn't find critical resourclayout file at expected path %s\n", resource_path);
 		return 1;
 	}
 
@@ -114,7 +114,7 @@ int new_game_client(struct game_client* game, char* resource_path) {
 
 	struct key_value_map* settings_map = get_value_from_key(game->resource_manager, "settings").ptr;
 	if (settings_map == NULL) {
-		log_message(game->debug_log_file, "Couldn't find critical settings file link 'settings' in resourcelayout\n");
+		log_message(game->debug_log_file, "Couldn't find critical settings file link 'settings' in resourcelayout");
 		destroy_resource_manager(game->resource_manager);
 		return 2;
 	}
@@ -126,7 +126,7 @@ int new_game_client(struct game_client* game, char* resource_path) {
 
 	struct key_value_map* constants_map = get_value_from_key(game->resource_manager, "constants").ptr;
 	if (constants_map == NULL) {
-		log_message(game->debug_log_file, "Couldn't find critical settings file link 'constants' in resourcelayout\n");
+		log_message(game->debug_log_file, "Couldn't find critical settings file link 'constants' in resourcelayout");
 		destroy_resource_manager(game->resource_manager);
 		return 2;
 	}
@@ -140,7 +140,7 @@ int new_game_client(struct game_client* game, char* resource_path) {
 	game->running = false;
 
 	game->in_game_flag = false;
-
+	game->disconnect_flag = 0;
 	init_game_menus(game);
 	init_networker(game);
 	debug_init(game);
@@ -178,7 +178,7 @@ void run_game_client(struct game_client* game) {
 
 	game->window = create_window(200, 100, 1100, 700, "client");
 
-	log_message(game->debug_log_file, "Created window\n");
+	log_message(game->debug_log_file, "Created window");
 
 	void* networking_thread = create_thread((void(*)(void*))networker_thread, game);
 	void* simulation_thread = create_thread((void(*)(void*))game_client_simulator_thread_function, game);
@@ -190,7 +190,7 @@ void run_game_client(struct game_client* game) {
 	game->render_state.height = (get_window_height(game->window) + game->settings.resolution_scale - 1) / game->settings.resolution_scale;
 	game->render_state.pixels = malloc(game->render_state.width * game->render_state.height * sizeof(unsigned int));
 
-	log_message(game->debug_log_file, "Entering main Game Loop\n");
+	log_message(game->debug_log_file, "Entering main Game Loop");
 
 
 	while (is_window_active(game->window) && !game->game_menus.main_menu.quit_game_button_state) {
@@ -204,18 +204,23 @@ void run_game_client(struct game_client* game) {
 			game->render_state.height = new_height;
 		}
 		
-		if (game->networker.status == NETWORK_CONNECTED && game->in_game_flag == false) {
+		if (game->disconnect_flag == 2) {
+			game->disconnect_flag = 1;
+			game->in_game_flag = false;
+			if (game->networker.status != NETWORK_INACTIVE) game->networker.close_connection_flag = true;
+		}
+
+		if (game->networker.status == NETWORK_CONNECTED && game->in_game_flag == false && game->disconnect_flag == 0) {
 			game->in_game_flag = true;
 			game->game_menus.active_menu = NO_MENU;
 		}
 
+		else if (game->disconnect_flag == 1 && game->networker.status == NETWORK_INACTIVE) game->disconnect_flag = 0;
+
 
 		if (game->in_game_flag) { 
 
-			if (game->networker.status != NETWORK_CONNECTED && game->in_game_flag == true) {
-				game->in_game_flag = false;
-				game->game_menus.active_menu = CONNECTION_WAITING_MENU;
-			}
+			
 
 			client_render_world(game); 
 		}
@@ -230,10 +235,9 @@ void run_game_client(struct game_client* game) {
 	free(game->render_state.pixels);
 
 	close_window(game->window);
-	game->networker.close_connection_flag = true;
-	game->in_game_flag = false;
-
 	game->running = false;
+	game->in_game_flag = false;
+	
 	while (game->networker.network_handle != NULL) sleep_for_ms(1);
 
 	join_thread(control_thread);

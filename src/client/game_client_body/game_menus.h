@@ -105,7 +105,8 @@ struct game_menus {
 
 	struct {
 
-		struct gui_character networking_message[64];
+		char networking_message[CONECTION_CLOSE_MESSAGE_LENGTH + 1];
+		struct gui_character networking_message_gui[CONECTION_CLOSE_MESSAGE_LENGTH + 1];
 
 		bool back_button_state;
 		bool back_button_enabled;
@@ -117,8 +118,8 @@ struct game_menus {
 	struct {
 
 		char message_buffer[255 + 1];
-		int port_buffer_link;
-		bool port_field_visible;
+		int message_link;
+		struct char_font* font;
 
 		struct menu_scene menu;
 	} chat_menu;

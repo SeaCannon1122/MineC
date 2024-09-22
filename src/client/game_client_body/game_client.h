@@ -31,16 +31,18 @@ struct game_client {
 	} session;
 	struct {
 		void* network_handle;
+		int next_packet_type;
 		int status;
-		int message;
 		int request;
 		int port;
 		char ip[15 + 1];
 		char username[MAX_USERNAME_LENGTH + 1];
 		char password[MAX_PASSWORD_LENGTH + 1];
 		bool close_connection_flag;
+		int status_updates_missed;
 	} networker;
 	bool in_game_flag;
+	int disconnect_flag;
 	struct {
 		int width;
 		int height;
