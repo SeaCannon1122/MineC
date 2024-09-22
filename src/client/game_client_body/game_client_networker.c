@@ -113,21 +113,40 @@ void networker_thread(struct game_client* game) {
 				
 				parse_string(" ", game->game_menus.connection_waiting_menu.networking_message);
 
+				int receive_status;
+
 				while (game->running) {
 					sleep_for_ms(100);
 
-					if (game->networker.close_connection_flag) {
+					if (game->networker.next_packet_type == -1) receive_status = receive_data(game->networker.network_handle, &game->networker.next_packet_type, sizeof(int), NULL, 0);
 
-						if(game->networker.next_packet_type == -1) receive_data(game->networker.network_handle, &game->networker.next_packet_type, sizeof(int), NULL, 0);
+					if (game->networker.next_packet_type != -1) {
 
-						if (game->networker.next_packet_type != -1) {
-							switch (game->networker.next_packet_type) {
-							case NETWORKING_PACKET_KICK: {
-
-							}break;
+						if (game->networker.next_packet_type == NETWORKING_PACKET_KICK) {
+							struct networking_packet_kick kick_packet;
+							receive_status = receive_data(game->networker.network_handle, &kick_packet, sizeof(struct networking_packet_kick), NULL, 0);
+							if (receive_status > 0) {
+								log_message(game->debug_log_file, "[NETWORKER] Disconnected from server % s: % u", game->networker.ip, game->networker.port);
+								parse_string(kick_packet.kick_message, game->game_menus.connection_waiting_menu.networking_message);
+								game->disconnect_flag = 2;
+								break;
 							}
 						}
 
+						switch (game->networker.next_packet_type) {
+
+						case NETWORKING_PACKET_KICK: {
+							
+
+						} break;
+
+						}
+
+
+					}
+
+
+					if (game->networker.close_connection_flag) {
 						log_message(game->debug_log_file, "[NETWORKER] Disconnected from server % s: % u", game->networker.ip, game->networker.port);
 						parse_string("Disconnected", game->game_menus.connection_waiting_menu.networking_message);
 						break;

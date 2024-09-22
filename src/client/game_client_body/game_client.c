@@ -149,30 +149,8 @@ int new_game_client(struct game_client* game, char* resource_path) {
 }
 
 
-
-void set_start_time(struct game_client* game) {
-		time_t raw_time = time(NULL);
-
-		struct tm* time_info = localtime(&raw_time);
-
-		game->session.start_time.unix_time = raw_time;
-
-		game->session.start_time.year = time_info->tm_year + 1900;
-		game->session.start_time.month = time_info->tm_mon + 1;
-		game->session.start_time.day = time_info->tm_mday;
-		game->session.start_time.hour = time_info->tm_hour;
-		game->session.start_time.minute = time_info->tm_min;
-		game->session.start_time.second = time_info->tm_sec;
-
-		get_time_in_string(game->session.start_time_str);
-		game->session.start_time_str[19] = '\0';
-
-}
-
 void run_game_client(struct game_client* game) {
 	show_console_window();
-
-	set_start_time(game);
 
 	game->running = true;
 
@@ -203,20 +181,6 @@ void run_game_client(struct game_client* game) {
 			game->render_state.width = new_width;
 			game->render_state.height = new_height;
 		}
-		
-		if (game->disconnect_flag == 2) {
-			game->disconnect_flag = 1;
-			game->in_game_flag = false;
-			if (game->networker.status != NETWORK_INACTIVE) game->networker.close_connection_flag = true;
-		}
-
-		if (game->networker.status == NETWORK_CONNECTED && game->in_game_flag == false && game->disconnect_flag == 0) {
-			game->in_game_flag = true;
-			game->game_menus.active_menu = NO_MENU;
-		}
-
-		else if (game->disconnect_flag == 1 && game->networker.status == NETWORK_INACTIVE) game->disconnect_flag = 0;
-
 
 		if (game->in_game_flag) { 
 
@@ -237,8 +201,6 @@ void run_game_client(struct game_client* game) {
 	close_window(game->window);
 	game->running = false;
 	game->in_game_flag = false;
-	
-	while (game->networker.network_handle != NULL) sleep_for_ms(1);
 
 	join_thread(control_thread);
 	join_thread(simulation_thread);

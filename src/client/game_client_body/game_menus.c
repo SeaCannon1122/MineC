@@ -544,7 +544,6 @@ void game_menus_frame(struct game_client* game, unsigned int* pixels, int width,
 
 		if (game->game_menus.in_game_options_menu.disconnect_button_state) {
 			game->game_menus.in_game_options_menu.disconnect_button_state = false;
-			game->game_menus.active_menu = CONNECTION_WAITING_MENU;
 			game->disconnect_flag = 2;
 			break;
 		}

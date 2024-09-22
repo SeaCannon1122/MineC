@@ -304,7 +304,7 @@ void run_game_server(struct game_server* game) {
 
     join_thread(client_auth_thread);
 
-    int kick_packet_type;
+    int kick_packet_type = NETWORKING_PACKET_KICK;
     struct networking_packet_kick kick_packet = { "Server stopped" };
 
     for (int i = 0; i < game->clients_length; i++) if (game->clients[i].client_handle != NULL) { 

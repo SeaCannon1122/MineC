@@ -39,22 +39,6 @@ set(SERVER_SOURCE_FILES
     src/general/resource_loader.c
 )
 
-set(TEST_SOURCE_FILES
-    
-    src/client/gui/char_font.c
-    src/client/gui/menu.c
-    src/test/main.c
-    
-    src/general/platformlib/platform.c
-    src/general/platformlib/parallel_computing.c
-    src/general/platformlib/networking.c
-
-    src/general/utils.c
-    src/general/keyvalue.c
-    src/general/resource_manager.c
-    src/general/resource_loader.c
-)
-
 include_directories(${PROJECT_SOURCE_DIR}/src)
 include_directories(${PROJECT_SOURCE_DIR}/dependencies/stb_image)
 include_directories(${PROJECT_SOURCE_DIR}/dependencies/OpenCL/inc)
@@ -62,12 +46,10 @@ link_directories(${PROJECT_SOURCE_DIR}/dependencies/OpenCL/lib)
 
 add_executable(blocks_client ${CLIENT_SOURCE_FILES})
 add_executable(blocks_server ${SERVER_SOURCE_FILES})
-add_executable(blocks_test ${TEST_SOURCE_FILES})
 
 
 target_link_libraries(blocks_client OpenCL)
 target_link_libraries(blocks_server OpenCL)
-target_link_libraries(blocks_test OpenCL)
 
 if(WIN32)
 
@@ -85,7 +67,6 @@ elseif(UNIX)
 
     target_link_libraries(blocks_client ${OPENGL_LIBRARIES} X11 pthread m)
     target_link_libraries(blocks_server ${OPENGL_LIBRARIES} X11 pthread m)
-    target_link_libraries(blocks_test ${OPENGL_LIBRARIES} X11 pthread m)
 endif()
 
 set(RESOURCE_DIRECTORY "${CMAKE_SOURCE_DIR}/resources")
