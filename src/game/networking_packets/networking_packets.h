@@ -37,4 +37,12 @@ struct networking_packet_kick {
 
 //networking packet message
 //size_t size_with_null_termination
-//char[] data
+
+struct networking_packet_chat_message_to_server {
+	char message[MAX_CHAT_MESSAGE_LENGTH + 1];
+};
+
+struct networking_packet_chat_message_from_server {
+	char author[MAX_USERNAME_LENGTH + 1];
+	char message[MAX_CHAT_MESSAGE_LENGTH + 1];
+};

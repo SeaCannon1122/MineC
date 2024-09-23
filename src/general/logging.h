@@ -6,8 +6,10 @@
 #include "general/utils.h"
 
 static void log_message(FILE* log_file, const char* format, ...) {
+	time_t t = time(NULL);
+	
 	char time_buffer[21];
-	get_time_in_string(time_buffer);
+	get_time_in_string(time_buffer, t);
 	time_buffer[19] = ' ';
 	time_buffer[20] = '\0';
 

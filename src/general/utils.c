@@ -113,8 +113,7 @@ int string_length(char* str) {
 	return length;
 }
 
-void get_time_in_string(char* buffer) {
-	time_t raw_time = time(NULL);
+void get_time_in_string(char* buffer, time_t raw_time) {
 
 	struct tm* time_info = localtime(&raw_time);
 
@@ -138,17 +137,3 @@ void get_time_in_string(char* buffer) {
 	buffer[17] = digit_to_char(time_info->tm_sec / 10);
 	buffer[18] = digit_to_char(time_info->tm_sec % 10);
 }
-
-void time_printf(char* format, ...) {
-	va_list args;
-	va_start(args, format);
-	char time_buffer[20];
-	get_time_in_string(time_buffer);
-	time_buffer[19] = '\0';
-	printf("%s ", time_buffer);
-
-	vprintf(format, args);
-
-	va_end(args);
-};
-

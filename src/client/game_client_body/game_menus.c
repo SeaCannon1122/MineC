@@ -1,6 +1,7 @@
 #include "game_menus.h"
 
 #include <stdlib.h>
+#include <time.h>
 
 #include "general/platformlib/platform.h"
 #include "general/keyvalue.h"
@@ -261,6 +262,53 @@ void init_game_menus(struct game_client* game) {
 	add_menu_button(&game->game_menus.in_game_options_menu.menu, 2, &game->game_menus.in_game_options_menu.back_to_game_button_state, -100, -25, 100, -5, ALIGNMENT_MIDDLE, ALIGNMENT_BOTTOM, light_texture, dark_texture, &game->game_menus.in_game_options_menu.back_to_game_button_enabled);
 }
 
+void switch_game_menu(struct game_client* game, int menu) {
+
+	switch (game->game_menus.active_menu) {
+	
+	case JOIN_GAME_MENU: {
+
+		if (game->game_menus.join_game_menu.ip_address_buffer_link != -1) {
+			unlink_keyboard_parse_buffer(game->window, game->game_menus.join_game_menu.ip_address_buffer_link);
+			game->game_menus.join_game_menu.ip_address_buffer_link = -1;
+		}
+		if (game->game_menus.join_game_menu.port_buffer_link != -1) {
+			unlink_keyboard_parse_buffer(game->window, game->game_menus.join_game_menu.port_buffer_link);
+			game->game_menus.join_game_menu.port_buffer_link = -1;
+		}
+		if (game->game_menus.join_game_menu.username_buffer_link != -1) {
+			unlink_keyboard_parse_buffer(game->window, game->game_menus.join_game_menu.username_buffer_link);
+			game->game_menus.join_game_menu.username_buffer_link = -1;
+		}
+		if (game->game_menus.join_game_menu.password_buffer_link != -1) {
+			unlink_keyboard_parse_buffer(game->window, game->game_menus.join_game_menu.password_buffer_link);
+			game->game_menus.join_game_menu.password_buffer_link = -1;
+		}
+
+	} break;
+
+	case CHAT_MENU: {
+
+		if (game->game_menus.chat_menu.message_link != -1) unlink_keyboard_parse_buffer(game->window, game->game_menus.chat_menu.message_link);
+
+	} break;
+
+	}
+
+	/*switch (menu) {
+	
+	case JOIN_GAME_MENU: {
+
+	} break;
+
+	case CHAT_MENU: {
+
+	} break;
+
+	}*/
+
+	game->game_menus.active_menu = menu;
+}
 
 void game_menus_frame(struct game_client* game, unsigned int* pixels, int width, int height) {
 
@@ -270,6 +318,78 @@ void game_menus_frame(struct game_client* game, unsigned int* pixels, int width,
 	char click = get_key_state(KEY_MOUSE_LEFT);
 
 	int render_gui_scale = (game->settings.gui_scale != 0 ? clamp_int(game->settings.gui_scale, 1, (width - 350) / 350 + 1) : (width - 350) / 350 + 1);
+
+	if (game->in_game_flag && (game->game_menus.active_menu == NO_MENU || game->game_menus.active_menu == CHAT_MENU || game->game_menus.active_menu == INGAME_OPTIONS_MENU)) {
+		int chat_line = 0;
+		int message_index = game->chat_stream.next_index - 1;
+		long long current_time = time(NULL);
+
+		while (chat_line < game->constants.max_chat_lines_display && current_time - game->chat_stream.stream[message_index].time < game->constants.chat_display_duration && game->chat_stream.stream[message_index].time != -1) {
+
+			int beggining_index = 0;
+
+			char print_string[1 + MAX_USERNAME_LENGTH + 2 + MAX_CHAT_MESSAGE_LENGTH + 1];
+			sprintf(print_string, "[%s] %s\n", game->chat_stream.stream[message_index].author, game->chat_stream.stream[message_index].message);
+
+			int chars_print = 0;
+			int chars_total = string_length(print_string) - 1;
+
+			int lines_needed = 0;
+
+			while (chars_print < chars_total) {
+				
+				lines_needed++;
+				int width = 4;
+
+				for (; print_string[chars_print] != '\0' && width < game->constants.chat_width - 2; chars_print++) {
+					width += (game->game_menus.chat_menu.font->char_font_entries[print_string[chars_print]].width > 0 ? 1 + clamp_int(game->game_menus.chat_menu.font->char_font_entries[print_string[chars_print]].width, 0, 8) : 0);
+					chars_print++;
+				}
+
+			}
+
+			chars_print = 0;
+			chat_line += lines_needed;
+
+			for (int i = chat_line - 1; i >= chat_line - lines_needed; i--) {
+				if (i > game->constants.max_chat_lines_display) continue;
+
+				int y_min_actually = height - (1 + 10 + 4 + 10 * (i + 1)) * render_gui_scale;
+				int y_max_actually = height - (1 + 10 + 4 + 10 * i) * render_gui_scale;
+				int y_min = clamp_int(y_min_actually, 0, height - 1);
+				int y_max = clamp_int(y_max_actually, 0, height - 1);
+				
+				for (int y = y_min; y < y_max; y++) {
+					for (int x = 0; x < game->constants.chat_width * render_gui_scale && x < width; x++) {
+						unsigned int* pixel = &game->render_state.pixels[x + game->render_state.width * y];
+
+						unsigned int top_a = 0x7f;
+						unsigned int top_r = 0x38;
+						unsigned int top_g = 0x38;
+						unsigned int top_b = 0x38;
+
+
+						*(unsigned char*)((long long)pixel + 2) = (unsigned char)((top_r * top_a + (255 - top_a) * (unsigned int)*(unsigned char*)((long long)pixel + 2)) / 255);
+						*(unsigned char*)((long long)pixel + 1) = (unsigned char)((top_g * top_a + (255 - top_a) * (unsigned int)*(unsigned char*)((long long)pixel + 1)) / 255);
+						*(unsigned char*)pixel = (unsigned char)((top_b * top_a + (255 - top_a) * (unsigned int)*(unsigned char*)pixel) / 255);
+					}
+				}
+
+				int chars_print_in_line = 0;
+				print_string_sized_bounded_ancored_right(game->game_menus.chat_menu.font, print_string + chars_print, (game->constants.chat_width - 6) * render_gui_scale, &chars_print_in_line, render_gui_scale, 0xff3b3b3b, 5 * render_gui_scale, height - (1 + 10 + 4 + 10 * i + 9 - 1) * render_gui_scale, game->render_state.pixels, game->render_state.width, game->render_state.height);
+				print_string_sized_bounded_ancored_right(game->game_menus.chat_menu.font, print_string + chars_print, (game->constants.chat_width - 6) * render_gui_scale, &chars_print_in_line, render_gui_scale, 0xffffffff, 4 * render_gui_scale, height - (1 + 10 + 4 + 10 * i + 9) * render_gui_scale, game->render_state.pixels, game->render_state.width, game->render_state.height);
+				chars_print += chars_print_in_line;
+			}
+
+
+
+
+			message_index--;
+
+		}
+
+
+	}
 
 	switch (game->game_menus.active_menu) {
 
@@ -370,24 +490,7 @@ void game_menus_frame(struct game_client* game, unsigned int* pixels, int width,
 
 		if (game->game_menus.join_game_menu.back_button_state || (get_key_state(KEY_ESCAPE) == 0b11 && is_window_selected(game->window))) {
 			game->game_menus.join_game_menu.back_button_state = false;
-			game->game_menus.active_menu = MAIN_MENU;
-
-			if (game->game_menus.join_game_menu.ip_address_buffer_link != -1) {
-				unlink_keyboard_parse_buffer(game->window, game->game_menus.join_game_menu.ip_address_buffer_link);
-				game->game_menus.join_game_menu.ip_address_buffer_link = -1;
-			}
-			if (game->game_menus.join_game_menu.port_buffer_link != -1) {
-				unlink_keyboard_parse_buffer(game->window, game->game_menus.join_game_menu.port_buffer_link);
-				game->game_menus.join_game_menu.port_buffer_link = -1;
-			}
-			if (game->game_menus.join_game_menu.username_buffer_link != -1) {
-				unlink_keyboard_parse_buffer(game->window, game->game_menus.join_game_menu.username_buffer_link);
-				game->game_menus.join_game_menu.username_buffer_link = -1;
-			}
-			if (game->game_menus.join_game_menu.password_buffer_link != -1) {
-				unlink_keyboard_parse_buffer(game->window, game->game_menus.join_game_menu.password_buffer_link);
-				game->game_menus.join_game_menu.password_buffer_link = -1;
-			}
+			switch_game_menu(game, MAIN_MENU);
 
 			break;
 
@@ -395,24 +498,7 @@ void game_menus_frame(struct game_client* game, unsigned int* pixels, int width,
 
 		else if (game->game_menus.join_game_menu.join_game_button_state) {
 			game->game_menus.join_game_menu.join_game_button_state = false;
-			game->game_menus.active_menu = CONNECTION_WAITING_MENU;
-
-			if (game->game_menus.join_game_menu.ip_address_buffer_link != -1) {
-				unlink_keyboard_parse_buffer(game->window, game->game_menus.join_game_menu.ip_address_buffer_link);
-				game->game_menus.join_game_menu.ip_address_buffer_link = -1;
-			}
-			if (game->game_menus.join_game_menu.port_buffer_link != -1) {
-				unlink_keyboard_parse_buffer(game->window, game->game_menus.join_game_menu.port_buffer_link);
-				game->game_menus.join_game_menu.port_buffer_link = -1;
-			}
-			if (game->game_menus.join_game_menu.username_buffer_link != -1) {
-				unlink_keyboard_parse_buffer(game->window, game->game_menus.join_game_menu.username_buffer_link);
-				game->game_menus.join_game_menu.username_buffer_link = -1;
-			}
-			if (game->game_menus.join_game_menu.password_buffer_link != -1) {
-				unlink_keyboard_parse_buffer(game->window, game->game_menus.join_game_menu.password_buffer_link);
-				game->game_menus.join_game_menu.password_buffer_link = -1;
-			}
+			switch_game_menu(game, CONNECTION_WAITING_MENU);
 
 			if (game->networker.status == NETWORK_INACTIVE) {
 				game->networker.port = string_to_int(game->game_menus.join_game_menu.port_buffer, sizeof(game->game_menus.join_game_menu.port_buffer) - 1);
@@ -455,7 +541,7 @@ void game_menus_frame(struct game_client* game, unsigned int* pixels, int width,
 			game->game_menus.active_menu = NO_MENU;
 
 			if (game->networker.should_send_chat_message == false) {
-				for (int i = 0; i < MAX_CHAT_MESSSAGE_LENGTH + 1; i++) game->networker.send_chat_message[i] = game->game_menus.chat_menu.message_buffer[i];
+				for (int i = 0; i < MAX_CHAT_MESSAGE_LENGTH + 1; i++) game->networker.send_chat_message[i] = game->game_menus.chat_menu.message_buffer[i];
 				game->networker.should_send_chat_message = true;
 
 				for (int i = 0; i < sizeof(game->game_menus.chat_menu.message_buffer); i++) game->game_menus.chat_menu.message_buffer[i] = '\0';
@@ -467,10 +553,9 @@ void game_menus_frame(struct game_client* game, unsigned int* pixels, int width,
 		}
 
 		else if (get_key_state(KEY_ESCAPE) == 0b11 && is_window_selected(game->window)) {
-			if (game->game_menus.chat_menu.message_link != -1) unlink_keyboard_parse_buffer(game->window, game->game_menus.chat_menu.message_link);
+			switch_game_menu(game, NO_MENU);
 			game->game_menus.active_menu = NO_MENU;
 			game->game_menus.chat_menu.message_link = -1;
-			for (int i = 0; i < sizeof(game->game_menus.chat_menu.message_buffer); i++) game->game_menus.chat_menu.message_buffer[i] = '\0';
 			break;
 		}
 
@@ -582,4 +667,5 @@ void game_menus_frame(struct game_client* game, unsigned int* pixels, int width,
 	}
 
 	}
+
 }

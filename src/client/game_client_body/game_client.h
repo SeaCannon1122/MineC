@@ -8,13 +8,22 @@
 enum game_request {
 	NULL_FLAG,
 	SHOULD_CONNECT,
-	SHOULD_ABORT_CONNECTING,
+};
+
+struct chat_stream_element {
+	long long time;
+	char author[MAX_USERNAME_LENGTH + 1];
+	char message[MAX_CHAT_MESSAGE_LENGTH + 1];
 };
 
 struct game_client {
 	char resource_folder_path[1024];
 	FILE* debug_log_file;
 	FILE* chat_log_file;
+	struct {
+		int next_index;
+		struct chat_stream_element* stream;
+	} chat_stream;
 	bool running;
 	int window;
 	struct key_value_map* resource_manager;
@@ -42,9 +51,15 @@ struct game_client {
 		int fov_max;
 		int client_connection_timeout;
 		int packet_awaiting_timeout;
+		int chat_width;
+		int max_chat_lines_display;
+		int chat_display_duration;
+		int chat_stream_length;
 	} constants;
 	struct game_menus game_menus;
 };
+
+void log_chat_message(struct game_client* game, char* author, char* message, ...);
 
 int new_game_client(struct game_client* game, char* resource_path);
 

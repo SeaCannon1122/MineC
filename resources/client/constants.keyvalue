@@ -5,3 +5,7 @@ fov_max i:120
 client_connection_timeout i:5000
 packet_awaiting_timeout i:2000
 server_status_updates_missed_max i:20
+chat_width i:200
+max_chat_lines_display i:10
+chat_display_duration i:6000
+chat_stream_length i:1024

@@ -115,7 +115,7 @@ struct game_menus {
 
 	struct {
 
-		char message_buffer[MAX_CHAT_MESSSAGE_LENGTH + 1];
+		char message_buffer[MAX_CHAT_MESSAGE_LENGTH + 1];
 		int message_link;
 		struct char_font* font;
 
@@ -152,5 +152,7 @@ struct game_menus {
 struct game_client;
 
 void init_game_menus(struct game_client* game);
+
+void switch_game_menu(struct game_client* game, int menu);
 
 void game_menus_frame(struct game_client* game, unsigned int* pixels, int width, int height);

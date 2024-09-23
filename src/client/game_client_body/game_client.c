@@ -23,6 +23,50 @@
 #include "debug.h"
 #include "general/logging.h"
 
+
+void log_chat_message(struct game_client* game, char* author, char* message, ...) {
+
+	game->chat_stream.stream[game->chat_stream.next_index].time = time(NULL);
+
+	va_list args;
+	va_start(args, message);
+	sprintf(game->chat_stream.stream[game->chat_stream.next_index].author, author);
+	vsprintf(game->chat_stream.stream[game->chat_stream.next_index].message, message, args);
+	va_end(args);
+
+	struct tm* time_info = localtime(&game->chat_stream.stream[game->chat_stream.next_index].time);
+
+	char time_buffer[] = {
+		digit_to_char((time_info->tm_mon + 1) / 10),
+		digit_to_char((time_info->tm_mon + 1) % 10),
+		'/',
+		digit_to_char(time_info->tm_mday / 10),
+		digit_to_char(time_info->tm_mday % 10),
+		'/',
+		digit_to_char((time_info->tm_year + 1900) / 1000),
+		digit_to_char(((time_info->tm_year + 1900) / 100) % 10),
+		digit_to_char(((time_info->tm_year + 1900) / 10) % 10),
+		digit_to_char((time_info->tm_year + 1900) % 10),
+		' ',
+		digit_to_char(time_info->tm_hour / 10),
+		digit_to_char(time_info->tm_hour % 10),
+		':',
+		digit_to_char(time_info->tm_min / 10),
+		digit_to_char(time_info->tm_min % 10),
+		':',
+		digit_to_char(time_info->tm_sec / 10),
+		digit_to_char(time_info->tm_sec % 10),
+		' ',
+		'\0',
+	};
+
+	printf("%s [%s] %s\n", time_buffer, author, game->chat_stream.stream[game->chat_stream.next_index].message);
+	fprintf(game->chat_log_file, "%s [%s] %s\n", time_buffer, author, game->chat_stream.stream[game->chat_stream.next_index].message);
+
+	game->chat_stream.next_index = (game->chat_stream.next_index + 1) % game->constants.chat_stream_length;
+}
+
+
 int client_log_init(struct game_client* game) {
 	time_t raw_time = time(NULL);
 	struct tm* time_info = localtime(&raw_time);
@@ -137,13 +181,24 @@ int new_game_client(struct game_client* game, char* resource_path) {
 	game->constants.fov_max = get_value_from_key(constants_map, "fov_max").i;
 	game->constants.client_connection_timeout = get_value_from_key(constants_map, "client_connection_timeout").i;
 	game->constants.packet_awaiting_timeout = get_value_from_key(constants_map, "packet_awaiting_timeout").i;
-	game->running = false;
+	game->constants.chat_width = get_value_from_key(constants_map, "chat_width").i;
+	game->constants.max_chat_lines_display = get_value_from_key(constants_map, "max_chat_lines_display").i;
+	game->constants.chat_display_duration = get_value_from_key(constants_map, "chat_display_duration").i;
+	game->constants.chat_stream_length = get_value_from_key(constants_map, "chat_stream_length").i;
+
+
+	game->chat_stream.stream = malloc(sizeof(struct chat_stream_element) * game->constants.chat_stream_length);
+	game->chat_stream.next_index = 0;
+	for (int i = game->constants.chat_stream_length - game->constants.max_chat_lines_display; i < game->constants.chat_stream_length; i++) game->chat_stream.stream[i].time = 0;
+
 
 	game->in_game_flag = false;
 	game->disconnect_flag = 0;
 	init_game_menus(game);
 	init_networker(game);
 	debug_init(game);
+
+	game->running = false;
 
 	return 0;
 }
@@ -214,4 +269,5 @@ void run_game_client(struct game_client* game) {
 
 void delete_game_client(struct game_client* game) {
 	destroy_resource_manager(game->resource_manager);
+	free(game->chat_stream.stream);
 }

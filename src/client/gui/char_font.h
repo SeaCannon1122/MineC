@@ -25,6 +25,9 @@ struct gui_character {
 void print_char(struct char_font* font, char c, int font_width, unsigned int color, int x, int y, unsigned int* screen, int width, int height);
 
 void print_string(struct char_font* font, char* str, int text_size, unsigned int color, int x, int y, unsigned int* screen, int width, int height);
+void print_string_sized(struct char_font* font, char* str, int length, int text_size, unsigned int color, int x, int y, unsigned int* screen, int width, int height);
+
+void print_string_sized_bounded_ancored_right(struct char_font* font, char* str, int max_width, int* chars_print, int text_size, unsigned int color, int x, int y, unsigned int* screen, int width, int height);
 
 struct gui_character* convert_string_to_gui_string(struct char_font* font, char* str, int text_size, int color);
 void convert_string_to_gui_string_in_buffer(struct char_font* font, char* str, int text_size, int color, struct gui_character* buffer, int buffer_length);
@@ -32,3 +35,4 @@ void convert_string_to_gui_string_in_buffer(struct char_font* font, char* str, i
 void print_gui_string(struct gui_character* str, int scale, int x, int y, char alignment, unsigned int* screen, int width, int height);
 
 int gui_text_width(struct gui_character* str);
+int text_with_as_gui(struct char_font* font, char* text);

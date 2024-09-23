@@ -41,7 +41,7 @@ void networker_disconnect_and_cleanup(struct game_client* game) {
 	game->networker.network_handle = NULL;
 
 	
-	
+	game->networker.next_packet_type == -1;
 	game->networker.request = NULL_REQUEST;
 	game->networker.close_connection_flag = false;
 }
@@ -129,7 +129,6 @@ void networker_thread_function(struct game_client* game) {
 				int receive_status;
 
 				while (game->running) {
-					sleep_for_ms(100);
 
 					if (game->networker.next_packet_type == -1) receive_status = receive_data(game->networker.network_handle, &game->networker.next_packet_type, sizeof(int), NULL, 0);
 
@@ -142,14 +141,21 @@ void networker_thread_function(struct game_client* game) {
 								log_message(game->debug_log_file, "[NETWORKER] Disconnected from server % s: % u", game->networker.ip, game->networker.port);
 								parse_string(kick_packet.kick_message, game->game_menus.connection_waiting_menu.networking_message);
 								game->disconnect_flag = 2;
+								game->networker.next_packet_type = -1;
 								break;
 							}
 						}
 
 						switch (game->networker.next_packet_type) {
 
-						case NETWORKING_PACKET_KICK: {
+						case NETWORKING_PACKET_MESSAGE: {
+							struct networking_packet_chat_message_from_server message_packet;
 							
+							if (receive_data(game->networker.network_handle, &message_packet, sizeof(message_packet), NULL, 0) > 0) {
+
+								game->networker.next_packet_type = -1;
+								log_chat_message(game, message_packet.author, message_packet.message);
+							}
 
 						} break;
 
@@ -161,11 +167,9 @@ void networker_thread_function(struct game_client* game) {
 					if (game->networker.should_send_chat_message) {
 						int packet_type = NETWORKING_PACKET_MESSAGE;
 						send_data(game->networker.network_handle, &packet_type, sizeof(int));
-						send_data(game->networker.network_handle, game->networker.send_chat_message, MAX_CHAT_MESSSAGE_LENGTH + 1);
+						send_data(game->networker.network_handle, game->networker.send_chat_message, sizeof(struct networking_packet_chat_message_to_server));
 						game->networker.should_send_chat_message = false;
 					}
-
-
 
 
 					if (game->networker.close_connection_flag) {
@@ -173,6 +177,8 @@ void networker_thread_function(struct game_client* game) {
 						parse_string("Disconnected", game->game_menus.connection_waiting_menu.networking_message);
 						break;
 					}
+
+					sleep_for_ms(10);
 
 				}
 

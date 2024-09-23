@@ -62,17 +62,20 @@ void client_auth_thread_function(struct game_server* game) {
             struct networking_packet_client_auth auth_packet;
             int recieved;
 
-            if (receive_data(client_handle, &packet_type, sizeof(int), NULL, 3000) == -2) {
+            if (receive_data(client_handle, &packet_type, sizeof(int), game->running, 3000) == -2) {
+                log_message(game->debug_log_file, "[CLIENT HANDLER] %s didnt send auth header", auth_packet.username);
                 close_connection(client_handle);
                 return;
             }
 
             if (packet_type != NETWORKING_PACKET_CLIENT_AUTH) {
+                log_message(game->debug_log_file, "[CLIENT HANDLER] %s didnt send correct auth headers", auth_packet.username);
                 close_connection(client_handle);
                 return;
             }
 
-            if (receive_data(client_handle, &auth_packet, sizeof(struct networking_packet_client_auth), NULL, 3000) == -2) {
+            if (receive_data(client_handle, &auth_packet, sizeof(struct networking_packet_client_auth), game->running, 3000) == -2) {
+                log_message(game->debug_log_file, "[CLIENT HANDLER] %s didnt send auth packet", auth_packet.username);
                 close_connection(client_handle);
                 return;
             }
@@ -123,9 +126,9 @@ void client_auth_thread_function(struct game_server* game) {
 }
 
 void disconnect_client(struct game_server* game, int client_index) {
-    close_connection(game->clients[client_index].client_handle);
-    log_message(game->debug_log_file, "[CLIENT HANDLER] %s from %s:%u disconnected from the server", game->clients[client_index].username, game->clients[client_index].ip_address, game->clients[client_index].port);
     game->clients[client_index].client_handle = NULL;
+    game->clients[client_index].next_packet_type = -1;
+    close_connection(game->clients[client_index].client_handle);
     game->clients_connected_count--;
 }
 
@@ -229,16 +232,24 @@ void run_game_server(struct game_server* game) {
 
 
                 case NETWORKING_PACKET_DISCONNECT: {
+                    game->clients[i].next_packet_type = -1;
+                    log_message(game->chat_log_file, "[SERVER] %s disconnected", game->clients[i].username);
                     disconnect_client(game, i);
                     goto _connection_closed;
                 } break;
 
                 case NETWORKING_PACKET_MESSAGE: {
-                    char message[MAX_CHAT_MESSSAGE_LENGTH + 1];
-                    if (receive_data(game->clients[i].client_handle, message, MAX_CHAT_MESSSAGE_LENGTH + 1, NULL, 0) > 0) {
-                        log_message(game->chat_log_file, "[%s] %s", game->clients[i].username, message);
+                    struct networking_packet_chat_message_from_server message_packet;
+                    if (receive_data(game->clients[i].client_handle, message_packet.message, sizeof(struct networking_packet_chat_message_to_server), NULL, 0) > 0) {
+                        sprintf(message_packet.author, game->clients[i].username);
+
+                        for (int j = 0; j < game->clients_length; j++) if (game->clients[j].client_handle != NULL) {
+                            send_data(game->clients[j].client_handle, &game->clients[i].next_packet_type, sizeof(int));
+                            send_data(game->clients[j].client_handle, &message_packet, sizeof(message_packet));
+                        }
 
                         game->clients[i].next_packet_type = -1;
+                        log_message(game->chat_log_file, "[%s] %s", message_packet.author, message_packet.message);
                     }
                 } break;
 
@@ -246,16 +257,21 @@ void run_game_server(struct game_server* game) {
 
                 } break;
 
-                default:
+                default: {
+                    game->clients[i].next_packet_type = -1;
+                    int kick_packet_type = NETWORKING_PACKET_KICK;
+                    struct networking_packet_kick kick_packet = { "Invalid packets" };
+                    send_data(game->clients[i].client_handle, &kick_packet_type, sizeof(int));
+                    send_data(game->clients[i].client_handle, &kick_packet, sizeof(struct networking_packet_kick));
                     disconnect_client(game, i);
-                    
+                    log_message(game->chat_log_file, "[SERVER] %s kicked due to invalid packet", game->clients[i].username);
+
                 } break;
+
+                }
 
             }
 
-
-
-            if(!is_connected(game->clients[i].client_handle)) disconnect_client(game, i);
 
         _connection_closed:
             1 == 1;
@@ -276,9 +292,10 @@ void run_game_server(struct game_server* game) {
         send_data(game->clients[i].client_handle, &kick_packet_type, sizeof(int));
         send_data(game->clients[i].client_handle, &kick_packet, sizeof(struct networking_packet_kick));
         close_connection(game->clients[i].client_handle); 
+        log_message(game->chat_log_file, "[SERVER] %s Disconnected", game->clients[i].username);
     }
 
-    log_message(game->debug_log_file, "[SERVER] Server closing");
+    log_message(game->debug_log_file, "[SERVER] Server closed");
     server_close(game->server_handle);
 
     fclose(game->chat_log_file);

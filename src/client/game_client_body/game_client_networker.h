@@ -36,7 +36,7 @@ struct game_networker {
 		size_t size;
 	} send_data[3];
 	bool should_send_chat_message;
-	char send_chat_message[MAX_CHAT_MESSSAGE_LENGTH + 1];
+	char send_chat_message[MAX_CHAT_MESSAGE_LENGTH + 1];
 
 };
 

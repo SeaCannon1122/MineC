@@ -47,6 +47,30 @@ void print_string(struct char_font* font, char* str, int text_size, unsigned int
 	}
 }
 
+void print_string_sized(struct char_font* font, char* str, int length, int text_size, unsigned int color, int x, int y, unsigned int* screen, int width, int height) {
+
+	int x_pos = x;
+
+	for (int i = 0; i < length; i++) {
+		print_char(font, str[i], text_size, color, x_pos, y, screen, width, height);
+		x_pos += (font->char_font_entries[str[i]].width > 0 ? text_size + text_size * clamp_int(font->char_font_entries[str[i]].width, 0, 8) : 0);
+	}
+}
+
+void print_string_sized_bounded_ancored_right(struct char_font* font, char* str, int max_width, int* chars_print, int text_size, unsigned int color, int x, int y, unsigned int* screen, int width, int height) {
+
+	int x_pos = x;
+	*chars_print = 0;
+
+	for (int i = 0; str[i] != '\0'; i++) {
+		int next_x_pos = x_pos + (font->char_font_entries[str[i]].width > 0 ? text_size + text_size * clamp_int(font->char_font_entries[str[i]].width, 0, 8) : 0);
+		if (next_x_pos >= max_width) return;
+		print_char(font, str[i], text_size, color, x_pos, y, screen, width, height);
+		x_pos = next_x_pos;
+		(*chars_print)++;
+	}
+}
+
 struct gui_character* convert_string_to_gui_string(struct char_font* font, char* str, int text_size, int color) {
 	int length = 0;
 	for (; str[length] != '\0'; length++);
@@ -107,5 +131,15 @@ int gui_text_width(struct gui_character* str) {
 		total_width += str[i].size * (str[i].font->char_font_entries[str[i].value].width ? (1 + str[i].font->char_font_entries[str[i].value].width) : 0);
 	}
 	if(i != 0) total_width -= str[i].size;
+	return total_width;
+}
+
+int text_with_as_gui(struct char_font* font, char* text) {
+	int total_width = 0;
+	int i = 0;
+	for (; text[i] != '\0'; i++) {
+		total_width += (font->char_font_entries[text[i]].width ? (1 + font->char_font_entries[text[i]].width) : 0);
+	}
+	if (i != 0) total_width -= 1;
 	return total_width;
 }

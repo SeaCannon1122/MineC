@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdio.h>
+
 #define parse_string_into_gui_string(src, gui_str) { char* psigs = src; int psigs_i = 0; for(; psigs[psigs_i] != '\0'; psigs_i++) {gui_str[psigs_i].value = psigs[psigs_i];} gui_str[psigs_i].value = psigs[psigs_i];}
 
 #define parse_string(src, dest) {char* _src_str = src; int _str_i = 0; for(; _src_str[_str_i] != '\0'; _str_i++) {dest[_str_i] = _src_str[_str_i];} dest[_str_i] = _src_str[_str_i];}
@@ -18,6 +20,4 @@ char digit_to_char(int digit);
 
 int string_length(char* str);
 
-void get_time_in_string(char* buffer);
-
-void time_printf(char* format, ...);
+void get_time_in_string(char* buffer, time_t raw_time);

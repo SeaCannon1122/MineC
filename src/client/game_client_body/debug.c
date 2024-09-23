@@ -35,4 +35,7 @@ void debug_init(struct game_client* game) {
 	game->game_menus.join_game_menu.password_buffer[1] = '3';
 	game->game_menus.join_game_menu.password_buffer[2] = '3';
 	game->game_menus.join_game_menu.password_buffer[3] = '7';
+
+	game->game_menus.main_menu.join_game_button_state = true;
+	game->game_menus.join_game_menu.join_game_button_state = true;
 }
