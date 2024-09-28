@@ -22,6 +22,7 @@ enum networker_request_type {
 struct game_networker {
 	void* network_handle;
 	int next_packet_type;
+	int next_packet_length;
 	int status;
 	int request;
 	int port;

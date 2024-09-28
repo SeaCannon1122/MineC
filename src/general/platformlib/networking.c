@@ -214,7 +214,7 @@ int send_data(void* socket_handle, void* buffer, int size) {
     int sent = 0;
 
     while (sent < size) {
-        int result = send((intptr_t)socket_handle, (const char*)buffer + sent, size - sent, 0);
+        int result = send((intptr_t)socket_handle, (const char*)buffer + sent, size - sent, MSG_NOSIGNAL);
         if (result == -1) {
             if (NETWORKING_VERBOSE) perror("send failed");
             return -1; // Error

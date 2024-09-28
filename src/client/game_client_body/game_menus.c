@@ -310,7 +310,11 @@ void switch_game_menu(struct game_client* game, int menu) {
 	game->game_menus.active_menu = menu;
 }
 
-void game_menus_frame(struct game_client* game, unsigned int* pixels, int width, int height) {
+void game_menus_frame(struct game_client* game) {
+
+	unsigned int* pixels = game->render_state.pixels;
+	int width = game->render_state.width;
+	int height = game->render_state.height;
 
 	struct point2d_int mousepos = get_mouse_cursor_position(game->window);
 	mousepos.x /= game->settings.resolution_scale;
@@ -321,52 +325,35 @@ void game_menus_frame(struct game_client* game, unsigned int* pixels, int width,
 
 	if (game->in_game_flag && (game->game_menus.active_menu == NO_MENU || game->game_menus.active_menu == CHAT_MENU || game->game_menus.active_menu == INGAME_OPTIONS_MENU)) {
 		int chat_line = 0;
-		int message_index = game->chat_stream.next_index - 1;
+		int message_index = (game->chat_stream.next_index - 1 + game->constants.chat_stream_length) % game->constants.chat_stream_length;
 		long long current_time = time(NULL);
 
 		while (chat_line < game->constants.max_chat_lines_display && current_time - game->chat_stream.stream[message_index].time < game->constants.chat_display_duration && game->chat_stream.stream[message_index].time != -1) {
 
-			int beggining_index = 0;
+			int lines_needed = 1;
 
-			char print_string[1 + MAX_USERNAME_LENGTH + 2 + MAX_CHAT_MESSAGE_LENGTH + 1];
-			sprintf(print_string, "[%s] %s\n", game->chat_stream.stream[message_index].author, game->chat_stream.stream[message_index].message);
+			for (int c = 0; game->chat_stream.stream[message_index].message[c].value != '\0'; c++) if (game->chat_stream.stream[message_index].is_chat_line_break[c] == 1) lines_needed++;
 
-			int chars_print = 0;
-			int chars_total = string_length(print_string) - 1;
-
-			int lines_needed = 0;
-
-			while (chars_print < chars_total) {
-				
-				lines_needed++;
-				int width = 4;
-
-				for (; print_string[chars_print] != '\0' && width < game->constants.chat_width - 2; chars_print++) {
-					width += (game->game_menus.chat_menu.font->char_font_entries[print_string[chars_print]].width > 0 ? 1 + clamp_int(game->game_menus.chat_menu.font->char_font_entries[print_string[chars_print]].width, 0, 8) : 0);
-					chars_print++;
-				}
-
-			}
-
-			chars_print = 0;
 			chat_line += lines_needed;
 
-			for (int i = chat_line - 1; i >= chat_line - lines_needed; i--) {
-				if (i > game->constants.max_chat_lines_display) continue;
+			int message_i = 0;
 
-				int y_min_actually = height - (1 + 10 + 4 + 10 * (i + 1)) * render_gui_scale;
-				int y_max_actually = height - (1 + 10 + 4 + 10 * i) * render_gui_scale;
+			for (int i = chat_line - 1; i >= chat_line - lines_needed; i--) {
+				if (i >= game->constants.max_chat_lines_display) { for (message_i++; game->chat_stream.stream[message_index].is_chat_line_break[message_i] != 1; message_i++); continue; }
+
+				int y_min_actually = height - (1 + game->constants.chat_line_radius * 2 + 4 + game->constants.chat_line_radius * 2 * (i + 1)) * render_gui_scale;
+				int y_max_actually = height - (1 + game->constants.chat_line_radius * 2 + 4 + game->constants.chat_line_radius * 2 * i) * render_gui_scale;
 				int y_min = clamp_int(y_min_actually, 0, height - 1);
 				int y_max = clamp_int(y_max_actually, 0, height - 1);
 				
 				for (int y = y_min; y < y_max; y++) {
 					for (int x = 0; x < game->constants.chat_width * render_gui_scale && x < width; x++) {
-						unsigned int* pixel = &game->render_state.pixels[x + game->render_state.width * y];
+						unsigned int* pixel = &pixels[x + width * y];
 
-						unsigned int top_a = 0x7f;
-						unsigned int top_r = 0x38;
-						unsigned int top_g = 0x38;
-						unsigned int top_b = 0x38;
+						unsigned int top_a = 0x5f;
+						unsigned int top_r = 0x00;
+						unsigned int top_g = 0x00;
+						unsigned int top_b = 0x00;
 
 
 						*(unsigned char*)((long long)pixel + 2) = (unsigned char)((top_r * top_a + (255 - top_a) * (unsigned int)*(unsigned char*)((long long)pixel + 2)) / 255);
@@ -375,16 +362,25 @@ void game_menus_frame(struct game_client* game, unsigned int* pixels, int width,
 					}
 				}
 
-				int chars_print_in_line = 0;
-				print_string_sized_bounded_ancored_right(game->game_menus.chat_menu.font, print_string + chars_print, (game->constants.chat_width - 6) * render_gui_scale, &chars_print_in_line, render_gui_scale, 0xff3b3b3b, 5 * render_gui_scale, height - (1 + 10 + 4 + 10 * i + 9 - 1) * render_gui_scale, game->render_state.pixels, game->render_state.width, game->render_state.height);
-				print_string_sized_bounded_ancored_right(game->game_menus.chat_menu.font, print_string + chars_print, (game->constants.chat_width - 6) * render_gui_scale, &chars_print_in_line, render_gui_scale, 0xffffffff, 4 * render_gui_scale, height - (1 + 10 + 4 + 10 * i + 9) * render_gui_scale, game->render_state.pixels, game->render_state.width, game->render_state.height);
-				chars_print += chars_print_in_line;
+				int x_text = game->constants.chat_indentation_left * render_gui_scale;
+
+				if (game->chat_stream.stream[message_index].message[message_i].value == '\n') message_i++;
+
+				for (; game->chat_stream.stream[message_index].message[message_i].value != '\0'; message_i++) {
+					print_char(game->game_menus.chat_menu.font, game->chat_stream.stream[message_index].message[message_i].value, render_gui_scale, game->chat_stream.stream[message_index].message[message_i].color.color_value, x_text, y_min_actually + (game->constants.chat_line_radius - 4) * render_gui_scale, pixels, width, height);
+					x_text += (1 + game->game_menus.chat_menu.font->char_font_entries[game->chat_stream.stream[message_index].message[message_i].value].width) * render_gui_scale;
+					if (game->chat_stream.stream[message_index].is_chat_line_break[message_i + 1] == 1) { message_i++; break; }
+				}
+
+				
+
+
 			}
 
 
 
 
-			message_index--;
+			message_index = (message_index - 1 + game->constants.chat_stream_length) % game->constants.chat_stream_length;
 
 		}
 
@@ -537,8 +533,7 @@ void game_menus_frame(struct game_client* game, unsigned int* pixels, int width,
 	case CHAT_MENU: {
 
 		if (get_key_state(KEY_ENTER) == 0b11 && is_window_selected(game->window)) {
-			if (game->game_menus.chat_menu.message_link != -1) unlink_keyboard_parse_buffer(game->window, game->game_menus.chat_menu.message_link);
-			game->game_menus.active_menu = NO_MENU;
+			switch_game_menu(game, NO_MENU);
 
 			if (game->networker.should_send_chat_message == false) {
 				for (int i = 0; i < MAX_CHAT_MESSAGE_LENGTH + 1; i++) game->networker.send_chat_message[i] = game->game_menus.chat_menu.message_buffer[i];
@@ -565,15 +560,17 @@ void game_menus_frame(struct game_client* game, unsigned int* pixels, int width,
 
 		//commandline background
 
-		for (int i = 0; i < game->render_state.width; i++) {
-			for (int j = game->render_state.height - render_gui_scale * 10 - 1; j < game->render_state.height; j++) {
+		unsigned int top_a = 0x5f;
+		unsigned int top_r = 0x00;
+		unsigned int top_g = 0x00;
+		unsigned int top_b = 0x00;
 
-				unsigned int* pixel = &game->render_state.pixels[i + game->render_state.width * j];
+		for (int i = 0; i < width; i++) {
+			for (int j = height - 1; j >= height - render_gui_scale * 10 - 1 && j >= 0; j--) {
 
-				unsigned int top_a = 0x7f;
-				unsigned int top_r = 0x38;
-				unsigned int top_g = 0x38;
-				unsigned int top_b = 0x38;
+				unsigned int* pixel = &pixels[i + width * j];
+
+				
 
 
 				*(unsigned char*)((long long)pixel + 2) = (unsigned char)((top_r * top_a + (255 - top_a) * (unsigned int)*(unsigned char*)((long long)pixel + 2)) / 255);
@@ -595,7 +592,7 @@ void game_menus_frame(struct game_client* game, unsigned int* pixels, int width,
 				menu_x(x + 1, ALIGNMENT_LEFT, render_gui_scale, width),
 				menu_y(-5 + 1, ALIGNMENT_BOTTOM, render_gui_scale, height),
 				ALIGNMENT_LEFT,
-				game->render_state.pixels,
+				pixels,
 				width,
 				height
 			);
@@ -606,7 +603,7 @@ void game_menus_frame(struct game_client* game, unsigned int* pixels, int width,
 				menu_x(x, ALIGNMENT_LEFT, render_gui_scale, width),
 				menu_y(-5, ALIGNMENT_BOTTOM, render_gui_scale, height),
 				ALIGNMENT_LEFT,
-				game->render_state.pixels,
+				pixels,
 				width,
 				height
 			);

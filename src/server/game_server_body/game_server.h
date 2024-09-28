@@ -5,6 +5,10 @@
 
 #include "general/keyvalue.h"
 #include "game/game_constants.h"
+#include "game/networking_packets/networking_packets.h"
+#include "game/chat.h"
+
+#define CLIENT_CHAT_QUEUE_LENGTH 8
 
 struct client_on_server {
 	void* client_handle;
@@ -12,6 +16,8 @@ struct client_on_server {
 	char ip_address[22 + 1];
 	unsigned short port;
 	int next_packet_type;
+	bool logged_in_from_another_location;
+	bool just_logged_in;
 };
 
 struct game_server {
@@ -25,11 +31,13 @@ struct game_server {
 	int clients_connected_count;
 	int clients_length;
 	bool running;
+
 	struct {
 		int max_clients;
 		int max_render_distance;
 		int max_message_length;
 	} settings;
+
 };
 
 void new_game_server(struct game_server* game, char* resource_path);

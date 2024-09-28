@@ -4,6 +4,7 @@
 #include "game_menus.h"
 #include "game/game_constants.h"
 #include "game_client_networker.h"
+#include "game/chat.h"
 
 enum game_request {
 	NULL_FLAG,
@@ -12,8 +13,8 @@ enum game_request {
 
 struct chat_stream_element {
 	long long time;
-	char author[MAX_USERNAME_LENGTH + 1];
-	char message[MAX_CHAT_MESSAGE_LENGTH + 1];
+	struct game_chat_char message[MAX_SERVER_MESSAGE_LENGTH + 1];
+	char is_chat_line_break[MAX_SERVER_MESSAGE_LENGTH + 1];
 };
 
 struct game_client {
@@ -55,11 +56,14 @@ struct game_client {
 		int max_chat_lines_display;
 		int chat_display_duration;
 		int chat_stream_length;
+		int chat_indentation_left;
+		int chat_indentation_right;
+		int chat_line_radius;
 	} constants;
 	struct game_menus game_menus;
 };
 
-void log_chat_message(struct game_client* game, char* author, char* message, ...);
+void log_chat_message(struct game_client* game);
 
 int new_game_client(struct game_client* game, char* resource_path);
 

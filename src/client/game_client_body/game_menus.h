@@ -155,4 +155,4 @@ void init_game_menus(struct game_client* game);
 
 void switch_game_menu(struct game_client* game, int menu);
 
-void game_menus_frame(struct game_client* game, unsigned int* pixels, int width, int height);
+void game_menus_frame(struct game_client* game);

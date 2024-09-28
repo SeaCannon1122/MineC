@@ -297,16 +297,16 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 
 			case WM_CHAR: {
 
-				for (int i = 0; i < MAX_KEYBOARD_BUFFER_PARSERS_PER_WINDOW; i++) {
-					if (window_resources[i].print_buffer[i].buffer != NULL) {
+				for (int j = 0; j < MAX_KEYBOARD_BUFFER_PARSERS_PER_WINDOW; j++) {
+					if (window_resources[i].print_buffer[j].buffer != NULL) {
 						char c = (char)wParam;
-						if (c >= ' ' && c <= '~' && window_resources[i].print_buffer[i].buffer_size_width_termination - 1 > window_resources[i].print_buffer[i].size_used) {
-							window_resources[i].print_buffer[i].buffer[window_resources[i].print_buffer[i].size_used] = c;
-							window_resources[i].print_buffer[i].size_used++;
+						if (c >= ' ' && c <= '~' && window_resources[i].print_buffer[j].buffer_size_width_termination - 1 > window_resources[i].print_buffer[j].size_used) {
+							window_resources[i].print_buffer[j].buffer[window_resources[i].print_buffer[j].size_used] = c;
+							window_resources[i].print_buffer[j].size_used++;
 						}
-						else if (c == 0x08 /*delete*/ && window_resources[i].print_buffer[i].size_used != 0) {
-							window_resources[i].print_buffer[i].size_used--;
-							window_resources[i].print_buffer[i].buffer[window_resources[i].print_buffer[i].size_used] = '\0';
+						else if (c == 0x08 /*delete*/ && window_resources[i].print_buffer[j].size_used != 0) {
+							window_resources[i].print_buffer[j].size_used--;
+							window_resources[i].print_buffer[j].buffer[window_resources[i].print_buffer[j].size_used] = '\0';
 						}
 					}
 				}
@@ -606,23 +606,23 @@ void WindowControl() {
 
 			XNextEvent(display, &event);
 
-			int index = 0;
+			int window_index = 0;
 
-			for (; index < MAX_WINDOW_COUNT && window_resources[index].window != event.xany.window; index++);
+			for (; window_index < MAX_WINDOW_COUNT && window_resources[window_index].window != event.xany.window; window_index++);
 
-			if (window_resources[index].active) {
+			if (window_resources[window_index].active) {
 
 				switch (event.type) {
 
 				case ConfigureNotify: {
-					window_resources[index].window_width = (event.xconfigure.width > display_width ? display_width : event.xconfigure.width);
-					window_resources[index].window_height = (event.xconfigure.height > display_height ? display_height : event.xconfigure.height);
+					window_resources[window_index].window_width = (event.xconfigure.width > display_width ? display_width : event.xconfigure.width);
+					window_resources[window_index].window_height = (event.xconfigure.height > display_height ? display_height : event.xconfigure.height);
 				} break;
 
 				case ClientMessage: {
 					if ((Atom)event.xclient.data.l[0] == wm_delete_window) {
-						window_resources[index].active = false;
-						XDestroyWindow(display, window_resources[index].window);
+						window_resources[window_index].active = false;
+						XDestroyWindow(display, window_resources[window_index].window);
 					}
 				} break;
 
@@ -636,17 +636,24 @@ void WindowControl() {
 					char buf[32];
 					int len = XLookupString(&event.xkey, buf, sizeof(buf), &keysym, NULL);
 					if (len > 0) {
-						for (int i = 0; i < len; ++i) {
-							unsigned char c = (unsigned char)buf[i];
-							if (c >= ' ' && c <= '~' && window_resources[i].print_buffer[i].buffer_size_width_termination - 1 > window_resources[i].print_buffer[i].size_used) {
-								window_resources[i].print_buffer[i].buffer[window_resources[i].print_buffer[i].size_used] = c;
-								window_resources[i].print_buffer[i].size_used++;
-							}
-							else if (c == 0x08 /*delete*/ && window_resources[i].print_buffer[i].size_used != 0) {
-								window_resources[i].print_buffer[i].size_used--;
-								window_resources[i].print_buffer[i].buffer[window_resources[i].print_buffer[i].size_used] = '\0';
+
+						for (int j = 0; j < MAX_KEYBOARD_BUFFER_PARSERS_PER_WINDOW; j++) if (window_resources[window_index].print_buffer[j].buffer != NULL) {
+							for (int i = 0; i < len; i++) {
+
+								unsigned char c = (unsigned char)buf[i];
+								if (c >= ' ' && c <= '~' && window_resources[window_index].print_buffer[j].buffer_size_width_termination - 1 > window_resources[window_index].print_buffer[j].size_used) {
+									window_resources[window_index].print_buffer[j].buffer[window_resources[window_index].print_buffer[j].size_used] = c;
+									window_resources[window_index].print_buffer[j].size_used++;
+								}
+								else if (c == 0x08 /*delete*/ && window_resources[window_index].print_buffer[j].size_used != 0) {
+									window_resources[window_index].print_buffer[j].size_used--;
+									window_resources[window_index].print_buffer[j].buffer[window_resources[window_index].print_buffer[j].size_used] = '\0';
+								}
+
 							}
 						}
+
+						
 					}
 
 				} break;

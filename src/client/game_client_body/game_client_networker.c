@@ -6,6 +6,7 @@
 #include "general/platformlib/platform.h"
 #include "general/utils.h"
 #include "game/networking_packets/networking_packets.h"
+#include "game/chat.h"
 #include "game_client.h"
 #include "general/logging.h"
 
@@ -16,6 +17,7 @@ void init_networker(struct game_client* game) {
 	game->networker.close_connection_flag = false;
 	game->networker.status_updates_missed = 0;
 	game->networker.next_packet_type = -1;
+	game->networker.next_packet_length = 0;
 
 	game->networker.send_packet_type = -1;
 
@@ -138,7 +140,7 @@ void networker_thread_function(struct game_client* game) {
 							struct networking_packet_kick kick_packet;
 							receive_status = receive_data(game->networker.network_handle, &kick_packet, sizeof(struct networking_packet_kick), NULL, 0);
 							if (receive_status > 0) {
-								log_message(game->debug_log_file, "[NETWORKER] Disconnected from server % s: % u", game->networker.ip, game->networker.port);
+								log_message(game->debug_log_file, "[NETWORKER] Disconnected from server %s: %u", game->networker.ip, game->networker.port);
 								parse_string(kick_packet.kick_message, game->game_menus.connection_waiting_menu.networking_message);
 								game->disconnect_flag = 2;
 								game->networker.next_packet_type = -1;
@@ -148,13 +150,16 @@ void networker_thread_function(struct game_client* game) {
 
 						switch (game->networker.next_packet_type) {
 
-						case NETWORKING_PACKET_MESSAGE: {
-							struct networking_packet_chat_message_from_server message_packet;
+						case NETWORKING_PACKET_MESSAGE_FROM_SERVER: {
 							
-							if (receive_data(game->networker.network_handle, &message_packet, sizeof(message_packet), NULL, 0) > 0) {
+							if (game->networker.next_packet_length == 0) if (receive_data(game->networker.network_handle, &game->networker.next_packet_length, sizeof(int), NULL, 0) <= 0) break;
 
+							if (receive_data(game->networker.network_handle, game->chat_stream.stream[game->chat_stream.next_index].message, sizeof(struct game_chat_char) * game->networker.next_packet_length, NULL, 0) > 0) {
+
+								log_chat_message(game);
+
+								game->networker.next_packet_length = 0;
 								game->networker.next_packet_type = -1;
-								log_chat_message(game, message_packet.author, message_packet.message);
 							}
 
 						} break;
@@ -165,7 +170,7 @@ void networker_thread_function(struct game_client* game) {
 					}
 
 					if (game->networker.should_send_chat_message) {
-						int packet_type = NETWORKING_PACKET_MESSAGE;
+						int packet_type = NETWORKING_PACKET_MESSAGE_TO_SERVER;
 						send_data(game->networker.network_handle, &packet_type, sizeof(int));
 						send_data(game->networker.network_handle, game->networker.send_chat_message, sizeof(struct networking_packet_chat_message_to_server));
 						game->networker.should_send_chat_message = false;

@@ -22,7 +22,7 @@ struct gui_character {
 	char value;
 };
 
-void print_char(struct char_font* font, char c, int font_width, unsigned int color, int x, int y, unsigned int* screen, int width, int height);
+void print_char(struct char_font* font, char c, int text_size, unsigned int color, int x, int y, unsigned int* screen, int width, int height);
 
 void print_string(struct char_font* font, char* str, int text_size, unsigned int color, int x, int y, unsigned int* screen, int width, int height);
 void print_string_sized(struct char_font* font, char* str, int length, int text_size, unsigned int color, int x, int y, unsigned int* screen, int width, int height);
