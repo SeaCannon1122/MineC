@@ -18,7 +18,6 @@
 #include "game_client_networker.h"
 #include "game_client_renderer.h"
 #include "game_client_simulator.h"
-#include "game_client_control.h"
 #include "game/networking_packets/networking_packets.h"
 
 #include "debug.h"
@@ -235,6 +234,7 @@ int new_game_client(struct game_client* game, char* resource_path) {
 
 	game->in_game_flag = false;
 	game->disconnect_flag = 0;
+
 	init_game_menus(game);
 	init_networker(game);
 	debug_init(game);
@@ -256,13 +256,14 @@ void run_game_client(struct game_client* game) {
 
 	void* networking_thread = create_thread((void(*)(void*))networker_thread_function, game);
 	void* simulation_thread = create_thread((void(*)(void*))game_client_simulator_thread_function, game);
-	void* control_thread = create_thread((void(*)(void*))game_client_control_thread_function, game);
 
 	while (get_key_state(KEY_MOUSE_LEFT) & 0b1) sleep_for_ms(10);
 
 	game->render_state.width = (get_window_width(game->window) + game->settings.resolution_scale - 1) / game->settings.resolution_scale;
 	game->render_state.height = (get_window_height(game->window) + game->settings.resolution_scale - 1) / game->settings.resolution_scale;
 	game->render_state.pixels = malloc(game->render_state.width * game->render_state.height * sizeof(unsigned int));
+
+	renderer_init(game);
 
 	log_message(game->debug_log_file, "Entering main Game Loop");
 
@@ -276,6 +277,8 @@ void run_game_client(struct game_client* game) {
 			game->render_state.pixels = malloc(new_width * new_height * sizeof(unsigned int));
 			game->render_state.width = new_width;
 			game->render_state.height = new_height;
+
+			client_renderer_adjust_size(game);
 		}
 
 		if (game->in_game_flag) { 
@@ -298,7 +301,8 @@ void run_game_client(struct game_client* game) {
 	game->running = false;
 	game->in_game_flag = false;
 
-	join_thread(control_thread);
+	renderer_exit(game);
+
 	join_thread(simulation_thread);
 	join_thread(networking_thread);
 

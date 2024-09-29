@@ -7,7 +7,6 @@ set(CLIENT_SOURCE_FILES
     src/client/gui/menu.c
     src/client/game_client_body/game_client.c
     src/client/game_client_body/game_menus.c
-    src/client/game_client_body/game_client_control.c
     src/client/game_client_body/game_client_renderer.c
     src/client/game_client_body/game_client_simulator.c
     src/client/game_client_body/game_client_networker.c
@@ -17,6 +16,7 @@ set(CLIENT_SOURCE_FILES
     src/general/platformlib/platform.c
     src/general/platformlib/parallel_computing.c
     src/general/platformlib/networking.c
+    src/general/platformlib/opengl_rendering.c
 
     src/general/keyvalue.c
     src/general/resource_manager.c
@@ -42,7 +42,10 @@ set(SERVER_SOURCE_FILES
 include_directories(${PROJECT_SOURCE_DIR}/src)
 include_directories(${PROJECT_SOURCE_DIR}/dependencies/stb_image)
 include_directories(${PROJECT_SOURCE_DIR}/dependencies/OpenCL/inc)
+include_directories(${PROJECT_SOURCE_DIR}/dependencies/GLEW/include)
+
 link_directories(${PROJECT_SOURCE_DIR}/dependencies/OpenCL/lib)
+link_directories(${PROJECT_SOURCE_DIR}/dependencies/GLEW/lib/Release/x64)
 
 add_executable(blocks_client ${CLIENT_SOURCE_FILES})
 add_executable(blocks_server ${SERVER_SOURCE_FILES})
@@ -59,13 +62,15 @@ if(WIN32)
         LINK_FLAGS "/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup"
     )
 
+    target_link_libraries(blocks_client opengl32 glew32s)
+
 elseif(UNIX)
     find_package(OpenGL REQUIRED)
     find_package(X11 REQUIRED)
     
     include_directories(${OPENGL_INCLUDE_DIRS} ${X11_INCLUDE_DIR})
 
-    target_link_libraries(blocks_client ${OPENGL_LIBRARIES} X11 pthread m)
+    target_link_libraries(blocks_client ${OPENGL_LIBRARIES} X11 GLEW GLX pthread m)
     target_link_libraries(blocks_server ${OPENGL_LIBRARIES} X11 pthread m)
 endif()
 

@@ -4,6 +4,7 @@
 #include "game_menus.h"
 #include "game/game_constants.h"
 #include "game_client_networker.h"
+#include "game_client_renderer.h"
 #include "game/chat.h"
 
 enum game_request {
@@ -36,6 +37,7 @@ struct game_client {
 		int height;
 		unsigned int* pixels;
 	} render_state;
+	struct game_renderer renderer;
 	struct {
 		int render_distance;
 		int fov;
