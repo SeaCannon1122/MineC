@@ -2,5 +2,6 @@ default_pixelfont l:assets/fonts/default.pixelfont
 settings l:settings.keyvalue
 constants l:constants.keyvalue
 texture_manager r:assets/textures.keyvalue
+shader_manager r:assets/shaders.keyvalue
 chat_dump s:dump/chat/
 debug_dump s:dump/error_and_log/

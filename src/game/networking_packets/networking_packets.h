@@ -16,6 +16,10 @@ enum networking_packet_type {
 	NETWORKING_PACKET_CLOCK,
 	NETWORKING_PACKET_MESSAGE_TO_SERVER,
 	NETWORKING_PACKET_MESSAGE_FROM_SERVER,
+
+	NETWORKING_PACKET_CHUNK_REQUEST,
+	NETWORKING_PACKET_CHUNK,
+
 };
 
 
@@ -46,4 +50,15 @@ struct networking_packet_chat_message_to_server {
 struct networking_packet_chat_message_from_server {
 	char author[MAX_USERNAME_LENGTH + 1];
 	char message[MAX_CHAT_MESSAGE_LENGTH + 1];
+};
+
+struct networking_packet_chunk {
+	struct {
+		int x;
+		int y;
+		int z;
+	} coordinates;
+	struct {
+		short block_id
+	} blocks[16 * 16 * 16]
 };

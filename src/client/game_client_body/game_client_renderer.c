@@ -1,11 +1,15 @@
 #include "game_client_renderer.h"
 
+#define GLEW_STATIC
+
 #include <GL/glew.h>
 #include <GL/gl.h>
 #include <stdio.h>
 
 #include "general/platformlib/platform.h"
+#include "general/platformlib/opengl_rendering.h"
 #include "game_client.h"
+#include "general/argb_image.h"
 
 char vertexShaderSource[] =
 "#version 330 core\n"
@@ -14,7 +18,7 @@ char vertexShaderSource[] =
 "out vec3 vertexColor;\n"
 "void main()\n"
 "{\n"
-"    gl_Position = vec4(aPos, 1.0);\n"
+"    gl_Position = vec4(aPos.x, -aPos.y, aPos.z, 1.0);\n"
 "    vertexColor = aColor;\n"
 "}";
 
@@ -29,147 +33,135 @@ char fragmentShaderSource[] =
 "}";
 
 
-
-GLuint compileShader(GLenum type, const char* source) {
-    GLuint shader = glCreateShader(type);
-    glShaderSource(shader, 1, &source, NULL);
-    glCompileShader(shader);
-
-    GLint success;
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-    if (!success) {
-        char infoLog[512];
-        glGetShaderInfoLog(shader, 512, NULL, infoLog);
-        fprintf(stderr, "Shader compilation error: %s\n", infoLog);
-    }
-
-    return shader;
-}
-
-// Function to create and compile the shader program
-GLuint createShaderProgram() {
-    GLuint vertexShader = compileShader(GL_VERTEX_SHADER, vertexShaderSource);
-    GLuint fragmentShader = compileShader(GL_FRAGMENT_SHADER, fragmentShaderSource);
-
-    GLuint shaderProgram = glCreateProgram();
-    glAttachShader(shaderProgram, vertexShader);
-    glAttachShader(shaderProgram, fragmentShader);
-    glLinkProgram(shaderProgram);
-
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
-
-    return shaderProgram;
-}
-
-
 void renderer_init(struct game_client* game) {
+
+    printf("Running OpenGL %s\n", glGetString(GL_VERSION));
+
     // Create and bind framebuffer
-    glGenFramebuffers(1, &game->renderer.fbo);
-    glBindFramebuffer(GL_FRAMEBUFFER, game->renderer.fbo);
+    GLCall(glGenFramebuffers(1, &game->renderer.fbo));
+    GLCall(glBindFramebuffer(GL_FRAMEBUFFER, game->renderer.fbo));
 
     // Create texture for framebuffer
-    glGenTextures(1, &game->renderer.texture);
-    glBindTexture(GL_TEXTURE_2D, game->renderer.texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, game->render_state.width, game->render_state.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    GLCall(glGenTextures(1, &game->renderer.texture));
+    GLCall(glBindTexture(GL_TEXTURE_2D, game->renderer.texture));
+    GLCall(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, game->render_state.width, game->render_state.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL));
+    GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+    GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
 
     // Attach texture to framebuffer
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, game->renderer.texture, 0);
+    GLCall(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, game->renderer.texture, 0));
 
     // Check framebuffer status (optional but good practice)
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
         fprintf(stderr, "Framebuffer not complete!\n");
     }
 
-    // Setup shader
-    game->renderer.default_shader_program = createShaderProgram();
-    glUseProgram(game->renderer.default_shader_program); // Use shader program before getting uniform location
-    game->renderer.buffer_size_uniform_loaction = glGetUniformLocation(game->renderer.default_shader_program, "uBufferSize");
+
+    
 
     // Set clear color
-    glClearColor(0.92f, 0.81f, 0.53f, 1.0f);
+    GLCall(glClearColor(0.92f, 0.81f, 0.53f, 1.0f));
 
-    // Generate and bind VAO/VBO
-    glGenVertexArrays(1, &game->renderer.vao);
-    glGenBuffers(1, &game->renderer.vbo);
-
-    glBindVertexArray(game->renderer.vao);
 
     float vertices[] = {
-        -0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f, // Bottom left - Red
-         0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f, // Bottom right - Green
-         0.0f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f  // Top middle - Blue
+        0.5f,  0.5f, 0.0f,  1.0f, 1.0f, // Top Right
+         0.5f, -0.5f, 0.0f,  1.0f, 0.0f, // Bottom Right
+        -0.5f, -0.5f, 0.0f,  0.0f, 0.0f, // Bottom Left
+        -0.5f,  0.5f, 0.0f,  0.0f, 1.0f  // Top Left 
     };
 
-    glBindBuffer(GL_ARRAY_BUFFER, game->renderer.vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    unsigned int indecies[] = {
+        0, 1, 3, // First triangle
+        1, 2, 3  // Second triangle
+    };
 
-    // Position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    GLCall(glGenVertexArrays(1, &game->renderer.vao));
+    GLCall(glBindVertexArray(game->renderer.vao));
+
+    GLCall(glGenBuffers(1, &game->renderer.vbo));
+    GLCall(glBindBuffer(GL_ARRAY_BUFFER, game->renderer.vbo));
+    GLCall(glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW));
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
-    // Color attribute
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
 
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
+    GLCall(glGenBuffers(1, &game->renderer.ibo));
+    GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, game->renderer.ibo));
+    GLCall(glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indecies), indecies, GL_STATIC_DRAW));
+
+
+    //setup_shader
+    char* vs = get_value_from_key(game->resource_manager, "default_vertex").ptr;
+    char* fs = get_value_from_key(game->resource_manager, "default_fragment").ptr;
+
+    game->renderer.shaders.default_shader_program = createShaderProgram(vs, fs);
+    GLCall(glUseProgram(game->renderer.shaders.default_shader_program));
+
+
+    struct argb_image* test_texture = get_value_from_key(game->resource_manager, "dirt_texture").ptr;
+    glGenTextures(1, &game->renderer.test_texture);
+    glActiveTexture(GL_TEXTURE);
+    glBindTexture(GL_TEXTURE_2D, game->renderer.test_texture);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, test_texture->width, test_texture->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, test_texture->pixels);
+    glGenerateMipmap(GL_TEXTURE_2D);
+
+
+    GLCall(glBindVertexArray(0));
+    GLCall(glUseProgram(0));
+    GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0));
+    GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    //set viewport
+    GLCall(glViewport(0, 0, game->render_state.width, game->render_state.height));
 }
 
 void client_renderer_adjust_size(struct game_client* game) {
     // Update texture size on resize
-    glBindTexture(GL_TEXTURE_2D, game->renderer.texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, game->render_state.width, game->render_state.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    GLCall(glBindTexture(GL_TEXTURE_2D, game->renderer.texture));
+    GLCall(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, game->render_state.width, game->render_state.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL));
 
-    glBindFramebuffer(GL_FRAMEBUFFER, game->renderer.fbo);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, game->renderer.texture, 0);
-
-    // Update uniform for buffer size
-    glUniform2f(game->renderer.buffer_size_uniform_loaction, game->render_state.width, game->render_state.height);
+    GLCall(glViewport(0, 0, game->render_state.width, game->render_state.height));
 }
 
 void client_render_world(struct game_client* game) {
-    // Clear framebuffer and set the viewport
-    glBindFramebuffer(GL_FRAMEBUFFER, game->renderer.fbo);
-    glViewport(0, 0, game->render_state.width, game->render_state.height);
-    glClear(GL_COLOR_BUFFER_BIT);
 
-    // Define dynamic vertex data
-    float vertices[] = {
-        -0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f, // Bottom left - Red
-         0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f, // Bottom right - Green
-         0.0f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f  // Top middle - Blue
-    };
+    GLCall(glClear(GL_COLOR_BUFFER_BIT));
 
-    // Bind the vertex buffer and update it with the new data
-    glBindBuffer(GL_ARRAY_BUFFER, game->renderer.vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW); // Use GL_DYNAMIC_DRAW for dynamic data
+    GLCall(glUseProgram(game->renderer.shaders.default_shader_program));
+    
+    glBindTexture(GL_TEXTURE_2D, game->renderer.test_texture);
 
-    // Bind the VAO
-    glBindVertexArray(game->renderer.vao);
+    GLCall(glBindVertexArray(game->renderer.vao));
+    GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, game->renderer.ibo));
 
-    // Draw the triangle
-    glDrawArrays(GL_TRIANGLES, 0, 3);
+    GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL));
 
-    // Read pixels from framebuffer
-    glReadPixels(0, 0, game->render_state.width, game->render_state.height, GL_RGBA, GL_UNSIGNED_BYTE, game->render_state.pixels);
+    GLCall(glReadPixels(0, 0, game->render_state.width, game->render_state.height, GL_RGBA, GL_UNSIGNED_BYTE, game->render_state.pixels));
 
-    // Unbind the VAO
-    glBindVertexArray(0);
 }
 
 
 void renderer_exit(struct game_client* game) {
     // Unbind VAO and framebuffer before deletion
-    glBindVertexArray(0);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    GLCall(glBindVertexArray(0));
+    GLCall(glBindFramebuffer(GL_FRAMEBUFFER, 0));
 
     // Delete resources
-    glDeleteVertexArrays(1, &game->renderer.vao);
-    glDeleteBuffers(1, &game->renderer.vbo);
-    glDeleteProgram(game->renderer.default_shader_program);
-    glDeleteTextures(1, &game->renderer.texture);
-    glDeleteFramebuffers(1, &game->renderer.fbo);
+    GLCall(glDeleteVertexArrays(1, &game->renderer.vao));
+    GLCall(glDeleteBuffers(1, &game->renderer.vbo));
+    GLCall(glDeleteProgram(game->renderer.shaders.default_shader_program));
+    GLCall(glDeleteTextures(1, &game->renderer.texture));
+    GLCall(glDeleteFramebuffers(1, &game->renderer.fbo));
 }

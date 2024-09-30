@@ -1,0 +1,2 @@
+default_vertex l:shaders/defaultVertex.glsl
+default_fragment l:shaders/defaultFragment.glsl

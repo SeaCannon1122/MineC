@@ -19,7 +19,7 @@ int main(int argc, char* argv[]) {
 
 	struct game_client game;
 
-	if (new_game_client(&game, "resources/client/resourcelayout.keyvalue") == 0) {
+	if (new_game_client(&game, "../../../resources/client/resourcelayout.keyvalue") == 0) {
 
 		run_game_client(&game);
 		delete_game_client(&game);

@@ -37,7 +37,7 @@ void* load_file(char* filename, int* size) {
 
 char* load_text_file(char* filename) {
 
-    FILE* file = fopen(filename, "r");
+    FILE* file = fopen(filename, "rb");
     if (file == NULL) return NULL;
 
     fseek(file, 0, SEEK_END);

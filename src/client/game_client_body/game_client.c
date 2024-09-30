@@ -278,10 +278,10 @@ void run_game_client(struct game_client* game) {
 			game->render_state.width = new_width;
 			game->render_state.height = new_height;
 
-			client_renderer_adjust_size(game);
+			if(game->render_state.height > 0 && game->render_state.width > 0) client_renderer_adjust_size(game);
 		}
 
-		if (game->in_game_flag) { 
+		if (game->in_game_flag && game->render_state.height > 0 && game->render_state.width > 0) { 
 
 			
 
