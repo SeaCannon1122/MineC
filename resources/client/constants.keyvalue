@@ -14,3 +14,4 @@ chat_indentation_right i:5
 chat_line_radius i:5
 chat_bottom_left_x i:0
 chat_bottom_left_y i:15
+max_chunk_requests i:4

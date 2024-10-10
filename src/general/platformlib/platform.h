@@ -1,10 +1,13 @@
 #ifndef PLATFORM_H
 #define PLATFORM_H
 
-#include <stdbool.h>
+#ifndef MAX_WINDOW_COUNT
+#define MAX_WINDOW_COUNT 5
+#endif // !MAX_WINDOW_COUNT
 
-#define MAX_WINDOW_COUNT 1
-#define MAX_KEYBOARD_BUFFER_PARSERS_PER_WINDOW 1
+#ifndef MAX_CALLBACK_FUNCTIONS
+#define MAX_CALLBACK_FUNCTIONS 32
+#endif // !1
 
 #define WINDOW_CREATION_FAILED -1
 #define KEYBOARD_BUFFER_PARSER_CREATION_FAILED -1
@@ -33,35 +36,39 @@ void join_thread(void* thread_handle);
 
 char get_key_state(int key);
 
-int get_last_mouse_scroll();
-
-void clear_mouse_scroll();
-
 //window functions
 
-int create_window(int posx, int posy, int width, int height, unsigned char* name);
+int window_create(int posx, int posy, int width, int height, unsigned char* name);
 
-int get_window_width(int window);
-int get_window_height(int window);
+int window_get_width(int window);
 
-bool is_window_selected(int window);
+int window_get_height(int window);
 
-bool is_window_active(int window);
+int window_is_selected(int window);
 
-void close_window(int window);
+int window_is_active(int window);
 
-void draw_to_window(int window, unsigned int* buffer, int width, int height, int scalar);
+void window_destroy(int window);
 
-struct point2d_int get_mouse_cursor_position(int window);
-void set_cursor_rel_window(int window, int x, int y);
+void window_draw(int window, unsigned int* buffer, int width, int height, int scalar);
 
-int link_keyboard_parse_buffer(int window, char* buffer, int size, int used);
-int get_linked_buffer_size(int window, int link);
-void unlink_keyboard_parse_buffer(int window, int link);
+struct point2d_int window_get_mouse_cursor_position(int window);
+
+void window_set_mouse_cursor_position(int window, int x, int y);
+
+int window_get_last_mouse_scrolls(int window);
+
+void window_clear_mouse_scrolls(int window);
+
+int window_add_char_callback(int window, void (*callback) (int, int));
+
+void window_remove_char_callback(int window, int char_callback_id);
 
 //keysymbol Mapping
 
 #if defined(_WIN32)
+
+#define RESTRICT __restrict
 
 #include <windows.h>
 
@@ -88,6 +95,8 @@ void unlink_keyboard_parse_buffer(int window, int link);
 #define KEY_MOUSE_RIGHT VK_RBUTTON
 
 #elif defined(__linux__)
+
+#define RESTRICT restrict
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>

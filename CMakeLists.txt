@@ -39,6 +39,24 @@ set(SERVER_SOURCE_FILES
     src/general/resource_loader.c
 )
 
+set(TEST_SOURCE_FILES
+    src/general/utils.c
+
+    src/test/main.c
+    src/test/testing.c
+    src/test/menu.c
+
+    src/general/platformlib/platform.c
+    src/general/platformlib/parallel_computing.c
+    src/general/platformlib/networking.c
+    src/general/platformlib/opengl_rendering.c
+
+    src/general/keyvalue.c
+    src/general/resource_manager.c
+    src/general/resource_loader.c
+
+)
+
 include_directories(${PROJECT_SOURCE_DIR}/src)
 include_directories(${PROJECT_SOURCE_DIR}/dependencies/stb_image)
 include_directories(${PROJECT_SOURCE_DIR}/dependencies/OpenCL/inc)
@@ -49,20 +67,25 @@ link_directories(${PROJECT_SOURCE_DIR}/dependencies/GLEW/lib/Release/x64)
 
 add_executable(blocks_client ${CLIENT_SOURCE_FILES})
 add_executable(blocks_server ${SERVER_SOURCE_FILES})
+add_executable(blocks_test ${TEST_SOURCE_FILES})
 
 
 target_link_libraries(blocks_client OpenCL)
 target_link_libraries(blocks_server OpenCL)
+target_link_libraries(blocks_test OpenCL)
 
 if(WIN32)
-
-    target_link_libraries(blocks_client opengl32)
 
     set_target_properties(blocks_client PROPERTIES
         LINK_FLAGS "/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup"
     )
 
+    set_target_properties(blocks_test PROPERTIES
+        LINK_FLAGS "/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup"
+    )
+
     target_link_libraries(blocks_client opengl32 glew32s)
+    target_link_libraries(blocks_test opengl32 glew32s)
 
 elseif(UNIX)
     find_package(OpenGL REQUIRED)
@@ -71,6 +94,7 @@ elseif(UNIX)
     include_directories(${OPENGL_INCLUDE_DIRS} ${X11_INCLUDE_DIR})
 
     target_link_libraries(blocks_client ${OPENGL_LIBRARIES} X11 GLEW GLX pthread m)
+    target_link_libraries(blocks_test ${OPENGL_LIBRARIES} X11 GLEW GLX pthread m)
     target_link_libraries(blocks_server ${OPENGL_LIBRARIES} X11 pthread m)
 endif()
 
@@ -85,6 +109,13 @@ add_custom_command(TARGET blocks_client POST_BUILD
 )
 
 add_custom_command(TARGET blocks_server POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    "${RESOURCE_DIRECTORY}"
+    "${OUTPUT_DIRECTORY}"
+    COMMENT "Copying resources from ${RESOURCE_DIRECTORY} to ${OUTPUT_DIRECTORY}"
+)
+
+add_custom_command(TARGET blocks_test POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
     "${RESOURCE_DIRECTORY}"
     "${OUTPUT_DIRECTORY}"

@@ -5,7 +5,9 @@
 #include "game/game_constants.h"
 #include "game_client_networker.h"
 #include "game_client_renderer.h"
+#include "game/game_constants.h"
 #include "game/chat.h"
+#include "game/chunk.h"
 
 enum game_request {
 	NULL_FLAG,
@@ -16,6 +18,16 @@ struct chat_stream_element {
 	long long time;
 	struct game_chat_char message[MAX_SERVER_MESSAGE_LENGTH + 1];
 	char is_chat_line_break[MAX_SERVER_MESSAGE_LENGTH + 1];
+};
+
+struct chunk_table_entry {
+	struct {
+		int x;
+		int y;
+		int z;
+	} coordinates;
+	struct game_raw_chunk *chunk;
+	char state;
 };
 
 struct game_client {
@@ -38,6 +50,19 @@ struct game_client {
 		unsigned int* pixels;
 	} render_state;
 	struct game_renderer renderer;
+	bool rendering;
+	struct {
+		struct chunk_table_entry* chunk_table;
+		int chunk_table_length;
+
+		struct {
+			struct global_position position;
+			struct direction direction;
+
+		} player;
+
+	} game_state;
+
 	struct {
 		int render_distance;
 		int fov;
@@ -61,6 +86,7 @@ struct game_client {
 		int chat_indentation_left;
 		int chat_indentation_right;
 		int chat_line_radius;
+		int max_chunk_requests;
 	} constants;
 	struct game_menus game_menus;
 };

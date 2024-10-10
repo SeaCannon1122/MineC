@@ -7,6 +7,10 @@
 
 #define parse_string(src, dest) {char* _src_str = src; int _str_i = 0; for(; _src_str[_str_i] != '\0'; _str_i++) {dest[_str_i] = _src_str[_str_i];} dest[_str_i] = _src_str[_str_i];}
 
+#define IF_BIT(ptr, pos) (((char*)ptr)[pos / 8] & (1 << (pos % 8)) )
+#define SET_BIT_1(ptr, pos) (((char*)ptr)[pos / 8] |= (1 << (pos % 8) ))
+#define SET_BIT_0(ptr, pos) (((char*)ptr)[pos / 8] &= (0xFF ^ (1 << (pos % 8) )))
+
 int clamp_int(int val, int min, int max);
 float clamp_float(float val, float min, float max);
 

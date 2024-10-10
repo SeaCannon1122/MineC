@@ -8,13 +8,10 @@ enum block_type {
 	BLOCK
 };
 
-struct block_type {
-	unsigned short id;
-	unsigned short variant;
-};
-
-struct raw_chunk {
+struct game_raw_chunk {
 	struct {
-		struct block_type type;
+		short block_id;
+		char variant;
+		char light_level;
 	} blocks[16 * 16 * 16];
 };

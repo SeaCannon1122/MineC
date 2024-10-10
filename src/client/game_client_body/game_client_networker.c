@@ -27,7 +27,7 @@ void init_networker(struct game_client* game) {
 	}
 
 	game->networker.should_send_chat_message = false;
-	
+	game->networker.current_chunk_requests = 0;
 }
 
 void networker_disconnect_and_cleanup(struct game_client* game) {
@@ -43,7 +43,7 @@ void networker_disconnect_and_cleanup(struct game_client* game) {
 	game->networker.network_handle = NULL;
 
 	
-	game->networker.next_packet_type == -1;
+	game->networker.next_packet_type = -1;
 	game->networker.request = NULL_REQUEST;
 	game->networker.close_connection_flag = false;
 }
@@ -117,12 +117,16 @@ void networker_thread_function(struct game_client* game) {
 					networker_disconnect_and_cleanup(game);
 					continue;
 				}
-				struct networking_packet_server_settings server_settings;
-				if (receive_data(game->networker.network_handle, &server_settings, sizeof(struct networking_packet_server_settings), &game->networker.close_connection_flag, game->constants.packet_awaiting_timeout) <= 0) {
+				struct networking_packet_server_state server_state;
+				if (receive_data(game->networker.network_handle, &server_state, sizeof(struct networking_packet_server_state), &game->networker.close_connection_flag, game->constants.packet_awaiting_timeout) <= 0) {
 					networker_disconnect_and_cleanup(game);
 					continue;
 				}
-				game->server_settings.max_render_distance = server_settings.max_render_distance;
+				game->server_settings.max_render_distance = server_state.max_render_distance;
+
+				game->game_state.player.position = server_state.player_data.position;
+				game->game_state.player.direction = server_state.player_data.direction;
+
 				log_message(game->debug_log_file, "[NETWORKER] Connected to server %s:%u", game->networker.ip, game->networker.port);
 				log_message(game->debug_log_file, "[NETWORKER] Max render distance %d", game->server_settings.max_render_distance);
 				
@@ -151,7 +155,7 @@ void networker_thread_function(struct game_client* game) {
 						switch (game->networker.next_packet_type) {
 
 						case NETWORKING_PACKET_MESSAGE_FROM_SERVER: {
-							
+
 							if (game->networker.next_packet_length == 0) if (receive_data(game->networker.network_handle, &game->networker.next_packet_length, sizeof(int), NULL, 0) <= 0) break;
 
 							if (receive_data(game->networker.network_handle, game->chat_stream.stream[game->chat_stream.next_index].message, sizeof(struct game_chat_char) * game->networker.next_packet_length, NULL, 0) > 0) {
@@ -164,7 +168,27 @@ void networker_thread_function(struct game_client* game) {
 
 						} break;
 
-						}
+						case NETWORKING_PACKET_CHUNK: {
+							if (available_data_size(game->networker.network_handle) >= sizeof(struct networking_packet_chunk)) {
+
+								for (int i = 0; i < game->game_state.chunk_table_length; i++) if (game->game_state.chunk_table[i].state == 0) {
+
+									if (game->game_state.chunk_table[i].chunk == NULL) game->game_state.chunk_table[i].chunk = malloc(sizeof(struct game_raw_chunk));
+
+									receive_data(game->networker.network_handle, &game->game_state.chunk_table[i].coordinates, 3 * sizeof(int), NULL, 0);
+									receive_data(game->networker.network_handle, game->game_state.chunk_table[i].chunk, sizeof(struct game_raw_chunk), NULL, 0);
+
+									game->game_state.chunk_table[i].state = 1;
+
+									break;
+								}
+
+							}
+
+
+						} break;
+
+						} 
 
 
 					}

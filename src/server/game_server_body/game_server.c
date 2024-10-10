@@ -24,7 +24,6 @@ void new_game_server(struct game_server* game, char* resource_path) {
 
     game->settings.max_clients = get_value_from_key(settings_map, "max_clients").i;
     game->settings.max_render_distance = get_value_from_key(settings_map, "max_render_distance").i;
-    game->settings.max_message_length = get_value_from_key(settings_map, "max_message_length").i;
 
     game->clients_connected_count = 0;
     game->clients_length = game->settings.max_clients;
@@ -105,7 +104,7 @@ void client_auth_thread_function(struct game_server* game) {
                 send_data(client_handle, &packet_type, sizeof(int));
                 packet_type = NETWORKING_PACKET_SERVER_SETTINGS;
                 send_data(client_handle, &packet_type, sizeof(int));
-                struct networking_packet_server_settings server_settings = {
+                struct networking_packet_server_state server_state = {
                     game->settings.max_render_distance
                 };
 
@@ -115,7 +114,7 @@ void client_auth_thread_function(struct game_server* game) {
                     break;
                 }
 
-                send_data(client_handle, &server_settings, sizeof(struct networking_packet_server_settings));
+                send_data(client_handle, &server_state, sizeof(struct networking_packet_server_state));
            
                 get_ip_address_and_port(client_handle, game->clients[client_index].ip_address, &game->clients[client_index].port);
 

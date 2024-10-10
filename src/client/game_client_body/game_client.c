@@ -152,7 +152,7 @@ int client_log_init(struct game_client* game) {
 	debug_log_path[i + j + 5] = digit_to_char(((time_info->tm_year + 1900) / 100) % 10);
 	debug_log_path[i + j + 6] = digit_to_char(((time_info->tm_year + 1900) / 10) % 10);
 	debug_log_path[i + j + 7] = digit_to_char((time_info->tm_year + 1900) % 10);
-	debug_log_path[i + j + 8] = digit_to_char(time_info->tm_hour / 10);
+	debug_log_path[i + j + 8] = digit_to_char(time_info->tm_hour / 10); 
 	debug_log_path[i + j + 9] = digit_to_char(time_info->tm_hour % 10);
 	debug_log_path[i + j + 10] = digit_to_char(time_info->tm_min / 10);
 	debug_log_path[i + j + 11] = digit_to_char(time_info->tm_min % 10);
@@ -224,6 +224,8 @@ int new_game_client(struct game_client* game, char* resource_path) {
 	game->constants.chat_indentation_left = get_value_from_key(constants_map, "chat_indentation_left").i;
 	game->constants.chat_indentation_right = get_value_from_key(constants_map, "chat_indentation_right").i;
 	game->constants.chat_line_radius = get_value_from_key(constants_map, "chat_line_radius").i;
+	game->constants.max_chunk_requests = get_value_from_key(constants_map, "max_chunk_requests").i;
+
 
 	game->chat_stream.stream = malloc(sizeof(struct chat_stream_element) * game->constants.chat_stream_length);
 	game->chat_stream.next_index = 0;
@@ -231,6 +233,14 @@ int new_game_client(struct game_client* game, char* resource_path) {
 		game->chat_stream.stream[i].time = 0;
 	}
 
+	game->game_state.chunk_table_length = (game->constants.render_distance_max * 2 + 1) * (game->constants.render_distance_max * 2 + 1) * (game->constants.render_distance_max * 2 + 1);
+	game->game_state.chunk_table = malloc(sizeof(struct chunk_table_entry) * game->game_state.chunk_table_length);
+
+	for (int i = 0; i < game->game_state.chunk_table_length; i++) {
+		game->game_state.chunk_table[i].chunk = NULL;
+		game->game_state.chunk_table[i].state = 0;
+	}
+		
 
 	game->in_game_flag = false;
 	game->disconnect_flag = 0;
@@ -300,6 +310,7 @@ void run_game_client(struct game_client* game) {
 	close_window(game->window);
 	game->running = false;
 	game->in_game_flag = false;
+	game->networker.close_connection_flag = true;
 
 	renderer_exit(game);
 
@@ -315,4 +326,5 @@ void run_game_client(struct game_client* game) {
 void delete_game_client(struct game_client* game) {
 	destroy_resource_manager(game->resource_manager);
 	free(game->chat_stream.stream);
+	free(game->game_state.chunk_table);
 }

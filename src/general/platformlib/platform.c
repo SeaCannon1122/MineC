@@ -6,36 +6,40 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-struct {
+#include <stdbool.h>
+
+
+
+struct window_resource {
 	HWND hwnd;
 	bool active;
 	int window_width;
 	int window_height;
-	struct {
-		char* buffer;
-		int buffer_size_width_termination;
-		int size_used;
-	} print_buffer[MAX_KEYBOARD_BUFFER_PARSERS_PER_WINDOW];
-} window_resources[MAX_WINDOW_COUNT];
+	int mouse_scrolls;
+	void (*char_callbacks[MAX_CALLBACK_FUNCTIONS]) (int, int);
+	void (*key_down_callbacks[MAX_CALLBACK_FUNCTIONS]) (int, int);
+};
 
-struct {
+static struct window_resource* window_resources[MAX_WINDOW_COUNT];
+
+static struct {
 	int posx;
 	int posy;
 	int width;
 	int height;
+	int parse_buffer_size;
 	unsigned char* name;
 	bool done_flag;
 	int window_resources_index;
 } next_window;
 
-WNDCLASSW wc;
+static WNDCLASSW wc;
 
-bool keyStates[256] = { 0 };
-int last_mouse_scroll = 0;
+static bool keyStates[256] = { 0 };
 
-bool running = true;
+static bool running = true;
 
-void* window_control_thread;
+static void* window_control_thread;
 
 void show_console_window() {
 	HWND hwndConsole = GetConsoleWindow();
@@ -90,22 +94,12 @@ char get_key_state(int key) {
 	return keyState;
 }
 
-int get_last_mouse_scroll() {
-	int temp = last_mouse_scroll;
-	last_mouse_scroll = 0;
-	return temp;
-}
-
-void clear_mouse_scroll() {
-	last_mouse_scroll = 0; 
-}
-
 //window functions
 
-int create_window(int posx, int posy, int width, int height, unsigned char* name) {
+int window_create(int posx, int posy, int width, int height, unsigned char* name) {
 
 	int next_free_window_index = 0;
-	for (; next_free_window_index < MAX_WINDOW_COUNT; next_free_window_index++) if (window_resources[next_free_window_index].hwnd == NULL) break;
+	for (; next_free_window_index < MAX_WINDOW_COUNT; next_free_window_index++) if (window_resources[next_free_window_index] == NULL) break;
 	if (next_free_window_index == MAX_WINDOW_COUNT) return WINDOW_CREATION_FAILED;
 
 
@@ -122,33 +116,34 @@ int create_window(int posx, int posy, int width, int height, unsigned char* name
 	return next_free_window_index;
 }
 
-int get_window_width(int window) {
-	return window_resources[window].window_width; 
+int window_get_width(int window) {
+	return window_resources[window]->window_width; 
 }
 
-int get_window_height(int window) { 
-	return window_resources[window].window_height; 
+int window_get_height(int window) { 
+	return window_resources[window]->window_height; 
 }
 
-bool is_window_selected(int window) { 
-	return window_resources[window].hwnd == GetForegroundWindow(); 
+int window_is_selected(int window) { 
+	return window_resources[window]->hwnd == GetForegroundWindow(); 
 }
 
-bool is_window_active(int window) { 
-	return window_resources[window].active; 
+int window_is_active(int window) { 
+	return window_resources[window]->active; 
 }
 
-void close_window(int window) {
-	if (window_resources[window].active) SendMessage(window_resources[window].hwnd, WM_CLOSE, 0, 0);
-	while (window_resources[window].active) Sleep(1);
-	window_resources[window].hwnd = NULL;
+void window_destroy(int window) {
+	if (window_resources[window]->active) SendMessage(window_resources[window]->hwnd, WM_CLOSE, 0, 0);
+	while (window_resources[window]->active) Sleep(1);
+	free(window_resources[window]);
+	window_resources[window] = NULL;
 }
 
-void draw_to_window(int window, unsigned int* buffer, int width, int height, int scalar) {
+void window_draw(int window, unsigned int* buffer, int width, int height, int scalar) {
 
-	if (window_resources[window].active == false) return;
+	if (window_resources[window]->active == false) return;
 
-	HDC hdc = GetDC(window_resources[window].hwnd);
+	HDC hdc = GetDC(window_resources[window]->hwnd);
 
 	BITMAPINFO bitmapInfo;
 
@@ -162,50 +157,53 @@ void draw_to_window(int window, unsigned int* buffer, int width, int height, int
 	SetStretchBltMode(hdc, COLORONCOLOR);
 	StretchDIBits(hdc, 0, 0, width * scalar, height * scalar, 0, 0, width, height, buffer, &bitmapInfo, DIB_RGB_COLORS, SRCCOPY);
 
-	ReleaseDC(window_resources[window].hwnd, hdc);
+	ReleaseDC(window_resources[window]->hwnd, hdc);
 
 }
 
-struct point2d_int get_mouse_cursor_position(int window) {
-	if (window_resources[window].hwnd != GetForegroundWindow()) return (struct point2d_int) {-1, -1};
+struct point2d_int window_get_mouse_cursor_position(int window) {
+	if (window_resources[window]->hwnd != GetForegroundWindow()) return (struct point2d_int) {-1, -1};
 
 	POINT position;
 	GetCursorPos(&position);
 	RECT window_rect;
-	GetWindowRect(window_resources[window].hwnd, &window_rect);
+	GetWindowRect(window_resources[window]->hwnd, &window_rect);
 
 	struct point2d_int pos = { position.x - window_rect.left - 7, position.y - window_rect.top - 29 };
 	return pos;
 }
 
-void set_cursor_rel_window(int window, int x, int y) {
+void window_set_mouse_cursor_position(int window, int x, int y) {
 	POINT position;
 	GetCursorPos(&position);
 	RECT window_rect;
-	GetWindowRect(window_resources[window].hwnd, &window_rect);
+	GetWindowRect(window_resources[window]->hwnd, &window_rect);
 
 	SetCursorPos(x + window_rect.left + 7, y + window_rect.top + 29);
 }
 
-int link_keyboard_parse_buffer(int window, char* buffer, int size, int used) {
-
-	int next_parser_index = 0;
-	for (; next_parser_index < MAX_KEYBOARD_BUFFER_PARSERS_PER_WINDOW; next_parser_index++) if (window_resources[window].print_buffer[next_parser_index].buffer == NULL) break;
-	if (next_parser_index == MAX_KEYBOARD_BUFFER_PARSERS_PER_WINDOW) return KEYBOARD_BUFFER_PARSER_CREATION_FAILED;
-
-	window_resources[window].print_buffer[next_parser_index].buffer = buffer;
-	window_resources[window].print_buffer[next_parser_index].buffer_size_width_termination = size;
-	window_resources[window].print_buffer[next_parser_index].size_used = used;
-
-	return next_parser_index;
+int window_get_last_mouse_scrolls(int window) {
+	int temp = window_resources[window]->mouse_scrolls;
+	window_resources[window]->mouse_scrolls = 0;
+	return temp;
 }
 
-int get_linked_buffer_size(int window, int link) {
-	return window_resources[window].print_buffer[link].size_used;
+void window_clear_mouse_scrolls(int window) {
+	window_resources[window]->mouse_scrolls = 0;
 }
 
-void unlink_keyboard_parse_buffer(int window, int link) {
-	window_resources[window].print_buffer[link].buffer = NULL;
+int window_add_char_callback(int window, void (*callback) (int, int)) {
+	int next_free_callback_index = 0;
+	for (; next_free_callback_index < MAX_WINDOW_COUNT; next_free_callback_index++) if (window_resources[window]->char_callbacks[next_free_callback_index] == NULL) break;
+	if (next_free_callback_index == MAX_WINDOW_COUNT) return WINDOW_CREATION_FAILED;
+
+	window_resources[window]->char_callbacks[next_free_callback_index] = callback;
+
+	return next_free_callback_index;
+}
+
+void window_remove_char_callback(int window, int char_callback_id) {
+	window_resources[window]->char_callbacks[char_callback_id] = NULL;
 }
 
 void WindowControl() {
@@ -213,9 +211,9 @@ void WindowControl() {
 
 		for (int i = 0; i < MAX_WINDOW_COUNT; i++) {
 
-			if (window_resources[i].active && window_resources[i].hwnd != NULL) {
+			if (window_resources[i] != NULL) {
 				MSG message;
-				while (PeekMessageW(&message, window_resources[i].hwnd, 0, 0, PM_REMOVE)) {
+				while (PeekMessageW(&message, window_resources[i]->hwnd, 0, 0, PM_REMOVE)) {
 					TranslateMessage(&message);
 					DispatchMessageW(&message);
 				}
@@ -229,10 +227,11 @@ void WindowControl() {
 
 			for (; next_window.name[name_length - 1] != '\0'; name_length++);
 
-			unsigned short* name_short = calloc(name_length, sizeof(unsigned short));
-			if (name_short == NULL) name_short = L"Error";
+			struct window_resource* window_resource = malloc(sizeof(struct window_resource) + name_length * sizeof(unsigned short));
 
-			for (int i = 0; i < name_length; i++) *((char*)name_short + i * sizeof(unsigned short)) = next_window.name[i];
+			unsigned short* name_short = (long long)window_resource + sizeof(struct window_resource);
+
+			for (int i = 0; i < name_length; i++) name_short[i] = (*(unsigned short*)&next_window.name[i] & 255);
 
 			HWND window = CreateWindowExW(
 				0,
@@ -249,9 +248,16 @@ void WindowControl() {
 				NULL
 			);
 
-			window_resources[next_window.window_resources_index].hwnd = window;
-			for(int i = 0; i < MAX_KEYBOARD_BUFFER_PARSERS_PER_WINDOW; i++) window_resources[next_window.window_resources_index].print_buffer[i].buffer = NULL;
-			window_resources[next_window.window_resources_index].active = true;
+			
+			window_resource->hwnd = window;
+			window_resource->active = true;
+
+			for (int i = 0; i < MAX_CALLBACK_FUNCTIONS; i++) {
+				window_resource->char_callbacks[i] = NULL;
+				window_resource->key_down_callbacks[i] = NULL;
+			}
+
+			window_resources[next_window.window_resources_index] = window_resource;
 
 			SendMessage(window, WM_SIZE, 0, 0);
 			next_window.done_flag = true;
@@ -265,9 +271,9 @@ void WindowControl() {
 
 LRESULT CALLBACK WinProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 
-	for (int i = 0; i < MAX_WINDOW_COUNT; i++) {
+	for (int i = 0; i < MAX_WINDOW_COUNT; i++) if(window_resources[i] != NULL) {
 
-		if (window_resources[i].hwnd == hwnd && window_resources[i].hwnd != NULL) {
+		if (window_resources[i]->hwnd == hwnd && window_resources[i]->hwnd != NULL) {
 
 			switch (uMsg) {
 
@@ -278,38 +284,30 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 
 			case WM_DESTROY: {
 				PostQuitMessage(0);
-				window_resources[i].active = false;
+				window_resources[i]->active = false;
 			} break;
 
 			case WM_SIZE: {
 				RECT rect;
 				GetClientRect(hwnd, &rect);
-				window_resources[i].window_width = rect.right - rect.left;
-				window_resources[i].window_height = rect.bottom - rect.top;
+				window_resources[i]->window_width = rect.right - rect.left;
+				window_resources[i]->window_height = rect.bottom - rect.top;
 			} break;
 
 			case WM_MOUSEWHEEL: {
 				int wheelDelta = GET_WHEEL_DELTA_WPARAM(wParam);
 
-				if (wheelDelta > 0) last_mouse_scroll++;
-				else if (wheelDelta < 0) last_mouse_scroll--;
+				if (wheelDelta > 0) window_resources[i]->mouse_scrolls++;
+				else if (wheelDelta < 0) window_resources[i]->mouse_scrolls--;
 			} break;
 
 			case WM_CHAR: {
 
-				for (int j = 0; j < MAX_KEYBOARD_BUFFER_PARSERS_PER_WINDOW; j++) {
-					if (window_resources[i].print_buffer[j].buffer != NULL) {
-						char c = (char)wParam;
-						if (c >= ' ' && c <= '~' && window_resources[i].print_buffer[j].buffer_size_width_termination - 1 > window_resources[i].print_buffer[j].size_used) {
-							window_resources[i].print_buffer[j].buffer[window_resources[i].print_buffer[j].size_used] = c;
-							window_resources[i].print_buffer[j].size_used++;
-						}
-						else if (c == 0x08 /*delete*/ && window_resources[i].print_buffer[j].size_used != 0) {
-							window_resources[i].print_buffer[j].size_used--;
-							window_resources[i].print_buffer[j].buffer[window_resources[i].print_buffer[j].size_used] = '\0';
-						}
-					}
-				}
+				WCHAR utf16_char = (WCHAR)wParam; 
+				int utf8_char = 0; 
+				int bytes_written = WideCharToMultiByte(CP_UTF8, 0, &utf16_char, 1, &utf8_char, sizeof(utf8_char), NULL, NULL);
+
+				for (int j = 0; j < MAX_CALLBACK_FUNCTIONS; j++) if (window_resources[i]->char_callbacks[j] != NULL) window_resources[i]->char_callbacks[j](i, utf8_char);
 
 			} break;
 
@@ -332,6 +330,9 @@ void platform_init() {
 	freopen_s(&fstderr, "CONOUT$", "w", stderr);
 	FILE* fstdin;
 	freopen_s(&fstdin, "CONIN$", "r", stdin);
+
+	SetConsoleCP(CP_UTF8);
+	SetConsoleOutputCP(CP_UTF8);
 
 	fflush(stdout);
 	fflush(stderr);
@@ -360,7 +361,7 @@ void platform_init() {
 }
 
 void platform_exit() {
-	for (int i = 0; i < MAX_WINDOW_COUNT; i++) if (window_resources[i].hwnd != NULL) close_window(i);
+	for (int i = 0; i < MAX_WINDOW_COUNT; i++) if (window_resources[i] != NULL) window_destroy(i);
 	running = false;
 	join_thread(window_control_thread);
 }
@@ -376,7 +377,7 @@ void platform_exit() {
 #include <stdlib.h>
 #include <stdio.h>
 
-struct {
+static struct {
 	Window window;
 	XImage* image;
 	unsigned int* pixels;
@@ -390,23 +391,23 @@ struct {
 	} print_buffer[MAX_KEYBOARD_BUFFER_PARSERS_PER_WINDOW];
 } window_resources[MAX_WINDOW_COUNT];
 
-char window_resources_active[MAX_WINDOW_COUNT] = { 0 };
+static char window_resources_active[MAX_WINDOW_COUNT] = { 0 };
 
-int display_width;
-int display_height;
+static int display_width;
+static int display_height;
 
-Display* display;
-int screen;
-Atom wm_delete_window;
+static Display* display;
+static int screen;
+static Atom wm_delete_window;
 
-bool running = true;
+static bool running = true;
 
-bool keyStates[256 * 256] = { false };
-int last_mouse_scroll = 0;
+static bool keyStates[256 * 256] = { false };
+static int last_mouse_scroll = 0;
 
-bool mouseButtons[3] = { false, false, false };
+static bool mouseButtons[3] = { false, false, false };
 
-void* window_control_thread;
+static void* window_control_thread;
 
 void show_console_window() { return; }
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "game/game_constants.h"
+#include "game/chunk.h"
 
 enum networking_packet_type {
 	NETWORKING_PACKET_CLIENT_AUTH,
@@ -28,8 +29,15 @@ struct networking_packet_client_auth {
 	char password[MAX_PASSWORD_LENGTH + 1];
 };
 
-struct networking_packet_server_settings {
+struct networking_packet_server_state {
 	int max_render_distance;
+
+	struct {
+
+		struct global_position position;
+		struct direction direction;
+
+	} player_data;
 };
 
 struct networking_packet_clock {
@@ -58,7 +66,5 @@ struct networking_packet_chunk {
 		int y;
 		int z;
 	} coordinates;
-	struct {
-		short block_id
-	} blocks[16 * 16 * 16]
+	struct game_raw_chunk chunk;
 };

@@ -1,4 +1,4 @@
-﻿#include "game_client_body/game_client.h"
+#include "testing.h"
 
 #define GLEW_STATIC
 #include <GL/glew.h>
@@ -8,22 +8,18 @@
 #include "general/platformlib/platform.h"
 #include "general/platformlib/opengl_rendering.h"
 
+
+
 int main(int argc, char* argv[]) {
 
-	platform_init(PLATFORM_MODE_PARALLEL);
+	platform_init();
 	networking_init();
 	parallel_computing_init();
 	opengl_init();
 
 	glewInit();
 
-	struct game_client game;
-
-	if (new_game_client(&game, "../../../resources/client/resourcelayout.keyvalue") == 0) {
-
-		run_game_client(&game);
-		delete_game_client(&game);
-	}
+	testing_main();
 
 	opengl_exit();
 	parallel_computing_exit();

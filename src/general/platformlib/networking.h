@@ -10,6 +10,7 @@ void networking_exit();
 bool is_connected(void* socket_handle);
 void get_ip_address_and_port(void* client_handle, char* address_buffer, unsigned short* port_buffer);
 
+int available_data_size(void* socket_handle);
 int receive_data(void* socket_handle, void* buffer, int size, bool* interrupt, unsigned int timeout_milliseconds);
 int send_data(void* socket_handle, void* buffer, int size);
 
