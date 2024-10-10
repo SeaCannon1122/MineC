@@ -211,12 +211,14 @@ void WindowControl() {
 
 		for (int i = 0; i < MAX_WINDOW_COUNT; i++) {
 
-			if (window_resources[i] != NULL) {
-				MSG message;
-				while (PeekMessageW(&message, window_resources[i]->hwnd, 0, 0, PM_REMOVE)) {
+			MSG message;
+
+			while (window_resources[i] != NULL) {
+				if (PeekMessageW(&message, window_resources[i]->hwnd, 0, 0, PM_REMOVE)) {
 					TranslateMessage(&message);
 					DispatchMessageW(&message);
 				}
+				else break;
 			}
 		}
 

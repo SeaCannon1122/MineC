@@ -3,7 +3,6 @@ project(blocks2)
 
 set(CLIENT_SOURCE_FILES
     src/general/utils.c
-    src/client/gui/char_font.c
     src/client/gui/menu.c
     src/client/game_client_body/game_client.c
     src/client/game_client_body/game_menus.c
@@ -36,7 +35,6 @@ set(SERVER_SOURCE_FILES
     src/general/utils.c
     src/general/keyvalue.c
     src/general/resource_manager.c
-    src/general/resource_loader.c
 )
 
 set(TEST_SOURCE_FILES
@@ -44,16 +42,12 @@ set(TEST_SOURCE_FILES
 
     src/test/main.c
     src/test/testing.c
-    src/test/menu.c
+    src/client/gui/pixel_char.c
 
     src/general/platformlib/platform.c
     src/general/platformlib/parallel_computing.c
     src/general/platformlib/networking.c
     src/general/platformlib/opengl_rendering.c
-
-    src/general/keyvalue.c
-    src/general/resource_manager.c
-    src/general/resource_loader.c
 
 )
 

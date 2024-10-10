@@ -10,7 +10,7 @@
 
 int main(int argc, char* argv[]) {
 
-	platform_init(PLATFORM_MODE_PARALLEL);
+	platform_init();
 	networking_init();
 	parallel_computing_init();
 	opengl_init();
