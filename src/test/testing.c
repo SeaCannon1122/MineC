@@ -5,7 +5,7 @@
 #include "general/platformlib/platform.h"
 #include "client/gui/pixel_char.h"
 
-int scale = 1;
+int scale = 15;
 
 void char_c(int window, int character) {
 	int str[2] = { character,  0};
@@ -57,32 +57,32 @@ int testing_main() {
 
 	show_console_window();
 	
-	pixel_char_convert_string(word, "[Hello} World!", 0xffffff00, PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK);
+	pixel_char_convert_string(word, "[Hello} World!", 0xff00ffff, PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK | PIXEL_CHAR_SHADOW_MASK);
 
 	struct pixel_char word1[] = {
-		{0xffffffff, 'H', 0, NULL},
-		{0xffffffff, 'e', PIXEL_CHAR_UNDERLINE_MASK, NULL},
-		{0xffffffff, 'l', PIXEL_CHAR_UNDERLINE_MASK, NULL},
-		{0xffffffff, 'l', PIXEL_CHAR_CURSIVE_MASK, NULL},
-		{0xffffffff, 'o', PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK, NULL},
-		{0xffffffff, ',', PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK, NULL},
-		{0xffffffff, ' ', PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK, NULL},
-		{0xffffffff, 'W', PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK, NULL},
-		{0xffffffff, 'h', PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK, NULL},
-		{0xffffffff, 'a', PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK, NULL},
-		{0xffffffff, 't', PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK, NULL},
-		{0xffffffff, '\'', PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK, NULL},
-		{0xffffffff, 's', PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK, NULL},
-		{0xffffffff, ' ', PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK, NULL},
-		{0xffffffff, 'u', PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK, NULL},
-		{0xffffffff, 'p', PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK, NULL},
-		{0xffffffff, '!', PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK, NULL},
-		{0xffffffff, '\0', PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK, NULL},
+		{0xffffffff, 'H', 0},
+		{0xffffffff, 'e', PIXEL_CHAR_UNDERLINE_MASK},
+		{0xffffffff, 'l', PIXEL_CHAR_UNDERLINE_MASK},
+		{0xffffffff, 'l', PIXEL_CHAR_CURSIVE_MASK},
+		{0xffffffff, 'o', PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK},
+		{0xffffffff, ',', PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK},
+		{0xffffffff, ' ', PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK},
+		{0xffffffff, 'W', PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK},
+		{0xffffffff, 'h', PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK},
+		{0xffffffff, 'a', PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK},
+		{0xffffffff, 't', PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK},
+		{0xffffffff, '\'', PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK},
+		{0xffffffff, 's', PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK},
+		{0xffffffff, ' ', PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK},
+		{0xffffffff, 'u', PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK},
+		{0xffffffff, 'p', PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK},
+		{0xffffffff, '!', PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK},
+		{0xffffffff, '\0', PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK},
 
 	};
 
-	int width = 500;
-	int height = 300;
+	int width = 800;
+	int height = 500;
 
 	int window = window_create(100, 100, width, height, "NAME");
 

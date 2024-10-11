@@ -3,28 +3,6 @@
 #include "general/argb_image.h"
 #include "general/platformlib/platform.h"
 
-#define PIXEL_FONT_RESOULUTION 16
-
-#define PIXEL_CHAR_UNDERLINE_MASK 0x80000000
-#define PIXEL_CHAR_CURSIVE_MASK   0x40000000
-#define PIXEL_CHAR_FONT_MASK      0x3fffffff
-
-struct pixel_font_entry {
-	long long width;
-	char layout[PIXEL_FONT_RESOULUTION * PIXEL_FONT_RESOULUTION / 8];
-};
-
-struct pixel_font {
-	struct pixel_font_entry char_font_entries[2097152];
-};
-
-struct pixel_char {
-	unsigned int color;
-	int value;
-	int underline_cursive_font;
-	char* hover;
-};
-
 enum alignment {
 	MENU_ALIGNMENT_LEFT,
 	MENU_ALIGNMENT_RIGHT,
@@ -98,10 +76,5 @@ struct menu_item {
 	int z;
 	char menu_item_type;
 };
-
-#define gui_string_convert(name, str, color, underline_cursive_font) struct gui_char name[sizeof(str)]; {for(int _gsc_i = 0; _gsc_i < sizeof(str); _gsc_i++) name[_gsc_i] = (struct gui_char) {color, str[_gsc_i], underline_cursive_font, NULL};}
-
-void gui_print_char(const struct gui_char* RESTRICT c, int text_size, int x, int y, unsigned int* RESTRICT screen, int width, int height, const const void** RESTRICT resource_map);
-void gui_print_string(const struct gui_char* RESTRICT c, int text_size, int x, int y, unsigned int* RESTRICT screen, int width, int height, const const void** RESTRICT resource_map);
 
 void menu_frame(struct menu_item** menu_items, int menu_items_count, unsigned int* screen, int width, int height, int scale, void** resource_map);
