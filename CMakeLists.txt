@@ -42,7 +42,10 @@ set(TEST_SOURCE_FILES
 
     src/test/main.c
     src/test/testing.c
+    src/client/gui/menu.c
+
     src/client/gui/pixel_char.c
+    src/client/gui/argb_image.c
 
     src/general/platformlib/platform.c
     src/general/platformlib/parallel_computing.c
@@ -52,7 +55,7 @@ set(TEST_SOURCE_FILES
 )
 
 include_directories(${PROJECT_SOURCE_DIR}/src)
-include_directories(${PROJECT_SOURCE_DIR}/dependencies/stb_image)
+include_directories(${PROJECT_SOURCE_DIR}/dependencies/stb_image/include)
 include_directories(${PROJECT_SOURCE_DIR}/dependencies/OpenCL/inc)
 include_directories(${PROJECT_SOURCE_DIR}/dependencies/GLEW/include)
 

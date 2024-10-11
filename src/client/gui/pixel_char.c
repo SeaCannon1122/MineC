@@ -74,14 +74,21 @@ void pixel_char_print(const struct pixel_char* _PIXEL_CHAR_RESTRICT c, int text_
 
 }
 
-void pixel_char_print_string(const struct pixel_char* _PIXEL_CHAR_RESTRICT string, int text_size, int line_spacing, int x, int y, int alignment_x, int alignment_y, unsigned int* _PIXEL_CHAR_RESTRICT screen, int width, int height, const const void** _PIXEL_CHAR_RESTRICT font_map) {
+void pixel_char_print_string(const struct pixel_char* _PIXEL_CHAR_RESTRICT string, int text_size, int line_spacing, int x, int y, int alignment_x, int alignment_y, int max_width, int max_lines, unsigned int* _PIXEL_CHAR_RESTRICT screen, int width, int height, const const void** _PIXEL_CHAR_RESTRICT font_map) {
 
 	if (string->value == '\0') return;
 
 	int lines = 1;
-	for (int i = 0; string[i].value != '\0'; i++) if (string[i].value == '\n') lines++;
+	int line_width = (__PIXEL_CHAR_WIDTH(string[0], font_map) + 1) / 2 * text_size;
+	for (int i = 0; string[i].value != '\0'; i++) {
 
-	int y_pos = y - (alignment_y == PIXEL_CHAR_ALIGNMENT_TOP ? 0 : (alignment_y == PIXEL_CHAR_ALIGNMENT_BOTTOM ? (PIXEL_FONT_RESOULUTION / 2 + line_spacing) * text_size * lines - line_spacing * text_size : ((PIXEL_FONT_RESOULUTION / 2 + line_spacing) * text_size * lines - line_spacing * text_size) / 2));
+		line_width += (__PIXEL_CHAR_WIDTH(string[i], font_map) + 1) / 2 * text_size + (__PIXEL_CHAR_WIDTH(string[i], font_map) > 0 ? text_size : 0);
+		if (string[i].value == '\n') lines++;
+		if (line_width > max_width) { lines++; line_width = (__PIXEL_CHAR_WIDTH(string[i], font_map) + 1) / 2 * text_size; }
+
+	}
+
+	int y_pos = y - (alignment_y == ALIGNMENT_TOP ? 0 : (alignment_y == ALIGNMENT_BOTTOM ? (PIXEL_FONT_RESOULUTION / 2 + line_spacing) * text_size * lines - line_spacing * text_size : ((PIXEL_FONT_RESOULUTION / 2 + line_spacing) * text_size * lines - line_spacing * text_size) / 2));
 
 	int text_i = 0;
 
@@ -89,21 +96,20 @@ void pixel_char_print_string(const struct pixel_char* _PIXEL_CHAR_RESTRICT strin
 		if (string[text_i].value == '\n') continue;
 		if (string[text_i].value == '\0') break;
 
-		int line_width = 0;
+		line_width = (__PIXEL_CHAR_WIDTH(string[text_i], font_map) + 1) / 2 * text_size;
+		int last_char_line = text_i + 1;
 
-		line_width += (__PIXEL_CHAR_WIDTH(string[text_i], font_map) + 1) / 2 * text_size;
-
-		for (int k = text_i + 1; string[k].value != '\n' && string[k].value != '\0'; k++) {
-			line_width += (__PIXEL_CHAR_WIDTH(string[k], font_map) + 1) / 2 * text_size + (__PIXEL_CHAR_WIDTH(string[k], font_map) > 0 ? text_size : 0);
+		for (; string[last_char_line].value != '\n' && string[last_char_line].value != '\0' && line_width < max_width; last_char_line++) {
+			line_width += (__PIXEL_CHAR_WIDTH(string[last_char_line], font_map) + 1) / 2 * text_size + (__PIXEL_CHAR_WIDTH(string[last_char_line], font_map) > 0 ? text_size : 0);
 		}
 
-		int x_pos = x - (alignment_x == PIXEL_CHAR_ALIGNMENT_LEFT ? 0 : (alignment_x == PIXEL_CHAR_ALIGNMENT_RIGHT ? line_width : line_width / 2));
+		int x_pos = x - (alignment_x == ALIGNMENT_LEFT ? 0 : (alignment_x == ALIGNMENT_RIGHT ? line_width : line_width / 2));
 
 		int x_tracer = x_pos;
 
 		int text_i_line = text_i;
 
-		for (; string[text_i_line].value != '\n' && string[text_i_line].value != '\0'; text_i_line++) {
+		for (; text_i_line < last_char_line; text_i_line++) {
 
 			if(string[text_i_line].value != '\x1f' && string[text_i_line].masks & PIXEL_CHAR_BACKGROUND_MASK) pixel_char_background_print(&string[text_i_line], text_size, x_tracer, y_pos, screen, width, height, font_map);
 
@@ -115,7 +121,7 @@ void pixel_char_print_string(const struct pixel_char* _PIXEL_CHAR_RESTRICT strin
 
 		text_i_line = text_i;
 
-		for (; string[text_i_line].value != '\n' && string[text_i_line].value != '\0'; text_i_line++) {
+		for (; text_i_line < last_char_line; text_i_line++) {
 
 			if (string[text_i_line].value != '\x1f') pixel_char_print(&string[text_i_line], text_size, x_tracer, y_pos, screen, width, height, font_map);
 
@@ -128,19 +134,19 @@ void pixel_char_print_string(const struct pixel_char* _PIXEL_CHAR_RESTRICT strin
 		if (string[text_i].value == '\0') break;
 
 		y_pos += (PIXEL_FONT_RESOULUTION / 2 + line_spacing) * text_size;
-		text_i++;
+		if(string[text_i].value == '\n') text_i++;
 	}
 
 }
 
-int pixel_char_get_hover_index(const struct pixel_char* _PIXEL_CHAR_RESTRICT string, int text_size, int line_spacing, int x, int y, int alignment_x, int alignment_y, const const void** _PIXEL_CHAR_RESTRICT font_map, int x_hover, int y_hover) {
+int pixel_char_get_hover_index(const struct pixel_char* _PIXEL_CHAR_RESTRICT string, int text_size, int line_spacing, int x, int y, int alignment_x, int alignment_y, int max_width, int max_lines, const const void** _PIXEL_CHAR_RESTRICT font_map, int x_hover, int y_hover) {
 
 	if (string->value == '\0') return;
 
 	int lines = 1;
 	for (int i = 0; string[i].value != '\0'; i++) if (string[i].value == '\n') lines++;
 
-	int y_pos = y - (alignment_y == PIXEL_CHAR_ALIGNMENT_TOP ? 0 : (alignment_y == PIXEL_CHAR_ALIGNMENT_BOTTOM ? (PIXEL_FONT_RESOULUTION / 2 + line_spacing) * text_size * lines - line_spacing * text_size : ((PIXEL_FONT_RESOULUTION / 2 + line_spacing) * text_size * lines - line_spacing * text_size) / 2));
+	int y_pos = y - (alignment_y == ALIGNMENT_TOP ? 0 : (alignment_y == ALIGNMENT_BOTTOM ? (PIXEL_FONT_RESOULUTION / 2 + line_spacing) * text_size * lines - line_spacing * text_size : ((PIXEL_FONT_RESOULUTION / 2 + line_spacing) * text_size * lines - line_spacing * text_size) / 2));
 
 	int text_i = 0;
 
@@ -156,7 +162,7 @@ int pixel_char_get_hover_index(const struct pixel_char* _PIXEL_CHAR_RESTRICT str
 			line_width += (__PIXEL_CHAR_WIDTH(string[k], font_map) + 1) / 2 * text_size + (__PIXEL_CHAR_WIDTH(string[k], font_map) > 0 ? text_size : 0);
 		}
 
-		int x_pos = x - (alignment_x == PIXEL_CHAR_ALIGNMENT_LEFT ? 0 : (alignment_x == PIXEL_CHAR_ALIGNMENT_RIGHT ? line_width : line_width / 2));
+		int x_pos = x - (alignment_x == ALIGNMENT_LEFT ? 0 : (alignment_x == ALIGNMENT_RIGHT ? line_width : line_width / 2));
 
 		for (; string[text_i].value != '\n' && string[text_i].value != '\0'; text_i++) {
 

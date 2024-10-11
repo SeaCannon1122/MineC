@@ -1,108 +1,97 @@
 #pragma once
 
-#include <stdbool.h>
+#include "client/gui/argb_image.h"
+#include "general/platformlib/platform.h"
+#include "client/gui/pixel_char.h"
 
-#include "general/argb_image.h"
-#include "client/gui/char_font.h"
+#ifndef ALIGNMENTS
+#define ALIGNMENTS
 
-#define MAX_MENU_ITEMS 32
+#define ALIGNMENT_LEFT   0
+#define ALIGNMENT_RIGHT  1
+#define ALIGNMENT_TOP    2
+#define ALIGNMENT_BOTTOM 3
+#define ALIGNMENT_MIDDLE 5
+
+#endif // !ALIGNMENTS
+
+#define MAX_MENU_ITEMS 64
 
 enum menu_item_type {
-	MENU_ITEM_LABEL = 0,
-	MENU_ITEM_IMAGE = 1,
-	MENU_ITEM_BUTTON = 2,
-	MENU_ITEM_SLIDER = 3,
-	MENU_ITEM_TEXT_FIELD = 4,
+	MENU_ITEM_LABEL,
+	MENU_ITEM_IMAGE,
+	MENU_ITEM_SLIDER,
+	MENU_ITEM_TEXT_FIELD,
 };
 
 struct menu_label {
+	int menu_item_type;
+	int z;
 	int x;
 	int y;
-	char alignment_x;
-	char alignment_y;
-	struct gui_character* text;
-	char text_alignment;
+	int alignment_x;
+	int alignment_y;
+	int text_alignment_x;
+	int text_alignment_y;
+	int max_width;
+	int max_rows;
+	int selectable;
+	int text_size;
+	struct pixel_char text[];
 };
 
 struct menu_image {
+	int menu_item_type;
+	int z;
 	int x;
 	int y;
-	char alignment_x;
-	char alignment_y;
-	char image_alignment_x;
-	char image_alignment_y;
-	struct argb_image* image;
+	int alignment_x;
+	int alignment_y;
+	int image_alignment_x;
+	int image_alignment_y;
+	int image;
 	int image_scalar;
 };
 
-struct menu_button {
-	bool* state;
-	int x_min;
-	int y_min;
-	int x_max;
-	int y_max;
-	char alignment_x;
-	char alignment_y;
-	struct argb_image* texture_enabled;
-	struct argb_image* texture_disabled;
-	bool* enabled;
-};
-
 struct menu_slider {
-	float* state;
+	int menu_item_type;
+	int z;
+	float state;
 	int x_min;
 	int y_min;
 	int x_max;
 	int y_max;
-	char alignment_x;
-	char alignment_y;
-	struct argb_image* texture_background;
-	struct argb_image* texture_slider;
+	int alignment_x;
+	int alignment_y;
+	int texture_background;
+	int texture_slider;
 	int slider_thickness;
 };
 
 struct menu_text_field {
+	int menu_item_type;
+	int z;
 	char* buffer;
 	int x_min;
 	int x_max;
 	int y;
-	char alignment_x;
-	char alignment_y;
-	char text_alignment;
-	bool* selected;
-	struct char_font* font;
-	bool* field_visible;
+	int alignment_x;
+	int alignment_y;
+	int text_alignment;
+	char* selected;
+	int font;
+	char* field_visible;
 };
 
-struct menu_item {
-	union {
-		struct menu_label label;
-		struct menu_image image;
-		struct menu_button button;
-		struct menu_slider slider;
-		struct menu_text_field text_field;
-	} items;
-	int z;
-	char menu_item_type;
+struct gui_menu {
+	int select_label;
+	int current_pos;
+	int select_begin;
+	int select_end;
+	int selecting;
+
+	int items_count;
+	int* items[];
 };
 
-struct menu_scene {
-	struct menu_item menu_items[MAX_MENU_ITEMS];
-	int menu_items_count;
-};
-
-void add_menu_label(struct menu_scene* scene, int z, int x, int y, char alignment_x, char alignment_y, struct gui_character* text, char text_alignment);
-  
-void add_menu_image(struct menu_scene* scene, int z, int x, int y, char alignment_x, char alignment_y, char image_alignment_x, char image_alignment_y, struct argb_image* image, int image_scalar);
-
-void add_menu_button(struct menu_scene* scene, int z, bool* state, int x_min, int y_min, int x_max, int y_max, char alignment_x, char alignment_y, struct argb_image* texture_enabled, struct argb_image* texture_disabled, bool* enabled);
-
-void add_menu_slider(struct menu_scene* scene, int z, float* state, int x_min, int y_min, int x_max, int y_max, char alignment_x, char alignment_y, struct argb_image* texture_background, struct argb_image* texture_slider, int slider_thickness);
-
-void add_menu_text_field(struct menu_scene* scene, int z, char* buffer, int x_min, int x_max, int y, char alignment_x, char alignment_y, char text_alignment, bool* selected, struct char_font* font, bool* field_visible);
-
-void menu_scene_frame(struct menu_scene* scene, int scale, unsigned int* screen, int width, int height, int mouse_x, int mouse_y, char click);
-
-int menu_x(int x, int alignment, int scale, int width);
-
-int menu_y(int y, int alignment, int scale, int height);
+void menu_frame(struct gui_menu* menu, unsigned int* screen, int width, int height, int scale, const void** resource_map, int mouse_click, int mouse_x, int mouse_y);

@@ -170,7 +170,8 @@ struct point2d_int window_get_mouse_cursor_position(int window) {
 	GetWindowRect(window_resources[window]->hwnd, &window_rect);
 
 	struct point2d_int pos = { position.x - window_rect.left - 7, position.y - window_rect.top - 29 };
-	return pos;
+	if(pos.x > 0 && pos.x < window_resources[window]->window_width - 1 && pos.y > 0 && pos.y < window_resources[window]->window_height - 1) return pos;
+	else return (struct point2d_int) { -1, -1 };
 }
 
 void window_set_mouse_cursor_position(int window, int x, int y) {

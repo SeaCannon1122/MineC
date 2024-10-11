@@ -3,6 +3,17 @@
 #include <stdio.h>
 #include <time.h>
 
+#ifndef ALIGNMENTS
+#define ALIGNMENTS
+
+#define ALIGNMENT_LEFT   0
+#define ALIGNMENT_RIGHT  1
+#define ALIGNMENT_TOP    2
+#define ALIGNMENT_BOTTOM 3
+#define ALIGNMENT_MIDDLE 5
+
+#endif // !ALIGNMENTS
+
 #define parse_string_into_gui_string(src, gui_str) { char* psigs = src; int psigs_i = 0; for(; psigs[psigs_i] != '\0'; psigs_i++) {gui_str[psigs_i].value = psigs[psigs_i];} gui_str[psigs_i].value = psigs[psigs_i];}
 
 #define parse_string(src, dest) {char* _src_str = src; int _str_i = 0; for(; _src_str[_str_i] != '\0'; _str_i++) {dest[_str_i] = _src_str[_str_i];} dest[_str_i] = _src_str[_str_i];}

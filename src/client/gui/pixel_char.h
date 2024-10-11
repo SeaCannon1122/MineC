@@ -28,20 +28,22 @@
 #define PIXEL_CHAR_BACKGROUND_MASK 0x10000000
 #define PIXEL_CHAR_FONT_MASK       0x0fffffff
 
-#define PIXEL_CHAR_ALIGNMENT_LEFT   0
-#define PIXEL_CHAR_ALIGNMENT_RIGHT  1
-#define PIXEL_CHAR_ALIGNMENT_TOP    2
-#define PIXEL_CHAR_ALIGNMENT_BOTTOM 3
-#define PIXEL_CAHR_ALIGNMENT_MIDDLE 5
+#ifndef ALIGNMENTS
+#define ALIGNMENTS
 
+#define ALIGNMENT_LEFT   0
+#define ALIGNMENT_RIGHT  1
+#define ALIGNMENT_TOP    2
+#define ALIGNMENT_BOTTOM 3
+#define ALIGNMENT_MIDDLE 5
 
-struct pixel_font_entry {
-	long long width;
-	char layout[PIXEL_FONT_RESOULUTION * PIXEL_FONT_RESOULUTION / 8];
-};
+#endif // !ALIGNMENTS
 
 struct pixel_font {
-	struct pixel_font_entry char_font_entries[2097152];
+	struct {
+		long long width;
+		char layout[PIXEL_FONT_RESOULUTION * PIXEL_FONT_RESOULUTION / 8];
+	} char_font_entries[2097152];
 };
 
 struct pixel_char {
@@ -53,8 +55,8 @@ struct pixel_char {
 
 #define pixel_char_convert_string(name, str, color, background_color, masks) struct pixel_char name[sizeof(str)]; {for(int _gsc_i = 0; _gsc_i < sizeof(str); _gsc_i++) name[_gsc_i] = (struct pixel_char) {color, background_color, str[_gsc_i], masks};}
 
-void pixel_char_print_string(const struct pixel_char* _PIXEL_CHAR_RESTRICT string, int text_size, int line_spacing, int x, int y, int alignment_x, int alignment_y, unsigned int* _PIXEL_CHAR_RESTRICT screen, int width, int height, const const void** _PIXEL_CHAR_RESTRICT font_map);
+void pixel_char_print_string(const struct pixel_char* _PIXEL_CHAR_RESTRICT string, int text_size, int line_spacing, int x, int y, int alignment_x, int alignment_y, int max_width, int max_lines, unsigned int* _PIXEL_CHAR_RESTRICT screen, int width, int height, const const void** _PIXEL_CHAR_RESTRICT font_map);
 
-int pixel_char_get_hover_index(const struct pixel_char* _PIXEL_CHAR_RESTRICT string, int text_size, int line_spacing, int x, int y, int alignment_x, int alignment_y, const const void** _PIXEL_CHAR_RESTRICT font_map, int x_hover, int y_hover);
+int pixel_char_get_hover_index(const struct pixel_char* _PIXEL_CHAR_RESTRICT string, int text_size, int line_spacing, int x, int y, int alignment_x, int alignment_y, int max_width, int max_lines, const const void** _PIXEL_CHAR_RESTRICT font_map, int x_hover, int y_hover);
 
 int pixel_char_fitting(const struct pixel_char* _PIXEL_CHAR_RESTRICT string, int text_size, const const void** _PIXEL_CHAR_RESTRICT font_map, int max_width);
