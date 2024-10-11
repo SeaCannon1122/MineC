@@ -40,7 +40,7 @@ int menu_object_y(int menu_y, int menu_alignment, int menu_height, int object_al
 
 void menu_frame(struct menu_item** menu_items, int menu_items_count, unsigned int* screen, int width, int height, int scale, void** resource_map) {
 
-	/*union argb_pixel* screen_argb = (union argb_pixel*)screen;
+	union argb_pixel* screen_argb = (union argb_pixel*)screen;
 
 	qsort(menu_items, menu_items_count, sizeof(void*), compare);
 
@@ -319,6 +319,6 @@ void menu_frame(struct menu_item** menu_items, int menu_items_count, unsigned in
 		default:
 			break;
 		}
-	}*/
+	}
 
 }

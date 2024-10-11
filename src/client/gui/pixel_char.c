@@ -1,17 +1,36 @@
 #include "pixel_char.h"
 
-#ifndef __PIXEL_CHAR_IF_BIT
 #define __PIXEL_CHAR_IF_BIT(ptr, pos) (((char*)ptr)[pos / 8] & (1 << (pos % 8)) )
-#endif
 
-void pixel_char_print(const struct pixel_char* _PIXEL_CHAR_RESTRICT c, int text_size, int x, int y, unsigned int* _PIXEL_CHAR_RESTRICT screen, int width, int height, const const void** _PIXEL_CHAR_RESTRICT resource_map) {
-	struct pixel_font* font = resource_map[c->masks & PIXEL_CHAR_FONT_MASK];
+#define __PIXEL_CHAR_WIDTH(c, font_map) (((struct pixel_font*)((font_map)[(c).masks & PIXEL_CHAR_FONT_MASK]))->char_font_entries[(c).value].width)
+
+
+void pixel_char_background_print(const struct pixel_char* _PIXEL_CHAR_RESTRICT c, int text_size, int x, int y, unsigned int* _PIXEL_CHAR_RESTRICT screen, int width, int height, const const void** _PIXEL_CHAR_RESTRICT font_map) {
+
+	int shaddow_offset = (c->masks & PIXEL_CHAR_CURSIVE_MASK ? (text_size + 1) / 2 : text_size);
 
 	for (int j = 0; j < PIXEL_FONT_RESOULUTION * text_size / 2; j++) {
 
 		int cursive_offset = (c->masks & PIXEL_CHAR_CURSIVE_MASK ? PIXEL_FONT_RESOULUTION * text_size / 4 - j / 2 - 1 : 0);
 
-		for (int i = 0; i < (font->char_font_entries[c->value].width * text_size + 1) / 2; i++) {
+		for (int i = -(text_size + 1) / 2; i < (__PIXEL_CHAR_WIDTH(c[0], font_map) * text_size + 1) / 2 + text_size / 2; i++) {
+
+			if (i + cursive_offset + x >= 0 && j + y >= 0 && i + cursive_offset + x < width && j + y < height) screen[(i + cursive_offset + x) + width * (j + y)] = c->background_color;
+
+		}
+	}
+}
+
+void pixel_char_print(const struct pixel_char* _PIXEL_CHAR_RESTRICT c, int text_size, int x, int y, unsigned int* _PIXEL_CHAR_RESTRICT screen, int width, int height, const const void** _PIXEL_CHAR_RESTRICT font_map) {
+
+	int shaddow_offset = (c->masks & PIXEL_CHAR_CURSIVE_MASK ? (text_size + 1) / 2 : text_size);
+
+	for (int j = 0; j < PIXEL_FONT_RESOULUTION * text_size / 2; j++) {
+
+		int cursive_offset = (c->masks & PIXEL_CHAR_CURSIVE_MASK ? PIXEL_FONT_RESOULUTION * text_size / 4 - j / 2 - 1 : 0);
+		int shaddow_offset = (c->masks & PIXEL_CHAR_CURSIVE_MASK ? (text_size + 1) / 2 : text_size);
+
+		for (int i = 0; i < (__PIXEL_CHAR_WIDTH(c[0], font_map) * text_size + 1) / 2; i++) {
 
 			int x_bit_pos = i - text_size * PIXEL_FONT_RESOULUTION / 4;
 			int y_bit_pos = j - text_size * PIXEL_FONT_RESOULUTION / 4;
@@ -21,10 +40,10 @@ void pixel_char_print(const struct pixel_char* _PIXEL_CHAR_RESTRICT c, int text_
 			if (x_bit_pos < 0) bit_pos -= 1;
 			if (y_bit_pos < 0) bit_pos -= PIXEL_FONT_RESOULUTION;
 
-			if (__PIXEL_CHAR_IF_BIT(font->char_font_entries[c->value].layout, bit_pos)) {
+			if (__PIXEL_CHAR_IF_BIT(((struct pixel_font*)(font_map[c[0].masks & 0x0fffffff]))->char_font_entries[c[0].value].layout, bit_pos)) {
 				if (i + cursive_offset + x >= 0 && j + y >= 0 && i + cursive_offset + x < width && j + y < height) screen[(i + cursive_offset + x) + width * (j + y)] = c->color;
-				if (c->masks & PIXEL_CHAR_SHADOW_MASK && i + cursive_offset + x + (text_size + 1) / 2 >= 0 && j + y + text_size >= 0 && i + cursive_offset + x + (text_size + 1) / 2 < width && j + y + text_size < height)
-					screen[(i + cursive_offset + x + (text_size + 1) / 2) + width * (j + y + text_size)] =
+				if (c->masks & PIXEL_CHAR_SHADOW_MASK && i + cursive_offset + x + shaddow_offset >= 0 && j + y + text_size >= 0 && i + cursive_offset + x + shaddow_offset < width && j + y + text_size < height)
+					screen[(i + cursive_offset + x + shaddow_offset) + width * (j + y + text_size)] =
 						(   c->color        & 0xff) / PIXEL_FONT_SHADOW_DIVISOR         +
 						((((c->color >> 8)  & 0xff) / PIXEL_FONT_SHADOW_DIVISOR) << 8)  +
 						((((c->color >> 16) & 0xff) / PIXEL_FONT_SHADOW_DIVISOR) << 16) +
@@ -39,11 +58,11 @@ void pixel_char_print(const struct pixel_char* _PIXEL_CHAR_RESTRICT c, int text_
 
 			int cursive_offset = (c->masks & PIXEL_CHAR_CURSIVE_MASK ? PIXEL_FONT_RESOULUTION * text_size / 4 - j / 2 - 1 : 0);
 
-			for (int i = -(text_size + 1) / 2; i < (font->char_font_entries[c->value].width * text_size + 1) / 2 + text_size / 2; i++) {
+			for (int i = -(text_size + 1) / 2; i < (__PIXEL_CHAR_WIDTH(c[0], font_map) * text_size + 1) / 2 + text_size / 2; i++) {
 
 				if (i + cursive_offset + x >= 0 && j + y >= 0 && i + cursive_offset + x < width && j + y < height) screen[(i + cursive_offset + x) + width * (j + y)] = c->color;
-				if (c->masks & PIXEL_CHAR_SHADOW_MASK && i + cursive_offset + x + text_size / 2 >= 0 && j + y + text_size >= 0 && i + cursive_offset + x + text_size / 2 < width && j + y + text_size < height)
-					screen[(i + cursive_offset + x + text_size / 2) + width * (j + y + text_size)] =
+				if (c->masks & PIXEL_CHAR_SHADOW_MASK && i + cursive_offset + x + shaddow_offset >= 0 && j + y + text_size >= 0 && i + cursive_offset + x + shaddow_offset < width && j + y + text_size < height)
+					screen[(i + cursive_offset + x + shaddow_offset) + width * (j + y + text_size)] =
 						(   c->color        & 0xff) / PIXEL_FONT_SHADOW_DIVISOR         +
 						((((c->color >> 8)  & 0xff) / PIXEL_FONT_SHADOW_DIVISOR) << 8)  +
 						((((c->color >> 16) & 0xff) / PIXEL_FONT_SHADOW_DIVISOR) << 16) +
@@ -55,18 +74,116 @@ void pixel_char_print(const struct pixel_char* _PIXEL_CHAR_RESTRICT c, int text_
 
 }
 
-void pixel_char_print_string(const struct pixel_char* _PIXEL_CHAR_RESTRICT c, int text_size, int x, int y, unsigned int* _PIXEL_CHAR_RESTRICT screen, int width, int height, const const void** _PIXEL_CHAR_RESTRICT resource_map) {
+void pixel_char_print_string(const struct pixel_char* _PIXEL_CHAR_RESTRICT string, int text_size, int line_spacing, int x, int y, int alignment_x, int alignment_y, unsigned int* _PIXEL_CHAR_RESTRICT screen, int width, int height, const const void** _PIXEL_CHAR_RESTRICT font_map) {
 
-	if (c->value == '\0') return;
+	if (string->value == '\0') return;
 
-	pixel_char_print(c, text_size, x, y, screen, width, height, resource_map);
+	int lines = 1;
+	for (int i = 0; string[i].value != '\0'; i++) if (string[i].value == '\n') lines++;
 
-	int x_pos = x + (((struct pixel_font*)(resource_map[c[0].masks & PIXEL_CHAR_FONT_MASK]))->char_font_entries[c[0].value].width + 1) / 2 * text_size + (text_size + 1) / 2;
+	int y_pos = y - (alignment_y == PIXEL_CHAR_ALIGNMENT_TOP ? 0 : (alignment_y == PIXEL_CHAR_ALIGNMENT_BOTTOM ? (PIXEL_FONT_RESOULUTION / 2 + line_spacing) * text_size * lines - line_spacing * text_size : ((PIXEL_FONT_RESOULUTION / 2 + line_spacing) * text_size * lines - line_spacing * text_size) / 2));
 
-	for (int i = 1; c[i].value != '\0'; i++) {
-		pixel_char_print(&c[i], text_size, x_pos, y, screen, width, height, resource_map);
+	int text_i = 0;
 
-		x_pos += (((struct pixel_font*)(resource_map[c[i].masks & PIXEL_CHAR_FONT_MASK]))->char_font_entries[c[i].value].width + 1) / 2 * text_size + (text_size + 1) / 2;
+	for (int i = 0; i < lines; i++) {
+		if (string[text_i].value == '\n') continue;
+		if (string[text_i].value == '\0') break;
+
+		int line_width = 0;
+
+		line_width += (__PIXEL_CHAR_WIDTH(string[text_i], font_map) + 1) / 2 * text_size;
+
+		for (int k = text_i + 1; string[k].value != '\n' && string[k].value != '\0'; k++) {
+			line_width += (__PIXEL_CHAR_WIDTH(string[k], font_map) + 1) / 2 * text_size + (__PIXEL_CHAR_WIDTH(string[k], font_map) > 0 ? text_size : 0);
+		}
+
+		int x_pos = x - (alignment_x == PIXEL_CHAR_ALIGNMENT_LEFT ? 0 : (alignment_x == PIXEL_CHAR_ALIGNMENT_RIGHT ? line_width : line_width / 2));
+
+		int x_tracer = x_pos;
+
+		int text_i_line = text_i;
+
+		for (; string[text_i_line].value != '\n' && string[text_i_line].value != '\0'; text_i_line++) {
+
+			if(string[text_i_line].value != '\x1f' && string[text_i_line].masks & PIXEL_CHAR_BACKGROUND_MASK) pixel_char_background_print(&string[text_i_line], text_size, x_tracer, y_pos, screen, width, height, font_map);
+
+			x_tracer += (__PIXEL_CHAR_WIDTH(string[text_i_line], font_map) + 1) / 2 * text_size + (__PIXEL_CHAR_WIDTH(string[text_i_line], font_map) > 0 ? text_size : 0);
+
+		}
+
+		x_tracer = x_pos;
+
+		text_i_line = text_i;
+
+		for (; string[text_i_line].value != '\n' && string[text_i_line].value != '\0'; text_i_line++) {
+
+			if (string[text_i_line].value != '\x1f') pixel_char_print(&string[text_i_line], text_size, x_tracer, y_pos, screen, width, height, font_map);
+
+			x_tracer += (__PIXEL_CHAR_WIDTH(string[text_i_line], font_map) + 1) / 2 * text_size + (__PIXEL_CHAR_WIDTH(string[text_i_line], font_map) > 0 ? text_size : 0);
+
+		}
+
+		text_i = text_i_line;
+
+		if (string[text_i].value == '\0') break;
+
+		y_pos += (PIXEL_FONT_RESOULUTION / 2 + line_spacing) * text_size;
+		text_i++;
 	}
 
+}
+
+int pixel_char_get_hover_index(const struct pixel_char* _PIXEL_CHAR_RESTRICT string, int text_size, int line_spacing, int x, int y, int alignment_x, int alignment_y, const const void** _PIXEL_CHAR_RESTRICT font_map, int x_hover, int y_hover) {
+
+	if (string->value == '\0') return;
+
+	int lines = 1;
+	for (int i = 0; string[i].value != '\0'; i++) if (string[i].value == '\n') lines++;
+
+	int y_pos = y - (alignment_y == PIXEL_CHAR_ALIGNMENT_TOP ? 0 : (alignment_y == PIXEL_CHAR_ALIGNMENT_BOTTOM ? (PIXEL_FONT_RESOULUTION / 2 + line_spacing) * text_size * lines - line_spacing * text_size : ((PIXEL_FONT_RESOULUTION / 2 + line_spacing) * text_size * lines - line_spacing * text_size) / 2));
+
+	int text_i = 0;
+
+	for (int i = 0; i < lines; i++) {
+		if (string[text_i].value == '\n') continue;
+		if (string[text_i].value == '\0') break;
+
+		int line_width = 0;
+
+		line_width += (__PIXEL_CHAR_WIDTH(string[text_i], font_map) + 1) / 2 * text_size;
+
+		for (int k = text_i + 1; string[k].value != '\n' && string[k].value != '\0'; k++) {
+			line_width += (__PIXEL_CHAR_WIDTH(string[k], font_map) + 1) / 2 * text_size + (__PIXEL_CHAR_WIDTH(string[k], font_map) > 0 ? text_size : 0);
+		}
+
+		int x_pos = x - (alignment_x == PIXEL_CHAR_ALIGNMENT_LEFT ? 0 : (alignment_x == PIXEL_CHAR_ALIGNMENT_RIGHT ? line_width : line_width / 2));
+
+		for (; string[text_i].value != '\n' && string[text_i].value != '\0'; text_i++) {
+
+			if (string[text_i].value != '\x1f') if (x_hover >= x_pos - (text_size + 1) / 2 && x_hover < x_pos + (__PIXEL_CHAR_WIDTH(string[text_i], font_map) + 1) / 2 * text_size + text_size / 2 && y_hover >= y_pos && y_hover < y_pos + PIXEL_FONT_RESOULUTION * text_size / 2) return text_i;
+
+			x_pos += (__PIXEL_CHAR_WIDTH(string[text_i], font_map) + 1) / 2 * text_size + (__PIXEL_CHAR_WIDTH(string[text_i], font_map) > 0 ? text_size : 0);
+
+		}
+
+
+		if (string[text_i].value == '\0') break;
+
+		y_pos += (PIXEL_FONT_RESOULUTION / 2 + line_spacing) * text_size;
+		text_i++;
+	}
+
+	return -1;
+}
+
+int pixel_char_fitting(const struct pixel_char* _PIXEL_CHAR_RESTRICT string, int text_size, const const void** _PIXEL_CHAR_RESTRICT font_map, int max_width) {
+
+	int width = (__PIXEL_CHAR_WIDTH(string[0], font_map) + 1) / 2 * text_size;
+	int amount = 1;
+
+	for (; string[amount].value != '\n' && string[amount].value != '\0' && width <= max_width; amount++) {
+		width += (__PIXEL_CHAR_WIDTH(string[amount], font_map) + 1) / 2 * text_size + (__PIXEL_CHAR_WIDTH(string[amount], font_map) > 0 ? text_size : 0);
+	}
+
+	return amount;
 }

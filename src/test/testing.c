@@ -57,29 +57,7 @@ int testing_main() {
 
 	show_console_window();
 	
-	pixel_char_convert_string(word, "[Hello} World!", 0xff00ffff, PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK | PIXEL_CHAR_SHADOW_MASK);
-
-	struct pixel_char word1[] = {
-		{0xffffffff, 'H', 0},
-		{0xffffffff, 'e', PIXEL_CHAR_UNDERLINE_MASK},
-		{0xffffffff, 'l', PIXEL_CHAR_UNDERLINE_MASK},
-		{0xffffffff, 'l', PIXEL_CHAR_CURSIVE_MASK},
-		{0xffffffff, 'o', PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK},
-		{0xffffffff, ',', PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK},
-		{0xffffffff, ' ', PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK},
-		{0xffffffff, 'W', PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK},
-		{0xffffffff, 'h', PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK},
-		{0xffffffff, 'a', PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK},
-		{0xffffffff, 't', PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK},
-		{0xffffffff, '\'', PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK},
-		{0xffffffff, 's', PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK},
-		{0xffffffff, ' ', PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK},
-		{0xffffffff, 'u', PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK},
-		{0xffffffff, 'p', PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK},
-		{0xffffffff, '!', PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK},
-		{0xffffffff, '\0', PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK},
-
-	};
+	pixel_char_convert_string(word, "[He\x1fllo} \nW\x1f\x1f\x1f\x1f\nrdafasld!", 0xff00ffff, 0xff7f7f7f, PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK | PIXEL_CHAR_SHADOW_MASK);
 
 	int width = 800;
 	int height = 500;
@@ -106,11 +84,34 @@ int testing_main() {
 		}
 		for (int i = 0; i < height * width; i++) pixels[i] = 0x12345;
 
-		pixel_char_print_string(word, scale, 100, 100, pixels, width, height, &font);
+		int string_x = width / 2;
+		int string_y = height / 2;
 
 		struct point2d_int p = window_get_mouse_cursor_position(window);
 
-		if (p.x >= 0 && p.x < width && p.y >= 0 && p.y < height && get_key_state(KEY_MOUSE_LEFT) & 0b1) pixels[p.x + width * p.y] = 0xffff0000;
+		pixel_char_print_string(word, scale, 2, string_x, string_y, PIXEL_CAHR_ALIGNMENT_MIDDLE, PIXEL_CAHR_ALIGNMENT_MIDDLE, pixels, width, height, &font);
+
+		for (int i = 0; word[i].value != '\0'; i++) {
+			word[i].color = 0xff00ffff;
+			word[i].masks &= (0xffffffff ^ PIXEL_CHAR_BACKGROUND_MASK);
+		}
+
+		int select_index = pixel_char_get_hover_index(word, scale, 2, string_x, string_y, PIXEL_CAHR_ALIGNMENT_MIDDLE, PIXEL_CAHR_ALIGNMENT_MIDDLE, &font, p.x, p.y);
+
+		if (select_index >= 0) {
+			word[select_index].color = 0xffffff00;
+			word[select_index].masks |= PIXEL_CHAR_BACKGROUND_MASK;
+		}
+
+		pixels[string_x - 1 + width * (string_y - 1)] = 0xffff0000;
+		pixels[string_x - 1 + width * (string_y)] = 0xffff0000;
+		pixels[string_x - 1 + width * (string_y + 1)] = 0xffff0000;
+		pixels[string_x + width * (string_y - 1)] = 0xffff0000;
+		pixels[string_x + width * (string_y    )] = 0xffff0000;
+		pixels[string_x + width * (string_y + 1)] = 0xffff0000;
+		pixels[string_x + 1 + width * (string_y - 1)] = 0xffff0000;
+		pixels[string_x + 1 + width * (string_y)] = 0xffff0000;
+		pixels[string_x + 1 + width * (string_y + 1)] = 0xffff0000;
 
 		window_draw(window, pixels, width, height, 1);
 
