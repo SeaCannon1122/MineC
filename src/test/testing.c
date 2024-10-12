@@ -5,14 +5,6 @@
 #include "general/platformlib/platform.h"
 #include "client/gui/menu.h"
 
-int scale = 8;
-
-void char_c(int window, int character) {
-	 
-	scale = character - 'a' + 1;
-
-}
-
 void* _load_file(char* filename, int* size) {
 
 	FILE* file = fopen(filename, "rb");
@@ -50,21 +42,25 @@ struct pixel_font* _load_char_font(char* src) {
 
 int testing_main() {
 
+	int menu_scale = 8;
+
 	struct menu_label label = {
 		MENU_ITEM_LABEL,
 		0,
-		0,
-		0,
+		20,
+		-20,
 		ALIGNMENT_MIDDLE,
 		ALIGNMENT_MIDDLE,
 		ALIGNMENT_MIDDLE,
 		ALIGNMENT_MIDDLE,
-		100,
+		200,
 		20,
 		1,
-		3,
-		{{0xff00ffff, 0xff3f3f3f, 'A', PIXEL_CHAR_BACKGROUND_MASK}, {0xff00ffff, 0xff3f3f3f, 'B', 0}, {0xff00ffff, 0xff3f3f3f, 'C', 0}, {0xff00ffff, 0xff3f3f3f, 'D', 0}, {0xff00ffff, 0xff3f3f3f, 'E', 0}, {0xff00ffff, 0xff3f3f3f, '\n', 0},{0xff00ffff, 0xff3f3f3f, 'G', 0}, {0xff00ffff, 0xff3f3f3f, 'H', 0}, {0xff00ffff, 0xff3f3f3f, 'I', 0}, {0xff00ffff, 0xff3f3f3f, 'J', 0}, {0xff00ffff, 0xff3f3f3f, 'K', 0}, {0xff00ffff, 0xff3f3f3f, 'L', 0}, {0xff00ffff, 0xff3f3f3f, 'M', 0}, {0xff00ffff, 0xff3f3f3f, 'N', 0}, {0xff00ffff, 0xff3f3f3f, 'O', 0}, {0xff00ffff, 0xff3f3f3f, 'P', 0}, {0xff00ffff, 0xff3f3f3f, 'Q', 0}, {0xff00ffff, 0xff3f3f3f, 'R', 0}, {0xff00ffff, 0xff3f3f3f, 'S', 0}, {0xff00ffff, 0xff3f3f3f, 'T', 0}, {0xff00ffff, 0xff3f3f3f, 'U', 0}, {0xff00ffff, 0xff3f3f3f, 'V', 0}, {0xff00ffff, 0xff3f3f3f, 'W', 0}, {0xff00ffff, 0xff3f3f3f, 'X', 0}, {0xff00ffff, 0xff3f3f3f, 'Y', 0}, {0xff00ffff, 0xff3f3f3f, 'Z', 0}, {0xff00ffff, 0xff3f3f3f, '\0', 0}}
+		1,
+		{{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0} }
 	};
+
+	pixel_char_convert_string_in(label.text, "Hello World!\nMy name is SeaCannon1122\nHow are you?", 0xff00ffff, 0xff3f3f3f, PIXEL_CHAR_SHADOW_MASK);
 
 	struct gui_menu menu = { -1, -1, -1, -1, 0, 1, {&label} };
 
@@ -76,8 +72,6 @@ int testing_main() {
 	int height = 500;
 
 	int window = window_create(100, 100, width, height, "NAME");
-
-	int cid = window_add_char_callback(window, char_c);
 
 	width = window_get_width(window);
 	height = window_get_width(window);
@@ -101,9 +95,9 @@ int testing_main() {
 
 		struct point2d_int p = window_get_mouse_cursor_position(window);
 
-		if (get_key_state(KEY_MOUSE_LEFT)) label.max_width = - 2 * p.x + width;
+		if (get_key_state(KEY_MOUSE_RIGHT)) if(p.x != -1) label.max_width = p.x - label.x * menu_scale;
 
-		menu_frame(&menu, pixels, width, height, 2, &font, get_key_state(KEY_MOUSE_LEFT), p.x, p.y);
+		menu_frame(&menu, pixels, width, height, menu_scale, &font, get_key_state(KEY_MOUSE_LEFT), p.x, p.y);
 
 		window_draw(window, pixels, width, height, 1);
 

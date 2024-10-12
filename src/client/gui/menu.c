@@ -33,7 +33,7 @@ void menu_frame(struct gui_menu* menu, unsigned int* screen, int width, int heig
 
 	union argb_pixel* screen_argb = (union argb_pixel*)screen;
 
-	int* ordered_menu_items[MAX_MENU_ITEMS];
+	int** ordered_menu_items = alloca(sizeof(int*) * menu->items_count);;
 
 	memcpy(ordered_menu_items, menu->items, sizeof(void*) * menu->items_count);
 
@@ -53,46 +53,62 @@ void menu_frame(struct gui_menu* menu, unsigned int* screen, int width, int heig
 
 			memcpy(text, label->text, sizeof(struct pixel_char) * string_size);
 
-			int select_index = pixel_char_get_hover_index(
-				text, 
-				label->text_size * scale, 
-				2, 
-				menu_x(label->x, label->alignment_x, width, scale), 
-				menu_y(label->y, label->alignment_y, height, scale), 
-				label->text_alignment_x,
-				label->text_alignment_y, 
-				label->max_width,
-				label->max_rows,
-				resource_map, 
-				mouse_x, 
-				mouse_y
-			);
+			if (label->selectable) {
+
+				int select_index = pixel_char_get_hover_index(
+					text,
+					label->text_size * scale,
+					2,
+					menu_x(label->x, label->alignment_x, width, scale),
+					menu_y(label->y, label->alignment_y, height, scale),
+					label->text_alignment_x,
+					label->text_alignment_y,
+					label->max_width,
+					label->max_rows,
+					resource_map,
+					mouse_x,
+					mouse_y
+				);
 
 
-			if (mouse_click == 0b11) {
+				if (mouse_click == 0b11) {
 
-				if (menu->select_label == i && menu->select_begin == select_index && menu->selecting == 1) {
-					for(menu->select_end = select_index; ; menu->select_end++) if ((text[menu->select_end + 1].value < 'a' || text[menu->select_end + 1].value > 'z') && (text[menu->select_end + 1].value < 'A' || text[menu->select_end + 1].value > 'Z')) break;
-					for (menu->select_begin = select_index; menu->select_begin > 0; menu->select_begin--) if ((text[menu->select_begin - 1].value < 'a' || text[menu->select_begin - 1].value > 'z') && (text[menu->select_begin - 1].value < 'A' || text[menu->select_begin - 1].value > 'Z')) break;
-					menu->selecting = 0;
+					if (menu->select_label == i && menu->select_begin == select_index && menu->selecting == 1) {
+
+						for (menu->select_end = select_index; ; menu->select_end++) if (
+							(text[menu->select_end].value < 'a' || text[menu->select_end].value > 'z') &&
+							(text[menu->select_end].value < 'A' || text[menu->select_end].value > 'Z') &&
+							(text[menu->select_end].value < '0' || text[menu->select_end].value > '9')
+							) break;
+
+						if (menu->select_end != select_index) menu->select_end--;
+
+						for (menu->select_begin = select_index; menu->select_begin > 0; menu->select_begin--) if (
+							(text[menu->select_begin - 1].value < 'a' || text[menu->select_begin - 1].value > 'z') &&
+							(text[menu->select_begin - 1].value < 'A' || text[menu->select_begin - 1].value > 'Z') &&
+							(text[menu->select_begin - 1].value < '0' || text[menu->select_begin - 1].value > '9')
+							) break;
+
+						menu->selecting = 0;
+					}
+					else {
+						menu->select_label = i;
+						menu->select_begin = select_index;
+						menu->select_end = -1;
+						menu->selecting = 1;
+					}
+
 				}
-				else {
-					menu->select_label = i;
-					menu->select_begin = select_index;
-					menu->select_end = -1;
-					menu->selecting = 1;
+
+				else if (mouse_click && menu->select_label == i && select_index != -1 && (menu->select_begin != select_index || menu->select_end != -1) && menu->selecting == 1) {
+					menu->select_end = select_index;
 				}
-				
-			}
 
-			else if (mouse_click && menu->select_label == i && select_index != -1 && (menu->select_begin != select_index || menu->select_end != -1) && menu->selecting == 1) {
-				menu->select_end = select_index;
-			}
-
-			if (menu->select_begin >= 0 && menu->select_end >= 0) {
-				for (int j = min(menu->select_begin, menu->select_end); j <= max(menu->select_begin, menu->select_end); j++) {
-					text[j].color = 0xffffff00;
-					text[j].masks |= PIXEL_CHAR_BACKGROUND_MASK;
+				if (menu->select_begin >= 0 && menu->select_end >= 0) {
+					for (int j = min(menu->select_begin, menu->select_end); j <= max(menu->select_begin, menu->select_end); j++) {
+						text[j].color = 0xffffff00;
+						text[j].masks |= PIXEL_CHAR_BACKGROUND_MASK;
+					}
 				}
 			}
 

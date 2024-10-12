@@ -4,6 +4,7 @@
 #include "general/platformlib/platform.h"
 #include "client/gui/pixel_char.h"
 
+
 #ifndef ALIGNMENTS
 #define ALIGNMENTS
 
@@ -14,8 +15,6 @@
 #define ALIGNMENT_MIDDLE 5
 
 #endif // !ALIGNMENTS
-
-#define MAX_MENU_ITEMS 64
 
 enum menu_item_type {
 	MENU_ITEM_LABEL,

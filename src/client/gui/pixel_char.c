@@ -76,19 +76,28 @@ void pixel_char_print(const struct pixel_char* _PIXEL_CHAR_RESTRICT c, int text_
 
 void pixel_char_print_string(const struct pixel_char* _PIXEL_CHAR_RESTRICT string, int text_size, int line_spacing, int x, int y, int alignment_x, int alignment_y, int max_width, int max_lines, unsigned int* _PIXEL_CHAR_RESTRICT screen, int width, int height, const const void** _PIXEL_CHAR_RESTRICT font_map) {
 
+
 	if (string->value == '\0') return;
 
 	int lines = 1;
-	int line_width = (__PIXEL_CHAR_WIDTH(string[0], font_map) + 1) / 2 * text_size;
+	int line_width = 0;
 	for (int i = 0; string[i].value != '\0'; i++) {
 
-		line_width += (__PIXEL_CHAR_WIDTH(string[i], font_map) + 1) / 2 * text_size + (__PIXEL_CHAR_WIDTH(string[i], font_map) > 0 ? text_size : 0);
-		if (string[i].value == '\n') lines++;
-		if (line_width > max_width) { lines++; line_width = (__PIXEL_CHAR_WIDTH(string[i], font_map) + 1) / 2 * text_size; }
+		if (string[i].value == '\n') { lines++; line_width = 0; continue; }
+
+		if (line_width == 0) line_width = (__PIXEL_CHAR_WIDTH(string[i], font_map) + 1) / 2 * text_size;
+		else {
+			char c = string[i].value;
+			int new_line_width = line_width + (__PIXEL_CHAR_WIDTH(string[i], font_map) + 1) / 2 * text_size + (__PIXEL_CHAR_WIDTH(string[i], font_map) > 0 ? text_size : 0);
+			if (new_line_width > max_width) { lines++; line_width = 0; i--; }
+			else line_width = new_line_width;
+		}
 
 	}
 
 	int y_pos = y - (alignment_y == ALIGNMENT_TOP ? 0 : (alignment_y == ALIGNMENT_BOTTOM ? (PIXEL_FONT_RESOULUTION / 2 + line_spacing) * text_size * lines - line_spacing * text_size : ((PIXEL_FONT_RESOULUTION / 2 + line_spacing) * text_size * lines - line_spacing * text_size) / 2));
+
+	int y_tracer = y_pos;
 
 	int text_i = 0;
 
@@ -97,10 +106,14 @@ void pixel_char_print_string(const struct pixel_char* _PIXEL_CHAR_RESTRICT strin
 		if (string[text_i].value == '\0') break;
 
 		line_width = (__PIXEL_CHAR_WIDTH(string[text_i], font_map) + 1) / 2 * text_size;
-		int last_char_line = text_i + 1;
+		int last_char_line = text_i;
 
-		for (; string[last_char_line].value != '\n' && string[last_char_line].value != '\0' && line_width < max_width; last_char_line++) {
-			line_width += (__PIXEL_CHAR_WIDTH(string[last_char_line], font_map) + 1) / 2 * text_size + (__PIXEL_CHAR_WIDTH(string[last_char_line], font_map) > 0 ? text_size : 0);
+		for (; string[last_char_line + 1].value != '\n' && string[last_char_line + 1].value != '\0'; last_char_line++) {
+			
+			int new_line_width = line_width + (__PIXEL_CHAR_WIDTH(string[last_char_line + 1], font_map) + 1) / 2 * text_size + (__PIXEL_CHAR_WIDTH(string[last_char_line + 1], font_map) > 0 ? text_size : 0);
+			if (new_line_width <= max_width) line_width = new_line_width;
+			else break;
+			
 		}
 
 		int x_pos = x - (alignment_x == ALIGNMENT_LEFT ? 0 : (alignment_x == ALIGNMENT_RIGHT ? line_width : line_width / 2));
@@ -109,9 +122,9 @@ void pixel_char_print_string(const struct pixel_char* _PIXEL_CHAR_RESTRICT strin
 
 		int text_i_line = text_i;
 
-		for (; text_i_line < last_char_line; text_i_line++) {
+		for (; text_i_line <= last_char_line; text_i_line++) {
 
-			if(string[text_i_line].value != '\x1f' && string[text_i_line].masks & PIXEL_CHAR_BACKGROUND_MASK) pixel_char_background_print(&string[text_i_line], text_size, x_tracer, y_pos, screen, width, height, font_map);
+			if(string[text_i_line].value != '\x1f' && string[text_i_line].masks & PIXEL_CHAR_BACKGROUND_MASK) pixel_char_background_print(&string[text_i_line], text_size, x_tracer, y_tracer, screen, width, height, font_map);
 
 			x_tracer += (__PIXEL_CHAR_WIDTH(string[text_i_line], font_map) + 1) / 2 * text_size + (__PIXEL_CHAR_WIDTH(string[text_i_line], font_map) > 0 ? text_size : 0);
 
@@ -121,9 +134,9 @@ void pixel_char_print_string(const struct pixel_char* _PIXEL_CHAR_RESTRICT strin
 
 		text_i_line = text_i;
 
-		for (; text_i_line < last_char_line; text_i_line++) {
+		for (; text_i_line <= last_char_line; text_i_line++) {
 
-			if (string[text_i_line].value != '\x1f') pixel_char_print(&string[text_i_line], text_size, x_tracer, y_pos, screen, width, height, font_map);
+			if (string[text_i_line].value != '\x1f') pixel_char_print(&string[text_i_line], text_size, x_tracer, y_tracer, screen, width, height, font_map);
 
 			x_tracer += (__PIXEL_CHAR_WIDTH(string[text_i_line], font_map) + 1) / 2 * text_size + (__PIXEL_CHAR_WIDTH(string[text_i_line], font_map) > 0 ? text_size : 0);
 
@@ -133,9 +146,31 @@ void pixel_char_print_string(const struct pixel_char* _PIXEL_CHAR_RESTRICT strin
 
 		if (string[text_i].value == '\0') break;
 
-		y_pos += (PIXEL_FONT_RESOULUTION / 2 + line_spacing) * text_size;
+		y_tracer += (PIXEL_FONT_RESOULUTION / 2 + line_spacing) * text_size;
 		if(string[text_i].value == '\n') text_i++;
 	}
+
+#ifdef PIXEL_CHAR_DEBUG
+
+	int i = (alignment_x == ALIGNMENT_LEFT ? x : (alignment_x == ALIGNMENT_RIGHT ? x - max_width : x - max_width / 2)) - 1;
+
+	for (int j = y_pos; j < (PIXEL_FONT_RESOULUTION / 2 + line_spacing) * text_size * lines - line_spacing * text_size + y_pos; j++) {
+		if (i >= 0 && i < width && j >= 0 && j < height) screen[i + j * width] = 0xffff7f00;
+	}
+
+	i = (alignment_x == ALIGNMENT_LEFT ? x + max_width : (alignment_x == ALIGNMENT_RIGHT ? x : x + max_width / 2));
+	for (int j = y_pos; j < (PIXEL_FONT_RESOULUTION / 2 + line_spacing) * text_size * lines - line_spacing * text_size + y_pos; j++) {
+		if (i >= 0 && i < width && j >= 0 && j < height) screen[i + j * width] = 0xffff7f00;
+	}
+
+	for (int i = x - 2; i <= x + 2; i++) {
+		for (int j = y - 2; j <= y + 2; j++) {
+			if (i >= 0 && i < width && j >= 0 && j < height) screen[i + j * width] = 0xffff0000;
+		}
+	}
+
+
+#endif // _PIXEL_CHAR_DEBUG
 
 }
 
@@ -144,9 +179,24 @@ int pixel_char_get_hover_index(const struct pixel_char* _PIXEL_CHAR_RESTRICT str
 	if (string->value == '\0') return;
 
 	int lines = 1;
-	for (int i = 0; string[i].value != '\0'; i++) if (string[i].value == '\n') lines++;
+	int line_width = 0;
+	for (int i = 0; string[i].value != '\0'; i++) {
+
+		if (string[i].value == '\n') { lines++; line_width = 0; continue; }
+
+		if (line_width == 0) line_width = (__PIXEL_CHAR_WIDTH(string[i], font_map) + 1) / 2 * text_size;
+		else {
+			char c = string[i].value;
+			int new_line_width = line_width + (__PIXEL_CHAR_WIDTH(string[i], font_map) + 1) / 2 * text_size + (__PIXEL_CHAR_WIDTH(string[i], font_map) > 0 ? text_size : 0);
+			if (new_line_width > max_width) { lines++; line_width = 0; i--; }
+			else line_width = new_line_width;
+		}
+
+	}
 
 	int y_pos = y - (alignment_y == ALIGNMENT_TOP ? 0 : (alignment_y == ALIGNMENT_BOTTOM ? (PIXEL_FONT_RESOULUTION / 2 + line_spacing) * text_size * lines - line_spacing * text_size : ((PIXEL_FONT_RESOULUTION / 2 + line_spacing) * text_size * lines - line_spacing * text_size) / 2));
+
+	int y_tracer = y_pos;
 
 	int text_i = 0;
 
@@ -154,29 +204,37 @@ int pixel_char_get_hover_index(const struct pixel_char* _PIXEL_CHAR_RESTRICT str
 		if (string[text_i].value == '\n') continue;
 		if (string[text_i].value == '\0') break;
 
-		int line_width = 0;
+		line_width = (__PIXEL_CHAR_WIDTH(string[text_i], font_map) + 1) / 2 * text_size;
+		int last_char_line = text_i;
 
-		line_width += (__PIXEL_CHAR_WIDTH(string[text_i], font_map) + 1) / 2 * text_size;
+		for (; string[last_char_line + 1].value != '\n' && string[last_char_line + 1].value != '\0'; last_char_line++) {
 
-		for (int k = text_i + 1; string[k].value != '\n' && string[k].value != '\0'; k++) {
-			line_width += (__PIXEL_CHAR_WIDTH(string[k], font_map) + 1) / 2 * text_size + (__PIXEL_CHAR_WIDTH(string[k], font_map) > 0 ? text_size : 0);
+			int new_line_width = line_width + (__PIXEL_CHAR_WIDTH(string[last_char_line + 1], font_map) + 1) / 2 * text_size + (__PIXEL_CHAR_WIDTH(string[last_char_line + 1], font_map) > 0 ? text_size : 0);
+			if (new_line_width <= max_width) line_width = new_line_width;
+			else break;
+
 		}
 
 		int x_pos = x - (alignment_x == ALIGNMENT_LEFT ? 0 : (alignment_x == ALIGNMENT_RIGHT ? line_width : line_width / 2));
 
-		for (; string[text_i].value != '\n' && string[text_i].value != '\0'; text_i++) {
+		int x_tracer = x_pos;
 
-			if (string[text_i].value != '\x1f') if (x_hover >= x_pos - (text_size + 1) / 2 && x_hover < x_pos + (__PIXEL_CHAR_WIDTH(string[text_i], font_map) + 1) / 2 * text_size + text_size / 2 && y_hover >= y_pos && y_hover < y_pos + PIXEL_FONT_RESOULUTION * text_size / 2) return text_i;
+		int text_i_line = text_i;
 
-			x_pos += (__PIXEL_CHAR_WIDTH(string[text_i], font_map) + 1) / 2 * text_size + (__PIXEL_CHAR_WIDTH(string[text_i], font_map) > 0 ? text_size : 0);
+		for (; text_i_line <= last_char_line; text_i_line++) {
+
+			if (string[text_i_line].value != '\x1f') if (x_hover >= x_tracer - (text_size + 1) / 2 && x_hover < x_tracer + (__PIXEL_CHAR_WIDTH(string[text_i_line], font_map) + 1) / 2 * text_size + text_size / 2 && y_hover >= y_tracer && y_hover < y_tracer + PIXEL_FONT_RESOULUTION * text_size / 2) return text_i_line;
+
+			x_tracer += (__PIXEL_CHAR_WIDTH(string[text_i_line], font_map) + 1) / 2 * text_size + (__PIXEL_CHAR_WIDTH(string[text_i_line], font_map) > 0 ? text_size : 0);
 
 		}
 
+		text_i = text_i_line;
 
 		if (string[text_i].value == '\0') break;
 
-		y_pos += (PIXEL_FONT_RESOULUTION / 2 + line_spacing) * text_size;
-		text_i++;
+		y_tracer += (PIXEL_FONT_RESOULUTION / 2 + line_spacing) * text_size;
+		if (string[text_i].value == '\n') text_i++;
 	}
 
 	return -1;
