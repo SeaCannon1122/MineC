@@ -1,4 +1,5 @@
 default_pixelfont l:assets/fonts/default.pixelfont
+debug_pixelfont l:assets/fonts/debug.pixelfont
 settings l:settings.keyvalue
 constants l:constants.keyvalue
 texture_manager r:assets/textures.keyvalue

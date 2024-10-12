@@ -4,6 +4,8 @@ project(blocks2)
 set(CLIENT_SOURCE_FILES
     src/general/utils.c
     src/client/gui/menu.c
+    src/client/gui/pixel_char.c
+    src/client/gui/argb_image.c
     src/client/game_client_body/game_client.c
     src/client/game_client_body/game_menus.c
     src/client/game_client_body/game_client_renderer.c

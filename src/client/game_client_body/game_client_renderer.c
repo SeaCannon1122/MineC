@@ -9,7 +9,7 @@
 #include "general/platformlib/platform.h"
 #include "general/platformlib/opengl_rendering.h"
 #include "game_client.h"
-#include "general/argb_image.h"
+#include "client/gui/argb_image.h"
 
 char vertexShaderSource[] =
 "#version 330 core\n"

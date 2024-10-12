@@ -21,7 +21,7 @@
 #endif
 
 #ifndef PIXEL_FONT_SHADOW_DIVISOR
-#define PIXEL_FONT_SHADOW_DIVISOR 4
+#define PIXEL_FONT_SHADOW_DIVISOR 3
 #endif
 
 #define PIXEL_CHAR_UNDERLINE_MASK  0x80000000
@@ -58,6 +58,8 @@ struct pixel_char {
 #define pixel_char_convert_string(name, str, color, background_color, masks) struct pixel_char name[sizeof(str)]; {for(int _gsc_i = 0; _gsc_i < sizeof(str); _gsc_i++) name[_gsc_i] = (struct pixel_char) {color, background_color, str[_gsc_i], masks};}
 
 #define pixel_char_convert_string_in(name, str, color, background_color, masks) {for(int _gsc_i = 0; _gsc_i < sizeof(str); _gsc_i++) name[_gsc_i] = (struct pixel_char) {color, background_color, str[_gsc_i], masks};}
+
+struct pixel_font* load_pixel_font(char* src);
 
 void pixel_char_print_string(const struct pixel_char* _PIXEL_CHAR_RESTRICT string, int text_size, int line_spacing, int x, int y, int alignment_x, int alignment_y, int max_width, int max_lines, unsigned int* _PIXEL_CHAR_RESTRICT screen, int width, int height, const const void** _PIXEL_CHAR_RESTRICT font_map);
 

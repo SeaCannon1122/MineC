@@ -10,6 +10,9 @@
 #include "game_client.h"
 #include "general/logging.h"
 
+#undef parse_string(x, y)
+#define parse_string(x, y)
+
 void init_networker(struct game_client* game) {
 	game->networker.network_handle = NULL;
 	game->networker.status = NETWORK_INACTIVE;

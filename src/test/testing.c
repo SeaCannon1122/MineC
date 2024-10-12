@@ -62,7 +62,7 @@ int testing_main() {
 
 	pixel_char_convert_string_in(label.text, "Hello World!\nMy name is SeaCannon1122\nHow are you?", 0xff00ffff, 0xff3f3f3f, PIXEL_CHAR_SHADOW_MASK);
 
-	struct gui_menu menu = { -1, -1, -1, -1, 0, 1, {&label} };
+	struct menu_scene menu = { -1, -1, -1, -1, 0, 1, {&label} };
 
 	struct pixel_font* font = _load_char_font("../../../resources/client/assets/fonts/debug.pixelfont");
 
@@ -97,7 +97,7 @@ int testing_main() {
 
 		if (get_key_state(KEY_MOUSE_RIGHT)) if(p.x != -1) label.max_width = p.x - label.x * menu_scale;
 
-		menu_frame(&menu, pixels, width, height, menu_scale, &font, get_key_state(KEY_MOUSE_LEFT), p.x, p.y);
+		menu_scene_frame(&menu, pixels, width, height, menu_scale, &font, p.x, p.y);
 
 		window_draw(window, pixels, width, height, 1);
 

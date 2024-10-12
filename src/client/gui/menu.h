@@ -35,6 +35,7 @@ struct menu_label {
 	int max_width;
 	int max_rows;
 	int selectable;
+	int hoverable;
 	int text_size;
 	struct pixel_char text[];
 };
@@ -48,8 +49,10 @@ struct menu_image {
 	int alignment_y;
 	int image_alignment_x;
 	int image_alignment_y;
+	int hoverable;
 	int image;
-	int image_scalar;
+	int hover_image;
+	float image_scalar;
 };
 
 struct menu_slider {
@@ -82,15 +85,22 @@ struct menu_text_field {
 	char* field_visible;
 };
 
-struct gui_menu {
+struct menu_scene {
+	int current_item;
+
 	int select_label;
-	int current_pos;
 	int select_begin;
 	int select_end;
 	int selecting;
+
+	int current_pos;
+
+	int image_pos_x;
+	int image_pox_y;
+	int image_index;
 
 	int items_count;
 	int* items[];
 };
 
-void menu_frame(struct gui_menu* menu, unsigned int* screen, int width, int height, int scale, const void** resource_map, int mouse_click, int mouse_x, int mouse_y);
+void menu_scene_frame(struct menu_scene* menu, unsigned int* screen, int width, int height, int scale, const void** resource_map, int mouse_x, int mouse_y);

@@ -12,8 +12,9 @@
 #include "general/resource_loader.h"
 #include "general/resource_manager.h"
 
-#include "client/gui/char_font.h"
+#include "client/gui/pixel_char.h"
 #include "client/gui/menu.h"
+#include "client/game_client_body/resources.h"
 #include "game_menus.h"
 #include "game_client_networker.h"
 #include "game_client_renderer.h"
@@ -28,7 +29,7 @@ void log_chat_message(struct game_client* game) {
 	int message_index = game->chat_stream.next_index;
 	game->chat_stream.next_index = (game->chat_stream.next_index + 1) % game->constants.chat_stream_length;
 
-	struct char_font* font = game->game_menus.chat_menu.font;
+	//struct char_font* font = game->game_menus.chat_menu.font;
 
 	char message_buffer[MAX_SERVER_MESSAGE_LENGTH + 1];
 
@@ -71,7 +72,7 @@ void log_chat_message(struct game_client* game) {
 
 	
 	i = 0;
-	game->chat_stream.stream[message_index].is_chat_line_break[0] = 0;
+	/*game->chat_stream.stream[message_index].is_chat_line_break[0] = 0;
 	while (1) {
 
 		if (game->chat_stream.stream[message_index].message[i].value == '\0') break;
@@ -95,7 +96,7 @@ void log_chat_message(struct game_client* game) {
 
 		
 
-	}
+	}*/
 
 	
 
@@ -192,6 +193,8 @@ int new_game_client(struct game_client* game, char* resource_path) {
 		return 2;
 	}
 
+	game->resource_map[RESOURCE_PIXEL_FONT_DEFAULT] = get_value_from_key(game->resource_manager, "debug_pixelfont").ptr;
+
 	struct key_value_map* settings_map = get_value_from_key(game->resource_manager, "settings").ptr;
 	if (settings_map == NULL) {
 		log_message(game->debug_log_file, "Couldn't find critical settings file link 'settings' in resourcelayout");
@@ -260,7 +263,7 @@ void run_game_client(struct game_client* game) {
 
 	game->running = true;
 
-	game->window = create_window(200, 100, 1100, 700, "client");
+	game->window = window_create(200, 100, 1100, 700, "client");
 
 	log_message(game->debug_log_file, "Created window");
 
@@ -269,8 +272,8 @@ void run_game_client(struct game_client* game) {
 
 	while (get_key_state(KEY_MOUSE_LEFT) & 0b1) sleep_for_ms(10);
 
-	game->render_state.width = (get_window_width(game->window) + game->settings.resolution_scale - 1) / game->settings.resolution_scale;
-	game->render_state.height = (get_window_height(game->window) + game->settings.resolution_scale - 1) / game->settings.resolution_scale;
+	game->render_state.width = (window_get_width(game->window) + game->settings.resolution_scale - 1) / game->settings.resolution_scale;
+	game->render_state.height = (window_get_height(game->window) + game->settings.resolution_scale - 1) / game->settings.resolution_scale;
 	game->render_state.pixels = malloc(game->render_state.width * game->render_state.height * sizeof(unsigned int));
 
 	renderer_init(game);
@@ -278,10 +281,10 @@ void run_game_client(struct game_client* game) {
 	log_message(game->debug_log_file, "Entering main Game Loop");
 
 
-	while (is_window_active(game->window) && !game->game_menus.main_menu.quit_game_button_state) {
+	while (window_is_active(game->window) ) {// && !game->game_menus.main_menu.quit_game_button_state) {
 		
-		int new_width = (get_window_width(game->window) + game->settings.resolution_scale - 1) / game->settings.resolution_scale;
-		int new_height = (get_window_height(game->window) + game->settings.resolution_scale - 1) / game->settings.resolution_scale;
+		int new_width = (window_get_width(game->window) + game->settings.resolution_scale - 1) / game->settings.resolution_scale;
+		int new_height = (window_get_height(game->window) + game->settings.resolution_scale - 1) / game->settings.resolution_scale;
 		if (new_width != game->render_state.width || new_height != game->render_state.height) {
 			free(game->render_state.pixels);
 			game->render_state.pixels = malloc(new_width * new_height * sizeof(unsigned int));
@@ -300,14 +303,14 @@ void run_game_client(struct game_client* game) {
 
 		game_menus_frame(game);
 
-		draw_to_window(game->window, game->render_state.pixels, game->render_state.width, game->render_state.height, game->settings.resolution_scale);
+		window_draw(game->window, game->render_state.pixels, game->render_state.width, game->render_state.height, game->settings.resolution_scale);
 
 		sleep_for_ms(10);
 	}
 
 	free(game->render_state.pixels);
 
-	close_window(game->window);
+	window_destroy(game->window);
 	game->running = false;
 	game->in_game_flag = false;
 	game->networker.close_connection_flag = true;

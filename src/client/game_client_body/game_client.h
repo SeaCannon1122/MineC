@@ -31,6 +31,7 @@ struct chunk_table_entry {
 };
 
 struct game_client {
+	void* resource_map[200];
 	char resource_folder_path[1024];
 	FILE* debug_log_file;
 	FILE* chat_log_file;

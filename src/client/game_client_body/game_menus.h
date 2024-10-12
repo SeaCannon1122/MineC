@@ -4,11 +4,21 @@
 #include <stdio.h>
 
 #include "client/gui/menu.h"
-#include "client/gui/char_font.h"
+#include "client/game_client_body/resources.h"
 #include "game/game_constants.h"
 
 #include "general/keyvalue.h"
 
+#define main_menu_this_is_not_minecraft_label_text "This is not Minecraft!!!"
+#define main_menu_join_game_label_text "Join Game"
+#define main_menu_options_label_text "Options..."
+#define main_menu_quit_game_label_text "Quit Game"
+
+#define options_menu_options_label_text "Options"
+#define options_menu_fov_label_text "FOV:    "
+#define options_menu_render_distance_label_text "Render Distance:    Chunks"
+#define options_menu_gui_scale_label_text "GUI Scale:     "
+#define options_menu_done_label_text "Done"
 
 enum blocks_menus {
 	NO_MENU,
@@ -22,44 +32,200 @@ enum blocks_menus {
 
 struct game_menus {
 	struct main_menu {
-		struct gui_character this_is_not_minecraft_text[25];
 
-		struct gui_character join_game_text[10];
-		bool join_game_button_state;
-		bool join_game_button_enabled;
+		struct main_menu_this_is_not_minecraft_label {
+			int menu_item_type;
+			int z;
+			int x;
+			int y;
+			int alignment_x;
+			int alignment_y;
+			int text_alignment_x;
+			int text_alignment_y;
+			int max_width;
+			int max_rows;
+			int selectable;
+			int hoverable;
+			int text_size;
+			struct pixel_char text[sizeof(main_menu_this_is_not_minecraft_label_text)];
+		} this_is_not_minecraft_label;
 
-		struct gui_character options_text[11];
-		bool options_button_state;
-		bool options_button_enabled;
+		struct main_menu_join_game_label {
+			int menu_item_type;
+			int z;
+			int x;
+			int y;
+			int alignment_x;
+			int alignment_y;
+			int text_alignment_x;
+			int text_alignment_y;
+			int max_width;
+			int max_rows;
+			int selectable;
+			int hoverable;
+			int text_size;
+			struct pixel_char text[sizeof(main_menu_join_game_label_text)];
+		} join_game_label;
 
-		struct gui_character quit_game_text[10];
-		bool quit_game_button_state;
-		bool quit_game_button_enabled;
+		struct main_menu_options_label {
+			int menu_item_type;
+			int z;
+			int x;
+			int y;
+			int alignment_x;
+			int alignment_y;
+			int text_alignment_x;
+			int text_alignment_y;
+			int max_width;
+			int max_rows;
+			int selectable;
+			int hoverable;
+			int text_size;
+			struct pixel_char text[sizeof(main_menu_options_label_text)];
+		} options_label;
 
-		struct menu_scene menu;
+		struct main_menu_quit_game_label {
+			int menu_item_type;
+			int z;
+			int x;
+			int y;
+			int alignment_x;
+			int alignment_y;
+			int text_alignment_x;
+			int text_alignment_y;
+			int max_width;
+			int max_rows;
+			int selectable;
+			int hoverable;
+			int text_size;
+			struct pixel_char text[sizeof(main_menu_quit_game_label_text)];
+		} quit_game_label;
+
+		struct menu_image background_image;
+
+		struct menu_image join_game_button_image;
+		struct menu_image options_button_image;
+		struct menu_image quit_game_button_image;
+
+		struct main_menu_scene {
+			int current_item;
+
+			int select_label;
+			int select_begin;
+			int select_end;
+			int selecting;
+
+			int current_pos;
+
+			int image_pos_x;
+			int image_pox_y;
+			int image_index;
+
+			int items_count;
+			int* items[20];
+		} menu;
 	} main_menu;
 
 	struct options_menu {
-		struct gui_character options_text[8];
+		struct options_menu_options_label {
+			int menu_item_type;
+			int z;
+			int x;
+			int y;
+			int alignment_x;
+			int alignment_y;
+			int text_alignment_x;
+			int text_alignment_y;
+			int max_width;
+			int max_rows;
+			int selectable;
+			int text_size;
+			struct pixel_char text[sizeof(options_menu_options_label_text)];
+		} options_label;
 
 		float fov_slider_state;
-		struct gui_character fov_text[9];
+		struct options_menu_fov_label {
+			int menu_item_type;
+			int z;
+			int x;
+			int y;
+			int alignment_x;
+			int alignment_y;
+			int text_alignment_x;
+			int text_alignment_y;
+			int max_width;
+			int max_rows;
+			int selectable;
+			int text_size;
+			struct pixel_char text[sizeof(options_menu_fov_label_text)];
+		} fov_label;
 
 		float render_distance_slider_state;
-		struct gui_character render_distance_text[27];
+		struct options_menu_render_distance_label {
+			int menu_item_type;
+			int z;
+			int x;
+			int y;
+			int alignment_x;
+			int alignment_y;
+			int text_alignment_x;
+			int text_alignment_y;
+			int max_width;
+			int max_rows;
+			int selectable;
+			int text_size;
+			struct pixel_char text[sizeof(options_menu_render_distance_label_text)];
+		} render_distance_label;
 
 		bool gui_scale_button_state;
 		bool gui_scale_button_enabled;
-		struct gui_character gui_scale_text[16];
+		struct options_menu_gui_scale_label {
+			int menu_item_type;
+			int z;
+			int x;
+			int y;
+			int alignment_x;
+			int alignment_y;
+			int text_alignment_x;
+			int text_alignment_y;
+			int max_width;
+			int max_rows;
+			int selectable;
+			int text_size;
+			struct pixel_char text[sizeof(options_menu_gui_scale_label_text)];
+		} gui_scale_label;
 
 		bool done_button_state;
 		bool done_button_enabled;
-		struct gui_character done_text[5];
+		struct options_menu_done_label {
+			int menu_item_type;
+			int z;
+			int x;
+			int y;
+			int alignment_x;
+			int alignment_y;
+			int text_alignment_x;
+			int text_alignment_y;
+			int max_width;
+			int max_rows;
+			int selectable;
+			int text_size;
+			struct pixel_char text[sizeof(options_menu_done_label_text)];
+		} done_label;
 
-		struct menu_scene menu;
+		struct options_menu_scene {
+			int select_label;
+			int current_pos;
+			int select_begin;
+			int select_end;
+			int selecting;
+
+			int items_count;
+			int* items[20];
+		} menu;
 	} options_menu;
 
-	struct join_game_menu {
+	/*struct join_game_menu {
 		struct gui_character join_a_multiplayer_game_text[24];
 
 		struct gui_character ip_address_text[12];
@@ -144,7 +310,7 @@ struct game_menus {
 		struct gui_character disconnect_text[11];
 
 		struct menu_scene menu;
-	} in_game_options_menu;
+	} in_game_options_menu;*/
 
 	int active_menu;
 };

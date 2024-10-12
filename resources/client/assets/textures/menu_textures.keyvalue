@@ -1,3 +1,3 @@
-menu_background l:menu/background.png
-menu_button_disabled l:menu/button_texture_disabled.png
-menu_button_enabled l:menu/button_texture_enabled.png
+texture_menu_background l:menu/background.png
+texture_menu_button l:menu/button_texture.png
+texture_menu_button_hover l:menu/button_texture_hover.png

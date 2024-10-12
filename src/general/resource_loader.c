@@ -72,15 +72,6 @@ char* load_text_file(char* filename) {
     return buffer;
 }
 
-struct char_font* load_char_font(char* src) {
-
-    int size;
-    struct char_font* font = load_file(src, &size);
-    if (size != 4096) { free(font); return NULL; }
-
-    return font;
-}
-
 int compare_resource_manager_entrys(const void* a, const void* b) {
     return strcmp(((struct key_value_map_entry*)a)->key, ((struct key_value_map_entry*)b)->key);
 }

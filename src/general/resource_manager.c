@@ -8,6 +8,8 @@
 #include "keyvalue.h"
 #include "resource_loader.h"
 #include "utils.h"
+#include "client/gui/argb_image.h"
+#include "client/gui/pixel_char.h"
 
 int rm_compare_resource_manager_entrys(const void* a, const void* b) {
 	return strcmp(((struct key_value_map_entry*)a)->key, ((struct key_value_map_entry*)b)->key);
@@ -101,7 +103,7 @@ struct key_value_map* new_resource_manager(char* src_keyvalue) {
 				mappings[i].value.ptr = load_argb_image_from_png(file_path);
 			}
 			else if (file_extension[0] == 'p' && file_extension[1] == 'i' && file_extension[2] == 'x' && file_extension[3] == 'e' && file_extension[4] == 'l' && file_extension[5] == 'f' && file_extension[6] == 'o' && file_extension[7] == 'n' && file_extension[8] == 't' && file_extension[9] == '\0') {
-				mappings[i].value.ptr = load_char_font(file_path);
+				mappings[i].value.ptr = load_pixel_font(file_path);
 			}
 			else if (file_extension[0] == 'k' && file_extension[1] == 'e' && file_extension[2] == 'y' && file_extension[3] == 'v' && file_extension[4] == 'a' && file_extension[5] == 'l' && file_extension[6] == 'u' && file_extension[7] == 'e' && file_extension[8] == '\0') {
 				mappings[i].value.ptr = load_key_value_map(file_path);

@@ -23,8 +23,8 @@ void game_client_simulator_thread_function(struct game_client* game) {
 		if (game->in_game_flag) {
 
 			if (game->game_menus.active_menu == NO_MENU) {
-				if (get_key_state(KEY_ESCAPE) == 0b11 && is_window_selected(game->window)) switch_game_menu(game, INGAME_OPTIONS_MENU);
-				else if (get_key_state('T') == 0b11 && is_window_selected(game->window)) switch_game_menu(game, CHAT_MENU);
+				if (get_key_state(KEY_ESCAPE) == 0b11 && window_is_selected(game->window)) switch_game_menu(game, INGAME_OPTIONS_MENU);
+				else if (get_key_state('T') == 0b11 && window_is_selected(game->window)) switch_game_menu(game, CHAT_MENU);
 
 			}
 

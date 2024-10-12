@@ -1,11 +1,10 @@
 #include "menu.h"
 
+#include "stdio.h"
 #include <stdlib.h>
 #include <malloc.h>
 
-int compare(const void* a, const void* b) {
-	return ((*(int**)a)[1] - (*(int**)b)[1]);
-}
+#include "general/platformlib/platform.h"
 
 int menu_x(int menu_x, int menu_alignment, int menu_width, int scale) {
 
@@ -29,32 +28,42 @@ int menu_y(int menu_y, int menu_alignment, int menu_height, int scale) {
 	return y;
 }
 
-void menu_frame(struct gui_menu* menu, unsigned int* screen, int width, int height, int scale, const void** resource_map, int mouse_click, int mouse_x, int mouse_y) {
+struct menu_item_wrapper {
+	int* item;
+	int index;
+};
+
+int compare(const void* a, const void* b) {
+	return (((struct menu_item_wrapper*)a)->item[1] - ((struct menu_item_wrapper*)b)->item[1]);
+}
+
+
+void menu_scene_frame(struct menu_scene* menu, unsigned int* screen, int width, int height, int scale, const void** resource_map, int mouse_x, int mouse_y) {
+
+	int mouse_click = get_key_state(KEY_MOUSE_LEFT);
 
 	union argb_pixel* screen_argb = (union argb_pixel*)screen;
 
-	int** ordered_menu_items = alloca(sizeof(int*) * menu->items_count);;
 
-	memcpy(ordered_menu_items, menu->items, sizeof(void*) * menu->items_count);
+	struct menu_item_wrapper* ordered_menu_items = alloca(sizeof(struct menu_item_wrapper) * menu->items_count);;
+	for (int i = 0; i < menu->items_count; i++) { ordered_menu_items[i].index = i; ordered_menu_items[i].item = menu->items[i]; }
 
-	qsort(ordered_menu_items, menu->items_count, sizeof(void*), compare);
+	qsort(ordered_menu_items, menu->items_count, sizeof(struct menu_item_wrapper), compare);
 
 	for (int i = 0; i < menu->items_count; i++) {
-		switch (ordered_menu_items[i][0]) {
+		switch (ordered_menu_items[i].item[0]) {
 
 		case MENU_ITEM_LABEL: {
 
-			struct menu_label* label = ordered_menu_items[i];
+			struct menu_label* label = ordered_menu_items[i].item;
 			
 			int string_size = 1;
 			for (; label->text[string_size - 1].value != '\0'; string_size++);
 
 			struct pixel_char* text = alloca(sizeof(struct pixel_char) * string_size);
-
 			memcpy(text, label->text, sizeof(struct pixel_char) * string_size);
 
-			if (label->selectable) {
-
+			if (label->hoverable) {
 				int select_index = pixel_char_get_hover_index(
 					text,
 					label->text_size * scale,
@@ -70,44 +79,50 @@ void menu_frame(struct gui_menu* menu, unsigned int* screen, int width, int heig
 					mouse_y
 				);
 
-
-				if (mouse_click == 0b11) {
-
-					if (menu->select_label == i && menu->select_begin == select_index && menu->selecting == 1) {
-
-						for (menu->select_end = select_index; ; menu->select_end++) if (
-							(text[menu->select_end].value < 'a' || text[menu->select_end].value > 'z') &&
-							(text[menu->select_end].value < 'A' || text[menu->select_end].value > 'Z') &&
-							(text[menu->select_end].value < '0' || text[menu->select_end].value > '9')
-							) break;
-
-						if (menu->select_end != select_index) menu->select_end--;
-
-						for (menu->select_begin = select_index; menu->select_begin > 0; menu->select_begin--) if (
-							(text[menu->select_begin - 1].value < 'a' || text[menu->select_begin - 1].value > 'z') &&
-							(text[menu->select_begin - 1].value < 'A' || text[menu->select_begin - 1].value > 'Z') &&
-							(text[menu->select_begin - 1].value < '0' || text[menu->select_begin - 1].value > '9')
-							) break;
-
-						menu->selecting = 0;
-					}
-					else {
-						menu->select_label = i;
-						menu->select_begin = select_index;
-						menu->select_end = -1;
-						menu->selecting = 1;
-					}
-
+				if (select_index >= 0) {
+					menu->current_item = ordered_menu_items[i].index;
+					menu->current_pos = select_index;
 				}
 
-				else if (mouse_click && menu->select_label == i && select_index != -1 && (menu->select_begin != select_index || menu->select_end != -1) && menu->selecting == 1) {
-					menu->select_end = select_index;
-				}
+				if (label->selectable) {
 
-				if (menu->select_begin >= 0 && menu->select_end >= 0) {
-					for (int j = min(menu->select_begin, menu->select_end); j <= max(menu->select_begin, menu->select_end); j++) {
-						text[j].color = 0xffffff00;
-						text[j].masks |= PIXEL_CHAR_BACKGROUND_MASK;
+					if (mouse_click == 0b11) {
+						if (menu->select_label == i && menu->select_begin == select_index && menu->selecting == 1) {
+
+							for (menu->select_end = select_index; ; menu->select_end++) if (
+								(text[menu->select_end].value < 'a' || text[menu->select_end].value > 'z') &&
+								(text[menu->select_end].value < 'A' || text[menu->select_end].value > 'Z') &&
+								(text[menu->select_end].value < '0' || text[menu->select_end].value > '9')
+								) break;
+
+							if (menu->select_end != select_index) menu->select_end--;
+
+							for (menu->select_begin = select_index; menu->select_begin > 0; menu->select_begin--) if (
+								(text[menu->select_begin - 1].value < 'a' || text[menu->select_begin - 1].value > 'z') &&
+								(text[menu->select_begin - 1].value < 'A' || text[menu->select_begin - 1].value > 'Z') &&
+								(text[menu->select_begin - 1].value < '0' || text[menu->select_begin - 1].value > '9')
+								) break;
+
+							menu->selecting = 0;
+						}
+						else {
+							menu->select_label = i;
+							menu->select_begin = select_index;
+							menu->select_end = -1;
+							menu->selecting = 1;
+						}
+
+					}
+
+					else if (mouse_click && menu->select_label == i && select_index != -1 && (menu->select_begin != select_index || menu->select_end != -1) && menu->selecting == 1) {
+						menu->select_end = select_index;
+					}
+
+					if (menu->select_begin >= 0 && menu->select_end >= 0) {
+						for (int j = min(menu->select_begin, menu->select_end); j <= max(menu->select_begin, menu->select_end) && j > 0 && j < string_size; j++) {
+							text[j].color = 0xffffff00;
+							text[j].masks |= PIXEL_CHAR_BACKGROUND_MASK;
+						}
 					}
 				}
 			}
@@ -133,12 +148,42 @@ void menu_frame(struct gui_menu* menu, unsigned int* screen, int width, int heig
 
 		case MENU_ITEM_IMAGE: {
 
-			struct menu_image* image = ordered_menu_items[i];
+			struct menu_image* image = ordered_menu_items[i].item;
+
+			int image_to_draw = image->image;
+
+			int x_rel = 0;
+			int y_rel = 0;
+
+			int image_index = argb_image_get_rel_position(resource_map[image->image],
+				menu_x(image->x, image->alignment_x, width, scale),
+				menu_y(image->y, image->alignment_y, height, scale),
+				image->image_alignment_x,
+				image->image_alignment_y,
+				0,
+				0,
+				width,
+				height,
+				image->image_scalar * scale,
+				&x_rel,
+				&y_rel,
+				mouse_x,
+				mouse_y
+			);
+
+			if (image_index >= 0) {
+				menu->current_item = ordered_menu_items[i].index;
+				menu->image_index = image_index;
+				menu->image_pos_x = x_rel;
+				menu->image_pox_y = y_rel;
+				if(image->hoverable) image_to_draw = image->hover_image;
+			}
 
 			argb_image_draw(
-				resource_map[image->image], 
-				image->x, 
-				image->y, 
+				MODE_RGB,
+				resource_map[image_to_draw],
+				menu_x(image->x, image->alignment_x, width, scale),
+				menu_y(image->y, image->alignment_y, height, scale),
 				image->image_alignment_x, 
 				image->image_alignment_y, 
 				0, 
@@ -146,7 +191,7 @@ void menu_frame(struct gui_menu* menu, unsigned int* screen, int width, int heig
 				screen, 
 				width, 
 				height, 
-				image->image_scalar
+				image->image_scalar * scale
 			);
 
 			break;

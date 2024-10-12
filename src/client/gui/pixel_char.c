@@ -1,8 +1,33 @@
 #include "pixel_char.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+
 #define __PIXEL_CHAR_IF_BIT(ptr, pos) (((char*)ptr)[pos / 8] & (1 << (pos % 8)) )
 
 #define __PIXEL_CHAR_WIDTH(c, font_map) (((struct pixel_font*)((font_map)[(c).masks & PIXEL_CHAR_FONT_MASK]))->char_font_entries[(c).value].width)
+
+struct pixel_font* load_pixel_font(char* src) {
+
+	FILE* file = fopen(src, "rb");
+	if (file == NULL) return NULL;
+
+	fseek(file, 0, SEEK_END);
+	long fileSize = ftell(file);
+	rewind(file);
+
+	char* buffer = (char*)malloc(fileSize);
+	if (buffer == NULL) {
+		fclose(file);
+		return NULL;
+	}
+
+	size_t bytesRead = fread(buffer, sizeof(char), fileSize, file);
+
+	fclose(file);
+
+	return buffer;
+}
 
 
 void pixel_char_background_print(const struct pixel_char* _PIXEL_CHAR_RESTRICT c, int text_size, int x, int y, unsigned int* _PIXEL_CHAR_RESTRICT screen, int width, int height, const const void** _PIXEL_CHAR_RESTRICT font_map) {
@@ -40,7 +65,7 @@ void pixel_char_print(const struct pixel_char* _PIXEL_CHAR_RESTRICT c, int text_
 			if (x_bit_pos < 0) bit_pos -= 1;
 			if (y_bit_pos < 0) bit_pos -= PIXEL_FONT_RESOULUTION;
 
-			if (__PIXEL_CHAR_IF_BIT(((struct pixel_font*)(font_map[c[0].masks & 0x0fffffff]))->char_font_entries[c[0].value].layout, bit_pos)) {
+			if (__PIXEL_CHAR_IF_BIT(((struct pixel_font*)(font_map[c[0].masks & PIXEL_CHAR_FONT_MASK]))->char_font_entries[c[0].value].layout, bit_pos)) {
 				if (i + cursive_offset + x >= 0 && j + y >= 0 && i + cursive_offset + x < width && j + y < height) screen[(i + cursive_offset + x) + width * (j + y)] = c->color;
 				if (c->masks & PIXEL_CHAR_SHADOW_MASK && i + cursive_offset + x + shaddow_offset >= 0 && j + y + text_size >= 0 && i + cursive_offset + x + shaddow_offset < width && j + y + text_size < height)
 					screen[(i + cursive_offset + x + shaddow_offset) + width * (j + y + text_size)] =
