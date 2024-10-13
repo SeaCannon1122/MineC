@@ -44,6 +44,7 @@ set(TEST_SOURCE_FILES
 
     src/test/main.c
     src/test/testing.c
+    src/test/key_value.c
     src/client/gui/menu.c
 
     src/client/gui/pixel_char.c

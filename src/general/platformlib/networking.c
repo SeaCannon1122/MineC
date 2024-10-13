@@ -189,6 +189,13 @@ void get_ip_address_and_port(void* client_handle, char* address_buffer, unsigned
     *port_buffer = ntohs(client_addr.sin_port);
 }
 
+int available_data_size(void* socket_handle) {
+    int available = 0;
+    ioctl((intptr_t)socket_handle, FIONREAD, &available);
+
+    return available;
+}
+
 int receive_data(void* socket_handle, void* buffer, int size, bool* interrupt, unsigned int timeout_milliseconds) {
     int available = 0;
 
