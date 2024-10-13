@@ -21,6 +21,9 @@ void init_game_menus(struct game_client* game) {
 	game->resource_map[RESOURCE_TEXTURE_DIRT_MULTIBLE] = get_value_from_key(game->resource_manager, "texture_menu_background").ptr;
 	game->resource_map[RESOURCE_TEXTURE_MENU_BUTTON] = get_value_from_key(game->resource_manager, "texture_menu_button").ptr;
 	game->resource_map[RESOURCE_TEXTURE_MENU_BUTTON_HOVER] = get_value_from_key(game->resource_manager, "texture_menu_button_hover").ptr;
+	game->resource_map[RESOURCE_TEXTURE_MENU_BUTTON_SHORT] = get_value_from_key(game->resource_manager, "texture_menu_button_short").ptr;
+	game->resource_map[RESOURCE_TEXTURE_MENU_BUTTON_HOVER_SHORT] = get_value_from_key(game->resource_manager, "texture_menu_button_hover_short").ptr;
+
 
 	game->game_menus.main_menu.background_image = (struct menu_image){
 		MENU_ITEM_IMAGE,
@@ -34,12 +37,12 @@ void init_game_menus(struct game_client* game) {
 		0,
 		RESOURCE_TEXTURE_DIRT_MULTIBLE,
 		0,
-		7.f,
+		7,
 	};
 
 
 
-	game->game_menus.main_menu.this_is_not_minecraft_label = (struct main_menu_this_is_not_minecraft_label){
+	game->game_menus.main_menu.this_is_not_minecraft_label = (struct game_menu_label){
 		MENU_ITEM_LABEL,
 		10,
 		0,
@@ -56,7 +59,7 @@ void init_game_menus(struct game_client* game) {
 		{0},
 	};
 
-	game->game_menus.main_menu.join_game_label = (struct main_menu_join_game_label){
+	game->game_menus.main_menu.join_game_label = (struct game_menu_label){
 		MENU_ITEM_LABEL,
 		10,
 		0,
@@ -85,13 +88,13 @@ void init_game_menus(struct game_client* game) {
 		1,
 		RESOURCE_TEXTURE_MENU_BUTTON,
 		RESOURCE_TEXTURE_MENU_BUTTON_HOVER,
-		1.5f,
+		1,
 	};
 
-	game->game_menus.main_menu.options_label = (struct main_menu_options_label){
+	game->game_menus.main_menu.options_label = (struct game_menu_label){
 		MENU_ITEM_LABEL,
 		10,
-		-49,
+		-51,
 		60,
 		ALIGNMENT_MIDDLE,
 		ALIGNMENT_MIDDLE,
@@ -108,22 +111,22 @@ void init_game_menus(struct game_client* game) {
 	game->game_menus.main_menu.options_button_image = (struct menu_image){
 		MENU_ITEM_IMAGE,
 		1,
-		-49,
+		-51,
 		60,
 		ALIGNMENT_MIDDLE,
 		ALIGNMENT_MIDDLE,
 		ALIGNMENT_MIDDLE,
 		ALIGNMENT_MIDDLE,
 		1,
-		RESOURCE_TEXTURE_MENU_BUTTON,
-		RESOURCE_TEXTURE_MENU_BUTTON_HOVER,
-		1.5f,
+		RESOURCE_TEXTURE_MENU_BUTTON_SHORT,
+		RESOURCE_TEXTURE_MENU_BUTTON_HOVER_SHORT,
+		1,
 	};
 
-	game->game_menus.main_menu.quit_game_label = (struct main_menu_quit_game_label){
+	game->game_menus.main_menu.quit_game_label = (struct game_menu_label){
 		MENU_ITEM_LABEL,
 		10,
-		49,
+		51,
 		60,
 		ALIGNMENT_MIDDLE,
 		ALIGNMENT_MIDDLE,
@@ -140,16 +143,16 @@ void init_game_menus(struct game_client* game) {
 	game->game_menus.main_menu.quit_game_button_image = (struct menu_image){
 		MENU_ITEM_IMAGE,
 		1,
-		49,
+		51,
 		60,
 		ALIGNMENT_MIDDLE,
 		ALIGNMENT_MIDDLE,
 		ALIGNMENT_MIDDLE,
 		ALIGNMENT_MIDDLE,
 		1,
-		RESOURCE_TEXTURE_MENU_BUTTON,
-		RESOURCE_TEXTURE_MENU_BUTTON_HOVER,
-		1.5f,
+		RESOURCE_TEXTURE_MENU_BUTTON_SHORT,
+		RESOURCE_TEXTURE_MENU_BUTTON_HOVER_SHORT,
+		1,
 	};
 
 	pixel_char_convert_string_in(game->game_menus.main_menu.this_is_not_minecraft_label.text, main_menu_this_is_not_minecraft_label_text, 0xffffffff, 0xff000000, PIXEL_CHAR_SHADOW_MASK | RESOURCE_PIXEL_FONT_DEFAULT);
@@ -182,6 +185,21 @@ void init_game_menus(struct game_client* game) {
 		&game->game_menus.main_menu.quit_game_button_image,
 		&game->game_menus.main_menu.background_image
 		},
+	};
+
+	game->game_menus.options_menu.background_image = (struct menu_image){
+		MENU_ITEM_IMAGE,
+		-1,
+		0,
+		0,
+		ALIGNMENT_LEFT,
+		ALIGNMENT_TOP,
+		ALIGNMENT_LEFT,
+		ALIGNMENT_TOP,
+		0,
+		RESOURCE_TEXTURE_DIRT_MULTIBLE,
+		0,
+		7,
 	};
 
 //
@@ -445,7 +463,7 @@ void game_menus_frame(struct game_client* game) {
 	mousepos.x /= game->settings.resolution_scale;
 	mousepos.y /= game->settings.resolution_scale;
 
-	int render_gui_scale = (game->settings.gui_scale != 0 ? clamp_int(game->settings.gui_scale, 1, (width - 350) / 350 + 1) : (width - 350) / 350 + 1);
+	int render_gui_scale = (game->settings.gui_scale != 0 ? clamp_int(game->settings.gui_scale, 1, (width / game->settings.resolution_scale - 350) / 350 + 1) : (width / game->settings.resolution_scale - 350) / 350 + 1);
 
 	if (game->in_game_flag && (game->game_menus.active_menu == NO_MENU || game->game_menus.active_menu == CHAT_MENU || game->game_menus.active_menu == INGAME_OPTIONS_MENU)) {
 		
@@ -455,49 +473,14 @@ void game_menus_frame(struct game_client* game) {
 	switch (game->game_menus.active_menu) {
 
 	case MAIN_MENU: {
-		menu_scene_frame(&game->game_menus.main_menu.menu, pixels, width, height, render_gui_scale, game->resource_map, mousepos.x, mousepos.y);
-
+		menu_scene_frame(&game->game_menus.main_menu.menu, pixels, width, height, render_gui_scale, game->resource_map, mousepos.x, mousepos.y, game->input_state.left_click);
 
 		break;
 	}
 
 	case OPTIONS_MENU: {
 
-		menu_scene_frame(&game->game_menus.options_menu.menu, pixels, width, height, render_gui_scale, game->resource_map, mousepos.x, mousepos.y);
-
-		game->settings.render_distance = (float)game->constants.render_distance_min + (game->game_menus.options_menu.render_distance_slider_state * ((float)game->constants.render_distance_max - (float)game->constants.render_distance_min));
-		game->settings.fov = (float)game->constants.fov_min + (game->game_menus.options_menu.fov_slider_state * ((float)game->constants.fov_max - (float)game->constants.fov_min));
-
-		if (game->game_menus.options_menu.done_button_state || (get_key_state(KEY_ESCAPE) == 0b11 && window_is_selected(game->window))) {
-			game->game_menus.options_menu.done_button_state = false;
-			game->game_menus.active_menu = MAIN_MENU;
-			break;
-		}
-
-		else if (game->game_menus.options_menu.gui_scale_button_state) {
-			game->game_menus.options_menu.gui_scale_button_state = false;
-			game->settings.gui_scale = (game->settings.gui_scale + 1) % ((width + 350) / 350);
-
-			if (game->settings.gui_scale > 0) {
-				game->game_menus.options_menu.gui_scale_label.text[11].value = digit_to_char(game->settings.gui_scale);
-				game->game_menus.options_menu.gui_scale_label.text[12].value = '\x1f';
-				game->game_menus.options_menu.gui_scale_label.text[13].value = '\x1f';
-				game->game_menus.options_menu.gui_scale_label.text[14].value = '\x1f';
-			}
-			else {
-				game->game_menus.options_menu.gui_scale_label.text[11].value = 'A';
-				game->game_menus.options_menu.gui_scale_label.text[12].value = 'u';
-				game->game_menus.options_menu.gui_scale_label.text[13].value = 't';
-				game->game_menus.options_menu.gui_scale_label.text[14].value = 'o';
-			}
-		}
-
-		game->game_menus.options_menu.render_distance_label.text[17].value = (game->settings.render_distance < 10 ? '\x1f' : digit_to_char(game->settings.render_distance / 10));
-		game->game_menus.options_menu.render_distance_label.text[18].value = digit_to_char(game->settings.render_distance % 10);
-
-		game->game_menus.options_menu.fov_label.text[5].value = (game->settings.fov < 100 ? '\x1f' : digit_to_char(game->settings.fov / 100));
-		game->game_menus.options_menu.fov_label.text[6].value = (game->settings.fov < 10 ? '\x1f' : digit_to_char((game->settings.fov / 10) % 10));
-		game->game_menus.options_menu.fov_label.text[7].value = digit_to_char(game->settings.fov % 10);
+		menu_scene_frame(&game->game_menus.options_menu.menu, pixels, width, height, render_gui_scale, game->resource_map, mousepos.x, mousepos.y, game->input_state.left_click);
 
 		break;
 	}

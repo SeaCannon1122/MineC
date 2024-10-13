@@ -31,6 +31,15 @@ struct chunk_table_entry {
 };
 
 struct game_client {
+	struct {
+		int mouse_x;
+		int mouse_y;
+		int left_click;
+		int right_click;
+		int escape;
+		int ctrl_left;
+	} input_state;
+
 	void* resource_map[200];
 	char resource_folder_path[1024];
 	FILE* debug_log_file;

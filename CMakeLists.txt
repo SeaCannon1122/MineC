@@ -56,6 +56,11 @@ set(TEST_SOURCE_FILES
 
 )
 
+add_library(test_lib SHARED src/test/test_lib.c)
+
+add_executable(dummy src/dummy_main.c)
+target_link_libraries(dummy test_lib)
+
 include_directories(${PROJECT_SOURCE_DIR}/src)
 include_directories(${PROJECT_SOURCE_DIR}/dependencies/stb_image/include)
 include_directories(${PROJECT_SOURCE_DIR}/dependencies/OpenCL/inc)

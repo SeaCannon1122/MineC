@@ -4,7 +4,14 @@
 #include <stdlib.h>
 #include <malloc.h>
 
-#include "general/platformlib/platform.h"
+#ifndef min
+#define min(a, b) (a < b ? a : b)
+#endif // !min
+
+#ifndef max
+#define max(a, b) (a > b ? a : b)
+#endif // !max
+
 
 int menu_x(int menu_x, int menu_alignment, int menu_width, int scale) {
 
@@ -38,9 +45,7 @@ int compare(const void* a, const void* b) {
 }
 
 
-void menu_scene_frame(struct menu_scene* menu, unsigned int* screen, int width, int height, int scale, const void** resource_map, int mouse_x, int mouse_y) {
-
-	int mouse_click = get_key_state(KEY_MOUSE_LEFT);
+void menu_scene_frame(struct menu_scene* menu, unsigned int* screen, int width, int height, int scale, const void** resource_map, int mouse_x, int mouse_y, int mouse_left_click) {
 
 	union argb_pixel* screen_argb = (union argb_pixel*)screen;
 
@@ -86,7 +91,7 @@ void menu_scene_frame(struct menu_scene* menu, unsigned int* screen, int width, 
 
 				if (label->selectable) {
 
-					if (mouse_click == 0b11) {
+					if (mouse_left_click == 0b11) {
 						if (menu->select_label == i && menu->select_begin == select_index && menu->selecting == 1) {
 
 							for (menu->select_end = select_index; ; menu->select_end++) if (
@@ -114,7 +119,7 @@ void menu_scene_frame(struct menu_scene* menu, unsigned int* screen, int width, 
 
 					}
 
-					else if (mouse_click && menu->select_label == i && select_index != -1 && (menu->select_begin != select_index || menu->select_end != -1) && menu->selecting == 1) {
+					else if (mouse_left_click && menu->select_label == i && select_index != -1 && (menu->select_begin != select_index || menu->select_end != -1) && menu->selecting == 1) {
 						menu->select_end = select_index;
 					}
 

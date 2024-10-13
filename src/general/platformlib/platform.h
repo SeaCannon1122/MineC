@@ -17,6 +17,10 @@ struct point2d_int {
 	int y;
 };
 
+void* dynamic_library_load(char* src);
+void (*dynamic_library_get_function(void* library_handle, char* function_name)) (void);
+void dynamic_library_unload(void* library_handle);
+
 void platform_init();
 void platform_exit();
 

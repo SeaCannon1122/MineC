@@ -280,9 +280,22 @@ void run_game_client(struct game_client* game) {
 
 	log_message(game->debug_log_file, "Entering main Game Loop");
 
+	game->input_state.left_click = get_key_state(KEY_MOUSE_LEFT);
+	game->input_state.right_click = get_key_state(KEY_MOUSE_RIGHT);
+	game->input_state.escape = get_key_state(KEY_ESCAPE);
+	game->input_state.ctrl_left = get_key_state(KEY_CONTROL_L);
 
-	while (window_is_active(game->window) ) {// && !game->game_menus.main_menu.quit_game_button_state) {
+	while (window_is_active(game->window) && !(game->game_menus.main_menu.menu.items[game->game_menus.main_menu.menu.current_item] == &game->game_menus.main_menu.quit_game_button_image && game->input_state.left_click == 0b11)) {
 		
+		struct point2d_int mouse_position = window_get_mouse_cursor_position(game->window);
+
+		game->input_state.mouse_x = mouse_position.x;
+		game->input_state.mouse_y = mouse_position.y;
+		game->input_state.left_click = get_key_state(KEY_MOUSE_LEFT);
+		game->input_state.right_click = get_key_state(KEY_MOUSE_RIGHT);
+		game->input_state.escape = get_key_state(KEY_ESCAPE);
+		game->input_state.ctrl_left = get_key_state(KEY_CONTROL_L);
+
 		int new_width = (window_get_width(game->window) + game->settings.resolution_scale - 1) / game->settings.resolution_scale;
 		int new_height = (window_get_height(game->window) + game->settings.resolution_scale - 1) / game->settings.resolution_scale;
 		if (new_width != game->render_state.width || new_height != game->render_state.height) {

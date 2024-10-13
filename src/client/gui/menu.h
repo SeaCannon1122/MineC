@@ -1,7 +1,6 @@
 #pragma once
 
 #include "client/gui/argb_image.h"
-#include "general/platformlib/platform.h"
 #include "client/gui/pixel_char.h"
 
 
@@ -52,22 +51,23 @@ struct menu_image {
 	int hoverable;
 	int image;
 	int hover_image;
-	float image_scalar;
+	int image_scalar;
 };
 
 struct menu_slider {
 	int menu_item_type;
 	int z;
-	float state;
-	int x_min;
-	int y_min;
-	int x_max;
-	int y_max;
+	int x;
+	int y;
 	int alignment_x;
 	int alignment_y;
-	int texture_background;
-	int texture_slider;
-	int slider_thickness;
+	int image_alignment_x;
+	int image_alignment_y;
+	int hoverable;
+	int slide_image;
+	int slider_image;
+	int slider_hover_image;
+	int image_scalar;
 };
 
 struct menu_text_field {
@@ -103,4 +103,8 @@ struct menu_scene {
 	int* items[];
 };
 
-void menu_scene_frame(struct menu_scene* menu, unsigned int* screen, int width, int height, int scale, const void** resource_map, int mouse_x, int mouse_y);
+void menu_init();
+
+void menu_scene_frame(struct menu_scene* menu, unsigned int* screen, int width, int height, int scale, const void** resource_map, int mouse_x, int mouse_y, int mouse_left_click);
+
+void menu_exit();

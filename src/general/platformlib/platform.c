@@ -1,5 +1,7 @@
 #include "platform.h"
 
+#include <malloc.h>
+
 #if defined(_WIN32)
 
 #include <windows.h>
@@ -40,6 +42,32 @@ static bool keyStates[256] = { 0 };
 static bool running = true;
 
 static void* window_control_thread;
+
+void* dynamic_library_load(char* src) {
+
+	int src_length = 0;
+	for (; src[src_length] != 0; src_length++);
+
+	char* src_platform = alloca(src_length + sizeof(".dll"));
+
+	for (int i = 0; i < src_length; i++) src_platform[i] = src[i];
+	src_platform[src_length] = '.';
+	src_platform[src_length + 1] = 'd';
+	src_platform[src_length + 2] = 'l';
+	src_platform[src_length + 3] = 'l';
+	src_platform[src_length + 4] = '\0';
+
+	return  LoadLibraryA(src_platform);
+
+}
+
+void (*dynamic_library_get_function(void* library_handle, char* function_name)) (void) {
+	return GetProcAddress(library_handle, function_name);
+}
+
+void dynamic_library_unload(void* library_handle) {
+	FreeLibrary(library_handle);
+}
 
 void show_console_window() {
 	HWND hwndConsole = GetConsoleWindow();
@@ -374,25 +402,29 @@ void platform_exit() {
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/XKBlib.h>
+#include <X11/Xlocale.h>
 #include <pthread.h>
 #include <unistd.h>
 #include <sys/time.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <dlfcn.h>
 
-static struct {
+struct window_resource {
 	Window window;
 	XImage* image;
+	XIC ic;
 	unsigned int* pixels;
-	bool active;
+	int active;
+	int drawing;
 	int window_width;
 	int window_height;
-	struct {
-		char* buffer;
-		int buffer_size_width_termination;
-		int size_used;
-	} print_buffer[MAX_KEYBOARD_BUFFER_PARSERS_PER_WINDOW];
-} window_resources[MAX_WINDOW_COUNT];
+	int mouse_scrolls;
+	void (*char_callbacks[MAX_CALLBACK_FUNCTIONS]) (int, int);
+	void (*key_down_callbacks[MAX_CALLBACK_FUNCTIONS]) (int, int);
+};
+
+static struct window_resource* window_resources[MAX_WINDOW_COUNT];
 
 static char window_resources_active[MAX_WINDOW_COUNT] = { 0 };
 
@@ -402,15 +434,49 @@ static int display_height;
 static Display* display;
 static int screen;
 static Atom wm_delete_window;
+static XIM xim;
 
-static bool running = true;
+static int running = 1;
 
-static bool keyStates[256 * 256] = { false };
+static char keyStates[256 * 256] = { 0 };
 static int last_mouse_scroll = 0;
 
-static bool mouseButtons[3] = { false, false, false };
+static char mouseButtons[3] = { 0, 0, 0 };
 
 static void* window_control_thread;
+
+void* dynamic_library_load(char* src) {
+
+	int src_length = 0;
+	for (; src[src_length] != 0; src_length++);
+
+	char* src_platform = alloca(sizeof("lib") - 1 +src_length + sizeof(".so"));
+
+	src_platform[0] = 'l';
+	src_platform[1] = 'i';
+	src_platform[2] = 'b';
+	for (int i = 3; i < src_length + 3; i++) src_platform[i] = src[i - 3];
+	src_platform[src_length + 3] = '.';
+	src_platform[src_length + 4] = 's';
+	src_platform[src_length + 5] = 'o';
+	src_platform[src_length + 6] = '\0';
+
+	void* handle = dlopen(src_platform, RTLD_NOW);
+	if (!handle) {
+		printf("Error loading shared object: %s\n", dlerror());
+		return NULL;
+	}
+
+	return handle;
+}
+
+void (*dynamic_library_get_function(void* library_handle, char* function_name)) (void) {
+	return dlsym(library_handle, function_name);
+}
+
+void dynamic_library_unload(void* library_handle) {
+	dlclose(library_handle);
+}
 
 void show_console_window() { return; }
 
@@ -486,120 +552,133 @@ int get_last_mouse_scroll() {
 
 void clear_mouse_scroll() { last_mouse_scroll = 0; }
 
-int create_window(int posx, int posy, int width, int height, unsigned char* name) {
+int window_create(int posx, int posy, int width, int height, unsigned char* name) {
 
 	int next_free_window_index = 0;
-	for (; next_free_window_index < MAX_WINDOW_COUNT; next_free_window_index++) if (!window_resources_active[next_free_window_index]) break;
+	for (; next_free_window_index < MAX_WINDOW_COUNT; next_free_window_index++) if (window_resources[next_free_window_index] == NULL) break;
 	if (next_free_window_index == MAX_WINDOW_COUNT) return WINDOW_CREATION_FAILED;
 
 	window_resources_active[next_free_window_index] = 1;
 
 	Window window = XCreateSimpleWindow(display, RootWindow(display, screen), posx, posy, width, height, 1, BlackPixel(display, screen), WhitePixel(display, screen));
 
+	XIC ic = XCreateIC(xim, XNInputStyle, XIMPreeditNothing | XIMStatusNothing, XNClientWindow, window, NULL);
+
 	unsigned int* pixels = malloc(display_width * display_height * sizeof(unsigned int));
 
 	XImage* image = XCreateImage(display, DefaultVisual(display, screen), DefaultDepth(display, screen), ZPixmap, 0, (char*)pixels, display_width, display_height, 32, 0);
 
-	window_resources[next_free_window_index].window = window;
-	window_resources[next_free_window_index].image = image;
-	window_resources[next_free_window_index].pixels = pixels;
-	window_resources[next_free_window_index].active = true;
-	window_resources[next_free_window_index].window_width = width;
-	window_resources[next_free_window_index].window_height = height;
+	struct window_resource* window_resource = malloc(sizeof(struct window_resource));
+
+
+	window_resource->window = window;
+	window_resource->ic = ic;
+	window_resource->image = image;
+	window_resource->pixels = pixels;
+	window_resource->active = 1;
+	window_resource->drawing = 0;
+	window_resource->window_width = width;
+	window_resource->window_height = height;
 
 	XSelectInput(display, window, ExposureMask | KeyPressMask | KeyReleaseMask | StructureNotifyMask | ButtonPressMask);
 	XStoreName(display, window, name);
 	XSetWMProtocols(display, window, &wm_delete_window, 1);
 	XMapWindow(display, window);
 
+	window_resources[next_free_window_index] = window_resource;
+
 	return next_free_window_index;
 }
 
-int get_window_width(int window) {
-	return window_resources[window].window_width;
+int window_get_width(int window) {
+	return window_resources[window]->window_width;
 }
 
-int get_window_height(int window) {
-	return window_resources[window].window_height;
+int window_get_height(int window) {
+	return window_resources[window]->window_height;
 }
 
-bool is_window_selected(int window) {
+int window_is_selected(int window) {
 	Window focused_window;
 	int revert_to;
 
 	XGetInputFocus(display, &focused_window, &revert_to);
 
-	return focused_window == window_resources[window].window;
+	return focused_window == window_resources[window]->window;
 }
 
-bool is_window_active(int window) {
-	return window_resources[window].active;
+int window_is_active(int window) {
+	return window_resources[window]->active;
 }
 
-void close_window(int window) {
-	if (window_resources[window].active) XDestroyWindow(display, window_resources[window].window);
+void window_destroy(int window) {
+
+	XDestroyIC(window_resources[window]->ic);
+	if (window_resources[window]->active) XDestroyWindow(display, window_resources[window]->window);
 	window_resources_active[window] = 0;
 
-	XDestroyImage(window_resources[window].image);
+	XDestroyImage(window_resources[window]->image);
+	free(window_resources[window]);
+	window_resources[window] = NULL;
 }
 
-void draw_to_window(int window, unsigned int* buffer, int width, int height, int scalar) {
-	if (!window_resources[window].active) return;
+void window_draw(int window, unsigned int* buffer, int width, int height, int scalar) {
+
+	window_resources[window]->drawing = 1;
+
+	if (!window_resources[window]->active) return;
 	for (int i = 0; i < width * scalar && i < display_width; i++) {
 		for (int j = 0; j < height * scalar && j < display_height; j++) {
-			window_resources[window].pixels[i + display_width * j] = buffer[i / scalar + width * (j / scalar)];
+			window_resources[window]->pixels[i + display_width * j] = buffer[i / scalar + width * (j / scalar)];
 		}
 	}
 
-	XPutImage(display, window_resources[window].window, DefaultGC(display, screen), window_resources[window].image, 0, 0, 0, 0, width * scalar, height * scalar);
+
+	XPutImage(display, window_resources[window]->window, DefaultGC(display, screen), window_resources[window]->image, 0, 0, 0, 0, width * scalar, height * scalar);
+
+	window_resources[window]->drawing = 0;
+
 }
 
-struct point2d_int get_mouse_cursor_position(int window) {
-	if (!window_resources[window].active) return (struct point2d_int) { -1, -1 };
+struct point2d_int window_get_mouse_cursor_position(int window) {
+	if (!window_resources[window]->active) return (struct point2d_int) { -1, -1 };
 	Window root, child;
 	int root_x, root_y;
 	int win_x, win_y;
 	unsigned int mask;
 
-	XQueryPointer(display, window_resources[window].window, &root, &child, &root_x, &root_y, &win_x, &win_y, &mask);
+	XQueryPointer(display, window_resources[window]->window, &root, &child, &root_x, &root_y, &win_x, &win_y, &mask);
 
 	struct point2d_int pos = { win_x + 1, win_y + 1 };
 
 	return pos;
 }
 
-void set_cursor_rel_window(int window, int x, int y) {
-	if (!window_resources[window].active) return;
+void window_set_mouse_cursor_position(int window, int x, int y) {
+	if (!window_resources[window]->active) return;
 	Window root, child;
 	int root_x, root_y;
 	int win_x, win_y;
 	unsigned int mask;
 
-	XQueryPointer(display, window_resources[window].window, &root, &child, &root_x, &root_y, &win_x, &win_y, &mask);
-	XWarpPointer(display, None, DefaultRootWindow(display), 0, 0, 0, 0, root_x - win_x + x + 2, root_y - win_y + window_resources[window].window_height - y + 1);
+	XQueryPointer(display, window_resources[window]->window, &root, &child, &root_x, &root_y, &win_x, &win_y, &mask);
+	XWarpPointer(display, None, DefaultRootWindow(display), 0, 0, 0, 0, root_x - win_x + x + 2, root_y - win_y + window_resources[window]->window_height - y + 1);
 	XFlush(display);
 	return;
 }
 
-int link_keyboard_parse_buffer(int window, char* buffer, int size, int used) {
+int window_add_char_callback(int window, void (*callback) (int, int)) {
+	int next_free_callback_index = 0;
+	for (; next_free_callback_index < MAX_WINDOW_COUNT; next_free_callback_index++) if (window_resources[window]->char_callbacks[next_free_callback_index] == NULL) break;
+	if (next_free_callback_index == MAX_WINDOW_COUNT) return WINDOW_CREATION_FAILED;
 
-	int next_parser_index = 0;
-	for (; next_parser_index < MAX_KEYBOARD_BUFFER_PARSERS_PER_WINDOW; next_parser_index++) if (window_resources[window].print_buffer[next_parser_index].buffer == NULL) break;
-	if (next_parser_index == MAX_KEYBOARD_BUFFER_PARSERS_PER_WINDOW) return KEYBOARD_BUFFER_PARSER_CREATION_FAILED;
+	window_resources[window]->char_callbacks[next_free_callback_index] = callback;
 
-	window_resources[window].print_buffer[next_parser_index].buffer = buffer;
-	window_resources[window].print_buffer[next_parser_index].buffer_size_width_termination = size;
-	window_resources[window].print_buffer[next_parser_index].size_used = used;
-
-	return next_parser_index;
+	return next_free_callback_index;
 }
 
-int get_linked_buffer_size(int window, int link) {
-	return window_resources[window].print_buffer[link].size_used;
-}
-
-void unlink_keyboard_parse_buffer(int window, int link) {
-	window_resources[window].print_buffer[link].buffer = NULL;
+void window_remove_char_callback(int window, int char_callback_id) {
+	window_resources[window]->char_callbacks[char_callback_id] = NULL;
 }
 
 void WindowControl() {
@@ -612,21 +691,31 @@ void WindowControl() {
 
 			int window_index = 0;
 
-			for (; window_index < MAX_WINDOW_COUNT && window_resources[window_index].window != event.xany.window; window_index++);
+			for (; window_index < MAX_WINDOW_COUNT; window_index++) {
+				if (window_resources[window_index]) {
+					if (window_resources[window_index]->window == event.xany.window) break;
+				}
+				
+			}
 
-			if (window_resources[window_index].active) {
+			if (window_index == MAX_WINDOW_COUNT) continue;
+
+			if (window_resources[window_index]->active) {
 
 				switch (event.type) {
 
 				case ConfigureNotify: {
-					window_resources[window_index].window_width = (event.xconfigure.width > display_width ? display_width : event.xconfigure.width);
-					window_resources[window_index].window_height = (event.xconfigure.height > display_height ? display_height : event.xconfigure.height);
+					window_resources[window_index]->window_width = (event.xconfigure.width > display_width ? display_width : event.xconfigure.width);
+					window_resources[window_index]->window_height = (event.xconfigure.height > display_height ? display_height : event.xconfigure.height);
 				} break;
 
 				case ClientMessage: {
 					if ((Atom)event.xclient.data.l[0] == wm_delete_window) {
-						window_resources[window_index].active = false;
-						XDestroyWindow(display, window_resources[window_index].window);
+
+						window_resources[window_index]->active = 0;
+						while (window_resources[window_index]->drawing) usleep(10);
+						
+						XDestroyWindow(display, window_resources[window_index]->window);
 					}
 				} break;
 
@@ -638,24 +727,12 @@ void WindowControl() {
 				case KeyPress: {
 					KeySym keysym;
 					char buf[32];
-					int len = XLookupString(&event.xkey, buf, sizeof(buf), &keysym, NULL);
+					XComposeStatus compose_status;
+					int len = XmbLookupString(window_resources[window_index]->ic, &event, buf, sizeof(buf) - 1, &keysym, &compose_status);
+
 					if (len > 0) {
 
-						for (int j = 0; j < MAX_KEYBOARD_BUFFER_PARSERS_PER_WINDOW; j++) if (window_resources[window_index].print_buffer[j].buffer != NULL) {
-							for (int i = 0; i < len; i++) {
-
-								unsigned char c = (unsigned char)buf[i];
-								if (c >= ' ' && c <= '~' && window_resources[window_index].print_buffer[j].buffer_size_width_termination - 1 > window_resources[window_index].print_buffer[j].size_used) {
-									window_resources[window_index].print_buffer[j].buffer[window_resources[window_index].print_buffer[j].size_used] = c;
-									window_resources[window_index].print_buffer[j].size_used++;
-								}
-								else if (c == 0x08 /*delete*/ && window_resources[window_index].print_buffer[j].size_used != 0) {
-									window_resources[window_index].print_buffer[j].size_used--;
-									window_resources[window_index].print_buffer[j].buffer[window_resources[window_index].print_buffer[j].size_used] = '\0';
-								}
-
-							}
-						}
+						for (int j = 0; j < MAX_CALLBACK_FUNCTIONS; j++) if (window_resources[window_index]->char_callbacks[j] != NULL) window_resources[window_index]->char_callbacks[j](window_index, *((int*)&buf));
 
 						
 					}
@@ -690,14 +767,17 @@ void platform_init() {
 
 	wm_delete_window = XInternAtom(display, "WM_DELETE_WINDOW", False);
 
+	xim = XOpenIM(display, NULL, NULL, NULL);
+
 	window_control_thread = create_thread(WindowControl, NULL);
 
 	return;
 }
 
 void platform_exit() {
-	running = false;
+	running = 0;
 	join_thread(window_control_thread);
+	XCloseIM(xim);
 	XCloseDisplay(display);
 }
 

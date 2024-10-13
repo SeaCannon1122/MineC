@@ -4,14 +4,14 @@
 
 #if defined(_WIN32)
 
-#ifndef _PIXEL_CHAR_RESTRICT
-#define _PIXEL_CHAR_RESTRICT __restrict
+#ifndef RESTRICT
+#define RESTRICT __restrict
 #endif
 
 #elif defined(__linux__)
 
-#ifndef _PIXEL_CHAR_RESTRICT
-#define _PIXEL_CHAR_RESTRICT restrict
+#ifndef RESTRICT
+#define RESTRICT restrict
 #endif
 
 #endif
@@ -45,7 +45,7 @@ struct pixel_font {
 	struct {
 		long long width;
 		char layout[PIXEL_FONT_RESOULUTION * PIXEL_FONT_RESOULUTION / 8];
-	} char_font_entries[2097152];
+	} char_font_entries[0x20000];
 };
 
 struct pixel_char {
@@ -61,8 +61,8 @@ struct pixel_char {
 
 struct pixel_font* load_pixel_font(char* src);
 
-void pixel_char_print_string(const struct pixel_char* _PIXEL_CHAR_RESTRICT string, int text_size, int line_spacing, int x, int y, int alignment_x, int alignment_y, int max_width, int max_lines, unsigned int* _PIXEL_CHAR_RESTRICT screen, int width, int height, const const void** _PIXEL_CHAR_RESTRICT font_map);
+void pixel_char_print_string(const struct pixel_char* RESTRICT string, int text_size, int line_spacing, int x, int y, int alignment_x, int alignment_y, int max_width, int max_lines, unsigned int* RESTRICT screen, int width, int height, const const void** RESTRICT font_map);
 
-int pixel_char_get_hover_index(const struct pixel_char* _PIXEL_CHAR_RESTRICT string, int text_size, int line_spacing, int x, int y, int alignment_x, int alignment_y, int max_width, int max_lines, const const void** _PIXEL_CHAR_RESTRICT font_map, int x_hover, int y_hover);
+int pixel_char_get_hover_index(const struct pixel_char* RESTRICT string, int text_size, int line_spacing, int x, int y, int alignment_x, int alignment_y, int max_width, int max_lines, const const void** RESTRICT font_map, int x_hover, int y_hover);
 
-int pixel_char_fitting(const struct pixel_char* _PIXEL_CHAR_RESTRICT string, int text_size, const const void** _PIXEL_CHAR_RESTRICT font_map, int max_width);
+int pixel_char_fitting(const struct pixel_char* RESTRICT string, int text_size, const const void** RESTRICT font_map, int max_width);

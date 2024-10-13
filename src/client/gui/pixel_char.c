@@ -30,7 +30,7 @@ struct pixel_font* load_pixel_font(char* src) {
 }
 
 
-void pixel_char_background_print(const struct pixel_char* _PIXEL_CHAR_RESTRICT c, int text_size, int x, int y, unsigned int* _PIXEL_CHAR_RESTRICT screen, int width, int height, const const void** _PIXEL_CHAR_RESTRICT font_map) {
+void pixel_char_background_print(const struct pixel_char* RESTRICT c, int text_size, int x, int y, unsigned int* RESTRICT screen, int width, int height, const const void** RESTRICT font_map) {
 
 	int shaddow_offset = (c->masks & PIXEL_CHAR_CURSIVE_MASK ? (text_size + 1) / 2 : text_size);
 
@@ -46,7 +46,7 @@ void pixel_char_background_print(const struct pixel_char* _PIXEL_CHAR_RESTRICT c
 	}
 }
 
-void pixel_char_print(const struct pixel_char* _PIXEL_CHAR_RESTRICT c, int text_size, int x, int y, unsigned int* _PIXEL_CHAR_RESTRICT screen, int width, int height, const const void** _PIXEL_CHAR_RESTRICT font_map) {
+void pixel_char_print(const struct pixel_char* RESTRICT c, int text_size, int x, int y, unsigned int* RESTRICT screen, int width, int height, const const void** RESTRICT font_map) {
 
 	int shaddow_offset = (c->masks & PIXEL_CHAR_CURSIVE_MASK ? (text_size + 1) / 2 : text_size);
 
@@ -99,7 +99,7 @@ void pixel_char_print(const struct pixel_char* _PIXEL_CHAR_RESTRICT c, int text_
 
 }
 
-void pixel_char_print_string(const struct pixel_char* _PIXEL_CHAR_RESTRICT string, int text_size, int line_spacing, int x, int y, int alignment_x, int alignment_y, int max_width, int max_lines, unsigned int* _PIXEL_CHAR_RESTRICT screen, int width, int height, const const void** _PIXEL_CHAR_RESTRICT font_map) {
+void pixel_char_print_string(const struct pixel_char* RESTRICT string, int text_size, int line_spacing, int x, int y, int alignment_x, int alignment_y, int max_width, int max_lines, unsigned int* RESTRICT screen, int width, int height, const const void** RESTRICT font_map) {
 
 
 	if (string->value == '\0') return;
@@ -199,9 +199,9 @@ void pixel_char_print_string(const struct pixel_char* _PIXEL_CHAR_RESTRICT strin
 
 }
 
-int pixel_char_get_hover_index(const struct pixel_char* _PIXEL_CHAR_RESTRICT string, int text_size, int line_spacing, int x, int y, int alignment_x, int alignment_y, int max_width, int max_lines, const const void** _PIXEL_CHAR_RESTRICT font_map, int x_hover, int y_hover) {
+int pixel_char_get_hover_index(const struct pixel_char* RESTRICT string, int text_size, int line_spacing, int x, int y, int alignment_x, int alignment_y, int max_width, int max_lines, const const void** RESTRICT font_map, int x_hover, int y_hover) {
 
-	if (string->value == '\0') return;
+	if (string->value == '\0') return -1;
 
 	int lines = 1;
 	int line_width = 0;
@@ -265,7 +265,7 @@ int pixel_char_get_hover_index(const struct pixel_char* _PIXEL_CHAR_RESTRICT str
 	return -1;
 }
 
-int pixel_char_fitting(const struct pixel_char* _PIXEL_CHAR_RESTRICT string, int text_size, const const void** _PIXEL_CHAR_RESTRICT font_map, int max_width) {
+int pixel_char_fitting(const struct pixel_char* RESTRICT string, int text_size, const const void** RESTRICT font_map, int max_width) {
 
 	int width = (__PIXEL_CHAR_WIDTH(string[0], font_map) + 1) / 2 * text_size;
 	int amount = 1;
