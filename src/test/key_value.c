@@ -150,7 +150,7 @@ int key_value_get_string(void* key_value_map, char* name, char* default_value, c
     if (map_index < meta_data->next_map_index) {
         if (maps[map_index].type == _VALUE_TYPE_STRING) {
 
-            int string_length = strlen(strings[maps[map_index].value.string]) + 1;
+            int string_length = strlen(&strings[maps[map_index].value.string]) + 1;
             if (buffer_size < string_length) return 3;
             memcpy(buffer, &strings[maps[map_index].value.string], string_length);
             return 0;
