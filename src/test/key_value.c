@@ -12,68 +12,199 @@ enum key_value_type {
     _VALUE_TYPE_STRING,
 };
 
+void* _key_value_expand_entries(void* key_value_map, int count) {
+    struct key_value_meta_data* meta_data = key_value_map;
+    char* strings = (size_t)key_value_map + sizeof(struct key_value_meta_data) + meta_data->maps_block_length * sizeof(struct key_value_entry);
+
+    key_value_map = realloc(key_value_map, sizeof(struct key_value_meta_data) + (meta_data->maps_block_length + count) * sizeof(struct key_value_entry) + meta_data->strings_block_size);
+    meta_data = key_value_map;
+    meta_data->maps_block_length += count;
+    memmove(strings, strings - count * sizeof(struct key_value_entry), meta_data->strings_block_size);
+
+    return key_value_map;
+}
+
+void* _key_value_add_string(void* key_value_map, char* string, int* stringdex) {
+
+    struct key_value_meta_data* meta_data = key_value_map;
+    struct key_value_entry* maps = (size_t)key_value_map + sizeof(struct key_value_meta_data);
+    char* strings = (size_t)key_value_map + sizeof(struct key_value_meta_data) + meta_data->maps_block_length * sizeof(struct key_value_entry);
+
+    int length = strlen(string);
+    if (meta_data->strings_block_size - meta_data->next_string_index < length + 1) {
+        key_value_map = realloc(key_value_map, sizeof(struct key_value_meta_data) + sizeof(struct key_value_entry) * meta_data->maps_block_length + meta_data->strings_block_size + (length + 1) + 200);
+        meta_data = key_value_map;
+        maps = (size_t)key_value_map + sizeof(struct key_value_meta_data);
+        strings = (size_t)key_value_map + sizeof(struct key_value_meta_data) + meta_data->maps_block_length * sizeof(struct key_value_entry);
+        meta_data->strings_block_size += (length + 1) + 200;
+    }
+
+    *stringdex = meta_data->next_string_index;
+
+    for (int i = 0; i < length + 1; i++) {
+        strings[meta_data->next_string_index] = string[i];
+        meta_data->next_string_index++;
+    }
+
+    return key_value_map;
+}
+
 int key_value_get_integer(void* key_value_map, char* name, int default_value, int* buffer) {
 
     struct key_value_meta_data* meta_data = key_value_map;
-    char* strings = (size_t)key_value_map + meta_data->strings_block_begin;
-    int map_index = 0;
-    for (; map_index < meta_data->maps_count && strcmp(name, &strings[((struct key_value_entry*)((size_t)key_value_map + sizeof(struct key_value_meta_data)))[map_index].key]) != 0; map_index++);
+    struct key_value_entry* maps = (size_t)key_value_map + sizeof(struct key_value_meta_data);
+    char* strings = (size_t)key_value_map + sizeof(struct key_value_meta_data) + meta_data->maps_block_length * sizeof(struct key_value_entry);
 
-    if (map_index < meta_data->maps_count) {
-        if (((struct key_value_entry*)((size_t)key_value_map + sizeof(struct key_value_meta_data)))[map_index].type == _VALUE_TYPE_INTEGER) {
-            
-            *buffer = ((struct key_value_entry*)((size_t)key_value_map + sizeof(struct key_value_meta_data)))[map_index].value.integer;
+    int map_index = 0;
+    for (; map_index < meta_data->next_map_index && strcmp(name, &strings[maps[map_index].key]) != 0; map_index++);
+
+    if (map_index < meta_data->next_map_index) {
+        if (maps[map_index].type == _VALUE_TYPE_INTEGER) {
+            *buffer = maps[map_index].value.integer;
             return 0;
         }
-        return 2;
+        else {
+            maps[map_index].type = _VALUE_TYPE_INTEGER;
+            maps[map_index].value.integer = default_value;
+            *buffer = default_value;
+            return 2;
+        }
+
+    }
+    else {
+        if (meta_data->next_map_index == meta_data->maps_block_length) {
+            key_value_map = _key_value_expand_entries(key_value_map, 20);
+            meta_data = key_value_map;
+            maps = (size_t)key_value_map + sizeof(struct key_value_meta_data);
+            strings = (size_t)key_value_map + sizeof(struct key_value_meta_data) + meta_data->maps_block_length * sizeof(struct key_value_entry);
+        }
+        int key_index;
+        key_value_map = _key_value_add_string(key_value_map, name, &key_index);
+        meta_data = key_value_map;
+        maps = (size_t)key_value_map + sizeof(struct key_value_meta_data);
+        strings = (size_t)key_value_map + sizeof(struct key_value_meta_data) + meta_data->maps_block_length * sizeof(struct key_value_entry);
+
+        maps[map_index].key = key_index;
+        maps[map_index].type = _VALUE_TYPE_INTEGER;
+        maps[map_index].value.integer = default_value;
+        *buffer = default_value;
+
+        meta_data->next_map_index++;
+        return 1;
     }
 
-    return 1;
 }
 int key_value_get_float(void* key_value_map, char* name, float default_value, float* buffer) {
     struct key_value_meta_data* meta_data = key_value_map;
-    char* strings = (size_t)key_value_map + meta_data->strings_block_begin;
+    struct key_value_entry* maps = (size_t)key_value_map + sizeof(struct key_value_meta_data);
+    char* strings = (size_t)key_value_map + sizeof(struct key_value_meta_data) + meta_data->maps_block_length * sizeof(struct key_value_entry);
+
     int map_index = 0;
-    for (; map_index < meta_data->maps_count && strcmp(name, &strings[((struct key_value_entry*)((size_t)key_value_map + sizeof(struct key_value_meta_data)))[map_index].key]) != 0; map_index++);
+    for (; map_index < meta_data->next_map_index && strcmp(name, &strings[maps[map_index].key]) != 0; map_index++);
 
-    if (map_index < meta_data->maps_count) {
-        if (((struct key_value_entry*)((size_t)key_value_map + sizeof(struct key_value_meta_data)))[map_index].type == _VALUE_TYPE_FLOAT) {
-
-            *buffer = ((struct key_value_entry*)((size_t)key_value_map + sizeof(struct key_value_meta_data)))[map_index].value.floating;
+    if (map_index < meta_data->next_map_index) {
+        if (maps[map_index].type == _VALUE_TYPE_FLOAT) {
+            *buffer = maps[map_index].value.floating;
             return 0;
         }
-        return 2;
-    }
+        else {
+            maps[map_index].type = _VALUE_TYPE_FLOAT;
+            maps[map_index].value.floating = default_value;
+            *buffer = default_value;
+            return 2;
+        }
 
-    return 1;
+    }
+    else {
+        if (meta_data->next_map_index == meta_data->maps_block_length) {
+            key_value_map = _key_value_expand_entries(key_value_map, 20);
+            meta_data = key_value_map;
+            maps = (size_t)key_value_map + sizeof(struct key_value_meta_data);
+            strings = (size_t)key_value_map + sizeof(struct key_value_meta_data) + meta_data->maps_block_length * sizeof(struct key_value_entry);
+        }
+        int key_index;
+        key_value_map = _key_value_add_string(key_value_map, name, &key_index);
+        meta_data = key_value_map;
+        maps = (size_t)key_value_map + sizeof(struct key_value_meta_data);
+        strings = (size_t)key_value_map + sizeof(struct key_value_meta_data) + meta_data->maps_block_length * sizeof(struct key_value_entry);
+
+        maps[map_index].key = key_index;
+        maps[map_index].type = _VALUE_TYPE_FLOAT;
+        maps[map_index].value.floating = default_value;
+        *buffer = default_value;
+
+        meta_data->next_map_index++;
+        return 1;
+    }
 }
+
+
 int key_value_get_string(void* key_value_map, char* name, char* default_value, char* buffer, int buffer_size) {
     struct key_value_meta_data* meta_data = key_value_map;
-    char* strings = (size_t)key_value_map + meta_data->strings_block_begin;
+    struct key_value_entry* maps = (size_t)key_value_map + sizeof(struct key_value_meta_data);
+    char* strings = (size_t)key_value_map + sizeof(struct key_value_meta_data) + meta_data->maps_block_length * sizeof(struct key_value_entry);
+
     int map_index = 0;
-    for (; map_index < meta_data->maps_count && strcmp(name, &strings[((struct key_value_entry*)((size_t)key_value_map + sizeof(struct key_value_meta_data)))[map_index].key]) != 0; map_index++);
+    for (; map_index < meta_data->next_map_index && strcmp(name, &strings[maps[map_index].key]) != 0; map_index++);
 
-    if (map_index < meta_data->maps_count) {
-        if (((struct key_value_entry*)((size_t)key_value_map + sizeof(struct key_value_meta_data)))[map_index].type == _VALUE_TYPE_STRING) {
+    if (map_index < meta_data->next_map_index) {
+        if (maps[map_index].type == _VALUE_TYPE_STRING) {
 
-            int string_length = 1;
-
-            char* string_ptr = &strings[((struct key_value_entry*)((size_t)key_value_map + sizeof(struct key_value_meta_data)))[map_index].value.string];
-
-            for (; string_ptr[string_length - 1] != '\0'; string_length++);
-
+            int string_length = strlen(strings[maps[map_index].value.string]) + 1;
             if (buffer_size < string_length) return 3;
-
-
-
-            memcpy(buffer, string_ptr, string_length);
-
+            memcpy(buffer, &strings[maps[map_index].value.string], string_length);
             return 0;
         }
-        return 2;
-    }
+        else {
+            maps[map_index].type = _VALUE_TYPE_STRING;
+            int value_index;
+            key_value_map = _key_value_add_string(key_value_map, default_value, &value_index);
 
-    return 1;
+            meta_data = key_value_map;
+            maps = (size_t)key_value_map + sizeof(struct key_value_meta_data);
+            strings = (size_t)key_value_map + sizeof(struct key_value_meta_data) + meta_data->maps_block_length * sizeof(struct key_value_entry);
+
+            maps[map_index].value.string = value_index;
+
+            int string_length = strlen(&strings[maps[map_index].value.string]) + 1;
+            if (buffer_size < string_length) return 3;
+            memcpy(buffer, &strings[maps[map_index].value.string], string_length);
+            return 2;
+        }
+
+    }
+    else {
+        if (meta_data->next_map_index == meta_data->maps_block_length) {
+            key_value_map = _key_value_expand_entries(key_value_map, 20);
+            meta_data = key_value_map;
+            maps = (size_t)key_value_map + sizeof(struct key_value_meta_data);
+            strings = (size_t)key_value_map + sizeof(struct key_value_meta_data) + meta_data->maps_block_length * sizeof(struct key_value_entry);
+        }
+        int key_index;
+        key_value_map = _key_value_add_string(key_value_map, name, &key_index);
+        meta_data = key_value_map;
+        maps = (size_t)key_value_map + sizeof(struct key_value_meta_data);
+        strings = (size_t)key_value_map + sizeof(struct key_value_meta_data) + meta_data->maps_block_length * sizeof(struct key_value_entry);
+
+        maps[map_index].key = key_index;
+
+        maps[map_index].type = _VALUE_TYPE_STRING;
+        int value_index;
+        key_value_map = _key_value_add_string(key_value_map, default_value, &value_index);
+
+        meta_data = key_value_map;
+        maps = (size_t)key_value_map + sizeof(struct key_value_meta_data);
+        strings = (size_t)key_value_map + sizeof(struct key_value_meta_data) + meta_data->maps_block_length * sizeof(struct key_value_entry);
+
+        maps[map_index].value.string = value_index;
+
+        int string_length = strlen(&strings[maps[map_index].value.string]) + 1;
+        if (buffer_size < string_length) return 3;
+        memcpy(buffer, &strings[maps[map_index].value.string], string_length);
+
+        meta_data->next_map_index++;
+        return 1;
+    }
 }
 
 void* key_value_load_yaml(char* file_path) {
@@ -98,14 +229,15 @@ void* key_value_load_yaml(char* file_path) {
 
     buffer[fileSize - 1 - line_breaks] = 0;
 
-    char* settings_map = malloc(sizeof(struct key_value_meta_data) + 10 * sizeof(struct key_value_entry) + 800);
+    int maps_block_length = 10;
+    int next_map_index = 0;
+    int strings_block_size = 200;
+    int next_string_index = 0;
 
-    int map_block = sizeof(struct key_value_meta_data);
-    int maps_count = 10;
-    int map_block_next = 0;
-    int strings_block = 10 * sizeof(struct key_value_entry) + sizeof(struct key_value_meta_data);
-    int strings_block_size = 800;
-    int strings_block_next = 0;
+    char* key_value_map = malloc(sizeof(struct key_value_meta_data) + maps_block_length * sizeof(struct key_value_entry) + strings_block_size);
+
+    struct key_value_entry* maps = (size_t)key_value_map + sizeof(struct key_value_meta_data);
+    char* strings = (size_t)key_value_map + sizeof(struct key_value_meta_data) + maps_block_length * sizeof(struct key_value_entry);
 
     int lines = 1;
 
@@ -117,17 +249,19 @@ void* key_value_load_yaml(char* file_path) {
 #define token_length(value) for(int _i = 0; buffer[text_i + _i] != ' ' && buffer[text_i+ _i] != ':' && buffer[text_i + _i] != '\n' && buffer[text_i + _i] != '\0'; _i++) value++;
 
 #define add_string(length, string_index) \
-        if(strings_block_size - strings_block_next < length + 1) {\
-            settings_map = realloc(settings_map, sizeof(struct key_value_meta_data) + sizeof(struct key_value_entry) * maps_count + strings_block_size + (length + 1) + 200);\
+        if(strings_block_size - next_string_index < length + 1) {\
+            key_value_map = realloc(key_value_map, sizeof(struct key_value_meta_data) + sizeof(struct key_value_entry) * maps_block_length + strings_block_size + (length + 1) + 200);\
             strings_block_size = strings_block_size + (length + 1) + 200;\
+            maps = (size_t)key_value_map + sizeof(struct key_value_meta_data);\
+            strings = (size_t)key_value_map + sizeof(struct key_value_meta_data) + maps_block_length * sizeof(struct key_value_entry);\
         }\
-        string_index = strings_block_next;\
-        for (int _i = 0; _i < length; _i++) { settings_map[strings_block + strings_block_next] = buffer[text_i]; strings_block_next++; text_i++; }\
-        settings_map[strings_block + strings_block_next] = '\0'; strings_block_next++;
+        string_index = next_string_index;\
+        for (int _i = 0; _i < length; _i++) { strings[next_string_index] = buffer[text_i]; next_string_index++; text_i++; }\
+        strings[next_string_index] = '\0'; next_string_index++;
 
         skip_spaces
 
-            if (buffer[text_i] == '\n' || buffer[text_i] == '\0') continue;
+        if (buffer[text_i] == '\n' || buffer[text_i] == '\0') { text_i++;  continue; }
 
         int key_length = 0;
         token_length(key_length)
@@ -136,10 +270,10 @@ void* key_value_load_yaml(char* file_path) {
 
         int key_index;
         add_string(key_length, key_index)
+        
+        skip_spaces
 
-            skip_spaces
-
-            if (buffer[text_i] != ':') goto _error;
+        if (buffer[text_i] != ':') goto _error;
         text_i++;
         skip_spaces
 
@@ -195,46 +329,127 @@ void* key_value_load_yaml(char* file_path) {
 
         skip_spaces
 
-            if (buffer[text_i] != '\n' && buffer[text_i] != '\0') goto _error;
+        if (buffer[text_i] != '\n' && buffer[text_i] != '\0') goto _error;
 
         text_i++;
 
-        if (map_block_next == maps_count) {
+        if (maps_block_length == next_map_index) {
 
-            settings_map = realloc(settings_map, sizeof(struct key_value_meta_data) + (maps_count + 20) * sizeof(struct key_value_entry) + strings_block_size);
-            memmove(settings_map + (maps_count + 20) * sizeof(struct key_value_entry), settings_map + maps_count * sizeof(struct key_value_entry), strings_block_size);
-            maps_count += 20;
-            strings_block += 20 * sizeof(struct key_value_entry);
+            key_value_map = realloc(key_value_map, sizeof(struct key_value_meta_data) + (maps_block_length + 20) * sizeof(struct key_value_entry) + strings_block_size);
+            maps = (size_t)key_value_map + sizeof(struct key_value_meta_data);
+            maps_block_length += 20;
+            strings = (size_t)key_value_map + sizeof(struct key_value_meta_data) + maps_block_length * sizeof(struct key_value_entry);
+            memmove(strings, strings - 20 * sizeof(struct key_value_entry), strings_block_size);
+            
         }
 
-        ((struct key_value_entry*)(settings_map + sizeof(struct key_value_meta_data)))[map_block_next] = (struct key_value_entry){
+        maps[next_map_index] = (struct key_value_entry){
             type,
             key_index,
             value,
         };
 
-        map_block_next++;
+        next_map_index++;
 
     }
 
-    struct key_value_meta_data* meta_data = settings_map;
-    meta_data->maps_count = map_block_next;
-    meta_data->map_block_begin = sizeof(struct key_value_meta_data);
-    meta_data->strings_block_begin = strings_block;
+    struct key_value_meta_data* meta_data = key_value_map;
+    meta_data->maps_block_length = maps_block_length;
+    meta_data->next_map_index = next_map_index;
     meta_data->strings_block_size = strings_block_size;
+    meta_data->next_string_index = next_string_index;
 
     free(buffer);
-    return settings_map;
+    return key_value_map;
 
 _error:
     free(buffer);
-    free(settings_map);
+    free(key_value_map);
 
     printf("error parsing yaml %s\n", file_path);
 
     return NULL;
 }
 
-void key_value_write_yaml(char* file_path, void* handle) {
+void key_value_write_yaml(char* file_path, void* key_value_map) {
+    
+    struct key_value_meta_data* meta_data = key_value_map;
+    struct key_value_entry* maps = (size_t)key_value_map + sizeof(struct key_value_meta_data);
+
+    int text_buffer_size = 1000;
+    char* text_buffer = malloc(text_buffer_size);
+
+    char* strings = (size_t)key_value_map + meta_data->maps_block_length * sizeof(struct key_value_entry) + sizeof(struct key_value_meta_data);
+    int text_i = 0;
+
+    for (int map_i = 0; map_i < meta_data->next_map_index; map_i++) {
+        
+        {
+            int _string_length = strlen(&strings[maps[map_i].key]);
+            if (_string_length > text_buffer_size - text_i - 30) {
+                text_buffer_size += _string_length + 200;
+                text_buffer = realloc(text_buffer, text_buffer_size);
+            }
+            for (int _i = 0; _i < _string_length; _i++) { text_buffer[text_i] = strings[maps[map_i].key + _i]; text_i++; }
+        }
+
+        text_buffer[text_i] = ':';
+        text_i++;
+        text_buffer[text_i] = ' ';
+        text_i++;
+
+        if (maps[map_i].type == _VALUE_TYPE_INTEGER) {
+            int divisor_max = 1;
+            for (; maps[map_i].value.integer / divisor_max >= 10; divisor_max *= 10);
+            for (; divisor_max > 0; divisor_max /= 10) {
+                text_buffer[text_i] = '0' + (maps[map_i].value.integer / divisor_max) % 10; text_i++;
+            }
+        }
+        else if (maps[map_i].type == _VALUE_TYPE_FLOAT) {
+            int divisor_max = 1;
+            int int_part = maps[map_i].value.floating;
+            for (; int_part / divisor_max >= 10; divisor_max *= 10);
+            for (; divisor_max > 0; divisor_max /= 10) {
+                text_buffer[text_i] = '0' + (int_part / divisor_max) % 10; text_i++;
+            }
+            text_buffer[text_i] = '.';
+            text_i++;
+            float float_part = maps[map_i].value.floating - (float)int_part;
+
+            int fractor = 10;
+            for (; ((float)(int)(float_part * (float)fractor)) - (float_part * (float)fractor) != 0; fractor *= 10) {
+                text_buffer[text_i] = '0' + (int)(float_part * (float)fractor) % 10; text_i++;
+            }
+
+        }
+        else {
+            text_buffer[text_i] = '"';
+            text_i++;
+
+            int string_length = strlen(&strings[maps[map_i].value.string]);
+            if (string_length > text_buffer_size - text_i - 30) {
+                text_buffer_size += string_length + 200;
+                text_buffer = realloc(text_buffer, text_buffer_size);
+            }
+            for (int _i = 0; _i < string_length; _i++) {
+                text_buffer[text_i] = strings[maps[map_i].value.string + _i];
+                text_i++;
+            }
+
+            text_buffer[text_i] = '"';
+            text_i++;
+
+        }
+
+
+        text_buffer[text_i] = '\n';
+        text_i++;
+
+    }
+
+    FILE* file = fopen(file_path, "w");
+
+    fwrite(text_buffer, sizeof(char), text_i, file);
+    fclose(file);
 
 }

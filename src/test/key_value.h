@@ -1,10 +1,10 @@
 #pragma once
 
 struct key_value_meta_data {
-	int map_block_begin;
-	int maps_count;
-	int strings_block_begin;
+	int maps_block_length;
+	int next_map_index;
 	int strings_block_size;
+	int next_string_index;
 };
 
 struct key_value_entry {

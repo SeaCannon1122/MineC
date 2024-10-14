@@ -16,8 +16,13 @@ int testing_main() {
 	int ret_status = key_value_get_float(settings, "val3", 100.f, &floating);
 	printf("%f\n", floating);
 	char buffer[64] = "Helloqw wefw2f";
-	ret_status = key_value_get_string(settings, "val4", 100, buffer, 64);
+	ret_status = key_value_get_string(settings, "val4", "value not found", buffer, 64);
 	printf("%s\n", buffer);
+	int integer = 0;
+	ret_status = key_value_get_integer(settings, "val5", 100, &integer);
+	printf("%d\n", integer);
+
+	key_value_write_yaml("../../../resources/client/settings.yaml", settings);
 
 	free(settings);
 
@@ -25,11 +30,11 @@ int testing_main() {
 
 	int (*my_add)(int, int) = dynamic_library_get_function(lib, "my_add");
 
-	//dynamic_library_unload(lib);
-
 	int result = my_add(3, 187);
 	printf("%d\n", result);
 	fflush(stdout);
+
+	dynamic_library_unload(lib);
 
 	int width = 800;
 	int height = 500;
