@@ -53,8 +53,8 @@ void init_game_menus(struct game_client* game) {
 		ALIGNMENT_MIDDLE,
 		10000000,
 		10000000,
-		0,
-		0,
+		1,
+		1,
 		3,
 		{0},
 	};

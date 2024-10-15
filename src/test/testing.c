@@ -10,15 +10,18 @@
 int testing_main() {
 	show_console_window();
 	
-	void* settings = key_value_load_yaml("../../../resources/client/settings.yaml");
+	void* settings = key_value_new(10, 100);
+
+	key_value_load_yaml(settings, "../../../resources/client/settings.yaml");
 
 	float floating = 0;
 	int ret_status = key_value_get_float(settings, "val3", 100.f, &floating);
 	printf("%f\n", floating);
+	
 	char buffer[64] = "Helloqw wefw2f";
 	ret_status = key_value_get_string(settings, "val4", "value not found", buffer, 64);
 	printf("%s\n", buffer);
-	int integer = 0;
+	long long integer = 0;
 	ret_status = key_value_get_integer(settings, "val5", 100, &integer);
 	printf("%d\n", integer);
 
