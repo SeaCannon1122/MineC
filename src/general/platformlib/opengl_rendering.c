@@ -34,7 +34,7 @@ typedef HGLRC(WINAPI* PFNWGLCREATECONTEXTATTRIBSARBPROC)(HDC, HGLRC, const int*)
 static HDC hdc;
 static HGLRC hglrc;
 
-int opengl_init() {
+int opengl_init(int version_major, int version_minor) {
     // Initialize Windows
     HINSTANCE hInstance = GetModuleHandle(NULL);
     HWND hwnd = CreateWindowExA(
@@ -79,8 +79,8 @@ int opengl_init() {
 
     // Create an OpenGL 3.3 context (or the desired version)
     int attribs[] = {
-        WGL_CONTEXT_MAJOR_VERSION_ARB, 3, // Major version
-        WGL_CONTEXT_MINOR_VERSION_ARB, 3, // Minor version
+        WGL_CONTEXT_MAJOR_VERSION_ARB, version_major, // Major version
+        WGL_CONTEXT_MINOR_VERSION_ARB, version_minor, // Minor version
         WGL_CONTEXT_FLAGS_ARB, WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB, // Forward-compatible
         WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB, // Core profile WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB
         0 // End of attributes
@@ -130,7 +130,7 @@ void opengl_exit() {
 static Display* display;
 static GLXContext glxContext;
 
-int opengl_init() {
+int opengl_init(int version_major, int version_minor) {
     display = XOpenDisplay(NULL);
     if (display == NULL) {
         fprintf(stderr, "Unable to open X display\n");
@@ -174,8 +174,8 @@ int opengl_init() {
     }
 
     int contextAttribs[] = {
-        GLX_CONTEXT_MAJOR_VERSION_ARB, 3,
-        GLX_CONTEXT_MINOR_VERSION_ARB, 3,
+        GLX_CONTEXT_MAJOR_VERSION_ARB, version_major,
+        GLX_CONTEXT_MINOR_VERSION_ARB, version_minor,
         GLX_CONTEXT_PROFILE_MASK_ARB, GLX_CONTEXT_CORE_PROFILE_BIT_ARB,
         None
     };

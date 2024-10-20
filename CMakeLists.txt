@@ -15,7 +15,6 @@ set(CLIENT_SOURCE_FILES
     src/client/main.c
     
     src/general/platformlib/platform.c
-    src/general/platformlib/parallel_computing.c
     src/general/platformlib/networking.c
     src/general/platformlib/opengl_rendering.c
 
@@ -31,7 +30,6 @@ set(SERVER_SOURCE_FILES
     src/server/game_server_body/game_simulator.c
 
     src/general/platformlib/platform.c
-    src/general/platformlib/parallel_computing.c
     src/general/platformlib/networking.c
 
     src/general/utils.c
@@ -45,13 +43,31 @@ set(TEST_SOURCE_FILES
     src/test/main.c
     src/test/testing.c
     src/test/key_value.c
-    src/client/gui/menu.c
+    src/test/glframebuffer.c
+    src/test/shader.c
+    src/test/pixel_char.c
 
-    src/client/gui/pixel_char.c
     src/client/gui/argb_image.c
 
     src/general/platformlib/platform.c
-    src/general/platformlib/parallel_computing.c
+    src/general/platformlib/networking.c
+    src/general/platformlib/opengl_rendering.c
+
+)
+
+set(TEST_2_SOURCE_FILES
+    src/general/utils.c
+
+    src/test2/main.c
+    src/test2/testing2.c
+    src/test/key_value.c
+    src/test/glframebuffer.c
+    src/test/shader.c
+    src/test/pixel_char.c
+
+    src/client/gui/argb_image.c
+
+    src/general/platformlib/platform.c
     src/general/platformlib/networking.c
     src/general/platformlib/opengl_rendering.c
 
@@ -64,7 +80,6 @@ target_link_libraries(dummy test_lib)
 
 include_directories(${PROJECT_SOURCE_DIR}/src)
 include_directories(${PROJECT_SOURCE_DIR}/dependencies/stb_image/include)
-include_directories(${PROJECT_SOURCE_DIR}/dependencies/OpenCL/inc)
 include_directories(${PROJECT_SOURCE_DIR}/dependencies/GLEW/include)
 
 link_directories(${PROJECT_SOURCE_DIR}/dependencies/OpenCL/lib)
@@ -73,11 +88,8 @@ link_directories(${PROJECT_SOURCE_DIR}/dependencies/GLEW/lib/Release/x64)
 add_executable(blocks_client ${CLIENT_SOURCE_FILES})
 add_executable(blocks_server ${SERVER_SOURCE_FILES})
 add_executable(blocks_test ${TEST_SOURCE_FILES})
+add_executable(blocks_test2 ${TEST_2_SOURCE_FILES})
 
-
-target_link_libraries(blocks_client OpenCL)
-target_link_libraries(blocks_server OpenCL)
-target_link_libraries(blocks_test OpenCL)
 
 if(WIN32)
 
@@ -89,8 +101,13 @@ if(WIN32)
         LINK_FLAGS "/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup"
     )
 
+    set_target_properties(blocks_test2 PROPERTIES
+        LINK_FLAGS "/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup"
+    )
+
     target_link_libraries(blocks_client opengl32 glew32s)
     target_link_libraries(blocks_test opengl32 glew32s)
+    target_link_libraries(blocks_test2 opengl32 glew32s)
 
 elseif(UNIX)
     find_package(OpenGL REQUIRED)

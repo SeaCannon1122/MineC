@@ -1,3 +1,7 @@
+fov: 80
+render_distance: 6
+gui_scale: 0
+resolution_scale: 1
 val3: 100.
 val4: "value not found"
 val5: 100

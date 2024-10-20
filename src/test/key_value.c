@@ -256,7 +256,7 @@ int key_value_load_yaml(void** key_value_map, char* file_path) {
             if (buffer[text_i] == '"') { type = _VALUE_TYPE_STRING; string_quotes ^= 1; }
             if (type == _VALUE_TYPE_STRING) continue;
             if (buffer[text_i] == '.' && type == _VALUE_TYPE_INTEGER) type = _VALUE_TYPE_FLOAT;
-            else if (buffer[text_i] < '0' || buffer[text_i] > '9') { type = _VALUE_TYPE_STRING; }
+            else if ((buffer[text_i] < '0' || buffer[text_i] > '9') && (buffer[text_i] != '-' || text_i != value_start)) { type = _VALUE_TYPE_STRING; }
         }
 
         if (type == _VALUE_TYPE_STRING) {
@@ -271,15 +271,23 @@ int key_value_load_yaml(void** key_value_map, char* file_path) {
         }
         else if (type == _VALUE_TYPE_INTEGER) {
             long long int_val = 0;
+            int negative = 1;
+
+            if (buffer[value_start] == '-') { value_start++; negative = -1; }
             for (int _i = value_start; _i < text_i; _i++) {
                 int_val *= 10;
                 int_val += buffer[_i] - '0';
             }
+            int_val *= negative;
             key_value_set_integer(key_value_map, &buffer[key_start], int_val);
         }
         else {
             float float_val = 0;
             int decimal = -1;
+            float negative = 1.f;
+
+            if (buffer[value_start] == '-') { value_start++; negative = -1.f; }
+
             for (int _i = value_start; _i < text_i; _i++) {
                 if (buffer[_i] == '.') decimal = _i;
                 else if (decimal == -1) {
@@ -290,6 +298,7 @@ int key_value_load_yaml(void** key_value_map, char* file_path) {
                     float_val += (float)(buffer[_i] - '0') / powf(10, _i - decimal);
                 }
             }
+            float_val *= negative;
             key_value_set_integer(key_value_map, &buffer[key_start], float_val);
         }
 

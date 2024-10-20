@@ -13,7 +13,7 @@ int main(int argc, char* argv[]) {
 
 	platform_init();
 	networking_init();
-	opengl_init(4, 3);
+	opengl_init(4, 6);
 
 	glewInit();
 
