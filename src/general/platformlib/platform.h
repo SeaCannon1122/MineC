@@ -1,6 +1,15 @@
 #ifndef PLATFORM_H
 #define PLATFORM_H
 
+
+
+#if defined(_WIN32)
+#define VK_USE_PLATFORM_WIN32_KHR
+#include <vulkan/vulkan.h>
+#define PLATFORM_VK_SURFACE_EXTENSION VK_KHR_WIN32_SURFACE_EXTENSION_NAME
+#endif
+
+
 #ifndef MAX_WINDOW_COUNT
 #define MAX_WINDOW_COUNT 5
 #endif // !MAX_WINDOW_COUNT
@@ -67,6 +76,15 @@ void window_clear_mouse_scrolls(int window);
 int window_add_char_callback(int window, void (*callback) (int, int));
 
 void window_remove_char_callback(int window, int char_callback_id);
+
+VkResult create_vulkan_surface(VkInstance instance, int window, VkSurfaceKHR* surface);
+
+//#elif defined(__linux__)
+//#ifdef VK_USE_PLATFORM_XLIB_KHR
+//#include <vulkan/vulkan_xlib.h>
+//#define PLATFORM_VK_SURFACE_EXTENSION VK_KHR_XLIB_SURFACE_EXTENSION_NAME
+//#endif
+//#endif
 
 //keysymbol Mapping
 

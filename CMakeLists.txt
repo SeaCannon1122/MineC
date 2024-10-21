@@ -61,9 +61,6 @@ set(TEST_2_SOURCE_FILES
     src/test2/main.c
     src/test2/testing2.c
     src/test/key_value.c
-    src/test/glframebuffer.c
-    src/test/shader.c
-    src/test/pixel_char.c
 
     src/client/gui/argb_image.c
 
@@ -73,16 +70,19 @@ set(TEST_2_SOURCE_FILES
 
 )
 
+find_package(Vulkan REQUIRED)
 add_library(test_lib SHARED src/test/test_lib.c)
 
 add_executable(dummy src/dummy_main.c)
 target_link_libraries(dummy test_lib)
 
+include_directories(${Vulkan_INCLUDE_DIRS})
+link_libraries(${Vulkan_LIBRARIES})
+
 include_directories(${PROJECT_SOURCE_DIR}/src)
 include_directories(${PROJECT_SOURCE_DIR}/dependencies/stb_image/include)
 include_directories(${PROJECT_SOURCE_DIR}/dependencies/GLEW/include)
 
-link_directories(${PROJECT_SOURCE_DIR}/dependencies/OpenCL/lib)
 link_directories(${PROJECT_SOURCE_DIR}/dependencies/GLEW/lib/Release/x64)
 
 add_executable(blocks_client ${CLIENT_SOURCE_FILES})

@@ -11,7 +11,6 @@
 #include <stdbool.h>
 
 
-
 struct window_resource {
 	HWND hwnd;
 	bool active;
@@ -233,6 +232,15 @@ int window_add_char_callback(int window, void (*callback) (int, int)) {
 
 void window_remove_char_callback(int window, int char_callback_id) {
 	window_resources[window]->char_callbacks[char_callback_id] = NULL;
+}
+
+VkResult create_vulkan_surface(VkInstance instance, int window, VkSurfaceKHR* surface) {
+	VkWin32SurfaceCreateInfoKHR create_info = {0};
+	create_info.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+	create_info.hwnd = window_resources[window]->hwnd;
+	create_info.hinstance = GetModuleHandleA(NULL);
+
+	return vkCreateWin32SurfaceKHR(instance, &create_info, NULL, surface);
 }
 
 void WindowControl() {
@@ -680,6 +688,16 @@ int window_add_char_callback(int window, void (*callback) (int, int)) {
 void window_remove_char_callback(int window, int char_callback_id) {
 	window_resources[window]->char_callbacks[char_callback_id] = NULL;
 }
+
+VkResult create_vulkan_surface(VkInstance instance, int window, VkSurfaceKHR* surface) {
+	VkXlibSurfaceCreateInfoKHR create_info = { 0 };
+	create_info.sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
+	create_info.window = window_resources[window]->hwnd;
+	create_info.dpy = display;
+
+	return vkCreateXlibSurfaceKHR(instance, &create_info, NULL, surface);
+}
+
 
 void WindowControl() {
 	XEvent event;
