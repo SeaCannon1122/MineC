@@ -692,10 +692,14 @@ void window_remove_char_callback(int window, int char_callback_id) {
 VkResult create_vulkan_surface(VkInstance instance, int window, VkSurfaceKHR* surface) {
 	VkXlibSurfaceCreateInfoKHR create_info = { 0 };
 	create_info.sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
-	create_info.window = window_resources[window]->hwnd;
+	create_info.window = window_resources[window]->window;
 	create_info.dpy = display;
 
-	return vkCreateXlibSurfaceKHR(instance, &create_info, NULL, surface);
+	do {
+		VkResult result = vkCreateXlibSurfaceKHR(instance, &create_info, ((void*)0), surface); if (result != VK_SUCCESS) {
+			printf("Vulkan error in \n    %s \n at %s:%d: %d\n", "vkCreateXlibSurfaceKHR(instance, &create_info, NULL, surface)", "C:\\Users\\coroc\\OneDrive\\Projects\\C\\blocks2\\src\\general\\platformlib\\platform.c", 698, result); raise(5);
+		}
+	} while (0);
 }
 
 

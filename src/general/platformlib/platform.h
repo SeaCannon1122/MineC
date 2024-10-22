@@ -4,10 +4,22 @@
 
 
 #if defined(_WIN32)
+
+#define DEBUG_BREAK() __debugbreak()
+
 #define VK_USE_PLATFORM_WIN32_KHR
 #include <vulkan/vulkan.h>
 #define PLATFORM_VK_SURFACE_EXTENSION VK_KHR_WIN32_SURFACE_EXTENSION_NAME
+
+#elif defined(__linux__)
+#include <signal.h>
+#define DEBUG_BREAK() raise(SIGTRAP)
+
+#define VK_USE_PLATFORM_XLIB_KHR
+#include <vulkan/vulkan.h>
+#define PLATFORM_VK_SURFACE_EXTENSION VK_KHR_XLIB_SURFACE_EXTENSION_NAME
 #endif
+
 
 
 #ifndef MAX_WINDOW_COUNT

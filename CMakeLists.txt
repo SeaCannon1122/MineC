@@ -60,13 +60,9 @@ set(TEST_2_SOURCE_FILES
 
     src/test2/main.c
     src/test2/testing2.c
-    src/test/key_value.c
-
-    src/client/gui/argb_image.c
 
     src/general/platformlib/platform.c
     src/general/platformlib/networking.c
-    src/general/platformlib/opengl_rendering.c
 
 )
 
@@ -117,6 +113,7 @@ elseif(UNIX)
 
     target_link_libraries(blocks_client ${OPENGL_LIBRARIES} X11 GLEW GLX pthread m)
     target_link_libraries(blocks_test ${OPENGL_LIBRARIES} X11 GLEW GLX pthread m)
+    target_link_libraries(blocks_test2 X11 pthread m)
     target_link_libraries(blocks_server ${OPENGL_LIBRARIES} X11 pthread m)
 endif()
 
