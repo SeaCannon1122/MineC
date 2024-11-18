@@ -2,7 +2,7 @@
 #include <stdio.h>
 
 #include "general/platformlib/networking.h"
-#include "general/platformlib/platform.h"
+#include "general/platformlib/platform/platform.h"
 
 #include <vulkan/vulkan.h>
 
@@ -78,11 +78,9 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vulkan_debug_callbck(
 int main(int argc, char* argv[]) {
 
 	platform_init();
-	networking_init();
-
 	show_console_window();
 
-	int window = window_create(10, 10, 1000, 1000, "window");
+	uint32_t window = window_create(10, 10, 1000, 1000, "window");
 
 	screen_size.width = window_get_width(window);
 	screen_size.height = window_get_height(window);
@@ -438,6 +436,11 @@ int main(int argc, char* argv[]) {
 
 	while (!get_key_state(KEY_ESCAPE) && window_is_active(window)) {
 
+		uint32_t new_width = window_get_width(window);
+		//uint32_t 
+
+		
+
 		uint32_t img_index;
 		
 		VKCall(vkWaitForFences(device, 1, &img_available_fence, VK_TRUE, UINT64_MAX));
@@ -510,6 +513,24 @@ int main(int argc, char* argv[]) {
 
 		VKCall(vkQueuePresentKHR(graphics_queue, &present_info));
 
+			struct window_event event;
+
+			while (window_process_next_event(&event)) {
+
+				switch (event.type) {
+
+				case WINDOW_EVENT_SIZE: {
+					printf("resize to %d %d\n", event.info.window_event_size.width, event.info.window_event_size.height);
+				} break;
+
+				case WINDOW_EVENT_MOVE: {
+					printf("moved to %d %d\n", event.info.window_event_move.x_position, event.info.window_event_move.y_position);
+				}
+
+				}
+
+
+			}
 
 		sleep_for_ms(10);
 	}
@@ -518,7 +539,6 @@ int main(int argc, char* argv[]) {
 close:
 	window_destroy(window);
 
-	networking_exit();
 	platform_exit();
 
 	return 0;

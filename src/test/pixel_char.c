@@ -1,33 +1,8 @@
 #include "pixel_char.h"
 
-#include "GL/glew.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <malloc.h>
-
-#include <general/platformlib/opengl_rendering.h>
-
-#include "shader.h"
-
-GLfloat vertexData[] = {
-
-	0.0f, 0.0f,
-	1.0f, 0.0f,
-	0.0f, 1.0f,
-
-	0.0f, 1.0f,
-	1.0f, 1.0f,
-	1.0f, 0.0f
-};
-
-GLuint VAO;
-
-GLuint VBO, transform_buffer, pixel_char_buffer;
-
-GLuint shader_program;
-
-GLint width_uniform_location, height_uniform_location;
 
 #define __PIXEL_CHAR_IF_BIT(ptr, pos) (((char*)ptr)[pos / 8] & (1 << (pos % 8)) )
 
@@ -78,39 +53,6 @@ void pixel_char_init() {
 	char* geometry_source = __read_text_file("../../../resources/font_geometry_shader.glsl");
 	char* fragment_source = __read_text_file("../../../resources/font_fragment_shader.glsl");
 
-	shader_program = shader_create_program(2, vertex_source, GL_VERTEX_SHADER, fragment_source, GL_FRAGMENT_SHADER);
-
-	GLCall(glGenVertexArrays(1, &VAO));
-	GLCall(glGenBuffers(1, &VBO));
-	GLCall(glGenBuffers(1, &transform_buffer));
-	GLCall(glGenBuffers(1, &pixel_char_buffer));
-
-	GLCall(glBindVertexArray(VAO));
-
-	GLCall(glBindBuffer(GL_ARRAY_BUFFER, VBO));
-	GLCall(glBufferData(GL_ARRAY_BUFFER, sizeof(vertexData), vertexData, GL_STATIC_DRAW));
-	GLCall(glEnableVertexAttribArray(0));
-	GLCall(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0));
-
-	GLCall(glBindBuffer(GL_ARRAY_BUFFER, transform_buffer));
-	GLCall(glBufferData(GL_ARRAY_BUFFER, 100 * sizeof(float) * 4, NULL, GL_DYNAMIC_DRAW));
-	GLCall(glEnableVertexAttribArray(2));
-	GLCall(glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(float) * 4, (void*)0));
-	GLCall(glVertexAttribDivisor(2, 1));
-
-	GLCall(glBindBuffer(GL_ARRAY_BUFFER, pixel_char_buffer));
-	GLCall(glBufferData(GL_ARRAY_BUFFER, 100 * sizeof(unsigned int) * 4, NULL, GL_DYNAMIC_DRAW));
-	GLCall(glEnableVertexAttribArray(1));
-	GLCall(glVertexAttribIPointer(1, 4, GL_INT, sizeof(unsigned int) * 4, (void*)0));
-	GLCall(glVertexAttribDivisor(1, 1));
-
-	GLCall(glUseProgram(shader_program));
-
-	width_uniform_location = glGetUniformLocation(shader_program, "screen_width");
-	height_uniform_location = glGetUniformLocation(shader_program, "screen_height");
-
-	GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0));
-	GLCall(glBindVertexArray(0));
 
 }
 
@@ -388,7 +330,7 @@ int pixel_char_fitting(const struct pixel_char* RESTRICT string, int text_size, 
 
 
 
-void pixel_char_print_string_gl(const struct pixel_char* RESTRICT string, int text_size, int line_spacing, int x, int y, int alignment_x, int alignment_y, int max_width, int max_lines, unsigned int* RESTRICT screen, int width, int height, const const void** RESTRICT font_map) {
+void pixel_char_print_string_vk(const struct pixel_char* RESTRICT string, int text_size, int line_spacing, int x, int y, int alignment_x, int alignment_y, int max_width, int max_lines, unsigned int* RESTRICT screen, int width, int height, const const void** RESTRICT font_map) {
 
 
 	if (string->value == '\0') return;
@@ -486,22 +428,6 @@ void pixel_char_print_string_gl(const struct pixel_char* RESTRICT string, int te
 		y_tracer += (PIXEL_FONT_RESOULUTION / 2 + line_spacing) * text_size;
 		if (string[text_i].value == '\n') text_i++;
 	}
-
-	GLCall(glBindBuffer(GL_ARRAY_BUFFER, transform_buffer));
-	GLCall(glBufferSubData(GL_ARRAY_BUFFER, 0, char_count * 4 * sizeof(int), transforms)); // Update with new vertex data
-
-	GLCall(glBindBuffer(GL_ARRAY_BUFFER, pixel_char_buffer));
-	GLCall(glBufferSubData(GL_ARRAY_BUFFER, 0, char_count * sizeof(struct pixel_char), pixel_chars)); // Update with new vertex data
-
-
-	GLCall(glUseProgram(shader_program));
-
-	glUniform1i(width_uniform_location, width);
-	glUniform1i(height_uniform_location, height);
-
-	GLCall(glBindVertexArray(VAO));
-	GLCall(glDrawArraysInstanced(GL_TRIANGLES, 0, 6, char_count));
-	//GLCall(glBindVertexArray(0));
 
 
 #ifdef PIXEL_CHAR_DEBUG

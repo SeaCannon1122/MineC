@@ -1,11 +1,26 @@
+#pragma once
+
 #ifndef PLATFORM_H
 #define PLATFORM_H
 
+#include <stdint.h>
 
+enum window_event_type {
+	WINDOW_EVENT_NULL,
+	WINDOW_EVENT_DESTROY,
+	WINDOW_EVENT_MOVE,
+	WINDOW_EVENT_FOCUS,
+	WINDOW_EVENT_UNFOCUS,
+	WINDOW_EVENT_MOUSE_SCROLL,
+	WINDOW_EVENT_CHAR,
+	WINDOW_EVENT_SIZE,
+};
 
 #if defined(_WIN32)
 
 #define DEBUG_BREAK() __debugbreak()
+#define RESTRICT __restrict
+#define DLL_EXPORT __declspec(dllexport)
 
 #define VK_USE_PLATFORM_WIN32_KHR
 #include <vulkan/vulkan.h>
@@ -14,32 +29,70 @@
 #elif defined(__linux__)
 #include <signal.h>
 #define DEBUG_BREAK() raise(SIGTRAP)
+#define RESTRICT restrict
+#define DLL_EXPORT __attribute__((visibility("default")))
 
+#define VK_USE_PLATFORM_XLIB_KHR
 #define VK_USE_PLATFORM_XLIB_KHR
 #include <vulkan/vulkan.h>
 #define PLATFORM_VK_SURFACE_EXTENSION VK_KHR_XLIB_SURFACE_EXTENSION_NAME
+
+#elif defined(__APPLE__)
+
+#define DEBUG_BREAK __builtin_trap()
+#define RESTRICT restrict
+
 #endif
 
 
 
 #ifndef MAX_WINDOW_COUNT
-#define MAX_WINDOW_COUNT 5
+#define MAX_WINDOW_COUNT 4
 #endif // !MAX_WINDOW_COUNT
 
-#ifndef MAX_CALLBACK_FUNCTIONS
-#define MAX_CALLBACK_FUNCTIONS 32
+#ifndef MAX_CHAR_CALLBACK_FUNCTIONS
+#define MAX_CHAR_CALLBACK_FUNCTIONS 8
 #endif // !1
 
 #define WINDOW_CREATION_FAILED -1
 #define KEYBOARD_BUFFER_PARSER_CREATION_FAILED -1
 
 struct point2d_int {
-	int x;
-	int y;
+	int32_t x;
+	int32_t y;
 };
 
-void* dynamic_library_load(char* src);
-void (*dynamic_library_get_function(void* library_handle, char* function_name)) (void);
+struct window_event {
+	uint32_t type;
+	uint32_t window;
+	union {
+		struct {
+			uint32_t scroll_steps;
+		} window_event_mouse_scroll;
+		struct {
+			uint32_t utf8_char;
+			uint32_t utf16_char;
+			uint32_t unicode;
+		} window_event_char;
+		struct {
+			uint32_t key;
+		} window_event_key_down;
+		struct {
+			uint32_t key;
+		} window_event_key_up;
+		struct {
+			uint32_t width;
+			uint32_t height;
+		} window_event_size;
+		struct {
+			uint32_t x_position;
+			uint32_t y_position;
+		} window_event_move;
+	} info;
+};
+
+void* dynamic_library_load(uint8_t* src);
+void (*dynamic_library_get_function(void* library_handle, uint8_t* function_name)) (void);
 void dynamic_library_unload(void* library_handle);
 
 void platform_init();
@@ -49,9 +102,9 @@ void platform_exit();
 void show_console_window();
 void hide_console_window();
 
-void set_console_cursor_position(int x, int y);
+void set_console_cursor_position(int32_t x, int32_t y);
 
-void sleep_for_ms(unsigned int time_in_milliseconds);
+void sleep_for_ms(uint32_t time_in_milliseconds);
 
 double get_time();
 
@@ -59,50 +112,37 @@ void* create_thread(void (address) (void*), void* args);
 
 void join_thread(void* thread_handle);
 
-char get_key_state(int key);
+int8_t get_key_state(int32_t key);
 
 //window functions
 
-int window_create(int posx, int posy, int width, int height, unsigned char* name);
+uint32_t window_create(uint32_t posx, uint32_t posy, uint32_t width, uint32_t height, uint8_t* name);
 
-int window_get_width(int window);
+uint32_t window_get_width(uint32_t window);
+uint32_t window_get_height(uint32_t window);
 
-int window_get_height(int window);
+uint32_t window_get_x_position(uint32_t window);
+uint32_t window_get_y_position(uint32_t window);
 
-int window_is_selected(int window);
+int32_t window_is_selected(uint32_t window);
 
-int window_is_active(int window);
+int32_t window_is_active(uint32_t window);
 
-void window_destroy(int window);
+void window_destroy(uint32_t window);
 
-void window_draw(int window, unsigned int* buffer, int width, int height, int scalar);
+void window_draw(uint32_t window, uint8_t* buffer, int32_t width, int32_t height, int32_t scalar);
 
-struct point2d_int window_get_mouse_cursor_position(int window);
+struct point2d_int window_get_mouse_cursor_position(uint32_t window);
 
-void window_set_mouse_cursor_position(int window, int x, int y);
+void window_set_mouse_cursor_position(uint32_t window, int32_t x, int32_t y);
 
-int window_get_last_mouse_scrolls(int window);
+uint32_t window_process_next_event(struct window_event* event);
 
-void window_clear_mouse_scrolls(int window);
-
-int window_add_char_callback(int window, void (*callback) (int, int));
-
-void window_remove_char_callback(int window, int char_callback_id);
-
-VkResult create_vulkan_surface(VkInstance instance, int window, VkSurfaceKHR* surface);
-
-//#elif defined(__linux__)
-//#ifdef VK_USE_PLATFORM_XLIB_KHR
-//#include <vulkan/vulkan_xlib.h>
-//#define PLATFORM_VK_SURFACE_EXTENSION VK_KHR_XLIB_SURFACE_EXTENSION_NAME
-//#endif
-//#endif
+VkResult create_vulkan_surface(VkInstance instance, uint32_t window, VkSurfaceKHR* surface);
 
 //keysymbol Mapping
 
 #if defined(_WIN32)
-
-#define RESTRICT __restrict
 
 #include <windows.h>
 
@@ -129,8 +169,6 @@ VkResult create_vulkan_surface(VkInstance instance, int window, VkSurfaceKHR* su
 #define KEY_MOUSE_RIGHT VK_RBUTTON
 
 #elif defined(__linux__)
-
-#define RESTRICT restrict
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
