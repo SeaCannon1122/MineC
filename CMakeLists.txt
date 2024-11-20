@@ -16,7 +16,7 @@ set(CLIENT_SOURCE_FILES
     src/general/platformlib/platform/platform.c
     src/general/platformlib/networking.c
 
-    src/general/keyvalue.c
+    src/general/key_value.c
 
 )
 
@@ -29,7 +29,7 @@ set(SERVER_SOURCE_FILES
     src/general/platformlib/networking.c
 
     src/general/utils.c
-    src/general/keyvalue.c
+    src/general/key_value.c
 )
 
 set(TEST_SOURCE_FILES
@@ -37,7 +37,7 @@ set(TEST_SOURCE_FILES
 
     src/test/main.c
     src/test/testing.c
-    src/test/key_value.c
+    src/general/key_value.c
     src/test/pixel_char.c
 
     src/general/platformlib/platform/platform.c
@@ -50,7 +50,7 @@ set(TEST_2_SOURCE_FILES
 
     src/test2/main.c
     src/test2/testing2.c
-    src/test2/vulkan_context.c
+    src/client/rendering/rendering_context.c
 
     src/general/platformlib/platform/platform.c
     src/general/platformlib/networking.c

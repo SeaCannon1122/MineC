@@ -23,3 +23,9 @@ struct rendering_context {
 
 	VkExtent2D screen_size;
 };
+
+VkResult new_VkInstance(uint8_t* app_name, uint8_t* engine_name, VkInstance* instance, VkDebugUtilsMessengerEXT* debug_messenger);
+
+VkResult get_first_suitable_VkPhysicalDevice(VkInstance instance, VkSurfaceKHR surface, VkPhysicalDevice* gpu, uint32_t* queue_index);
+
+VkResult new_VkDevice(VkInstance instance, VkPhysicalDevice gpu, uint32_t queue_idx, float queue_priority, VkDevice* device);

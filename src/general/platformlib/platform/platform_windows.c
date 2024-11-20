@@ -23,8 +23,6 @@ struct window_event* we = NULL;
 uint32_t is_trackable_window_event = 0;
 uint32_t window_check = 0;
 
-void (*NtDelayExecution)(BOOLEAN, PLARGE_INTEGER);
-
 void* dynamic_library_load(uint8_t* src) {
 
 	uint32_t src_length = 0;
@@ -69,10 +67,8 @@ void set_console_cursor_position(int32_t x, int32_t y) {
 	SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), (COORD) { (SHORT)x, (SHORT)y });
 }
 
-void sleep_for_microseconds(uint32_t time_in_milliseconds) {
-	LARGE_INTEGER interval;
-	interval.QuadPart = -(time_in_milliseconds * 10000LL);
-	NtDelayExecution(FALSE, &interval);
+void sleep_for_ms(uint32_t time_in_milliseconds) {
+	Sleep(time_in_milliseconds);
 }
 
 double get_time() {
@@ -131,7 +127,7 @@ uint32_t window_create(uint32_t posx, uint32_t posy, uint32_t width, uint32_t he
 		posx,
 		posy,
 		width + 16,
-		height,
+		height + 39,
 		NULL,
 		NULL,
 		GetModuleHandleA(NULL),
@@ -375,9 +371,6 @@ void platform_init() {
 
 	RegisterClassW(&wc);
 
-	HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
-	NtDelayExecution = GetProcAddress(ntdll, "NtDelayExecution");
-
 	return;
 }
 
@@ -386,6 +379,4 @@ void platform_exit() {
 
 	UnregisterClassA(L"BasicWindowClass", GetModuleHandleA(NULL));
 	FreeConsole();
-
-	NtDelayExecution = 0;
 }

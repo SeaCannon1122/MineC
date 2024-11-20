@@ -3,8 +3,10 @@
 
 #include "general/platformlib/networking.h"
 #include "general/platformlib/platform/platform.h"
+#include "client/rendering/rendering_context.h"
 
 #include <vulkan/vulkan.h>
+#include <malloc.h>
 
 VkExtent2D screen_size;
 
@@ -80,140 +82,32 @@ int main(int argc, char* argv[]) {
 	platform_init();
 	show_console_window();
 
-	sleep_for_microseconds(1000);
-
-	printf("start\n");
-
-	double dt = get_time();
-
-	sleep_for_microseconds(1);
-
-	double dtime = get_time() - dt;
-
-	printf("%lf\n", dtime);
-	fflush(stdout);
-
-	sleep_for_microseconds(12345);
-
-	return 0;
-
 	uint32_t window = window_create(10, 10, 1000, 1000, "window");
 
 	screen_size.width = window_get_width(window);
 	screen_size.height = window_get_height(window);
 
-	VkApplicationInfo app_info = { 0 };
-	app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-	app_info.pApplicationName = "testapp";
-	app_info.pEngineName = "testengine";
+	// (semi) Vulkan code
 
-	char* instance_extensions[] = {
-		PLATFORM_VK_SURFACE_EXTENSION,
-		VK_KHR_SURFACE_EXTENSION_NAME,
-		VK_EXT_DEBUG_UTILS_EXTENSION_NAME
-	};
-
-	char* layers[] = {
-		"VK_LAYER_KHRONOS_validation",
-	};
-
-	VkInstanceCreateInfo instance_info = { 0 };
-	instance_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-	instance_info.pApplicationInfo = &app_info;
-	instance_info.ppEnabledExtensionNames = instance_extensions;
-	instance_info.enabledExtensionCount = 3;
-	instance_info.ppEnabledLayerNames = layers;
-	instance_info.enabledLayerCount = 1;
-
-	VKCall(vkCreateInstance(&instance_info, 0, &instance));
-
-	PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessengerEXT = vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
-
-	if (vkCreateDebugUtilsMessengerEXT) {
-
-		VkDebugUtilsMessengerCreateInfoEXT debug_info = { 0 };
-		debug_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-		debug_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT;
-		debug_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
-		debug_info.pfnUserCallback = vulkan_debug_callbck;
-
-		vkCreateDebugUtilsMessengerEXT(instance, &debug_info, 0, &debug_messenger);
-	}
-
+	VKCall(new_VkInstance("testapp", "testengine", &instance, &debug_messenger));
 
 	VKCall(create_vulkan_surface(instance, window, &surface));
 
-	uint32_t gpu_count = 0;
-	VkPhysicalDevice gpus[10];
+	uint32_t queue_idx = -1;
 
-	uint32_t graphics_idx = -1;
+	VKCall(get_first_suitable_VkPhysicalDevice(instance, surface, &gpu, &queue_idx));
 
-	VKCall(vkEnumeratePhysicalDevices(instance, &gpu_count, 0));
-	VKCall(vkEnumeratePhysicalDevices(instance, &gpu_count, gpus));
-
-	for (uint32_t i = 0; i < gpu_count; i++) {
-
-		uint32_t queue_family_count = 0;
-
-		VkQueueFamilyProperties queue_props[10];
-
-		vkGetPhysicalDeviceQueueFamilyProperties(gpus[i], &queue_family_count, 0);
-		vkGetPhysicalDeviceQueueFamilyProperties(gpus[i], &queue_family_count, queue_props);
-
-		uint32_t j = 0;
-		for (; j < queue_family_count; j++) {
-
-			if (queue_props[j].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-				
-				VkBool32 surface_support = VK_FALSE;
-				VKCall(vkGetPhysicalDeviceSurfaceSupportKHR(gpus[i], j, surface, &surface_support));
-				
-				if (surface_support) {
-
-					graphics_idx = j;
-					gpu = gpus[i];
-					break;
-				}
-					
-			}
-
-		}
-
-		if (j != queue_family_count) break;
-
-	}
-
-	if (graphics_idx == -1) {
+	if (queue_idx == -1) {
 		printf("couldnt fint suitable device");
 		goto close;
 	}
 
+	VKCall(new_VkDevice(instance, gpu, queue_idx, 1.0f, &device));
 
-	float queue_priority = 1.0f;
+	vkGetDeviceQueue(device, queue_idx, 0, &graphics_queue);
 
-	VkDeviceQueueCreateInfo queue_info = { 0 };
-	queue_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-	queue_info.queueFamilyIndex = graphics_idx;
-	queue_info.queueCount = 1;
-	queue_info.pQueuePriorities = &queue_priority;
-
-	char* device_extentions[] = {
-		VK_KHR_SWAPCHAIN_EXTENSION_NAME
-	};
-
-	VkDeviceCreateInfo device_info = { 0 };
-	device_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-	device_info.pQueueCreateInfos = &queue_info;
-	device_info.queueCreateInfoCount = 1;
-	device_info.ppEnabledExtensionNames = device_extentions;
-	device_info.enabledExtensionCount = 1;
-
-	VKCall(vkCreateDevice(gpu, &device_info, 0, &device));
-
-	vkGetDeviceQueue(device, graphics_idx, 0, &graphics_queue);
 
 	VkSurfaceFormatKHR surface_format;
-
 
 	uint32_t format_count = 0;
 	VkSurfaceFormatKHR surface_formats[10];
@@ -312,7 +206,7 @@ int main(int argc, char* argv[]) {
 
 	VkCommandPoolCreateInfo pool_info = { 0 };
 	pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-	pool_info.queueFamilyIndex = graphics_idx;
+	pool_info.queueFamilyIndex = queue_idx;
 	pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
 	VKCall(vkCreateCommandPool(device, &pool_info, 0, &command_pool));
@@ -549,7 +443,7 @@ int main(int argc, char* argv[]) {
 
 			}
 
-			sleep_for_microseconds(10000);
+			sleep_for_ms(10);
 	}
 	
 

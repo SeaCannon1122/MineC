@@ -85,7 +85,7 @@ void set_console_cursor_position(int32_t x, int32_t y) {
 	printf("\033[%d;%dH", y, x);
 }
 
-void sleep_for_microseconds(uint32_t time_in_milliseconds) {
+void sleep_for_ms(uint32_t time_in_milliseconds) {
 	usleep(time_in_milliseconds * 1000);
 }
 
