@@ -3,11 +3,11 @@
 #include <stdlib.h>
 #include <time.h>
 
-#include "general/platformlib/platform.h"
+#include "general/platformlib/platform/platform.h"
 #include "general/keyvalue.h"
 #include "general/utils.h"
 #include "general/logging.h"
-#include "client/gui/menu.h"
+#include "client/rendering/gui/menu.h"
 #include "game_client.h"
 #include "game_client_networker.h"
 #include "game/networking_packets/networking_packets.h"

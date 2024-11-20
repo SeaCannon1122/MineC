@@ -85,14 +85,14 @@ void set_console_cursor_position(int32_t x, int32_t y) {
 	printf("\033[%d;%dH", y, x);
 }
 
-void sleep_for_ms(uint32_t _time_in_milliseconds) {
-	usleep(_time_in_milliseconds * 1000);
+void sleep_for_microseconds(uint32_t time_in_milliseconds) {
+	usleep(time_in_milliseconds * 1000);
 }
 
 double get_time() {
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
-	return (double)tv.tv_sec * 1000 + (double)tv.tv_usec / 1000;
+	return (double)tv.tv_sec * 1000. + (double)tv.tv_usec / 1000.;
 }
 
 void* create_thread(void (address)(void*), void* args) {

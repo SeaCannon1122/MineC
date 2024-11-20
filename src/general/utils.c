@@ -67,46 +67,6 @@ float string_to_float(char* src, int length) {
 	return floating * sign;
 }
 
-char digit_to_char(int digit) {
-	char c = '0';
-	switch (digit)
-	{
-
-	case 1: 
-		c = '1'; 
-		break;
-	case 2: 
-		c = '2';
-		break;
-	case 3: 
-		c = '3';
-		break;
-	case 4: 
-		c = '4';
-		break;
-	case 5: 
-		c = '5';
-		break;
-	case 6: 
-		c = '6';
-		break;
-	case 7:
-		c = '7';
-		break;
-	case 8: 
-		c = '8';
-		break;
-	case 9: 
-		c = '9';
-		break;
-	case 0: 
-		c = '0';
-		break;
-	}
-
-	return c;
-}
-
 int string_length(char* str) {
 	int length = 1;
 	for (; str[length - 1] != '\0'; length++);
@@ -117,23 +77,23 @@ void get_time_in_string(char* buffer, time_t raw_time) {
 
 	struct tm* time_info = localtime(&raw_time);
 
-	buffer[0] = digit_to_char((time_info->tm_mon + 1) / 10);
-	buffer[1] = digit_to_char((time_info->tm_mon + 1) % 10);
+	buffer[0] = ((time_info->tm_mon + 1) / 10) + '0';
+	buffer[1] = ((time_info->tm_mon + 1) % 10) + '0';
 	buffer[2] = '/';
-	buffer[3] = digit_to_char(time_info->tm_mday / 10);
-	buffer[4] = digit_to_char(time_info->tm_mday % 10);
+	buffer[3] = (time_info->tm_mday / 10) + '0';
+	buffer[4] = (time_info->tm_mday % 10) + '0';
 	buffer[5] = '/';
-	buffer[6] = digit_to_char((time_info->tm_year + 1900) / 1000);
-	buffer[7] = digit_to_char(((time_info->tm_year + 1900) / 100) % 10);
-	buffer[8] = digit_to_char(((time_info->tm_year + 1900) / 10) % 10);
-	buffer[9] = digit_to_char((time_info->tm_year + 1900) % 10);
+	buffer[6] = ((time_info->tm_year + 1900) / 1000) + '0';
+	buffer[7] = (((time_info->tm_year + 1900) / 100) % 10) + '0';
+	buffer[8] = (((time_info->tm_year + 1900) / 10) % 10) + '0';
+	buffer[9] = ((time_info->tm_year + 1900) % 10) + '0';
 	buffer[10] = ' ';
-	buffer[11] = digit_to_char(time_info->tm_hour / 10);
-	buffer[12] = digit_to_char(time_info->tm_hour % 10);
+	buffer[11] = (time_info->tm_hour / 10) + '0';
+	buffer[12] = (time_info->tm_hour % 10) + '0';
 	buffer[13] = ':';
-	buffer[14] = digit_to_char(time_info->tm_min / 10);
-	buffer[15] = digit_to_char(time_info->tm_min % 10);
+	buffer[14] = (time_info->tm_min / 10) + '0';
+	buffer[15] = (time_info->tm_min % 10) + '0';
 	buffer[16] = ':';
-	buffer[17] = digit_to_char(time_info->tm_sec / 10);
-	buffer[18] = digit_to_char(time_info->tm_sec % 10);
+	buffer[17] = (time_info->tm_sec / 10) + '0';
+	buffer[18] = (time_info->tm_sec % 10) + '0';
 }

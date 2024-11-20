@@ -1,22 +1,7 @@
 #pragma once
 
 struct game_renderer {
-	unsigned int fbo;
-	unsigned int texture;
-
-	unsigned int vbo;
-	unsigned int vao;
-	unsigned int ibo;
-
-	int buffer_size_uniform_loaction;
-	int color_uniform_location;
-
-	unsigned int test_texture;
-
-	struct {
-		unsigned int default_shader_program;
-	} shaders;
-
+	int a;
 };
 
 struct game_client;

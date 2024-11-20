@@ -1,6 +1,6 @@
 #include "game_client_simulator.h"
 
-#include "general/platformlib/platform.h"
+#include "general/platformlib/platform/platform.h"
 
 void game_client_simulator_thread_function(struct game_client* game) {
 

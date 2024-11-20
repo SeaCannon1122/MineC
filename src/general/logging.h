@@ -2,16 +2,35 @@
 
 #include <stdio.h>
 #include <stdarg.h>
-
-#include "general/utils.h"
+#include <time.h>
 
 static void log_message(FILE* log_file, const char* format, ...) {
 	time_t t = time(NULL);
-	
-	char time_buffer[21];
-	get_time_in_string(time_buffer, t);
-	time_buffer[19] = ' ';
-	time_buffer[20] = '\0';
+	struct tm* time_info = localtime(&t);
+
+	char time_buffer[] = {
+		 (time_info->tm_mon  +    1) /   10       + '0',
+		 (time_info->tm_mon  +    1)         % 10 + '0',
+		'/',
+		  time_info->tm_mday         /   10       + '0',
+		  time_info->tm_mday                 % 10 + '0',
+		'/',
+		 (time_info->tm_year + 1900) / 1000       + '0',
+		((time_info->tm_year + 1900) /  100) % 10 + '0',
+		((time_info->tm_year + 1900) /   10) % 10 + '0',
+		 (time_info->tm_year + 1900)         % 10 + '0',
+		' ',
+		  time_info->tm_hour         /   10       + '0',
+		  time_info->tm_hour                 % 10 + '0',
+		':',
+		  time_info->tm_min          /   10       + '0',
+		  time_info->tm_min                  % 10 + '0',
+		':',
+		  time_info->tm_sec          /   10       + '0',
+		  time_info->tm_sec                  % 10 + '0',
+		' ',
+		'\0'
+	};
 
 	va_list args;
 	va_start(args, format);

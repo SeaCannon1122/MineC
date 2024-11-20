@@ -1,14 +1,13 @@
 #include "pixel_char.h"
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <malloc.h>
 
 #define __PIXEL_CHAR_IF_BIT(ptr, pos) (((char*)ptr)[pos / 8] & (1 << (pos % 8)) )
 
 #define __PIXEL_CHAR_WIDTH(c, font_map) (((struct pixel_font*)((font_map)[(c).masks & PIXEL_CHAR_FONT_MASK]))->char_font_entries[(c).value].width)
 
-char* __read_text_file(char* filename) {
+static void* __load_file(uint8_t* filename, uint32_t* size) {
 
 	FILE* file = fopen(filename, "rb");
 	if (file == NULL) return NULL;
@@ -17,43 +16,135 @@ char* __read_text_file(char* filename) {
 	long fileSize = ftell(file);
 	rewind(file);
 
-	char* buffer_raw = (char*)malloc(fileSize);
-	if (buffer_raw == NULL) {
+	char* buffer = (char*)malloc(fileSize);
+	if (buffer == NULL) {
 		fclose(file);
 		return NULL;
 	}
 
-	size_t bytesRead = fread(buffer_raw, sizeof(char), fileSize, file);
-
-	int carriage_return_count = 0;
-
-	for (int i = 0; i < fileSize; i++) if (buffer_raw[i] == '\r') carriage_return_count++;
-
-	char* buffer = (char*)malloc(fileSize + 1 - carriage_return_count);
-
-	int i = 0;
-
-	for (int raw_i = 0; raw_i < fileSize; raw_i++) {
-		if (buffer_raw[raw_i] != '\r') {
-			buffer[i] = buffer_raw[raw_i];
-			i++;
-		}
-	}
-
-	buffer[fileSize - carriage_return_count] = '\0';
-	free(buffer_raw);
-
+	size_t bytesRead = fread(buffer, sizeof(char), fileSize, file);
 	fclose(file);
+	*size = fileSize;
 
 	return buffer;
 }
 
-void pixel_char_init() {
-	char* vertex_source = __read_text_file("../../../resources/font_vertex_shader.glsl");
-	char* geometry_source = __read_text_file("../../../resources/font_geometry_shader.glsl");
-	char* fragment_source = __read_text_file("../../../resources/font_fragment_shader.glsl");
+uint32_t pixel_char_renderer_new(struct pixel_char_renderer* renderer, VkDevice device, VkRenderPass render_pass) {
+	renderer->device = device;
+
+	VkPipelineLayoutCreateInfo layout_info = { 0 };
+	layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+
+	VKCall(vkCreatePipelineLayout(device, &layout_info, 0, &renderer->pipe_layout));
 
 
+	VkPipelineVertexInputStateCreateInfo vertex_input_stage = { 0 };
+	vertex_input_stage.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+
+	VkPipelineColorBlendAttachmentState color_blend_attachment = { 0 };
+	color_blend_attachment.blendEnable = VK_FALSE;
+	color_blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+
+
+	VkPipelineColorBlendStateCreateInfo color_blend_state = { 0 };
+	color_blend_state.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+	color_blend_state.pAttachments = &color_blend_attachment;
+	color_blend_state.attachmentCount = 1;
+
+	VkPipelineInputAssemblyStateCreateInfo input_assembly = { 0 };
+	input_assembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+	input_assembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+
+	VkRect2D initial_scissor = { 0 };
+	VkViewport initial_viewport = { 0 };
+	initial_viewport.maxDepth = 1.0f;
+
+	VkPipelineViewportStateCreateInfo viewport_state = { 0 };
+	viewport_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+	viewport_state.scissorCount = 1;
+	viewport_state.pScissors = &initial_scissor;
+	viewport_state.viewportCount = 1;
+	viewport_state.pViewports = &initial_viewport;
+
+	VkPipelineRasterizationStateCreateInfo rasterization_state = { 0 };
+	rasterization_state.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+	rasterization_state.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+	rasterization_state.cullMode = VK_CULL_MODE_BACK_BIT;
+	rasterization_state.polygonMode = VK_POLYGON_MODE_FILL;
+	rasterization_state.lineWidth = 1.0f;
+
+	VkPipelineMultisampleStateCreateInfo multi_sample_state = { 0 };
+	multi_sample_state.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+	multi_sample_state.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+
+	VkShaderModule vertex_shader, fragment_shader;
+
+	uint32_t vertex_shader_code_size;
+	char* vertex_shader_code = __load_file("../../../resources/vertex_shader.spv", &vertex_shader_code_size);
+
+	uint32_t fragment_shader_code_size;
+	char* fragment_shader_code = __load_file("../../../resources/fragment_shader.spv", &fragment_shader_code_size);
+
+	VkShaderModuleCreateInfo shader_info = { 0 };
+	shader_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+
+
+	shader_info.pCode = vertex_shader_code;
+	shader_info.codeSize = vertex_shader_code_size;
+	VKCall(vkCreateShaderModule(device, &shader_info, 0, &vertex_shader));
+
+	shader_info.pCode = fragment_shader_code;
+	shader_info.codeSize = fragment_shader_code_size;
+	VKCall(vkCreateShaderModule(device, &shader_info, 0, &fragment_shader));
+
+	free(vertex_shader_code);
+	free(fragment_shader_code);
+
+	VkPipelineShaderStageCreateInfo vertex_stage = { 0 };
+	vertex_stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	vertex_stage.pName = "main";
+	vertex_stage.stage = VK_SHADER_STAGE_VERTEX_BIT;
+	vertex_stage.module = vertex_shader;
+
+	VkPipelineShaderStageCreateInfo fragment_stage = { 0 };
+	fragment_stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	fragment_stage.pName = "main";
+	fragment_stage.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+	fragment_stage.module = fragment_shader;
+
+	VkPipelineShaderStageCreateInfo shader_stage[] = {
+		vertex_stage,
+		fragment_stage
+	};
+
+	VkDynamicState dynamic_states[] = {
+		VK_DYNAMIC_STATE_SCISSOR,
+		VK_DYNAMIC_STATE_VIEWPORT
+	};
+
+	VkPipelineDynamicStateCreateInfo dynamic_state = { 0 };
+	dynamic_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+	dynamic_state.pDynamicStates = dynamic_states;
+	dynamic_state.dynamicStateCount = 2;
+
+	VkGraphicsPipelineCreateInfo pipe_info = { 0 };
+	pipe_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+	pipe_info.pVertexInputState = &vertex_input_stage;
+	pipe_info.pColorBlendState = &color_blend_state;
+	pipe_info.pStages = shader_stage;
+	pipe_info.layout = renderer->pipe_layout;
+	pipe_info.renderPass = render_pass;
+	pipe_info.stageCount = 2;
+	pipe_info.pRasterizationState = &rasterization_state;
+	pipe_info.pViewportState = &viewport_state;
+	pipe_info.pDynamicState = &dynamic_state;
+	pipe_info.pMultisampleState = &multi_sample_state;
+	pipe_info.pInputAssemblyState = &input_assembly;
+
+	VKCall(vkCreateGraphicsPipelines(device, 0, 1, &pipe_info, 0, &renderer->pipeline));
+
+	vkDestroyShaderModule(device, vertex_shader, 0);
+	vkDestroyShaderModule(device, fragment_shader, 0);
 }
 
 struct pixel_font* load_pixel_font(char* src) {
@@ -78,180 +169,7 @@ struct pixel_font* load_pixel_font(char* src) {
 	return buffer;
 }
 
-
-void pixel_char_background_print(const struct pixel_char* RESTRICT c, int text_size, int x, int y, unsigned int* RESTRICT screen, int width, int height, const const void** RESTRICT font_map) {
-
-	int shaddow_offset = (c->masks & PIXEL_CHAR_CURSIVE_MASK ? (text_size + 1) / 2 : text_size);
-
-	for (int j = 0; j < PIXEL_FONT_RESOULUTION * text_size / 2; j++) {
-
-		int cursive_offset = (c->masks & PIXEL_CHAR_CURSIVE_MASK ? PIXEL_FONT_RESOULUTION * text_size / 4 - j / 2 - 1 : 0);
-
-		for (int i = -(text_size + 1) / 2; i < (__PIXEL_CHAR_WIDTH(c[0], font_map) * text_size + 1) / 2 + text_size / 2; i++) {
-
-			if (i + cursive_offset + x >= 0 && j + y >= 0 && i + cursive_offset + x < width && j + y < height) screen[(i + cursive_offset + x) + width * (j + y)] = c->background_color;
-
-		}
-	}
-}
-
-void pixel_char_print(const struct pixel_char* RESTRICT c, int text_size, int x, int y, unsigned int* RESTRICT screen, int width, int height, const const void** RESTRICT font_map) {
-
-	int shaddow_offset = (c->masks & PIXEL_CHAR_CURSIVE_MASK ? (text_size + 1) / 2 : text_size);
-
-	for (int j = 0; j < PIXEL_FONT_RESOULUTION * text_size / 2; j++) {
-
-		int cursive_offset = (c->masks & PIXEL_CHAR_CURSIVE_MASK ? PIXEL_FONT_RESOULUTION * text_size / 4 - j / 2 - 1 : 0);
-		int shaddow_offset = (c->masks & PIXEL_CHAR_CURSIVE_MASK ? (text_size + 1) / 2 : text_size);
-
-		for (int i = 0; i < (__PIXEL_CHAR_WIDTH(c[0], font_map) * text_size + 1) / 2; i++) {
-
-			int x_bit_pos = i - text_size * PIXEL_FONT_RESOULUTION / 4;
-			int y_bit_pos = j - text_size * PIXEL_FONT_RESOULUTION / 4;
-
-			int bit_pos = ((x_bit_pos < 0 ? x_bit_pos + 1 : x_bit_pos) * 2 / text_size + PIXEL_FONT_RESOULUTION / 2) + PIXEL_FONT_RESOULUTION * ((y_bit_pos < 0 ? y_bit_pos + 1 : y_bit_pos) * 2 / text_size + PIXEL_FONT_RESOULUTION / 2);
-
-			if (x_bit_pos < 0) bit_pos -= 1;
-			if (y_bit_pos < 0) bit_pos -= PIXEL_FONT_RESOULUTION;
-
-			if (__PIXEL_CHAR_IF_BIT(((struct pixel_font*)(font_map[c[0].masks & PIXEL_CHAR_FONT_MASK]))->char_font_entries[c[0].value].layout, bit_pos)) {
-				if (i + cursive_offset + x >= 0 && j + y >= 0 && i + cursive_offset + x < width && j + y < height) screen[(i + cursive_offset + x) + width * (j + y)] = c->color;
-				if (c->masks & PIXEL_CHAR_SHADOW_MASK && i + cursive_offset + x + shaddow_offset >= 0 && j + y + text_size >= 0 && i + cursive_offset + x + shaddow_offset < width && j + y + text_size < height)
-					screen[(i + cursive_offset + x + shaddow_offset) + width * (j + y + text_size)] =
-					(c->color & 0xff) / PIXEL_FONT_SHADOW_DIVISOR +
-					((((c->color >> 8) & 0xff) / PIXEL_FONT_SHADOW_DIVISOR) << 8) +
-					((((c->color >> 16) & 0xff) / PIXEL_FONT_SHADOW_DIVISOR) << 16) +
-					((((c->color >> 24) & 0xff) / PIXEL_FONT_SHADOW_DIVISOR) << 24);
-			}
-
-		}
-	}
-
-	if (c->masks & PIXEL_CHAR_UNDERLINE_MASK) {
-		for (int j = PIXEL_FONT_RESOULUTION * text_size / 2; j < (PIXEL_FONT_RESOULUTION + 2) * text_size / 2; j++) {
-
-			int cursive_offset = (c->masks & PIXEL_CHAR_CURSIVE_MASK ? PIXEL_FONT_RESOULUTION * text_size / 4 - j / 2 - 1 : 0);
-
-			for (int i = -(text_size + 1) / 2; i < (__PIXEL_CHAR_WIDTH(c[0], font_map) * text_size + 1) / 2 + text_size / 2; i++) {
-
-				if (i + cursive_offset + x >= 0 && j + y >= 0 && i + cursive_offset + x < width && j + y < height) screen[(i + cursive_offset + x) + width * (j + y)] = c->color;
-				if (c->masks & PIXEL_CHAR_SHADOW_MASK && i + cursive_offset + x + shaddow_offset >= 0 && j + y + text_size >= 0 && i + cursive_offset + x + shaddow_offset < width && j + y + text_size < height)
-					screen[(i + cursive_offset + x + shaddow_offset) + width * (j + y + text_size)] =
-					(c->color & 0xff) / PIXEL_FONT_SHADOW_DIVISOR +
-					((((c->color >> 8) & 0xff) / PIXEL_FONT_SHADOW_DIVISOR) << 8) +
-					((((c->color >> 16) & 0xff) / PIXEL_FONT_SHADOW_DIVISOR) << 16) +
-					((((c->color >> 24) & 0xff) / PIXEL_FONT_SHADOW_DIVISOR) << 24);
-			}
-		}
-	}
-
-
-}
-
-void pixel_char_print_string(const struct pixel_char* RESTRICT string, int text_size, int line_spacing, int x, int y, int alignment_x, int alignment_y, int max_width, int max_lines, unsigned int* RESTRICT screen, int width, int height, const const void** RESTRICT font_map) {
-
-
-	if (string->value == '\0') return;
-
-	int lines = 1;
-	int line_width = 0;
-	for (int i = 0; string[i].value != '\0'; i++) {
-
-		if (string[i].value == '\n') { lines++; line_width = 0; continue; }
-
-		if (line_width == 0) line_width = (__PIXEL_CHAR_WIDTH(string[i], font_map) + 1) / 2 * text_size;
-		else {
-			char c = string[i].value;
-			int new_line_width = line_width + (__PIXEL_CHAR_WIDTH(string[i], font_map) + 1) / 2 * text_size + (__PIXEL_CHAR_WIDTH(string[i], font_map) > 0 ? text_size : 0);
-			if (new_line_width > max_width) { lines++; line_width = 0; i--; }
-			else line_width = new_line_width;
-		}
-
-	}
-
-	int y_pos = y - (alignment_y == ALIGNMENT_TOP ? 0 : (alignment_y == ALIGNMENT_BOTTOM ? (PIXEL_FONT_RESOULUTION / 2 + line_spacing) * text_size * lines - line_spacing * text_size : ((PIXEL_FONT_RESOULUTION / 2 + line_spacing) * text_size * lines - line_spacing * text_size) / 2));
-
-	int y_tracer = y_pos;
-
-	int text_i = 0;
-
-	for (int i = 0; i < lines; i++) {
-		if (string[text_i].value == '\n') continue;
-		if (string[text_i].value == '\0') break;
-
-		line_width = (__PIXEL_CHAR_WIDTH(string[text_i], font_map) + 1) / 2 * text_size;
-		int last_char_line = text_i;
-
-		for (; string[last_char_line + 1].value != '\n' && string[last_char_line + 1].value != '\0'; last_char_line++) {
-
-			int new_line_width = line_width + (__PIXEL_CHAR_WIDTH(string[last_char_line + 1], font_map) + 1) / 2 * text_size + (__PIXEL_CHAR_WIDTH(string[last_char_line + 1], font_map) > 0 ? text_size : 0);
-			if (new_line_width <= max_width) line_width = new_line_width;
-			else break;
-
-		}
-
-		int x_pos = x - (alignment_x == ALIGNMENT_LEFT ? 0 : (alignment_x == ALIGNMENT_RIGHT ? line_width : line_width / 2));
-
-		int x_tracer = x_pos;
-
-		int text_i_line = text_i;
-
-		for (; text_i_line <= last_char_line; text_i_line++) {
-
-			if (string[text_i_line].value != '\x1f' && string[text_i_line].masks & PIXEL_CHAR_BACKGROUND_MASK) pixel_char_background_print(&string[text_i_line], text_size, x_tracer, y_tracer, screen, width, height, font_map);
-
-			x_tracer += (__PIXEL_CHAR_WIDTH(string[text_i_line], font_map) + 1) / 2 * text_size + (__PIXEL_CHAR_WIDTH(string[text_i_line], font_map) > 0 ? text_size : 0);
-
-		}
-
-		x_tracer = x_pos;
-
-		text_i_line = text_i;
-
-		for (; text_i_line <= last_char_line; text_i_line++) {
-
-			if (string[text_i_line].value != '\x1f') pixel_char_print(&string[text_i_line], text_size, x_tracer, y_tracer, screen, width, height, font_map);
-
-			x_tracer += (__PIXEL_CHAR_WIDTH(string[text_i_line], font_map) + 1) / 2 * text_size + (__PIXEL_CHAR_WIDTH(string[text_i_line], font_map) > 0 ? text_size : 0);
-
-		}
-
-		text_i = text_i_line;
-
-		if (string[text_i].value == '\0') break;
-
-		y_tracer += (PIXEL_FONT_RESOULUTION / 2 + line_spacing) * text_size;
-		if (string[text_i].value == '\n') text_i++;
-	}
-
-#ifdef PIXEL_CHAR_DEBUG
-
-	int i = (alignment_x == ALIGNMENT_LEFT ? x : (alignment_x == ALIGNMENT_RIGHT ? x - max_width : x - max_width / 2)) - 1;
-
-	for (int j = y_pos; j < (PIXEL_FONT_RESOULUTION / 2 + line_spacing) * text_size * lines - line_spacing * text_size + y_pos; j++) {
-		if (i >= 0 && i < width && j >= 0 && j < height) screen[i + j * width] = 0xffff7f00;
-	}
-
-	i = (alignment_x == ALIGNMENT_LEFT ? x + max_width : (alignment_x == ALIGNMENT_RIGHT ? x : x + max_width / 2));
-	for (int j = y_pos; j < (PIXEL_FONT_RESOULUTION / 2 + line_spacing) * text_size * lines - line_spacing * text_size + y_pos; j++) {
-		if (i >= 0 && i < width && j >= 0 && j < height) screen[i + j * width] = 0xffff7f00;
-	}
-
-	for (int i = x - 2; i <= x + 2; i++) {
-		for (int j = y - 2; j <= y + 2; j++) {
-			if (i >= 0 && i < width && j >= 0 && j < height) screen[i + j * width] = 0xffff0000;
-		}
-	}
-
-
-#endif // _PIXEL_CHAR_DEBUG
-
-}
-
-
-
-int pixel_char_get_hover_index(const struct pixel_char* RESTRICT string, int text_size, int line_spacing, int x, int y, int alignment_x, int alignment_y, int max_width, int max_lines, const const void** RESTRICT font_map, int x_hover, int y_hover) {
-
+uint32_t pixel_char_get_hover_index(const struct pixel_char* RESTRICT string, uint32_t text_size, int32_t line_spacing, int32_t x, int32_t y, int32_t alignment_x, int32_t alignment_y, int32_t max_width, uint32_t max_lines, const const void** RESTRICT font_map, int x_hover, int y_hover) {
 	if (string->value == '\0') return -1;
 
 	int lines = 1;
@@ -330,7 +248,7 @@ int pixel_char_fitting(const struct pixel_char* RESTRICT string, int text_size, 
 
 
 
-void pixel_char_print_string_vk(const struct pixel_char* RESTRICT string, int text_size, int line_spacing, int x, int y, int alignment_x, int alignment_y, int max_width, int max_lines, unsigned int* RESTRICT screen, int width, int height, const const void** RESTRICT font_map) {
+void pixel_char_print_string(struct pixel_char_renderer* RESTRICT renderer, const struct pixel_char* RESTRICT string, uint32_t text_size, int32_t line_spacing, int32_t x, int32_t y, int32_t alignment_x, int32_t alignment_y, int32_t max_width, uint32_t max_lines, uint32_t width, uint32_t height, const const void** RESTRICT font_map) {
 
 
 	if (string->value == '\0') return;
@@ -428,28 +346,5 @@ void pixel_char_print_string_vk(const struct pixel_char* RESTRICT string, int te
 		y_tracer += (PIXEL_FONT_RESOULUTION / 2 + line_spacing) * text_size;
 		if (string[text_i].value == '\n') text_i++;
 	}
-
-
-#ifdef PIXEL_CHAR_DEBUG
-
-	int i = (alignment_x == ALIGNMENT_LEFT ? x : (alignment_x == ALIGNMENT_RIGHT ? x - max_width : x - max_width / 2)) - 1;
-
-	for (int j = y_pos; j < (PIXEL_FONT_RESOULUTION / 2 + line_spacing) * text_size * lines - line_spacing * text_size + y_pos; j++) {
-		if (i >= 0 && i < width && j >= 0 && j < height) screen[i + j * width] = 0xffff7f00;
-	}
-
-	i = (alignment_x == ALIGNMENT_LEFT ? x + max_width : (alignment_x == ALIGNMENT_RIGHT ? x : x + max_width / 2));
-	for (int j = y_pos; j < (PIXEL_FONT_RESOULUTION / 2 + line_spacing) * text_size * lines - line_spacing * text_size + y_pos; j++) {
-		if (i >= 0 && i < width && j >= 0 && j < height) screen[i + j * width] = 0xffff7f00;
-	}
-
-	for (int i = x - 2; i <= x + 2; i++) {
-		for (int j = y - 2; j <= y + 2; j++) {
-			if (i >= 0 && i < width && j >= 0 && j < height) screen[i + j * width] = 0xffff0000;
-		}
-	}
-
-
-#endif // _PIXEL_CHAR_DEBUG
 
 }

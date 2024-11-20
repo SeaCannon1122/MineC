@@ -3,7 +3,7 @@
 #include <stdio.h>
 
 #include "general/platformlib/networking.h"
-#include "general/platformlib/platform.h"
+#include "general/platformlib/platform/platform.h"
 #include "general/utils.h"
 #include "game/networking_packets/networking_packets.h"
 #include "game/chat.h"

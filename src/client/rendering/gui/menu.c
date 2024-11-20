@@ -184,20 +184,7 @@ void menu_scene_frame(struct menu_scene* menu, unsigned int* screen, int width, 
 				if(image->hoverable) image_to_draw = image->hover_image;
 			}
 
-			argb_image_draw(
-				MODE_RGB,
-				resource_map[image_to_draw],
-				menu_x(image->x, image->alignment_x, width, scale),
-				menu_y(image->y, image->alignment_y, height, scale),
-				image->image_alignment_x, 
-				image->image_alignment_y, 
-				0, 
-				0, 
-				screen, 
-				width, 
-				height, 
-				image->image_scalar * scale
-			);
+
 
 			break;
 		}

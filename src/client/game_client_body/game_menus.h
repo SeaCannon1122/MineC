@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#include "client/gui/menu.h"
+#include "client/rendering/gui/menu.h"
 #include "client/game_client_body/resources.h"
 #include "game/game_constants.h"
 

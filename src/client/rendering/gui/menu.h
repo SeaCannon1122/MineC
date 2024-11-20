@@ -1,7 +1,6 @@
 #pragma once
 
-#include "client/gui/argb_image.h"
-#include "client/gui/pixel_char.h"
+#include "client/rendering/gui/pixel_char.h"
 
 
 #ifndef ALIGNMENTS

@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <time.h>
 
-#include "general/platformlib/platform.h"
+#include "general/platformlib/platform/platform.h"
 #include "general/platformlib/networking.h"
 
 #include "general/utils.h"
@@ -12,8 +12,8 @@
 #include "general/resource_loader.h"
 #include "general/resource_manager.h"
 
-#include "client/gui/pixel_char.h"
-#include "client/gui/menu.h"
+#include "client/rendering/gui/pixel_char.h"
+#include "client/rendering/gui/menu.h"
 #include "client/game_client_body/resources.h"
 #include "game_menus.h"
 #include "game_client_networker.h"
@@ -171,95 +171,11 @@ int client_log_init(struct game_client* game) {
 	return 0;
 }
 
-int new_game_client(struct game_client* game, char* resource_path) {
-
-	game->resource_manager = new_resource_manager(resource_path);
-	if (game->resource_manager == NULL) {
-		printf("Couldn't find critical resourclayout file at expected path %s\n", resource_path);
-		return 1;
-	}
-
-	int i = 0;
-	for (; resource_path[i] != '\0'; i++);
-	for (; resource_path[i] != '/' && i > 0; i--);
-	if (resource_path[i] == '/') i++;
-
-	for (int j = 0; j < i; j++) game->resource_folder_path[j] = resource_path[j];
-	game->resource_folder_path[i] = '\0';
-
-	if (client_log_init(game) != 0) {
-		printf("Couldn't find log directory paths in resource_manager\n");
-		destroy_resource_manager(game->resource_manager);
-		return 2;
-	}
-
-	game->resource_map[RESOURCE_PIXEL_FONT_DEFAULT] = get_value_from_key(game->resource_manager, "debug_pixelfont").ptr;
-
-	struct key_value_map* settings_map = get_value_from_key(game->resource_manager, "settings").ptr;
-	if (settings_map == NULL) {
-		log_message(game->debug_log_file, "Couldn't find critical settings file link 'settings' in resourcelayout");
-		destroy_resource_manager(game->resource_manager);
-		return 2;
-	}
-
-	game->settings.render_distance = get_value_from_key(settings_map, "render_distance").i;
-	game->settings.gui_scale = get_value_from_key(settings_map, "gui_scale").i;
-	game->settings.resolution_scale = get_value_from_key(settings_map, "resolution_scale").i;
-	game->settings.fov = get_value_from_key(settings_map, "fov").i;
-
-	struct key_value_map* constants_map = get_value_from_key(game->resource_manager, "constants").ptr;
-	if (constants_map == NULL) {
-		log_message(game->debug_log_file, "Couldn't find critical settings file link 'constants' in resourcelayout");
-		destroy_resource_manager(game->resource_manager);
-		return 2;
-	}
-
-	game->constants.render_distance_min = get_value_from_key(constants_map, "render_distance_min").i;
-	game->constants.render_distance_max = get_value_from_key(constants_map, "render_distance_max").i;
-	game->constants.fov_min = get_value_from_key(constants_map, "fov_min").i;
-	game->constants.fov_max = get_value_from_key(constants_map, "fov_max").i;
-	game->constants.client_connection_timeout = get_value_from_key(constants_map, "client_connection_timeout").i;
-	game->constants.packet_awaiting_timeout = get_value_from_key(constants_map, "packet_awaiting_timeout").i;
-	game->constants.chat_width = get_value_from_key(constants_map, "chat_width").i;
-	game->constants.max_chat_lines_display = get_value_from_key(constants_map, "max_chat_lines_display").i;
-	game->constants.chat_display_duration = get_value_from_key(constants_map, "chat_display_duration").i;
-	game->constants.chat_stream_length = get_value_from_key(constants_map, "chat_stream_length").i;
-	game->constants.chat_indentation_left = get_value_from_key(constants_map, "chat_indentation_left").i;
-	game->constants.chat_indentation_right = get_value_from_key(constants_map, "chat_indentation_right").i;
-	game->constants.chat_line_radius = get_value_from_key(constants_map, "chat_line_radius").i;
-	game->constants.max_chunk_requests = get_value_from_key(constants_map, "max_chunk_requests").i;
-
-
-	game->chat_stream.stream = malloc(sizeof(struct chat_stream_element) * game->constants.chat_stream_length);
-	game->chat_stream.next_index = 0;
-	for (int i = game->constants.chat_stream_length - game->constants.max_chat_lines_display; i < game->constants.chat_stream_length; i++) {
-		game->chat_stream.stream[i].time = 0;
-	}
-
-	game->game_state.chunk_table_length = (game->constants.render_distance_max * 2 + 1) * (game->constants.render_distance_max * 2 + 1) * (game->constants.render_distance_max * 2 + 1);
-	game->game_state.chunk_table = malloc(sizeof(struct chunk_table_entry) * game->game_state.chunk_table_length);
-
-	for (int i = 0; i < game->game_state.chunk_table_length; i++) {
-		game->game_state.chunk_table[i].chunk = NULL;
-		game->game_state.chunk_table[i].state = 0;
-	}
-		
-
-	game->in_game_flag = false;
-	game->disconnect_flag = 0;
+int32_t run_game_client(struct game_client* game, uint8_t* resource_path) {
 
 	init_game_menus(game);
 	init_networker(game);
 	debug_init(game);
-
-	game->running = false;
-
-	return 0;
-}
-
-
-void run_game_client(struct game_client* game) {
-	show_console_window();
 
 	game->running = true;
 
@@ -267,8 +183,8 @@ void run_game_client(struct game_client* game) {
 
 	log_message(game->debug_log_file, "Created window");
 
-	void* networking_thread = create_thread((void(*)(void*))networker_thread_function, game);
-	void* simulation_thread = create_thread((void(*)(void*))game_client_simulator_thread_function, game);
+	//void* networking_thread = create_thread((void(*)(void*))networker_thread_function, game);
+	//void* simulation_thread = create_thread((void(*)(void*))game_client_simulator_thread_function, game);
 
 	while (get_key_state(KEY_MOUSE_LEFT) & 0b1) sleep_for_ms(10);
 
@@ -280,13 +196,32 @@ void run_game_client(struct game_client* game) {
 
 	log_message(game->debug_log_file, "Entering main Game Loop");
 
-	game->input_state.left_click = get_key_state(KEY_MOUSE_LEFT);
-	game->input_state.right_click = get_key_state(KEY_MOUSE_RIGHT);
-	game->input_state.escape = get_key_state(KEY_ESCAPE);
-	game->input_state.ctrl_left = get_key_state(KEY_CONTROL_L);
+	
+	while (window_is_active(game->window)) {
 
-	while (window_is_active(game->window) && !(game->game_menus.main_menu.menu.items[game->game_menus.main_menu.menu.current_item] == &game->game_menus.main_menu.quit_game_button_image && game->input_state.left_click == 0b11)) {
-		
+		double rendering_start_time = get_time();
+
+		game->input_state.left_click = get_key_state(KEY_MOUSE_LEFT);
+		game->input_state.right_click = get_key_state(KEY_MOUSE_RIGHT);
+		game->input_state.escape = get_key_state(KEY_ESCAPE);
+		game->input_state.ctrl_left = get_key_state(KEY_CONTROL_L);
+
+		struct window_event event;
+
+		while (window_process_next_event(&event)) {
+			switch (event.type)
+			{
+
+			case WINDOW_EVENT_SIZE: {
+				game->render_state.width = event.info.window_event_size.width;
+				game->render_state.height = event.info.window_event_size.height;
+
+				if (game->render_state.height > 0 && game->render_state.width > 0) client_renderer_adjust_size(game);
+			} break;
+			
+			}
+		}
+
 		struct point2d_int mouse_position = window_get_mouse_cursor_position(game->window);
 
 		game->input_state.mouse_x = mouse_position.x;
@@ -296,29 +231,21 @@ void run_game_client(struct game_client* game) {
 		game->input_state.escape = get_key_state(KEY_ESCAPE);
 		game->input_state.ctrl_left = get_key_state(KEY_CONTROL_L);
 
-		int new_width = (window_get_width(game->window) + game->settings.resolution_scale - 1) / game->settings.resolution_scale;
-		int new_height = (window_get_height(game->window) + game->settings.resolution_scale - 1) / game->settings.resolution_scale;
-		if (new_width != game->render_state.width || new_height != game->render_state.height) {
-			free(game->render_state.pixels);
-			game->render_state.pixels = malloc(new_width * new_height * sizeof(unsigned int));
-			game->render_state.width = new_width;
-			game->render_state.height = new_height;
-
-			if(game->render_state.height > 0 && game->render_state.width > 0) client_renderer_adjust_size(game);
-		}
-
 		if (game->in_game_flag && game->render_state.height > 0 && game->render_state.width > 0) { 
 
-			
+			//vk begin rendering
 
-			client_render_world(game); 
+			//client_render_world(game);
+
+			//game_menus_frame(game);
+
+			//vk end rendering
+
+			//display rendering
 		}
 
-		game_menus_frame(game);
+		while (get_time() - rendering_start_time < 1000. / 60.);
 
-		window_draw(game->window, game->render_state.pixels, game->render_state.width, game->render_state.height, game->settings.resolution_scale);
-
-		sleep_for_ms(10);
 	}
 
 	free(game->render_state.pixels);
@@ -330,17 +257,9 @@ void run_game_client(struct game_client* game) {
 
 	renderer_exit(game);
 
-	join_thread(simulation_thread);
-	join_thread(networking_thread);
+	//join_thread(simulation_thread);
+	//join_thread(networking_thread);
 
 
 	return;
-}
-
-
-
-void delete_game_client(struct game_client* game) {
-	destroy_resource_manager(game->resource_manager);
-	free(game->chat_stream.stream);
-	free(game->game_state.chunk_table);
 }

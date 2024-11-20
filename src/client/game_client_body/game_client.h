@@ -9,10 +9,6 @@
 #include "game/chat.h"
 #include "game/chunk.h"
 
-enum game_request {
-	NULL_FLAG,
-	SHOULD_CONNECT,
-};
 
 struct chat_stream_element {
 	long long time;
@@ -103,8 +99,4 @@ struct game_client {
 
 void log_chat_message(struct game_client* game);
 
-int new_game_client(struct game_client* game, char* resource_path);
-
-void run_game_client(struct game_client* game);
-
-void delete_game_client(struct game_client* game);
+int32_t run_game_client(struct game_client* game, uint8_t* resource_path);

@@ -80,6 +80,23 @@ int main(int argc, char* argv[]) {
 	platform_init();
 	show_console_window();
 
+	sleep_for_microseconds(1000);
+
+	printf("start\n");
+
+	double dt = get_time();
+
+	sleep_for_microseconds(1);
+
+	double dtime = get_time() - dt;
+
+	printf("%lf\n", dtime);
+	fflush(stdout);
+
+	sleep_for_microseconds(12345);
+
+	return 0;
+
 	uint32_t window = window_create(10, 10, 1000, 1000, "window");
 
 	screen_size.width = window_get_width(window);
@@ -532,7 +549,7 @@ int main(int argc, char* argv[]) {
 
 			}
 
-		sleep_for_ms(10);
+			sleep_for_microseconds(10000);
 	}
 	
 

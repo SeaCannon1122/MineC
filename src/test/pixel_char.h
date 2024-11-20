@@ -1,6 +1,6 @@
 #pragma once 
 
-#define PIXEL_CHAR_DEBUG
+#include "vulkan/vulkan.h"
 
 #if defined(_WIN32)
 
@@ -49,24 +49,28 @@ struct pixel_font {
 };
 
 struct pixel_char {
-	unsigned int color;
-	unsigned int background_color;
-	unsigned int value;
-	unsigned int masks;
+	uint32_t color;
+	uint32_t background_color;
+	uint32_t value;
+	uint32_t masks;
+};
+
+struct pixel_char_renderer {
+	VkPipelineLayout pipe_layout;
+	VkDevice device;
+	VkPipeline pipeline
 };
 
 #define pixel_char_convert_string(name, str, color, background_color, masks) struct pixel_char name[sizeof(str)]; {for(int _gsc_i = 0; _gsc_i < sizeof(str); _gsc_i++) name[_gsc_i] = (struct pixel_char) {color, background_color, str[_gsc_i], masks};}
 
 #define pixel_char_convert_string_in(name, str, color, background_color, masks) {for(int _gsc_i = 0; _gsc_i < sizeof(str); _gsc_i++) name[_gsc_i] = (struct pixel_char) {color, background_color, str[_gsc_i], masks};}
 
-void pixel_char_init();
+uint32_t pixel_char_renderer_new(struct pixel_char_renderer* renderer, VkDevice device, VkRenderPass render_pass);
 
 struct pixel_font* load_pixel_font(char* src);
 
-void pixel_char_print_string(const struct pixel_char* RESTRICT string, int text_size, int line_spacing, int x, int y, int alignment_x, int alignment_y, int max_width, int max_lines, unsigned int* RESTRICT screen, int width, int height, const const void** RESTRICT font_map);
+uint32_t pixel_char_get_hover_index(const struct pixel_char* RESTRICT string, uint32_t text_size, int32_t line_spacing, int32_t x, int32_t y, int32_t alignment_x, int32_t alignment_y, int32_t max_width, uint32_t max_lines, const const void** RESTRICT font_map, int x_hover, int y_hover);
 
-int pixel_char_get_hover_index(const struct pixel_char* RESTRICT string, int text_size, int line_spacing, int x, int y, int alignment_x, int alignment_y, int max_width, int max_lines, const const void** RESTRICT font_map, int x_hover, int y_hover);
+int pixel_char_fitting(const struct pixel_char* RESTRICT string, uint32_t text_size, const const void** RESTRICT font_map, int32_t max_width);
 
-int pixel_char_fitting(const struct pixel_char* RESTRICT string, int text_size, const const void** RESTRICT font_map, int max_width);
-
-void pixel_char_print_string_vk(const struct pixel_char* RESTRICT string, int text_size, int line_spacing, int x, int y, int alignment_x, int alignment_y, int max_width, int max_lines, unsigned int* RESTRICT screen, int width, int height, const const void** RESTRICT font_map);
+void pixel_char_print_string(struct pixel_char_renderer* RESTRICT renderer, const struct pixel_char* RESTRICT string, uint32_t text_size, int32_t line_spacing, int32_t x, int32_t y, int32_t alignment_x, int32_t alignment_y, int32_t max_width, uint32_t max_lines, uint32_t width, uint32_t height, const const void** RESTRICT font_map);
