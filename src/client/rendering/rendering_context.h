@@ -30,22 +30,22 @@ struct rendering_image {
 	VkImageView view;
 };
 
-struct rendering_buffer {
+struct rendering_buffer_local {
 	VkBuffer buffer;
 	VkDeviceMemory memory;
-	void* data;
+};
+
+struct rendering_buffer_visible {
+	struct rendering_buffer_local device_buffer;
+	void* host_handle;
 };
 
 VkResult new_VkInstance(uint8_t* app_name, uint8_t* engine_name, VkInstance* instance, VkDebugUtilsMessengerEXT* debug_messenger);
 
-VkResult get_first_suitable_VkPhysicalDevice(VkInstance instance, VkSurfaceKHR surface, VkPhysicalDevice* gpu, uint32_t* queue_index);
+VkResult new_VkDevice(VkInstance instance, VkSurfaceKHR surface, VkPhysicalDevice* gpu, uint32_t* queue_family_index, float queue_priority, VkDevice* device);
 
-VkResult new_VkDevice(VkInstance instance, VkPhysicalDevice gpu, uint32_t queue_idx, float queue_priority, VkDevice* device);
+VkResult new_VkSwapchainKHR(VkDevice device, VkPhysicalDevice gpu, VkSurfaceKHR surface, uint32_t* images_count, VkSwapchainKHR* swapchain, VkSurfaceFormatKHR* surface_format, VkImage* swapchain_images, VkImageView* swapchain_image_views);
 
-VkResult get_first_suitable_VkSurfaceFormatKHR(VkPhysicalDevice gpu, VkSurfaceKHR surface, VkSurfaceFormatKHR* surface_format);
+VkResult new_VkImage(VkDevice device, VkPhysicalDevice gpu, VkQueue graphics_queue, VkCommandPool command_pool, uint8_t* file_path, struct rendering_buffer_visible* buffer, struct rendering_image* image);
 
-VkResult new_SwapchainKHR(VkDevice device, VkPhysicalDevice gpu, VkSurfaceKHR surface, VkSurfaceFormatKHR surface_format, VkSwapchainKHR* swapchain);
-
-VkResult new_VkImage(VkDevice device, VkPhysicalDevice gpu, VkQueue graphics_queue, VkCommandPool command_pool, uint8_t* file_path, struct rendering_buffer* buffer, struct rendering_image* image);
-
-VkResult new_VkBuffer(VkDevice device, VkPhysicalDevice gpu, uint32_t size, VkBufferUsageFlags buffer_usage_flags, VkMemoryPropertyFlagBits memory_flags, struct rendering_buffer* buffer);
+VkResult new_VkBuffer(VkDevice device, VkPhysicalDevice gpu, uint32_t size, VkBufferUsageFlags buffer_usage_flags, VkMemoryPropertyFlagBits memory_flags, struct rendering_buffer_local* buffer);

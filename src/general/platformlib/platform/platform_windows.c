@@ -339,7 +339,11 @@ uint32_t window_process_next_event(struct window_event* event) {
 
 void platform_init() {
 
-	AllocConsole();
+	if (!AllocConsole()) {
+		MessageBox(NULL, "Failed to allocate console.", "Error", MB_OK | MB_ICONERROR);
+		return;
+	}
+
 	hide_console_window();
 
 	FILE* fstdout;
@@ -349,12 +353,23 @@ void platform_init() {
 	FILE* fstdin;
 	freopen_s(&fstdin, "CONIN$", "r", stdin);
 
+	// Set console to UTF-8
 	SetConsoleCP(CP_UTF8);
 	SetConsoleOutputCP(CP_UTF8);
 
-	fflush(stdout);
-	fflush(stderr);
-	fflush(stdin);
+	// Optional: Set no buffering for immediate output
+	setvbuf(stdout, NULL, _IONBF, 0);
+	setvbuf(stderr, NULL, _IONBF, 0);
+
+	DWORD dwMode = 0;
+	HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+
+	// Get current console mode
+	if (GetConsoleMode(hStdOut, &dwMode)) {
+		// Enable virtual terminal processing
+		dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+		SetConsoleMode(hStdOut, dwMode);
+	}
 
 	wc = (WNDCLASSW){
 		CS_HREDRAW | CS_VREDRAW | CS_CLASSDC,

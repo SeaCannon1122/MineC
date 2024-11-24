@@ -65,7 +65,7 @@ VkResult new_VkInstance(uint8_t* app_name, uint8_t* engine_name, VkInstance* ins
 	return VK_SUCCESS;
 }
 
-VkResult get_first_suitable_VkPhysicalDevice(VkInstance instance, VkSurfaceKHR surface, VkPhysicalDevice* gpu, uint32_t* queue_index) {
+VkResult new_VkDevice(VkInstance instance, VkSurfaceKHR surface, VkPhysicalDevice* gpu, uint32_t* queue_family_index, float queue_priority, VkDevice* device) {
 
 	uint32_t gpu_count = 0;
 	VKCall(vkEnumeratePhysicalDevices(instance, &gpu_count, 0));
@@ -89,10 +89,10 @@ VkResult get_first_suitable_VkPhysicalDevice(VkInstance instance, VkSurfaceKHR s
 
 				if (surface_support) {
 
-					*queue_index = j;
+					*queue_family_index = j;
 					*gpu = gpus[i];
-					
-					return VK_SUCCESS;
+
+					goto gpu_found;
 				}
 
 			}
@@ -102,13 +102,12 @@ VkResult get_first_suitable_VkPhysicalDevice(VkInstance instance, VkSurfaceKHR s
 	}
 
 	return 187187187;
-}
 
-VkResult new_VkDevice(VkInstance instance, VkPhysicalDevice gpu, uint32_t queue_idx, float queue_priority, VkDevice* device) {
+gpu_found:
 
 	VkDeviceQueueCreateInfo queue_info = { 0 };
 	queue_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-	queue_info.queueFamilyIndex = queue_idx;
+	queue_info.queueFamilyIndex = *queue_family_index;
 	queue_info.queueCount = 1;
 	queue_info.pQueuePriorities = &queue_priority;
 
@@ -123,58 +122,74 @@ VkResult new_VkDevice(VkInstance instance, VkPhysicalDevice gpu, uint32_t queue_
 	device_info.ppEnabledExtensionNames = device_extentions;
 	device_info.enabledExtensionCount = 1;
 
-	VKCall(vkCreateDevice(gpu, &device_info, 0, device));
+	VKCall(vkCreateDevice(*gpu, &device_info, 0, device));
 
 	return VK_SUCCESS;
 }
 
-VkResult get_first_suitable_VkSurfaceFormatKHR(VkPhysicalDevice gpu, VkSurfaceKHR surface, VkSurfaceFormatKHR* surface_format) {
+VkResult new_VkSwapchainKHR(VkDevice device, VkPhysicalDevice gpu, VkSurfaceKHR surface, uint32_t* images_count, VkSwapchainKHR* swapchain, VkSurfaceFormatKHR* surface_format, VkImage* swapchain_images, VkImageView* swapchain_image_views) {
+
 	uint32_t format_count = 0;
 	VKCall(vkGetPhysicalDeviceSurfaceFormatsKHR(gpu, surface, &format_count, 0));
 	VkSurfaceFormatKHR* surface_formats = alloca(format_count * sizeof(VkSurfaceFormatKHR));
 	VKCall(vkGetPhysicalDeviceSurfaceFormatsKHR(gpu, surface, &format_count, surface_formats));
 
-	for (int i = 0; i < format_count; i++) {
+
+	uint32_t found = 0;
+
+	for (uint32_t i = 0; i < format_count; i++) {
 
 		if (surface_formats[i].format == VK_FORMAT_B8G8R8A8_SRGB) {
 			*surface_format = surface_formats[i];
-			return VK_SUCCESS;
+			found = 1;
+			break;
 		}
 	}
 
-	return 187187187;
-}
-
-VkResult new_SwapchainKHR(VkDevice device, VkPhysicalDevice gpu, VkSurfaceKHR surface, VkSurfaceFormatKHR surface_format, VkSwapchainKHR* swapchain) {
+	if(found == 0) return 187187187;
 
 	VkSurfaceCapabilitiesKHR surface_capabilities = { 0 };
 	VKCall(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(gpu, surface, &surface_capabilities));
-
-	uint32_t img_count = surface_capabilities.minImageCount + 1;
-	if (surface_capabilities.minImageCount == surface_capabilities.maxImageCount) img_count = surface_capabilities.minImageCount;
-
+	
 	VkSwapchainCreateInfoKHR sc_info = { 0 };
 	sc_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
 	sc_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 	sc_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 	sc_info.surface = surface;
-	sc_info.imageFormat = surface_format.format;
+	sc_info.imageFormat = surface_format->format;
 	sc_info.preTransform = surface_capabilities.currentTransform;
 	sc_info.imageExtent = surface_capabilities.currentExtent;
-	sc_info.minImageCount = img_count;
+	sc_info.minImageCount = *images_count;
 	sc_info.imageArrayLayers = 1;
 
 	VKCall(vkCreateSwapchainKHR(device, &sc_info, 0, swapchain));
 
+	VKCall(vkGetSwapchainImagesKHR(device, *swapchain, images_count, swapchain_images));
+
+	VkImageViewCreateInfo image_view_info = { 0 };
+	image_view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+	image_view_info.format = surface_format->format;
+	image_view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+	image_view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	image_view_info.subresourceRange.layerCount = 1;
+	image_view_info.subresourceRange.levelCount = 1;
+
+	for (uint32_t i = 0; i < *images_count; i++) {
+
+		image_view_info.image = swapchain_images[i];
+		VKCall(vkCreateImageView(device, &image_view_info, 0, &swapchain_image_views[i]));
+	}
+
 	return VK_SUCCESS;
 }
 
-VkResult new_VkBuffer(VkDevice device, VkPhysicalDevice gpu, uint32_t size, VkBufferUsageFlags buffer_usage_flags, VkMemoryPropertyFlagBits memory_flags, struct rendering_buffer* buffer) {
+VkResult new_VkBuffer(VkDevice device, VkPhysicalDevice gpu, uint32_t size, VkBufferUsageFlags buffer_usage_flags, VkMemoryPropertyFlagBits memory_flags, struct rendering_buffer_local* buffer) {
 
 	VkBufferCreateInfo buffer_info = { 0 };
 	buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 	buffer_info.usage = buffer_usage_flags;
 	buffer_info.size = size;
+	buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
 	VKCall(vkCreateBuffer(device, &buffer_info, 0, &buffer->buffer));
 	
@@ -201,13 +216,22 @@ VkResult new_VkBuffer(VkDevice device, VkPhysicalDevice gpu, uint32_t size, VkBu
 	return VK_SUCCESS;
 }
 
-VkResult new_VkImage(VkDevice device, VkPhysicalDevice gpu, VkQueue graphics_queue, VkCommandPool command_pool, uint8_t* file_path, struct rendering_buffer* buffer, struct rendering_image* image) {
+VkResult new_rendering_buffer_visible(VkDevice device, VkPhysicalDevice gpu, uint32_t size, struct rendering_buffer_visible* buffer) {
+
+	VKCall(new_VkBuffer(device, gpu, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, &buffer->device_buffer));
+	VKCall(vkBindBufferMemory(device, buffer->device_buffer.buffer, buffer->device_buffer.memory, 0));
+	VKCall(vkMapMemory(device, buffer->device_buffer.memory, 0, size, 0, &buffer->host_handle));
+	
+	return VK_SUCCESS;
+}
+
+VkResult new_VkImage(VkDevice device, VkPhysicalDevice gpu, VkQueue graphics_queue, VkCommandPool command_pool, uint8_t* file_path, struct rendering_buffer_visible* buffer, struct rendering_image* image) {
 
 	uint32_t width, height, channels;
 	uint32_t* img = stbi_load(file_path, &width, &height, &channels, 4);
 	if (!img) return 187187187;
 
-	memcpy(buffer->data, img, width * height * 4);
+	memcpy(buffer->host_handle, img, width * height * 4);
 
 	VkImageCreateInfo image_info = { 0 };
 	image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -290,12 +314,12 @@ VkResult new_VkImage(VkDevice device, VkPhysicalDevice gpu, VkQueue graphics_que
 	copy_region.imageSubresource.layerCount = 1;
 	copy_region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
-	vkCmdCopyBufferToImage(cmd, buffer->buffer, image->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_region);
+	vkCmdCopyBufferToImage(cmd, buffer->device_buffer.buffer, image->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_region);
 
 	img_mem_barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 	img_mem_barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	img_mem_barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 	img_mem_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+	img_mem_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
 	vkCmdPipelineBarrier(
 		cmd,
@@ -319,6 +343,8 @@ VkResult new_VkImage(VkDevice device, VkPhysicalDevice gpu, VkQueue graphics_que
 	fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
 	VKCall(vkCreateFence(device, &fence_info, 0, &upload_fence));
+
+	VKCall(vkResetFences(device, 1, &upload_fence));
 
 	VkSubmitInfo submit_info = { 0 };
 	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;

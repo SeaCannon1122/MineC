@@ -87,59 +87,42 @@ int main(int argc, char* argv[]) {
 	platform_init();
 	show_console_window();
 
+	uint32_t apiVersion;
+	if (vkEnumerateInstanceVersion(&apiVersion) == VK_SUCCESS) {
+		printf("Running Vulkan %d.%d.%d\n", VK_API_VERSION_MAJOR(apiVersion), VK_API_VERSION_MINOR(apiVersion), VK_API_VERSION_PATCH(apiVersion));
+	}
+
 	uint32_t window = window_create(10, 10, 1000, 1000, "window");
 
 	screen_size.width = window_get_width(window);
 	screen_size.height = window_get_height(window);
 
-	// (semi) Vulkan code
-
 	VKCall(new_VkInstance("testapp", "testengine", &instance, &debug_messenger));
 
 	VKCall(create_vulkan_surface(instance, window, &surface));
 
-	uint32_t queue_idx = -1;
+	uint32_t queue_idx;
 
-	VKCall(get_first_suitable_VkPhysicalDevice(instance, surface, &gpu, &queue_idx));
-
-	if (queue_idx == -1) {
-		printf("couldnt fint suitable device");
-		goto close;
-	}
-
-	VKCall(new_VkDevice(instance, gpu, queue_idx, 1.0f, &device));
+	VKCall(new_VkDevice(instance, surface, &gpu, &queue_idx, 1.f, &device));
 
 	vkGetDeviceQueue(device, queue_idx, 0, &graphics_queue);
 
+	VkSurfaceCapabilitiesKHR surface_capabilities = { 0 };
+	VKCall(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(gpu, surface, &surface_capabilities));
+
+	sc_image_count = surface_capabilities.minImageCount + 1;
+	if (surface_capabilities.minImageCount == surface_capabilities.maxImageCount) sc_image_count = surface_capabilities.minImageCount;
+
 	VkSurfaceFormatKHR surface_format;
-	VKCall(get_first_suitable_VkSurfaceFormatKHR(gpu, surface, &surface_format));
-
-	VKCall(new_SwapchainKHR(device, gpu, surface, surface_format, &swapchain));
-
-	VKCall(vkGetSwapchainImagesKHR(device, swapchain, &sc_image_count, 0));
-	VKCall(vkGetSwapchainImagesKHR(device, swapchain, &sc_image_count, sc_images));
-
-	VkImageViewCreateInfo image_view_info = { 0 };
-	image_view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-	image_view_info.format = surface_format.format;
-	image_view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-	image_view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	image_view_info.subresourceRange.layerCount = 1;
-	image_view_info.subresourceRange.levelCount = 1;
-
-	for (uint32_t i = 0; i < sc_image_count; i++) {
-
-		image_view_info.image = sc_images[i];
-		VKCall(vkCreateImageView(device, &image_view_info, 0, &sc_image_views[i]));
-	}
-
-
+	new_VkSwapchainKHR(device, gpu, surface, &sc_image_count, &swapchain, &surface_format, sc_images, sc_image_views);
 
 	VkAttachmentDescription color_attachment = { 0 };
 	color_attachment.format = surface_format.format;
 	color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
 	color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 	color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	color_attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
@@ -231,14 +214,27 @@ int main(int argc, char* argv[]) {
 	vertex_input_stage.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
 	VkPipelineColorBlendAttachmentState color_blend_attachment = { 0 };
-	color_blend_attachment.blendEnable = VK_FALSE;
-	color_blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-
+	color_blend_attachment.blendEnable = VK_TRUE;
+	color_blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+	color_blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+	color_blend_attachment.colorBlendOp = VK_BLEND_OP_ADD;
+	color_blend_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+	color_blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+	color_blend_attachment.alphaBlendOp = VK_BLEND_OP_ADD;
+	color_blend_attachment.colorWriteMask =
+		VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+		VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 
 	VkPipelineColorBlendStateCreateInfo color_blend_state = { 0 };
 	color_blend_state.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-	color_blend_state.pAttachments = &color_blend_attachment;
+	color_blend_state.logicOpEnable = VK_FALSE;
+	color_blend_state.logicOp = VK_LOGIC_OP_COPY;
 	color_blend_state.attachmentCount = 1;
+	color_blend_state.pAttachments = &color_blend_attachment;
+	color_blend_state.blendConstants[0] = 0.0f;
+	color_blend_state.blendConstants[1] = 0.0f;
+	color_blend_state.blendConstants[2] = 0.0f;
+	color_blend_state.blendConstants[3] = 0.0f;
 
 	VkPipelineInputAssemblyStateCreateInfo input_assembly = { 0 };
 	input_assembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -336,13 +332,14 @@ int main(int argc, char* argv[]) {
 	vkDestroyShaderModule(device, fragment_shader, 0);
 
 	struct rendering_image image;
-	struct rendering_buffer staging_buffer;
+	struct rendering_buffer_visible staging_buffer;
 
-	VKCall(new_VkBuffer(device, gpu, 512 * 512 * 4, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, &staging_buffer));
-	VKCall(vkMapMemory(device, staging_buffer.memory, 0, 512 * 512 * 4, 0, &staging_buffer.data));
-	VKCall(vkBindBufferMemory(device, staging_buffer.buffer, staging_buffer.memory, 0));
+	VKCall(new_VkBuffer(device, gpu, 512 * 512 * 4, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, &staging_buffer.device_buffer));
+	VKCall(vkBindBufferMemory(device, staging_buffer.device_buffer.buffer, staging_buffer.device_buffer.memory, 0));
+	VKCall(vkMapMemory(device, staging_buffer.device_buffer.memory, 0, 512 * 512 * 4, 0, &staging_buffer.host_handle));
+	
 
-	VKCall(new_VkImage(device, gpu, graphics_queue, command_pool, "C:/Users/coroc/Desktop/resources/oak_leaves.png", &staging_buffer, &image));
+	VKCall(new_VkImage(device, gpu, graphics_queue, command_pool, "../../../resources/client/assets/textures/blocks/oak_leaves.png", &staging_buffer, &image));
 
 	VkSamplerCreateInfo sampler_info = { 0 };
 	sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -388,6 +385,9 @@ int main(int argc, char* argv[]) {
 
 	vkUpdateDescriptorSets(device, 1, &write, 0, 0);
 
+#define FRAME_TIME_FRAMES_AVERAGE 128
+	double last_frame_times[FRAME_TIME_FRAMES_AVERAGE] = { 0 };
+	for (int32_t i = 0; i < FRAME_TIME_FRAMES_AVERAGE; i++) last_frame_times[i] = 1000. / 60.;
 
 	while (!get_key_state(KEY_ESCAPE)) {
 
@@ -407,7 +407,7 @@ int main(int argc, char* argv[]) {
 
 			case WINDOW_EVENT_MOVE: {
 				printf("moved to %d %d\n", event.info.window_event_move.x_position, event.info.window_event_move.y_position);
-			}
+			} break;
 
 			case WINDOW_EVENT_DESTROY: {
 				goto close;
@@ -417,6 +417,8 @@ int main(int argc, char* argv[]) {
 
 
 		}
+
+		double start_time = get_time();
 
 		uint32_t img_index;
 		
@@ -501,7 +503,26 @@ int main(int argc, char* argv[]) {
 
 		VKCall(vkQueuePresentKHR(graphics_queue, &present_info));
 
-		sleep_for_ms(10);
+		double average = 0;
+
+		for (int32_t i = FRAME_TIME_FRAMES_AVERAGE - 2; i >= 0; i--) {
+			last_frame_times[i + 1] = last_frame_times[i];
+			average += last_frame_times[i];
+		}
+
+
+		last_frame_times[0] = get_time() - start_time;
+
+		if ((int32_t)(1000. / 60. - last_frame_times[0]) > 1) {
+			sleep_for_ms((uint32_t)(1000. / 60. - last_frame_times[0]));
+			last_frame_times[0] = get_time() - start_time;
+		}
+
+		average = (average + last_frame_times[0]) / FRAME_TIME_FRAMES_AVERAGE;
+
+		printf("               \033[0G");
+		printf("FPS %f\033[0G", 1000. / average);
+		
 	}
 	
 
