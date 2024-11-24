@@ -29,8 +29,13 @@ VkSemaphore submit_semaphore;
 VkSemaphore aquire_semaphore;
 VkFence img_available_fence;
 
+VkDescriptorSetLayout set_layout;
 VkPipeline pipeline;
 VkPipelineLayout pipe_layout;
+VkDescriptorSet descriptor_set;
+VkDescriptorPool descriptor_pool;
+VkSampler sampler;
+
 
 VkRenderPass render_pass;
 
@@ -106,41 +111,10 @@ int main(int argc, char* argv[]) {
 
 	vkGetDeviceQueue(device, queue_idx, 0, &graphics_queue);
 
-
 	VkSurfaceFormatKHR surface_format;
+	VKCall(get_first_suitable_VkSurfaceFormatKHR(gpu, surface, &surface_format));
 
-	uint32_t format_count = 0;
-	VkSurfaceFormatKHR surface_formats[10];
-	VKCall(vkGetPhysicalDeviceSurfaceFormatsKHR(gpu, surface, &format_count, 0));
-	VKCall(vkGetPhysicalDeviceSurfaceFormatsKHR(gpu, surface, &format_count, surface_formats));
-
-	for (int i = 0; i < format_count; i++) {
-
-		if (surface_formats[i].format == VK_FORMAT_B8G8R8A8_SRGB) {
-			surface_format = surface_formats[i];
-			break;
-		}
-	}
-	
-
-	VkSurfaceCapabilitiesKHR surface_capabilities = { 0 };
-	VKCall(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(gpu, surface, &surface_capabilities));
-
-	uint32_t img_count = surface_capabilities.minImageCount + 1;
-	if (surface_capabilities.minImageCount == surface_capabilities.maxImageCount) img_count = surface_capabilities.minImageCount;
-
-	VkSwapchainCreateInfoKHR sc_info = { 0 };
-	sc_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-	sc_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-	sc_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR; 
-	sc_info.surface = surface;
-	sc_info.imageFormat = surface_format.format;
-	sc_info.preTransform = surface_capabilities.currentTransform;
-	sc_info.imageExtent = surface_capabilities.currentExtent;
-	sc_info.minImageCount = img_count;
-	sc_info.imageArrayLayers = 1;
-
-	VKCall(vkCreateSwapchainKHR(device, &sc_info, 0, &swapchain));
+	VKCall(new_SwapchainKHR(device, gpu, surface, surface_format, &swapchain));
 
 	VKCall(vkGetSwapchainImagesKHR(device, swapchain, &sc_image_count, 0));
 	VKCall(vkGetSwapchainImagesKHR(device, swapchain, &sc_image_count, sc_images));
@@ -231,10 +205,26 @@ int main(int argc, char* argv[]) {
 	VKCall(vkCreateFence(device, &fence_info, 0, &img_available_fence));
 
 
-	VkPipelineLayoutCreateInfo layout_info = { 0 };
-	layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+	VkDescriptorSetLayoutBinding binding = { 0 };
+	binding.binding = 0;
+	binding.descriptorCount = 1;
+	binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-	VKCall(vkCreatePipelineLayout(device, &layout_info, 0, &pipe_layout));
+	VkDescriptorSetLayoutCreateInfo set_layout_info = { 0 };
+	set_layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	set_layout_info.bindingCount = 1;
+	set_layout_info.pBindings = &binding;
+
+	VKCall(vkCreateDescriptorSetLayout(device, &set_layout_info, 0, &set_layout));
+
+
+	VkPipelineLayoutCreateInfo pipeline_layout_info = { 0 };
+	pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+	pipeline_layout_info.setLayoutCount = 1;
+	pipeline_layout_info.pSetLayouts = &set_layout;
+
+	VKCall(vkCreatePipelineLayout(device, &pipeline_layout_info, 0, &pipe_layout));
 
 
 	VkPipelineVertexInputStateCreateInfo vertex_input_stage = { 0 };
@@ -345,12 +335,88 @@ int main(int argc, char* argv[]) {
 	vkDestroyShaderModule(device, vertex_shader, 0);
 	vkDestroyShaderModule(device, fragment_shader, 0);
 
-	while (!get_key_state(KEY_ESCAPE) && window_is_active(window)) {
+	struct rendering_image image;
+	struct rendering_buffer staging_buffer;
 
-		uint32_t new_width = window_get_width(window);
-		//uint32_t 
+	VKCall(new_VkBuffer(device, gpu, 512 * 512 * 4, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, &staging_buffer));
+	VKCall(vkMapMemory(device, staging_buffer.memory, 0, 512 * 512 * 4, 0, &staging_buffer.data));
+	VKCall(vkBindBufferMemory(device, staging_buffer.buffer, staging_buffer.memory, 0));
 
-		
+	VKCall(new_VkImage(device, gpu, graphics_queue, command_pool, "C:/Users/coroc/Desktop/resources/oak_leaves.png", &staging_buffer, &image));
+
+	VkSamplerCreateInfo sampler_info = { 0 };
+	sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+	sampler_info.minFilter = VK_FILTER_NEAREST;
+	sampler_info.magFilter = VK_FILTER_NEAREST;
+
+	VKCall(vkCreateSampler(device, &sampler_info, 0, &sampler));
+
+
+	VkDescriptorPoolSize pool_size = { 0 };
+	pool_size.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	pool_size.descriptorCount = 1;
+
+	VkDescriptorPoolCreateInfo descriptor_pool_info = { 0 };
+	descriptor_pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	descriptor_pool_info.maxSets = 1;
+	descriptor_pool_info.poolSizeCount = 1;
+	descriptor_pool_info.pPoolSizes = &pool_size;
+
+	VKCall(vkCreateDescriptorPool(device, &descriptor_pool_info, 0, &descriptor_pool));
+
+
+	VkDescriptorSetAllocateInfo descriptor_set_info = { 0 };
+	descriptor_set_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	descriptor_set_info.pSetLayouts = &set_layout;
+	descriptor_set_info.descriptorSetCount = 1;
+	descriptor_set_info.descriptorPool = descriptor_pool;
+
+	VKCall(vkAllocateDescriptorSets(device, &descriptor_set_info, &descriptor_set));
+
+	VkDescriptorImageInfo img_info = { 0 };
+	img_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	img_info.imageView = image.view;
+	img_info.sampler = sampler;
+
+	VkWriteDescriptorSet write = { 0 };
+	write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	write.dstSet = descriptor_set;
+	write.pImageInfo = &img_info;
+	write.dstBinding = 0;
+	write.descriptorCount = 1;
+	write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+
+	vkUpdateDescriptorSets(device, 1, &write, 0, 0);
+
+
+	while (!get_key_state(KEY_ESCAPE)) {
+
+		struct window_event event;
+
+		while (window_process_next_event(&event)) {
+
+			switch (event.type) {
+
+			case WINDOW_EVENT_SIZE: {
+
+				screen_size.width = event.info.window_event_size.width;
+				screen_size.height = event.info.window_event_size.height;
+
+				printf("resize to %d %d\n", event.info.window_event_size.width, event.info.window_event_size.height);
+			} break;
+
+			case WINDOW_EVENT_MOVE: {
+				printf("moved to %d %d\n", event.info.window_event_move.x_position, event.info.window_event_move.y_position);
+			}
+
+			case WINDOW_EVENT_DESTROY: {
+				goto close;
+			}
+
+			}
+
+
+		}
 
 		uint32_t img_index;
 		
@@ -368,7 +434,7 @@ int main(int argc, char* argv[]) {
 		VKCall(vkBeginCommandBuffer(cmd, &begin_info));
 
 		VkClearValue clear_value = { 0 };
-		clear_value.color = (VkClearColorValue){ 0, 0, 0, 1 };
+		clear_value.color = (VkClearColorValue){ 1, 0, 0, 1 };
 
 		VkRenderPassBeginInfo renderpass_begin_info = { 0 };
 		renderpass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -388,11 +454,22 @@ int main(int argc, char* argv[]) {
 		viewport.height = screen_size.height;
 		viewport.maxDepth = 1.0f;
 
-		vkCmdSetScissor(cmd, 0, 1, &scissor);
 		vkCmdSetViewport(cmd, 0, 1, &viewport);
+		vkCmdSetScissor(cmd, 0, 1, &scissor);
+
+		vkCmdBindDescriptorSets(
+			cmd,
+			VK_PIPELINE_BIND_POINT_GRAPHICS,
+			pipe_layout,
+			0,
+			1,
+			&descriptor_set,
+			0,
+			0
+		);
 
 		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-		vkCmdDraw(cmd, 3, 1, 0, 0);
+		vkCmdDraw(cmd, 6, 1, 0, 0);
 
 
 		vkCmdEndRenderPass(cmd);
@@ -424,26 +501,7 @@ int main(int argc, char* argv[]) {
 
 		VKCall(vkQueuePresentKHR(graphics_queue, &present_info));
 
-			struct window_event event;
-
-			while (window_process_next_event(&event)) {
-
-				switch (event.type) {
-
-				case WINDOW_EVENT_SIZE: {
-					printf("resize to %d %d\n", event.info.window_event_size.width, event.info.window_event_size.height);
-				} break;
-
-				case WINDOW_EVENT_MOVE: {
-					printf("moved to %d %d\n", event.info.window_event_move.x_position, event.info.window_event_move.y_position);
-				}
-
-				}
-
-
-			}
-
-			sleep_for_ms(10);
+		sleep_for_ms(10);
 	}
 	
 
