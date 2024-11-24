@@ -92,7 +92,7 @@ int main(int argc, char* argv[]) {
 		printf("Running Vulkan %d.%d.%d\n", VK_API_VERSION_MAJOR(apiVersion), VK_API_VERSION_MINOR(apiVersion), VK_API_VERSION_PATCH(apiVersion));
 	}
 
-	uint32_t window = window_create(10, 10, 1000, 1000, "window");
+	uint32_t window = window_create(10, 10, 400, 400, "window");
 
 	screen_size.width = window_get_width(window);
 	screen_size.height = window_get_height(window);
@@ -331,15 +331,15 @@ int main(int argc, char* argv[]) {
 	vkDestroyShaderModule(device, vertex_shader, 0);
 	vkDestroyShaderModule(device, fragment_shader, 0);
 
+
 	struct rendering_image image;
-	struct rendering_buffer_visible staging_buffer;
 
-	VKCall(new_VkBuffer(device, gpu, 512 * 512 * 4, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, &staging_buffer.device_buffer));
-	VKCall(vkBindBufferMemory(device, staging_buffer.device_buffer.buffer, staging_buffer.device_buffer.memory, 0));
-	VKCall(vkMapMemory(device, staging_buffer.device_buffer.memory, 0, 512 * 512 * 4, 0, &staging_buffer.host_handle));
-	
+	struct rendering_memory_manager rmm;
+	VKCall(rendering_memory_manager_new(device, gpu, graphics_queue, command_pool, &rmm));
 
-	VKCall(new_VkImage(device, gpu, graphics_queue, command_pool, "../../../resources/client/assets/textures/blocks/oak_leaves.png", &staging_buffer, &image));
+	VKCall(VkImage_new(&rmm, "../../../resources/client/assets/textures/blocks/oak_leaves.png", &image));
+
+	//VKCall(rendering_memory_manager_destroy(&rmm));
 
 	VkSamplerCreateInfo sampler_info = { 0 };
 	sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -389,119 +389,140 @@ int main(int argc, char* argv[]) {
 	double last_frame_times[FRAME_TIME_FRAMES_AVERAGE] = { 0 };
 	for (int32_t i = 0; i < FRAME_TIME_FRAMES_AVERAGE; i++) last_frame_times[i] = 1000. / 60.;
 
+	int32_t render = 1;
+
 	while (!get_key_state(KEY_ESCAPE)) {
 
 		struct window_event event;
+		while (window_process_next_event(&event)) if(event.type == WINDOW_EVENT_DESTROY) goto close;
 
-		while (window_process_next_event(&event)) {
+		uint32_t new_width = window_get_width(window);
+		uint32_t new_height = window_get_height(window);
 
-			switch (event.type) {
+		if (new_width != 0 && new_height != 0) {
 
-			case WINDOW_EVENT_SIZE: {
+			if (screen_size.width != new_width || screen_size.height != new_height) {
 
-				screen_size.width = event.info.window_event_size.width;
-				screen_size.height = event.info.window_event_size.height;
+				screen_size.width = new_width;
+				screen_size.height = new_height;
 
-				printf("resize to %d %d\n", event.info.window_event_size.width, event.info.window_event_size.height);
-			} break;
+				vkDeviceWaitIdle(device);
 
-			case WINDOW_EVENT_MOVE: {
-				printf("moved to %d %d\n", event.info.window_event_move.x_position, event.info.window_event_move.y_position);
-			} break;
+				for (uint32_t i = 0; i < sc_image_count; i++) {
+					vkDestroyImageView(device, sc_image_views[i], 0);
+					vkDestroyFramebuffer(device, framebuffers[i], 0);
+				}
+				vkDestroySwapchainKHR(device, swapchain, 0);
 
-			case WINDOW_EVENT_DESTROY: {
-				goto close;
+				new_VkSwapchainKHR(device, gpu, surface, &sc_image_count, &swapchain, &surface_format, sc_images, sc_image_views);
+
+				VkFramebufferCreateInfo framebuffer_info = { 0 };
+				framebuffer_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+				framebuffer_info.width = screen_size.width;
+				framebuffer_info.height = screen_size.height;
+				framebuffer_info.renderPass = render_pass;
+				framebuffer_info.layers = 1;
+				framebuffer_info.attachmentCount = 1;
+
+				for (uint32_t i = 0; i < sc_image_count; i++) {
+					framebuffer_info.pAttachments = &sc_image_views[i];
+					VKCall(vkCreateFramebuffer(device, &framebuffer_info, 0, &framebuffers[i]));
+				}
+
 			}
 
-			}
-
-
+			render = 1;
 		}
+		else render = 0;
 
 		double start_time = get_time();
 
-		uint32_t img_index;
-		
-		VKCall(vkWaitForFences(device, 1, &img_available_fence, VK_TRUE, UINT64_MAX));
-		VKCall(vkResetFences(device, 1, &img_available_fence));
-		
-		VKCall(vkAcquireNextImageKHR(device, swapchain, 0, aquire_semaphore, 0, &img_index));
+		if (render) {
 
-		vkResetCommandBuffer(cmd, 0);
+			uint32_t img_index;
 
-		VkCommandBufferBeginInfo begin_info = { 0 };
-		begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+			VKCall(vkWaitForFences(device, 1, &img_available_fence, VK_TRUE, UINT64_MAX));
+			VKCall(vkResetFences(device, 1, &img_available_fence));
 
-		VKCall(vkBeginCommandBuffer(cmd, &begin_info));
+			VKCall(vkAcquireNextImageKHR(device, swapchain, 0, aquire_semaphore, 0, &img_index));
 
-		VkClearValue clear_value = { 0 };
-		clear_value.color = (VkClearColorValue){ 1, 0, 0, 1 };
+			vkResetCommandBuffer(cmd, 0);
 
-		VkRenderPassBeginInfo renderpass_begin_info = { 0 };
-		renderpass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderpass_begin_info.renderPass = render_pass;
-		renderpass_begin_info.renderArea.extent = screen_size;
-		renderpass_begin_info.framebuffer = framebuffers[img_index];
-		renderpass_begin_info.pClearValues = &clear_value;
-		renderpass_begin_info.clearValueCount = 1;
+			VkCommandBufferBeginInfo begin_info = { 0 };
+			begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+			begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-		vkCmdBeginRenderPass(cmd, &renderpass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
+			VKCall(vkBeginCommandBuffer(cmd, &begin_info));
 
-		VkRect2D scissor = { 0 };
-		scissor.extent = screen_size;
+			VkClearValue clear_value = { 0 };
+			clear_value.color = (VkClearColorValue){ 1, 0, 0, 1 };
 
-		VkViewport viewport = { 0 };
-		viewport.width = screen_size.width;
-		viewport.height = screen_size.height;
-		viewport.maxDepth = 1.0f;
+			VkRenderPassBeginInfo renderpass_begin_info = { 0 };
+			renderpass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+			renderpass_begin_info.renderPass = render_pass;
+			renderpass_begin_info.renderArea.extent = screen_size;
+			renderpass_begin_info.framebuffer = framebuffers[img_index];
+			renderpass_begin_info.pClearValues = &clear_value;
+			renderpass_begin_info.clearValueCount = 1;
 
-		vkCmdSetViewport(cmd, 0, 1, &viewport);
-		vkCmdSetScissor(cmd, 0, 1, &scissor);
+			vkCmdBeginRenderPass(cmd, &renderpass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
-		vkCmdBindDescriptorSets(
-			cmd,
-			VK_PIPELINE_BIND_POINT_GRAPHICS,
-			pipe_layout,
-			0,
-			1,
-			&descriptor_set,
-			0,
-			0
-		);
+			VkRect2D scissor = { 0 };
+			scissor.extent = screen_size;
 
-		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-		vkCmdDraw(cmd, 6, 1, 0, 0);
+			VkViewport viewport = { 0 };
+			viewport.width = screen_size.width;
+			viewport.height = screen_size.height;
+			viewport.maxDepth = 1.0f;
 
+			vkCmdSetViewport(cmd, 0, 1, &viewport);
+			vkCmdSetScissor(cmd, 0, 1, &scissor);
 
-		vkCmdEndRenderPass(cmd);
+			vkCmdBindDescriptorSets(
+				cmd,
+				VK_PIPELINE_BIND_POINT_GRAPHICS,
+				pipe_layout,
+				0,
+				1,
+				&descriptor_set,
+				0,
+				0
+			);
 
-		VKCall(vkEndCommandBuffer(cmd));
-
-		VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-
-		VkSubmitInfo submit_info = { 0 };
-		submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		submit_info.pWaitDstStageMask = &wait_stage;
-		submit_info.commandBufferCount = 1;
-		submit_info.pCommandBuffers = &cmd;
-		submit_info.pSignalSemaphores = &submit_semaphore;
-		submit_info.pWaitSemaphores = &aquire_semaphore;
-		submit_info.signalSemaphoreCount = 1;
-		submit_info.waitSemaphoreCount = 1;
+			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+			vkCmdDraw(cmd, 6, 1, 0, 0);
 
 
-		VKCall(vkQueueSubmit(graphics_queue, 1, &submit_info, img_available_fence));
+			vkCmdEndRenderPass(cmd);
 
-		VkPresentInfoKHR present_info = { 0 };
-		present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-		present_info.pSwapchains = &swapchain;
-		present_info.swapchainCount = 1;
-		present_info.pImageIndices = &img_index;
-		present_info.pWaitSemaphores = &submit_semaphore;
-		present_info.waitSemaphoreCount = 1;
+			VKCall(vkEndCommandBuffer(cmd));
 
-		VKCall(vkQueuePresentKHR(graphics_queue, &present_info));
+			VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+			VkSubmitInfo submit_info = { 0 };
+			submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+			submit_info.pWaitDstStageMask = &wait_stage;
+			submit_info.commandBufferCount = 1;
+			submit_info.pCommandBuffers = &cmd;
+			submit_info.pSignalSemaphores = &submit_semaphore;
+			submit_info.pWaitSemaphores = &aquire_semaphore;
+			submit_info.signalSemaphoreCount = 1;
+			submit_info.waitSemaphoreCount = 1;
+
+
+			VKCall(vkQueueSubmit(graphics_queue, 1, &submit_info, img_available_fence));
+
+			VkPresentInfoKHR present_info = { 0 };
+			present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+			present_info.pSwapchains = &swapchain;
+			present_info.swapchainCount = 1;
+			present_info.pImageIndices = &img_index;
+			present_info.pWaitSemaphores = &submit_semaphore;
+			present_info.waitSemaphoreCount = 1;
+
+			VKCall(vkQueuePresentKHR(graphics_queue, &present_info));
+
+		}
 
 		double average = 0;
 

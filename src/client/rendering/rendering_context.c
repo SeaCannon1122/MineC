@@ -9,7 +9,10 @@
 #define VKCall(call) \
 do { \
     VkResult result = (call); \
-    if (result != VK_SUCCESS) return result;\
+    if (result != VK_SUCCESS) { \
+        printf("Vulkan error in \n    %s \n at %s:%d: %d\n", #call, __FILE__, __LINE__, result); \
+		DEBUG_BREAK();\
+    } \
 } while(0)
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL vulkan_debug_callbck(
@@ -183,19 +186,25 @@ VkResult new_VkSwapchainKHR(VkDevice device, VkPhysicalDevice gpu, VkSurfaceKHR 
 	return VK_SUCCESS;
 }
 
-VkResult new_VkBuffer(VkDevice device, VkPhysicalDevice gpu, uint32_t size, VkBufferUsageFlags buffer_usage_flags, VkMemoryPropertyFlagBits memory_flags, struct rendering_buffer_local* buffer) {
+VkResult rendering_memory_manager_new(VkDevice device, VkPhysicalDevice gpu, VkQueue graphics_queue, VkCommandPool command_pool, struct rendering_memory_manager* rmm) {
+
+	rmm->command_pool = command_pool;
+	rmm->device = device;
+	rmm->gpu = gpu;
+	rmm->graphics_queue = graphics_queue;
+
+	//staging buffer
 
 	VkBufferCreateInfo buffer_info = { 0 };
 	buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	buffer_info.usage = buffer_usage_flags;
-	buffer_info.size = size;
-	buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	buffer_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+	buffer_info.size = 10000000;
 
-	VKCall(vkCreateBuffer(device, &buffer_info, 0, &buffer->buffer));
-	
+	VKCall(vkCreateBuffer(device, &buffer_info, 0, &rmm->staging_buffer));
+
 	VkMemoryRequirements memory_requirements;
-	
-	vkGetBufferMemoryRequirements(device, buffer->buffer, &memory_requirements);
+
+	vkGetBufferMemoryRequirements(device, rmm->staging_buffer, &memory_requirements);
 
 	VkPhysicalDeviceMemoryProperties memory_properties;
 	vkGetPhysicalDeviceMemoryProperties(gpu, &memory_properties);
@@ -203,7 +212,66 @@ VkResult new_VkBuffer(VkDevice device, VkPhysicalDevice gpu, uint32_t size, VkBu
 	VkMemoryAllocateInfo alloc_info = { 0 };
 	for (uint32_t i = 0; i < memory_properties.memoryTypeCount; i++) {
 
-		if ((memory_requirements.memoryTypeBits & (1 << i)) && (memory_properties.memoryTypes[i].propertyFlags & memory_flags) == memory_flags) {
+		if ((memory_requirements.memoryTypeBits & (1 << i)) && (memory_properties.memoryTypes[i].propertyFlags & (VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)) == (VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)) {
+			alloc_info.memoryTypeIndex = i;
+			break;
+		}
+	}
+
+	alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	alloc_info.allocationSize = 10000000;
+
+	VKCall(vkAllocateMemory(device, &alloc_info, 0, &rmm->staging_buffer_memory));
+
+	VKCall(vkBindBufferMemory(device, rmm->staging_buffer, rmm->staging_buffer_memory, 0));
+	VKCall(vkMapMemory(device, rmm->staging_buffer_memory, 0, 10000000, 0, &rmm->staging_buffer_host_handle));
+
+	//command buffer
+
+	VkCommandBufferAllocateInfo cmd_alloc_info = { 0 };
+	cmd_alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	cmd_alloc_info.commandBufferCount = 1;
+	cmd_alloc_info.commandPool = command_pool;
+	cmd_alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	VKCall(vkAllocateCommandBuffers(device, &cmd_alloc_info, &rmm->cmd));
+
+	VKCall(vkResetCommandBuffer(rmm->cmd, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT));
+
+	return VK_SUCCESS;
+}
+
+VkResult rendering_memory_manager_destroy(struct rendering_memory_manager* rmm) {
+
+	vkUnmapMemory(rmm->device, rmm->staging_buffer_host_handle);
+
+	vkDestroyBuffer(rmm->device, rmm->staging_buffer, 0);
+	vkFreeMemory(rmm->device, rmm->staging_buffer_memory, 0);
+	vkFreeCommandBuffers(rmm->device, rmm->command_pool, 1, &rmm->cmd);
+
+	return VK_SUCCESS;
+}
+
+VkResult VkBuffer_new(struct rendering_memory_manager* rmm, uint32_t size, VkBufferUsageFlags usage_flags, struct rendering_buffer* buffer) {
+
+	VkBufferCreateInfo buffer_info = { 0 };
+	buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	buffer_info.usage = usage_flags;
+	buffer_info.size = size;
+	buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+	VKCall(vkCreateBuffer(rmm->device, &buffer_info, 0, &buffer->buffer));
+	
+	VkMemoryRequirements memory_requirements;
+	
+	vkGetBufferMemoryRequirements(rmm->device, buffer->buffer, &memory_requirements);
+
+	VkPhysicalDeviceMemoryProperties memory_properties;
+	vkGetPhysicalDeviceMemoryProperties(rmm->gpu, &memory_properties);
+
+	VkMemoryAllocateInfo alloc_info = { 0 };
+	for (uint32_t i = 0; i < memory_properties.memoryTypeCount; i++) {
+
+		if ((memory_requirements.memoryTypeBits & (1 << i)) && (memory_properties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) {
 			alloc_info.memoryTypeIndex = i;
 			break;
 		}
@@ -212,26 +280,70 @@ VkResult new_VkBuffer(VkDevice device, VkPhysicalDevice gpu, uint32_t size, VkBu
 	alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 	alloc_info.allocationSize = size;
 
-	VKCall(vkAllocateMemory(device, &alloc_info, 0, &buffer->memory));
+	VKCall(vkAllocateMemory(rmm->device, &alloc_info, 0, &buffer->memory));
+	VKCall(vkBindBufferMemory(rmm->device, buffer->buffer, buffer->memory, 0));
+
 	return VK_SUCCESS;
 }
 
-VkResult new_rendering_buffer_visible(VkDevice device, VkPhysicalDevice gpu, uint32_t size, struct rendering_buffer_visible* buffer) {
+VkResult VkBuffer_fill(struct rendering_memory_manager* rmm, struct rendering_buffer* buffer, void* data, uint32_t size) {
 
-	VKCall(new_VkBuffer(device, gpu, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, &buffer->device_buffer));
-	VKCall(vkBindBufferMemory(device, buffer->device_buffer.buffer, buffer->device_buffer.memory, 0));
-	VKCall(vkMapMemory(device, buffer->device_buffer.memory, 0, size, 0, &buffer->host_handle));
-	
+	memcpy(rmm->staging_buffer_host_handle, data, size);
+
+	VkCommandBufferBeginInfo begin_info = { 0 };
+	begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+	VKCall(vkBeginCommandBuffer(rmm->cmd, &begin_info));
+
+	VkBufferCopy copy_region = { 0 };
+	copy_region.srcOffset = 0;
+	copy_region.dstOffset = 0;
+	copy_region.size = size;
+
+	vkCmdCopyBuffer(rmm->cmd, rmm->staging_buffer, buffer->buffer, 1, &copy_region);
+
+	VKCall(vkEndCommandBuffer(rmm->cmd));
+
+	VkFence upload_fence;
+
+	VkFenceCreateInfo fence_info = { 0 };
+	fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+
+	VKCall(vkCreateFence(rmm->device, &fence_info, 0, &upload_fence));
+
+	VKCall(vkResetFences(rmm->device, 1, &upload_fence));
+
+	VkSubmitInfo submit_info = { 0 };
+	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submit_info.commandBufferCount = 1;
+	submit_info.pCommandBuffers = &rmm->cmd;
+
+	VKCall(vkQueueSubmit(rmm->graphics_queue, 1, &submit_info, VK_NULL_HANDLE));
+
+	VKCall(vkWaitForFences(rmm->device, 1, &upload_fence, 1, UINT64_MAX));
+
+	vkDestroyFence(rmm->device, upload_fence, 0);
+
 	return VK_SUCCESS;
 }
 
-VkResult new_VkImage(VkDevice device, VkPhysicalDevice gpu, VkQueue graphics_queue, VkCommandPool command_pool, uint8_t* file_path, struct rendering_buffer_visible* buffer, struct rendering_image* image) {
+VkResult VkBuffer_destroy(struct rendering_memory_manager* rmm, struct rendering_buffer* buffer) {
+	vkDestroyBuffer(rmm->device, buffer->buffer, 0);
+	vkFreeMemory(rmm->device, buffer->memory, 0);
+
+	return VK_SUCCESS;
+}
+
+VkResult VkImage_new(struct rendering_memory_manager* rmm, uint8_t* file_path, struct rendering_image* image) {
 
 	uint32_t width, height, channels;
 	uint32_t* img = stbi_load(file_path, &width, &height, &channels, 4);
 	if (!img) return 187187187;
 
-	memcpy(buffer->host_handle, img, width * height * 4);
+	memcpy(rmm->staging_buffer_host_handle, img, width * height * 4);
+
+	free(img);
 
 	VkImageCreateInfo image_info = { 0 };
 	image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -244,13 +356,13 @@ VkResult new_VkImage(VkDevice device, VkPhysicalDevice gpu, VkQueue graphics_que
 	image_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 	image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-	VKCall(vkCreateImage(device, &image_info, 0, &image->image));
+	VKCall(vkCreateImage(rmm->device, &image_info, 0, &image->image));
 
 	VkMemoryRequirements memory_requirements;
-	vkGetImageMemoryRequirements(device, image->image, &memory_requirements);
+	vkGetImageMemoryRequirements(rmm->device, image->image, &memory_requirements);
 
 	VkPhysicalDeviceMemoryProperties memory_properties;
-	vkGetPhysicalDeviceMemoryProperties(gpu, &memory_properties);
+	vkGetPhysicalDeviceMemoryProperties(rmm->gpu, &memory_properties);
 
 	VkMemoryAllocateInfo mem_alloc_info = { 0 };
 	for (uint32_t i = 0; i < memory_properties.memoryTypeCount; i++) {
@@ -264,23 +376,15 @@ VkResult new_VkImage(VkDevice device, VkPhysicalDevice gpu, VkQueue graphics_que
 	mem_alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 	mem_alloc_info.allocationSize = width * width * 4;
 
-	VKCall(vkAllocateMemory(device, &mem_alloc_info, 0, &image->memory));
-	VKCall(vkBindImageMemory(device, image->image, image->memory, 0));
+	VKCall(vkAllocateMemory(rmm->device, &mem_alloc_info, 0, &image->memory));
+	VKCall(vkBindImageMemory(rmm->device, image->image, image->memory, 0));
 
-	VkCommandBuffer cmd;
-
-	VkCommandBufferAllocateInfo alloc_info = { 0 };
-	alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	alloc_info.commandBufferCount = 1;
-	alloc_info.commandPool = command_pool;
-	alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	VKCall(vkAllocateCommandBuffers(device, &alloc_info, &cmd));
 
 	VkCommandBufferBeginInfo begin_info = { 0 };
 	begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-	VKCall(vkBeginCommandBuffer(cmd, &begin_info));
+	VKCall(vkBeginCommandBuffer(rmm->cmd, &begin_info));
 
 	VkImageSubresourceRange range = { 0 };
 	range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -297,7 +401,7 @@ VkResult new_VkImage(VkDevice device, VkPhysicalDevice gpu, VkQueue graphics_que
 	img_mem_barrier.subresourceRange = range;
 
 	vkCmdPipelineBarrier(
-		cmd,
+		rmm->cmd,
 		VK_PIPELINE_STAGE_TRANSFER_BIT,
 		VK_PIPELINE_STAGE_TRANSFER_BIT,
 		0,
@@ -314,7 +418,7 @@ VkResult new_VkImage(VkDevice device, VkPhysicalDevice gpu, VkQueue graphics_que
 	copy_region.imageSubresource.layerCount = 1;
 	copy_region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
-	vkCmdCopyBufferToImage(cmd, buffer->device_buffer.buffer, image->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_region);
+	vkCmdCopyBufferToImage(rmm->cmd, rmm->staging_buffer, image->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_region);
 
 	img_mem_barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 	img_mem_barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -322,7 +426,7 @@ VkResult new_VkImage(VkDevice device, VkPhysicalDevice gpu, VkQueue graphics_que
 	img_mem_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
 	vkCmdPipelineBarrier(
-		cmd,
+		rmm->cmd,
 		VK_PIPELINE_STAGE_TRANSFER_BIT,
 		VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
 		0,
@@ -334,7 +438,7 @@ VkResult new_VkImage(VkDevice device, VkPhysicalDevice gpu, VkQueue graphics_que
 		&img_mem_barrier
 	);
 
-	VKCall(vkEndCommandBuffer(cmd));
+	VKCall(vkEndCommandBuffer(rmm->cmd));
 
 	VkFence upload_fence;
 
@@ -342,18 +446,20 @@ VkResult new_VkImage(VkDevice device, VkPhysicalDevice gpu, VkQueue graphics_que
 	fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 	fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-	VKCall(vkCreateFence(device, &fence_info, 0, &upload_fence));
+	VKCall(vkCreateFence(rmm->device, &fence_info, 0, &upload_fence));
 
-	VKCall(vkResetFences(device, 1, &upload_fence));
+	VKCall(vkResetFences(rmm->device, 1, &upload_fence));
 
 	VkSubmitInfo submit_info = { 0 };
 	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	submit_info.commandBufferCount = 1;
-	submit_info.pCommandBuffers = &cmd;
+	submit_info.pCommandBuffers = &rmm->cmd;
 
-	VKCall(vkQueueSubmit(graphics_queue, 1, &submit_info, upload_fence));
+	VKCall(vkQueueSubmit(rmm->graphics_queue, 1, &submit_info, upload_fence));
 
-	VKCall(vkWaitForFences(device, 1, &upload_fence, 1, UINT64_MAX));
+	VKCall(vkWaitForFences(rmm->device, 1, &upload_fence, 1, UINT64_MAX));
+
+	vkDestroyFence(rmm->device, upload_fence, 0);
 
 	VkImageViewCreateInfo view_info = { 0 };
 	view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -364,7 +470,7 @@ VkResult new_VkImage(VkDevice device, VkPhysicalDevice gpu, VkQueue graphics_que
 	view_info.subresourceRange.levelCount = 1;
 	view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
 
-	VKCall(vkCreateImageView(device, &view_info, 0, &image->view));
+	VKCall(vkCreateImageView(rmm->device, &view_info, 0, &image->view));
 
 	return VK_SUCCESS;
 }

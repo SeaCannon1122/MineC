@@ -234,6 +234,7 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	} break;
 
 	case WM_SIZE: {
+
 		is_trackable_window_event = 1;
 
 		RECT rect;
@@ -250,7 +251,6 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 
 	case WM_MOVE: {
 		is_trackable_window_event = 1;
-
 		RECT rect;
 		GetWindowRect(hwnd, &rect);
 

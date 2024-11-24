@@ -30,14 +30,22 @@ struct rendering_image {
 	VkImageView view;
 };
 
-struct rendering_buffer_local {
+struct rendering_buffer {
 	VkBuffer buffer;
 	VkDeviceMemory memory;
 };
 
-struct rendering_buffer_visible {
-	struct rendering_buffer_local device_buffer;
-	void* host_handle;
+struct rendering_memory_manager {
+	VkDevice device;
+	VkPhysicalDevice gpu;
+	VkQueue graphics_queue;
+	VkCommandPool command_pool;
+
+	VkCommandBuffer cmd;
+
+	VkBuffer staging_buffer;
+	VkDeviceMemory staging_buffer_memory;
+	void* staging_buffer_host_handle;
 };
 
 VkResult new_VkInstance(uint8_t* app_name, uint8_t* engine_name, VkInstance* instance, VkDebugUtilsMessengerEXT* debug_messenger);
@@ -46,6 +54,11 @@ VkResult new_VkDevice(VkInstance instance, VkSurfaceKHR surface, VkPhysicalDevic
 
 VkResult new_VkSwapchainKHR(VkDevice device, VkPhysicalDevice gpu, VkSurfaceKHR surface, uint32_t* images_count, VkSwapchainKHR* swapchain, VkSurfaceFormatKHR* surface_format, VkImage* swapchain_images, VkImageView* swapchain_image_views);
 
-VkResult new_VkImage(VkDevice device, VkPhysicalDevice gpu, VkQueue graphics_queue, VkCommandPool command_pool, uint8_t* file_path, struct rendering_buffer_visible* buffer, struct rendering_image* image);
+VkResult rendering_memory_manager_new(VkDevice device, VkPhysicalDevice gpu, VkQueue graphics_queue, VkCommandPool command_pool, struct rendering_memory_manager* rmm);
+VkResult rendering_memory_manager_destroy(struct rendering_memory_manager* rmm);
 
-VkResult new_VkBuffer(VkDevice device, VkPhysicalDevice gpu, uint32_t size, VkBufferUsageFlags buffer_usage_flags, VkMemoryPropertyFlagBits memory_flags, struct rendering_buffer_local* buffer);
+VkResult VkBuffer_new(struct rendering_memory_manager* rmm, uint32_t size, VkBufferUsageFlags usage_flags, struct rendering_buffer* buffer);
+VkResult VkBuffer_fill(struct rendering_memory_manager* rmm, struct rendering_buffer* buffer, void* data, uint32_t size);
+VkResult VkBuffer_destroy(struct rendering_memory_manager* rmm, struct rendering_buffer* buffer);
+
+VkResult VkImage_new(struct rendering_memory_manager* rmm, uint8_t* file_path, struct rendering_image* image);
