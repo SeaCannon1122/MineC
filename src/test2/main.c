@@ -322,7 +322,7 @@ int main(int argc, char* argv[]) {
 	VKCall(VkBuffer_new(&rmm, 65536, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, &pixel_char_buffer));
 	VKCall(VkBuffer_new(&rmm, sizeof(struct pixel_font), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, &pixel_font_buffer));
 
-	struct pixel_font* font = load_pixel_font("../../../resources/client/assets/fonts/debug.pixelfont");
+	struct pixel_font* font = load_pixel_font("../../../resources/client/assets/fonts/default.pixelfont");
 
 	VKCall(VkBuffer_fill(&rmm, &pixel_font_buffer, font, sizeof(struct pixel_font)));
 
@@ -387,8 +387,10 @@ int main(int argc, char* argv[]) {
 	vkUpdateDescriptorSets(device, 2, descriptor_writes, 0, 0);
 
 #define FRAME_TIME_FRAMES_AVERAGE 128
+
+#define FPS 60.
 	double last_frame_times[FRAME_TIME_FRAMES_AVERAGE] = { 0 };
-	for (int32_t i = 0; i < FRAME_TIME_FRAMES_AVERAGE; i++) last_frame_times[i] = 1000. / 60.;
+	for (int32_t i = 0; i < FRAME_TIME_FRAMES_AVERAGE; i++) last_frame_times[i] = 1000. / FPS;
 
 	int32_t render = 1;
 
@@ -451,13 +453,11 @@ int main(int argc, char* argv[]) {
 			((float*)pixel_char_data_host_buffer)[0] = screen_size.width;
 			((float*)pixel_char_data_host_buffer)[1] = screen_size.height;
 
-			
-
 			struct character* chars = (size_t)pixel_char_data_host_buffer + sizeof(float) * 4;
 
-			chars[0] = (struct character){ 4, {100.f, 100.f}, { { 0.f, 1.f, 1.f, 1.f }, { 0.f, 0.f, 0.f, 1.f }, 'A', 0 } };
-			chars[1] = (struct character){ 4, {130.f, 150.f}, { { 1.f, 1.f, 0.f, 1.f }, { 0.f, 0.f, 0.f, 1.f }, 'I', 0 } };
-			chars[2] = (struct character){ 4, {160.f, 200.f}, { { 1.f, 0.f, 1.f, 1.f }, { 0.f, 0.f, 0.f, 1.f }, 'C', 0 } };
+			chars[0] = (struct character){ 10, {100.f, 100.f}, { { 0.f, 1.f, 1.f, 1.f }, { 0.f, 0.f, 0.f, 1.f }, 'A', PIXEL_CHAR_UNDERLINE_MASK } };
+			chars[1] = (struct character){ 20, {200.f, 150.f}, { { 1.f, 1.f, 0.f, 1.f }, { 0.f, 0.f, 0.f, 1.f }, 'I', 0 } };
+			chars[2] = (struct character){ 100, {300.f, 200.f}, { { 1.f, 0.f, 1.f, 1.f }, { 0.f, 0.f, 0.f, 1.f }, 'C', 0 } };
 
 			VkBuffer_fill(&rmm, &pixel_char_buffer, pixel_char_data_host_buffer, sizeof(float) * 2 + sizeof(struct character) * 3);
 
@@ -558,8 +558,8 @@ int main(int argc, char* argv[]) {
 
 		last_frame_times[0] = get_time() - start_time;
 
-		if ((int32_t)(1000. / 60. - last_frame_times[0]) > 1) {
-			sleep_for_ms((uint32_t)(1000. / 60. - last_frame_times[0]));
+		if ((int32_t)(1000. / FPS - last_frame_times[0]) > 1) {
+			sleep_for_ms((uint32_t)(1000. / FPS - last_frame_times[0]));
 			last_frame_times[0] = get_time() - start_time;
 		}
 

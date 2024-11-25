@@ -10,7 +10,7 @@
 
 struct char_font_entry {
 		uint width;
-		uint width_space;
+		uint space;
 		int pixel_layout[PIXEL_FONT_RESOLUTION * PIXEL_FONT_RESOLUTION / 32];
 };
 
@@ -19,6 +19,7 @@ struct pixel_char
     vec4 color;
     vec4 background_color;
     uint value;
+    uint space;
     uint masks;
 };
 
@@ -42,22 +43,31 @@ layout(set = 0, binding = 1) readonly buffer font {
 };
 
 layout (location = 0) out vec2 char_vertex_position;
-layout (location = 1) out flat int char_index;
+layout (location = 1) out float f_char_index;
 
 void main() {
 
-	char_index = gl_VertexIndex / 6;
+	uint char_index = gl_VertexIndex / 6;
 
-	if (gl_VertexIndex % 6 == 0) char_vertex_position = vec2(0.0, 1.0);
-	else if (gl_VertexIndex % 6 == 1) char_vertex_position = vec2(1.0, 0.0);
-	else if (gl_VertexIndex % 6 == 2) char_vertex_position = vec2(0.0, 0.0);
-	else if (gl_VertexIndex % 6 == 3) char_vertex_position = vec2(0.0, 1.0);
-	else if (gl_VertexIndex % 6 == 4) char_vertex_position = vec2(1.0, 1.0);
-	else if (gl_VertexIndex % 6 == 5) char_vertex_position = vec2(1.0, 0.0);
+    f_char_index = float(char_index);
+	
+    vec2 vertex_position;
+	
+	if (gl_VertexIndex % 6 == 0) vertex_position = vec2(0.0, 1.0);
+	else if (gl_VertexIndex % 6 == 1) vertex_position = vec2(1.0, 0.0);
+	else if (gl_VertexIndex % 6 == 2) vertex_position = vec2(0.0, 0.0);
+	else if (gl_VertexIndex % 6 == 3) vertex_position = vec2(0.0, 1.0);
+	else if (gl_VertexIndex % 6 == 4) vertex_position = vec2(1.0, 1.0);
+	else if (gl_VertexIndex % 6 == 5) vertex_position = vec2(1.0, 0.0);
 
+    char_vertex_position = vec2(
+		vertex_position.x * float(chars[char_index].size * char_font_entries[chars[char_index].pixel_char_data.value].width / 2),
+		vertex_position.y * float(chars[char_index].size * 9)
+	);
+	
     gl_Position = vec4(
-		-1.0 + 2.0 * (chars[char_index].start_position.x + char_vertex_position.x * float(chars[char_index].size * char_font_entries[chars[char_index].pixel_char_data.value].width / 2)) / screen_size.x,
-		-1.0 + 2.0 * (chars[char_index].start_position.y + char_vertex_position.y * float(chars[char_index].size * 8)) / screen_size.y,
+		-1.0 + 2.0 * (chars[char_index].start_position.x + vertex_position.x * float(chars[char_index].size * char_font_entries[chars[char_index].pixel_char_data.value].width / 2)) / screen_size.x,
+		-1.0 + 2.0 * (chars[char_index].start_position.y + vertex_position.y * float(chars[char_index].size * 9)) / screen_size.y,
 		1.0,
 		1.0
 	);
