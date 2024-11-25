@@ -322,7 +322,7 @@ int main(int argc, char* argv[]) {
 	VKCall(VkBuffer_new(&rmm, 65536, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, &pixel_char_buffer));
 	VKCall(VkBuffer_new(&rmm, sizeof(struct pixel_font), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, &pixel_font_buffer));
 
-	struct pixel_font* font = load_pixel_font("../../../resources/client/assets/fonts/default.pixelfont");
+	struct pixel_font* font = load_pixel_font("../../../resources/client/assets/fonts/debug.pixelfont");
 
 	VKCall(VkBuffer_fill(&rmm, &pixel_font_buffer, font, sizeof(struct pixel_font)));
 
@@ -455,9 +455,9 @@ int main(int argc, char* argv[]) {
 
 			struct character* chars = (size_t)pixel_char_data_host_buffer + sizeof(float) * 4;
 
-			chars[0] = (struct character){ 10, {100.f, 100.f}, { { 0.f, 1.f, 1.f, 1.f }, { 0.f, 0.f, 0.f, 1.f }, 'A', PIXEL_CHAR_UNDERLINE_MASK } };
-			chars[1] = (struct character){ 20, {200.f, 150.f}, { { 1.f, 1.f, 0.f, 1.f }, { 0.f, 0.f, 0.f, 1.f }, 'I', 0 } };
-			chars[2] = (struct character){ 100, {300.f, 200.f}, { { 1.f, 0.f, 1.f, 1.f }, { 0.f, 0.f, 0.f, 1.f }, 'C', 0 } };
+			chars[0] = (struct character){ 10, {100.f, 100.f}, { { 0.f, 1.f, 1.f, 1.f }, { 0.f, 0.f, 0.f, 1.f }, 'A', PIXEL_CHAR_UNDERLINE_MASK | PIXEL_CHAR_CURSIVE_MASK} };
+			chars[1] = (struct character){ 10, {200.f, 150.f}, { { 1.f, 1.f, 0.f, 1.f }, { 0.f, 0.f, 0.f, 1.f }, '>', 0 } };
+			chars[2] = (struct character){ 10, {300.f, 200.f}, { { 1.f, 0.f, 1.f, 1.f }, { 0.f, 0.f, 0.f, 1.f }, 'C', 0 } };
 
 			VkBuffer_fill(&rmm, &pixel_char_buffer, pixel_char_data_host_buffer, sizeof(float) * 2 + sizeof(struct character) * 3);
 

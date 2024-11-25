@@ -3,8 +3,6 @@
 #define PIXEL_CHAR_IF_BIT(ptr, x, y) (ptr[(x + y * 16) / 32] & (1 << ((x + y * 16) % 32)) )
 
 
-#define PIXEL_FONT_RESOLUTION 16
-
 #define PIXEL_CHAR_UNDERLINE_MASK  0x80000000
 #define PIXEL_CHAR_CURSIVE_MASK    0x40000000
 #define PIXEL_CHAR_SHADOW_MASK     0x20000000
@@ -15,7 +13,7 @@ struct char_font_entry
 {
     uint width;
     uint space;
-    int pixel_layout[PIXEL_FONT_RESOLUTION * PIXEL_FONT_RESOLUTION / 32];
+    int pixel_layout[8];
 };
 
 struct pixel_char
@@ -29,7 +27,7 @@ struct pixel_char
 
 struct character
 {
-    uint size;
+    int size;
     vec2 start_position;
     pixel_char pixel_char_data;
 };
@@ -47,20 +45,37 @@ char_font_entry char_font_entries[];
 	
 };
 
-layout (location = 0) in vec2 char_vertex_position;
+layout (location = 0) in vec2 f_fragment_position;
 layout (location = 1) in float f_char_index;
 
 layout (location = 0) out vec4 fragmentColor;
 
 void main() {
 
-    uint char_index = uint(f_char_index);
-    uvec2 fragment_position = uvec2(char_vertex_position);
+    int char_index = int(f_char_index);
+    ivec2 fragment_position = ivec2(f_fragment_position.x - 0.2, f_fragment_position.y - 0.2);
     
+    int size = chars[char_index].size;
     
-    if (uint(char_vertex_position.y) < 8 * chars[char_index].size) {
+    if (int(fragment_position.y) < 8 * size) {
         
-        if (PIXEL_CHAR_IF_BIT(char_font_entries[chars[char_index].pixel_char_data.value].pixel_layout, uint(2 * fragment_position.x / chars[char_index].size), uint(2 * fragment_position.y / chars[char_index].size)) != 0)
+        
+        
+        fragment_position.x = fragment_position.x - 4 * size;
+        fragment_position.y = fragment_position.y - 4 * size;
+        
+        ivec2 check_coords = fragment_position;
+        
+        if (fragment_position.x < 0) check_coords.x += 1;
+        if (fragment_position.y < 0) check_coords.y += 1;
+        
+        check_coords.x = check_coords.x * 2 / size + 8;
+        check_coords.y = check_coords.y * 2 / size + 8;
+        
+        if (fragment_position.x < 0) check_coords.x -= 1;
+        if (fragment_position.y < 0) check_coords.y -= 1;
+        
+        if (PIXEL_CHAR_IF_BIT(char_font_entries[chars[char_index].pixel_char_data.value].pixel_layout, check_coords.x, check_coords.y) != 0)
             fragmentColor = chars[char_index].pixel_char_data.color;
         
         else fragmentColor = vec4(0.0, 0.0, 0.0, 0.0);
