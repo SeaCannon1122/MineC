@@ -54,6 +54,10 @@ VkResult new_VkDevice(VkInstance instance, VkSurfaceKHR surface, VkPhysicalDevic
 
 VkResult new_VkSwapchainKHR(VkDevice device, VkPhysicalDevice gpu, VkSurfaceKHR surface, uint32_t* images_count, VkSwapchainKHR* swapchain, VkSurfaceFormatKHR* surface_format, VkImage* swapchain_images, VkImageView* swapchain_image_views);
 
+VkResult new_VkShaderModule(VkDevice device, uint8_t* file_path, VkShaderModule* shader_module);
+
+VkPipelineShaderStageCreateInfo shader_stage(VkShaderModule shader_module, VkShaderStageFlagBits flag_bits);
+
 VkResult rendering_memory_manager_new(VkDevice device, VkPhysicalDevice gpu, VkQueue graphics_queue, VkCommandPool command_pool, struct rendering_memory_manager* rmm);
 VkResult rendering_memory_manager_destroy(struct rendering_memory_manager* rmm);
 
@@ -62,3 +66,4 @@ VkResult VkBuffer_fill(struct rendering_memory_manager* rmm, struct rendering_bu
 VkResult VkBuffer_destroy(struct rendering_memory_manager* rmm, struct rendering_buffer* buffer);
 
 VkResult VkImage_new(struct rendering_memory_manager* rmm, uint8_t* file_path, struct rendering_image* image);
+VkResult VkImage_destroy(struct rendering_memory_manager* rmm, struct rendering_image* image);

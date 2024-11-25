@@ -16,8 +16,8 @@
 
 #endif
 
-#ifndef PIXEL_FONT_RESOULUTION
-#define PIXEL_FONT_RESOULUTION 16
+#ifndef PIXEL_FONT_RESOLUTION
+#define PIXEL_FONT_RESOLUTION 16
 #endif
 
 #ifndef PIXEL_FONT_SHADOW_DIVISOR
@@ -44,7 +44,7 @@
 struct pixel_font {
 	struct {
 		long long width;
-		char layout[PIXEL_FONT_RESOULUTION * PIXEL_FONT_RESOULUTION / 8];
+		char layout[PIXEL_FONT_RESOLUTION * PIXEL_FONT_RESOLUTION / 8];
 	} char_font_entries[0x20000];
 };
 

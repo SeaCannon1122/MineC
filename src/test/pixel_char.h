@@ -16,8 +16,8 @@
 
 #endif
 
-#ifndef PIXEL_FONT_RESOULUTION
-#define PIXEL_FONT_RESOULUTION 16
+#ifndef PIXEL_FONT_RESOLUTION
+#define PIXEL_FONT_RESOLUTION 16
 #endif
 
 #ifndef PIXEL_FONT_SHADOW_DIVISOR
@@ -43,34 +43,27 @@
 
 struct pixel_font {
 	struct {
-		long long width;
-		char layout[PIXEL_FONT_RESOULUTION * PIXEL_FONT_RESOULUTION / 8];
+		uint64_t width;
+		char layout[PIXEL_FONT_RESOLUTION * PIXEL_FONT_RESOLUTION / 8];
 	} char_font_entries[0x20000];
 };
 
 struct pixel_char {
-	uint32_t color;
-	uint32_t background_color;
-	uint32_t value;
-	uint32_t masks;
+	float color[4];
+	float background_color[4];
+	uint64_t value;
+	uint64_t masks;
 };
 
-struct pixel_char_renderer {
-	VkPipelineLayout pipe_layout;
-	VkDevice device;
-	VkPipeline pipeline
-};
 
 #define pixel_char_convert_string(name, str, color, background_color, masks) struct pixel_char name[sizeof(str)]; {for(int _gsc_i = 0; _gsc_i < sizeof(str); _gsc_i++) name[_gsc_i] = (struct pixel_char) {color, background_color, str[_gsc_i], masks};}
 
 #define pixel_char_convert_string_in(name, str, color, background_color, masks) {for(int _gsc_i = 0; _gsc_i < sizeof(str); _gsc_i++) name[_gsc_i] = (struct pixel_char) {color, background_color, str[_gsc_i], masks};}
 
-uint32_t pixel_char_renderer_new(struct pixel_char_renderer* renderer, VkDevice device, VkRenderPass render_pass);
-
 struct pixel_font* load_pixel_font(char* src);
 
 uint32_t pixel_char_get_hover_index(const struct pixel_char* RESTRICT string, uint32_t text_size, int32_t line_spacing, int32_t x, int32_t y, int32_t alignment_x, int32_t alignment_y, int32_t max_width, uint32_t max_lines, const const void** RESTRICT font_map, int x_hover, int y_hover);
 
-int pixel_char_fitting(const struct pixel_char* RESTRICT string, uint32_t text_size, const const void** RESTRICT font_map, int32_t max_width);
+//int pixel_char_fitting(const struct pixel_char* RESTRICT string, uint32_t text_size, const const void** RESTRICT font_map, int32_t max_width);
 
 void pixel_char_print_string(struct pixel_char_renderer* RESTRICT renderer, const struct pixel_char* RESTRICT string, uint32_t text_size, int32_t line_spacing, int32_t x, int32_t y, int32_t alignment_x, int32_t alignment_y, int32_t max_width, uint32_t max_lines, uint32_t width, uint32_t height, const const void** RESTRICT font_map);

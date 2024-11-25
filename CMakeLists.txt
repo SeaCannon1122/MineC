@@ -46,14 +46,12 @@ set(TEST_SOURCE_FILES
 )
 
 set(TEST_2_SOURCE_FILES
-    src/general/utils.c
-
     src/test2/main.c
     src/test2/testing2.c
     src/client/rendering/rendering_context.c
+    src/test/pixel_char.c
 
     src/general/platformlib/platform/platform.c
-    src/general/platformlib/networking.c
 
 )
 

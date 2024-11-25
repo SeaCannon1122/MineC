@@ -6,6 +6,30 @@
 
 #include "rendering_context.h"
 
+void* load_file(uint8_t* filename, uint32_t* size) {
+
+	FILE* file = fopen(filename, "rb");
+	if (file == NULL) return NULL;
+
+	fseek(file, 0, SEEK_END);
+	long fileSize = ftell(file);
+	rewind(file);
+
+	uint8_t* buffer = (uint8_t*)malloc(fileSize);
+	if (buffer == NULL) {
+		fclose(file);
+		return NULL;
+	}
+
+	size_t bytesRead = fread(buffer, sizeof(uint8_t), fileSize, file);
+
+	fclose(file);
+
+	*size = fileSize;
+
+	return buffer;
+}
+
 #define VKCall(call) \
 do { \
     VkResult result = (call); \
@@ -186,6 +210,33 @@ VkResult new_VkSwapchainKHR(VkDevice device, VkPhysicalDevice gpu, VkSurfaceKHR 
 	return VK_SUCCESS;
 }
 
+VkResult new_VkShaderModule(VkDevice device, uint8_t* file_path, VkShaderModule* shader_module) {
+
+	uint32_t shader_size;
+	void* shader_data = load_file(file_path, &shader_size);
+
+	VkShaderModuleCreateInfo shader_info = { 0 };
+	shader_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+	shader_info.pCode = shader_data;
+	shader_info.codeSize = shader_size;
+	VKCall(vkCreateShaderModule(device, &shader_info, 0, shader_module));
+
+	free(shader_data);
+
+	return VK_SUCCESS;
+}
+
+VkPipelineShaderStageCreateInfo shader_stage(VkShaderModule shader_module, VkShaderStageFlagBits flag_bits) {
+	
+	VkPipelineShaderStageCreateInfo shader_stage = { 0 };
+	shader_stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	shader_stage.pName = "main";
+	shader_stage.stage = flag_bits;
+	shader_stage.module = shader_module;
+
+	return shader_stage;
+}
+
 VkResult rendering_memory_manager_new(VkDevice device, VkPhysicalDevice gpu, VkQueue graphics_queue, VkCommandPool command_pool, struct rendering_memory_manager* rmm) {
 
 	rmm->command_pool = command_pool;
@@ -242,10 +293,10 @@ VkResult rendering_memory_manager_new(VkDevice device, VkPhysicalDevice gpu, VkQ
 
 VkResult rendering_memory_manager_destroy(struct rendering_memory_manager* rmm) {
 
-	vkUnmapMemory(rmm->device, rmm->staging_buffer_host_handle);
-
-	vkDestroyBuffer(rmm->device, rmm->staging_buffer, 0);
+	vkUnmapMemory(rmm->device, rmm->staging_buffer_memory);
+	
 	vkFreeMemory(rmm->device, rmm->staging_buffer_memory, 0);
+	vkDestroyBuffer(rmm->device, rmm->staging_buffer, 0);
 	vkFreeCommandBuffers(rmm->device, rmm->command_pool, 1, &rmm->cmd);
 
 	return VK_SUCCESS;
@@ -255,7 +306,7 @@ VkResult VkBuffer_new(struct rendering_memory_manager* rmm, uint32_t size, VkBuf
 
 	VkBufferCreateInfo buffer_info = { 0 };
 	buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	buffer_info.usage = usage_flags;
+	buffer_info.usage = usage_flags |VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 	buffer_info.size = size;
 	buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
@@ -278,7 +329,7 @@ VkResult VkBuffer_new(struct rendering_memory_manager* rmm, uint32_t size, VkBuf
 	}
 
 	alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-	alloc_info.allocationSize = size;
+	alloc_info.allocationSize = (size > memory_requirements.size ? size : memory_requirements.size);
 
 	VKCall(vkAllocateMemory(rmm->device, &alloc_info, 0, &buffer->memory));
 	VKCall(vkBindBufferMemory(rmm->device, buffer->buffer, buffer->memory, 0));
@@ -319,7 +370,7 @@ VkResult VkBuffer_fill(struct rendering_memory_manager* rmm, struct rendering_bu
 	submit_info.commandBufferCount = 1;
 	submit_info.pCommandBuffers = &rmm->cmd;
 
-	VKCall(vkQueueSubmit(rmm->graphics_queue, 1, &submit_info, VK_NULL_HANDLE));
+	VKCall(vkQueueSubmit(rmm->graphics_queue, 1, &submit_info, upload_fence));
 
 	VKCall(vkWaitForFences(rmm->device, 1, &upload_fence, 1, UINT64_MAX));
 
@@ -444,7 +495,6 @@ VkResult VkImage_new(struct rendering_memory_manager* rmm, uint8_t* file_path, s
 
 	VkFenceCreateInfo fence_info = { 0 };
 	fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-	fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
 	VKCall(vkCreateFence(rmm->device, &fence_info, 0, &upload_fence));
 
@@ -473,4 +523,10 @@ VkResult VkImage_new(struct rendering_memory_manager* rmm, uint8_t* file_path, s
 	VKCall(vkCreateImageView(rmm->device, &view_info, 0, &image->view));
 
 	return VK_SUCCESS;
+}
+
+VkResult VkImage_destroy(struct rendering_memory_manager* rmm, struct rendering_image* image) {
+	vkDestroyImage(rmm->device, image->image, 0);
+	vkFreeMemory(rmm->device, image->memory, 0);
+	vkDestroyImageView(rmm->device, image->view, 0);
 }

@@ -1,12 +1,14 @@
 #include "testing.h"
 #include <stdio.h>
+#include <math.h>
 
-#include "general/platformlib/networking.h"
 #include "general/platformlib/platform/platform.h"
 #include "client/rendering/rendering_context.h"
 
 #include <vulkan/vulkan.h>
 #include <malloc.h>
+
+#include "test/pixel_char.h"
 
 VkExtent2D screen_size;
 
@@ -79,7 +81,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vulkan_debug_callbck(
 	void* p_user_data
 ) {
 	printf("--------------------------------------------------------------------------\n\nValidation Error: %s\n\n\n\n", p_callback_data->pMessage);
-	return false;
+	return 0;
 }
 
 int main(int argc, char* argv[]) {
@@ -114,7 +116,7 @@ int main(int argc, char* argv[]) {
 	if (surface_capabilities.minImageCount == surface_capabilities.maxImageCount) sc_image_count = surface_capabilities.minImageCount;
 
 	VkSurfaceFormatKHR surface_format;
-	new_VkSwapchainKHR(device, gpu, surface, &sc_image_count, &swapchain, &surface_format, sc_images, sc_image_views);
+	VKCall(new_VkSwapchainKHR(device, gpu, surface, &sc_image_count, &swapchain, &surface_format, sc_images, sc_image_views));
 
 	VkAttachmentDescription color_attachment = { 0 };
 	color_attachment.format = surface_format.format;
@@ -187,17 +189,27 @@ int main(int argc, char* argv[]) {
 
 	VKCall(vkCreateFence(device, &fence_info, 0, &img_available_fence));
 
+	VkDescriptorSetLayoutBinding pixel_char_buffer_binding = { 0 };
+	pixel_char_buffer_binding.binding = 0;
+	pixel_char_buffer_binding.descriptorCount = 1;
+	pixel_char_buffer_binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	pixel_char_buffer_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 
-	VkDescriptorSetLayoutBinding binding = { 0 };
-	binding.binding = 0;
-	binding.descriptorCount = 1;
-	binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	VkDescriptorSetLayoutBinding pixel_font_buffer_binding = { 0 };
+	pixel_font_buffer_binding.binding = 1;
+	pixel_font_buffer_binding.descriptorCount = 1;
+	pixel_font_buffer_binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	pixel_font_buffer_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+
+	VkDescriptorSetLayoutBinding bindings[] = {
+		pixel_char_buffer_binding,
+		pixel_font_buffer_binding,
+	};
 
 	VkDescriptorSetLayoutCreateInfo set_layout_info = { 0 };
 	set_layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	set_layout_info.bindingCount = 1;
-	set_layout_info.pBindings = &binding;
+	set_layout_info.bindingCount = 2;
+	set_layout_info.pBindings = bindings;
 
 	VKCall(vkCreateDescriptorSetLayout(device, &set_layout_info, 0, &set_layout));
 
@@ -264,42 +276,12 @@ int main(int argc, char* argv[]) {
 
 	VkShaderModule vertex_shader, fragment_shader;
 
-	uint32_t vertex_shader_code_size; 
-	char* vertex_shader_code = load_file("../../../resources/vertex_shader.spv", &vertex_shader_code_size);
+	VKCall(new_VkShaderModule(device, "../../../resources/vertex_shader.spv", &vertex_shader));
+	VKCall(new_VkShaderModule(device, "../../../resources/fragment_shader.spv", &fragment_shader));
 
-	uint32_t fragment_shader_code_size;
-	char* fragment_shader_code = load_file("../../../resources/fragment_shader.spv", &fragment_shader_code_size);
-
-	VkShaderModuleCreateInfo shader_info = { 0 };
-	shader_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-
-
-	shader_info.pCode = vertex_shader_code;
-	shader_info.codeSize = vertex_shader_code_size;
-	VKCall(vkCreateShaderModule(device, &shader_info, 0, &vertex_shader));
-
-	shader_info.pCode = fragment_shader_code;
-	shader_info.codeSize = fragment_shader_code_size;
-	VKCall(vkCreateShaderModule(device, &shader_info, 0, &fragment_shader));
-
-	free(vertex_shader_code);
-	free(fragment_shader_code);
-
-	VkPipelineShaderStageCreateInfo vertex_stage = { 0 };
-	vertex_stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-	vertex_stage.pName = "main";
-	vertex_stage.stage = VK_SHADER_STAGE_VERTEX_BIT;
-	vertex_stage.module = vertex_shader;
-
-	VkPipelineShaderStageCreateInfo fragment_stage = { 0 };
-	fragment_stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-	fragment_stage.pName = "main";
-	fragment_stage.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-	fragment_stage.module = fragment_shader;
-
-	VkPipelineShaderStageCreateInfo shader_stage[] = {
-		vertex_stage,
-		fragment_stage
+	VkPipelineShaderStageCreateInfo shader_stages[] = {
+		shader_stage(vertex_shader, VK_SHADER_STAGE_VERTEX_BIT),
+		shader_stage(fragment_shader, VK_SHADER_STAGE_FRAGMENT_BIT)
 	};
 
 	VkDynamicState dynamic_states[] = {
@@ -316,7 +298,7 @@ int main(int argc, char* argv[]) {
 	pipe_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 	pipe_info.pVertexInputState = &vertex_input_stage;
 	pipe_info.pColorBlendState = &color_blend_state;
-	pipe_info.pStages = shader_stage;
+	pipe_info.pStages = shader_stages;
 	pipe_info.layout = pipe_layout;
 	pipe_info.renderPass = render_pass;
 	pipe_info.stageCount = 2;
@@ -331,15 +313,18 @@ int main(int argc, char* argv[]) {
 	vkDestroyShaderModule(device, vertex_shader, 0);
 	vkDestroyShaderModule(device, fragment_shader, 0);
 
-
-	struct rendering_image image;
+	struct rendering_buffer pixel_char_buffer;
+	struct rendering_buffer pixel_font_buffer;
 
 	struct rendering_memory_manager rmm;
 	VKCall(rendering_memory_manager_new(device, gpu, graphics_queue, command_pool, &rmm));
 
-	VKCall(VkImage_new(&rmm, "../../../resources/client/assets/textures/blocks/oak_leaves.png", &image));
+	VKCall(VkBuffer_new(&rmm, 65536, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, &pixel_char_buffer));
+	VKCall(VkBuffer_new(&rmm, sizeof(struct pixel_font), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, &pixel_font_buffer));
 
-	//VKCall(rendering_memory_manager_destroy(&rmm));
+	struct pixel_font* font = load_pixel_font("../../../resources/client/assets/fonts/debug.pixelfont");
+
+	VKCall(VkBuffer_fill(&rmm, &pixel_font_buffer, font, sizeof(struct pixel_font)));
 
 	VkSamplerCreateInfo sampler_info = { 0 };
 	sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -349,15 +334,18 @@ int main(int argc, char* argv[]) {
 	VKCall(vkCreateSampler(device, &sampler_info, 0, &sampler));
 
 
-	VkDescriptorPoolSize pool_size = { 0 };
-	pool_size.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	pool_size.descriptorCount = 1;
+	VkDescriptorPoolSize pool_sizes[2];
+
+	pool_sizes[0].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	pool_sizes[0].descriptorCount = 1;
+	pool_sizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	pool_sizes[1].descriptorCount = 2;
 
 	VkDescriptorPoolCreateInfo descriptor_pool_info = { 0 };
 	descriptor_pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	descriptor_pool_info.maxSets = 1;
-	descriptor_pool_info.poolSizeCount = 1;
-	descriptor_pool_info.pPoolSizes = &pool_size;
+	descriptor_pool_info.poolSizeCount = 2;
+	descriptor_pool_info.pPoolSizes = pool_sizes;
 
 	VKCall(vkCreateDescriptorPool(device, &descriptor_pool_info, 0, &descriptor_pool));
 
@@ -370,20 +358,33 @@ int main(int argc, char* argv[]) {
 
 	VKCall(vkAllocateDescriptorSets(device, &descriptor_set_info, &descriptor_set));
 
-	VkDescriptorImageInfo img_info = { 0 };
-	img_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-	img_info.imageView = image.view;
-	img_info.sampler = sampler;
+	VkDescriptorBufferInfo pixel_char_buffer_info = { 0 };
+	pixel_char_buffer_info.buffer = pixel_char_buffer.buffer;
+	pixel_char_buffer_info.range = VK_WHOLE_SIZE;
 
-	VkWriteDescriptorSet write = { 0 };
-	write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	write.dstSet = descriptor_set;
-	write.pImageInfo = &img_info;
-	write.dstBinding = 0;
-	write.descriptorCount = 1;
-	write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	VkDescriptorBufferInfo pixel_font_buffer_info = { 0 };
+	pixel_font_buffer_info.buffer = pixel_font_buffer.buffer;
+	pixel_font_buffer_info.range = VK_WHOLE_SIZE;
 
-	vkUpdateDescriptorSets(device, 1, &write, 0, 0);
+	VkWriteDescriptorSet pixel_char_buffer_write = { 0 };
+	pixel_char_buffer_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	pixel_char_buffer_write.dstSet = descriptor_set;
+	pixel_char_buffer_write.pBufferInfo = &pixel_char_buffer_info;
+	pixel_char_buffer_write.dstBinding = 0;
+	pixel_char_buffer_write.descriptorCount = 1;
+	pixel_char_buffer_write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+
+	VkWriteDescriptorSet pixel_font_buffer_write = { 0 };
+	pixel_font_buffer_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	pixel_font_buffer_write.dstSet = descriptor_set;
+	pixel_font_buffer_write.pBufferInfo = &pixel_font_buffer_info;
+	pixel_font_buffer_write.dstBinding = 1;
+	pixel_font_buffer_write.descriptorCount = 1;
+	pixel_font_buffer_write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+
+	VkWriteDescriptorSet descriptor_writes[] = { pixel_char_buffer_write, pixel_font_buffer_write };
+
+	vkUpdateDescriptorSets(device, 2, descriptor_writes, 0, 0);
 
 #define FRAME_TIME_FRAMES_AVERAGE 128
 	double last_frame_times[FRAME_TIME_FRAMES_AVERAGE] = { 0 };
@@ -439,6 +440,29 @@ int main(int argc, char* argv[]) {
 
 		if (render) {
 
+			struct character {
+				uint64_t size;
+				float start_position[2];
+				struct pixel_char pixel_char_data;
+			};
+
+			void* pixel_char_data_host_buffer = malloc(sizeof(float) * 4 + sizeof(struct character) * 3);
+
+			((float*)pixel_char_data_host_buffer)[0] = screen_size.width;
+			((float*)pixel_char_data_host_buffer)[1] = screen_size.height;
+
+			
+
+			struct character* chars = (size_t)pixel_char_data_host_buffer + sizeof(float) * 4;
+
+			chars[0] = (struct character){ 4, {100.f, 100.f}, { { 0.f, 1.f, 1.f, 1.f }, { 0.f, 0.f, 0.f, 1.f }, 'A', 0 } };
+			chars[1] = (struct character){ 4, {130.f, 150.f}, { { 1.f, 1.f, 0.f, 1.f }, { 0.f, 0.f, 0.f, 1.f }, 'I', 0 } };
+			chars[2] = (struct character){ 4, {160.f, 200.f}, { { 1.f, 0.f, 1.f, 1.f }, { 0.f, 0.f, 0.f, 1.f }, 'C', 0 } };
+
+			VkBuffer_fill(&rmm, &pixel_char_buffer, pixel_char_data_host_buffer, sizeof(float) * 2 + sizeof(struct character) * 3);
+
+			free(pixel_char_data_host_buffer);
+
 			uint32_t img_index;
 
 			VKCall(vkWaitForFences(device, 1, &img_available_fence, VK_TRUE, UINT64_MAX));
@@ -455,7 +479,7 @@ int main(int argc, char* argv[]) {
 			VKCall(vkBeginCommandBuffer(cmd, &begin_info));
 
 			VkClearValue clear_value = { 0 };
-			clear_value.color = (VkClearColorValue){ 1, 0, 0, 1 };
+			clear_value.color = (VkClearColorValue){ 0.5f, 0.5f, 0.5f, 1 };
 
 			VkRenderPassBeginInfo renderpass_begin_info = { 0 };
 			renderpass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -490,7 +514,7 @@ int main(int argc, char* argv[]) {
 			);
 
 			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-			vkCmdDraw(cmd, 6, 1, 0, 0);
+			vkCmdDraw(cmd, 18, 1, 0, 0);
 
 
 			vkCmdEndRenderPass(cmd);
@@ -548,6 +572,9 @@ int main(int argc, char* argv[]) {
 	
 
 close:
+
+	VKCall(rendering_memory_manager_destroy(&rmm));
+
 	window_destroy(window);
 
 	platform_exit();

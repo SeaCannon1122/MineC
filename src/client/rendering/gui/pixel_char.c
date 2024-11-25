@@ -34,9 +34,9 @@ void pixel_char_background_print(const struct pixel_char* RESTRICT c, int text_s
 
 	int shaddow_offset = (c->masks & PIXEL_CHAR_CURSIVE_MASK ? (text_size + 1) / 2 : text_size);
 
-	for (int j = 0; j < PIXEL_FONT_RESOULUTION * text_size / 2; j++) {
+	for (int j = 0; j < PIXEL_FONT_RESOLUTION * text_size / 2; j++) {
 
-		int cursive_offset = (c->masks & PIXEL_CHAR_CURSIVE_MASK ? PIXEL_FONT_RESOULUTION * text_size / 4 - j / 2 - 1 : 0);
+		int cursive_offset = (c->masks & PIXEL_CHAR_CURSIVE_MASK ? PIXEL_FONT_RESOLUTION * text_size / 4 - j / 2 - 1 : 0);
 
 		for (int i = -(text_size + 1) / 2; i < (__PIXEL_CHAR_WIDTH(c[0], font_map) * text_size + 1) / 2 + text_size / 2; i++) {
 
@@ -50,20 +50,20 @@ void pixel_char_print(const struct pixel_char* RESTRICT c, int text_size, int x,
 
 	int shaddow_offset = (c->masks & PIXEL_CHAR_CURSIVE_MASK ? (text_size + 1) / 2 : text_size);
 
-	for (int j = 0; j < PIXEL_FONT_RESOULUTION * text_size / 2; j++) {
+	for (int j = 0; j < PIXEL_FONT_RESOLUTION * text_size / 2; j++) {
 
-		int cursive_offset = (c->masks & PIXEL_CHAR_CURSIVE_MASK ? PIXEL_FONT_RESOULUTION * text_size / 4 - j / 2 - 1 : 0);
+		int cursive_offset = (c->masks & PIXEL_CHAR_CURSIVE_MASK ? PIXEL_FONT_RESOLUTION * text_size / 4 - j / 2 - 1 : 0);
 		int shaddow_offset = (c->masks & PIXEL_CHAR_CURSIVE_MASK ? (text_size + 1) / 2 : text_size);
 
 		for (int i = 0; i < (__PIXEL_CHAR_WIDTH(c[0], font_map) * text_size + 1) / 2; i++) {
 
-			int x_bit_pos = i - text_size * PIXEL_FONT_RESOULUTION / 4;
-			int y_bit_pos = j - text_size * PIXEL_FONT_RESOULUTION / 4;
+			int x_bit_pos = i - text_size * PIXEL_FONT_RESOLUTION / 4;
+			int y_bit_pos = j - text_size * PIXEL_FONT_RESOLUTION / 4;
 
-			int bit_pos = ((x_bit_pos < 0 ? x_bit_pos + 1 : x_bit_pos) * 2 / text_size + PIXEL_FONT_RESOULUTION / 2) + PIXEL_FONT_RESOULUTION * ((y_bit_pos < 0 ? y_bit_pos + 1 : y_bit_pos) * 2 / text_size + PIXEL_FONT_RESOULUTION / 2);
+			int bit_pos = ((x_bit_pos < 0 ? x_bit_pos + 1 : x_bit_pos) * 2 / text_size + PIXEL_FONT_RESOLUTION / 2) + PIXEL_FONT_RESOLUTION * ((y_bit_pos < 0 ? y_bit_pos + 1 : y_bit_pos) * 2 / text_size + PIXEL_FONT_RESOLUTION / 2);
 
 			if (x_bit_pos < 0) bit_pos -= 1;
-			if (y_bit_pos < 0) bit_pos -= PIXEL_FONT_RESOULUTION;
+			if (y_bit_pos < 0) bit_pos -= PIXEL_FONT_RESOLUTION;
 
 			if (__PIXEL_CHAR_IF_BIT(((struct pixel_font*)(font_map[c[0].masks & PIXEL_CHAR_FONT_MASK]))->char_font_entries[c[0].value].layout, bit_pos)) {
 				if (i + cursive_offset + x >= 0 && j + y >= 0 && i + cursive_offset + x < width && j + y < height) screen[(i + cursive_offset + x) + width * (j + y)] = c->color;
@@ -79,9 +79,9 @@ void pixel_char_print(const struct pixel_char* RESTRICT c, int text_size, int x,
 	}
 
 	if (c->masks & PIXEL_CHAR_UNDERLINE_MASK) {
-		for (int j = PIXEL_FONT_RESOULUTION * text_size / 2; j < (PIXEL_FONT_RESOULUTION + 2) * text_size / 2; j++) {
+		for (int j = PIXEL_FONT_RESOLUTION * text_size / 2; j < (PIXEL_FONT_RESOLUTION + 2) * text_size / 2; j++) {
 
-			int cursive_offset = (c->masks & PIXEL_CHAR_CURSIVE_MASK ? PIXEL_FONT_RESOULUTION * text_size / 4 - j / 2 - 1 : 0);
+			int cursive_offset = (c->masks & PIXEL_CHAR_CURSIVE_MASK ? PIXEL_FONT_RESOLUTION * text_size / 4 - j / 2 - 1 : 0);
 
 			for (int i = -(text_size + 1) / 2; i < (__PIXEL_CHAR_WIDTH(c[0], font_map) * text_size + 1) / 2 + text_size / 2; i++) {
 
@@ -120,7 +120,7 @@ void pixel_char_print_string(const struct pixel_char* RESTRICT string, int text_
 
 	}
 
-	int y_pos = y - (alignment_y == ALIGNMENT_TOP ? 0 : (alignment_y == ALIGNMENT_BOTTOM ? (PIXEL_FONT_RESOULUTION / 2 + line_spacing) * text_size * lines - line_spacing * text_size : ((PIXEL_FONT_RESOULUTION / 2 + line_spacing) * text_size * lines - line_spacing * text_size) / 2));
+	int y_pos = y - (alignment_y == ALIGNMENT_TOP ? 0 : (alignment_y == ALIGNMENT_BOTTOM ? (PIXEL_FONT_RESOLUTION / 2 + line_spacing) * text_size * lines - line_spacing * text_size : ((PIXEL_FONT_RESOLUTION / 2 + line_spacing) * text_size * lines - line_spacing * text_size) / 2));
 
 	int y_tracer = y_pos;
 
@@ -171,7 +171,7 @@ void pixel_char_print_string(const struct pixel_char* RESTRICT string, int text_
 
 		if (string[text_i].value == '\0') break;
 
-		y_tracer += (PIXEL_FONT_RESOULUTION / 2 + line_spacing) * text_size;
+		y_tracer += (PIXEL_FONT_RESOLUTION / 2 + line_spacing) * text_size;
 		if(string[text_i].value == '\n') text_i++;
 	}
 
@@ -179,12 +179,12 @@ void pixel_char_print_string(const struct pixel_char* RESTRICT string, int text_
 
 	int i = (alignment_x == ALIGNMENT_LEFT ? x : (alignment_x == ALIGNMENT_RIGHT ? x - max_width : x - max_width / 2)) - 1;
 
-	for (int j = y_pos; j < (PIXEL_FONT_RESOULUTION / 2 + line_spacing) * text_size * lines - line_spacing * text_size + y_pos; j++) {
+	for (int j = y_pos; j < (PIXEL_FONT_RESOLUTION / 2 + line_spacing) * text_size * lines - line_spacing * text_size + y_pos; j++) {
 		if (i >= 0 && i < width && j >= 0 && j < height) screen[i + j * width] = 0xffff7f00;
 	}
 
 	i = (alignment_x == ALIGNMENT_LEFT ? x + max_width : (alignment_x == ALIGNMENT_RIGHT ? x : x + max_width / 2));
-	for (int j = y_pos; j < (PIXEL_FONT_RESOULUTION / 2 + line_spacing) * text_size * lines - line_spacing * text_size + y_pos; j++) {
+	for (int j = y_pos; j < (PIXEL_FONT_RESOLUTION / 2 + line_spacing) * text_size * lines - line_spacing * text_size + y_pos; j++) {
 		if (i >= 0 && i < width && j >= 0 && j < height) screen[i + j * width] = 0xffff7f00;
 	}
 
@@ -219,7 +219,7 @@ int pixel_char_get_hover_index(const struct pixel_char* RESTRICT string, int tex
 
 	}
 
-	int y_pos = y - (alignment_y == ALIGNMENT_TOP ? 0 : (alignment_y == ALIGNMENT_BOTTOM ? (PIXEL_FONT_RESOULUTION / 2 + line_spacing) * text_size * lines - line_spacing * text_size : ((PIXEL_FONT_RESOULUTION / 2 + line_spacing) * text_size * lines - line_spacing * text_size) / 2));
+	int y_pos = y - (alignment_y == ALIGNMENT_TOP ? 0 : (alignment_y == ALIGNMENT_BOTTOM ? (PIXEL_FONT_RESOLUTION / 2 + line_spacing) * text_size * lines - line_spacing * text_size : ((PIXEL_FONT_RESOLUTION / 2 + line_spacing) * text_size * lines - line_spacing * text_size) / 2));
 
 	int y_tracer = y_pos;
 
@@ -248,7 +248,7 @@ int pixel_char_get_hover_index(const struct pixel_char* RESTRICT string, int tex
 
 		for (; text_i_line <= last_char_line; text_i_line++) {
 
-			if (string[text_i_line].value != '\x1f') if (x_hover >= x_tracer - (text_size + 1) / 2 && x_hover < x_tracer + (__PIXEL_CHAR_WIDTH(string[text_i_line], font_map) + 1) / 2 * text_size + text_size / 2 && y_hover >= y_tracer && y_hover < y_tracer + PIXEL_FONT_RESOULUTION * text_size / 2) return text_i_line;
+			if (string[text_i_line].value != '\x1f') if (x_hover >= x_tracer - (text_size + 1) / 2 && x_hover < x_tracer + (__PIXEL_CHAR_WIDTH(string[text_i_line], font_map) + 1) / 2 * text_size + text_size / 2 && y_hover >= y_tracer && y_hover < y_tracer + PIXEL_FONT_RESOLUTION * text_size / 2) return text_i_line;
 
 			x_tracer += (__PIXEL_CHAR_WIDTH(string[text_i_line], font_map) + 1) / 2 * text_size + (__PIXEL_CHAR_WIDTH(string[text_i_line], font_map) > 0 ? text_size : 0);
 
@@ -258,7 +258,7 @@ int pixel_char_get_hover_index(const struct pixel_char* RESTRICT string, int tex
 
 		if (string[text_i].value == '\0') break;
 
-		y_tracer += (PIXEL_FONT_RESOULUTION / 2 + line_spacing) * text_size;
+		y_tracer += (PIXEL_FONT_RESOLUTION / 2 + line_spacing) * text_size;
 		if (string[text_i].value == '\n') text_i++;
 	}
 
