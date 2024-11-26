@@ -213,11 +213,18 @@ int main(int argc, char* argv[]) {
 
 	VKCall(vkCreateDescriptorSetLayout(device, &set_layout_info, 0, &set_layout));
 
+	VkPushConstantRange push_constant_range = { 0 };
+	push_constant_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+	push_constant_range.offset = 0;
+	push_constant_range.size = sizeof(uint32_t) * 3;
+
 
 	VkPipelineLayoutCreateInfo pipeline_layout_info = { 0 };
 	pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	pipeline_layout_info.setLayoutCount = 1;
 	pipeline_layout_info.pSetLayouts = &set_layout;
+	pipeline_layout_info.pushConstantRangeCount = 1;
+	pipeline_layout_info.pPushConstantRanges = &push_constant_range;
 
 	VKCall(vkCreatePipelineLayout(device, &pipeline_layout_info, 0, &pipe_layout));
 
@@ -386,9 +393,29 @@ int main(int argc, char* argv[]) {
 
 	vkUpdateDescriptorSets(device, 2, descriptor_writes, 0, 0);
 
+
+
+#define letter_count 20
+
+	struct character {
+		uint64_t size;
+		float start_position[2];
+		struct pixel_char pixel_char_data;
+	};
+
+#define string_to_pixel_char(name, str, size, x, y, flags) struct character name[sizeof(str) - 1];\
+for(int i = 0; i < sizeof(str) - 1; i++) {\
+if(i == 0) name[i] = (struct character){ size, {x, y}, { { 1.f, 1.f, 1.f, 1.f }, { 1.0, 1.0, 1.0, 1.0 }, str[i], flags } };\
+else name[i] = (struct character){ size, {name[i-1].start_position[0] + (float)(size * ((font->char_font_entries[name[i-1].pixel_char_data.value].width + 3) / 2 )), y}, { { 1.f, 1.f, 1.f, 1.f }, { 1.0, 1.0, 1.0, 1.0 }, str[i], flags } };\
+}\
+
+	string_to_pixel_char(chars, "Hello World!", 1, 100.f, 100.f, PIXEL_CHAR_UNDERLINE_MASK | PIXEL_CHAR_SHADOW_MASK)
+
+	VkBuffer_fill(&rmm, &pixel_char_buffer, chars, sizeof(struct character) * letter_count);
+
 #define FRAME_TIME_FRAMES_AVERAGE 128
 
-#define FPS 60.
+#define FPS 20.
 	double last_frame_times[FRAME_TIME_FRAMES_AVERAGE] = { 0 };
 	for (int32_t i = 0; i < FRAME_TIME_FRAMES_AVERAGE; i++) last_frame_times[i] = 1000. / FPS;
 
@@ -442,26 +469,7 @@ int main(int argc, char* argv[]) {
 
 		if (render) {
 
-			struct character {
-				uint64_t size;
-				float start_position[2];
-				struct pixel_char pixel_char_data;
-			};
-
-			void* pixel_char_data_host_buffer = malloc(sizeof(float) * 4 + sizeof(struct character) * 3);
-
-			((float*)pixel_char_data_host_buffer)[0] = screen_size.width;
-			((float*)pixel_char_data_host_buffer)[1] = screen_size.height;
-
-			struct character* chars = (size_t)pixel_char_data_host_buffer + sizeof(float) * 4;
-
-			chars[0] = (struct character){ 10, {100.f, 100.f}, { { 0.f, 1.f, 1.f, 1.f }, { 0.f, 0.f, 0.f, 1.f }, 'A', PIXEL_CHAR_UNDERLINE_MASK | PIXEL_CHAR_CURSIVE_MASK} };
-			chars[1] = (struct character){ 10, {200.f, 150.f}, { { 1.f, 1.f, 0.f, 1.f }, { 0.f, 0.f, 0.f, 1.f }, '>', 0 } };
-			chars[2] = (struct character){ 10, {300.f, 200.f}, { { 1.f, 0.f, 1.f, 1.f }, { 0.f, 0.f, 0.f, 1.f }, 'C', 0 } };
-
-			VkBuffer_fill(&rmm, &pixel_char_buffer, pixel_char_data_host_buffer, sizeof(float) * 2 + sizeof(struct character) * 3);
-
-			free(pixel_char_data_host_buffer);
+			
 
 			uint32_t img_index;
 
@@ -479,7 +487,7 @@ int main(int argc, char* argv[]) {
 			VKCall(vkBeginCommandBuffer(cmd, &begin_info));
 
 			VkClearValue clear_value = { 0 };
-			clear_value.color = (VkClearColorValue){ 0.5f, 0.5f, 0.5f, 1 };
+			clear_value.color = (VkClearColorValue){ 0.0f, 1.0f, 1.0f, 1 };
 
 			VkRenderPassBeginInfo renderpass_begin_info = { 0 };
 			renderpass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -514,7 +522,28 @@ int main(int argc, char* argv[]) {
 			);
 
 			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-			vkCmdDraw(cmd, 18, 1, 0, 0);
+
+			vkCmdPushConstants(
+				cmd,
+				pipe_layout,
+				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+				0,
+				sizeof(uint32_t) * 2,
+				&screen_size
+			);
+
+			for (uint32_t char_render_mode = 0; char_render_mode < 3; char_render_mode++) {
+				vkCmdPushConstants(
+					cmd,
+					pipe_layout,
+					VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+					sizeof(uint32_t) * 2,
+					sizeof(uint32_t),
+					&char_render_mode
+				);
+
+				vkCmdDraw(cmd, letter_count * 6, 1, 0, 0);
+			}
 
 
 			vkCmdEndRenderPass(cmd);

@@ -32,68 +32,132 @@ struct character
     pixel_char pixel_char_data;
 };
 
+
+
 layout(set = 0, binding = 0) readonly buffer pixel_char_data {
-    
-vec2 screen_size;
-character chars[];
-	
+	character chars[];
 };
 
 layout(set = 0, binding = 1) readonly buffer font {
-    
-char_font_entry char_font_entries[];
-	
+	char_font_entry char_font_entries[];
 };
+
+layout(push_constant) uniform PushConstants {
+	int screen_width;
+	int screen_height;
+	int draw_mode;
+};
+
+
 
 layout (location = 0) in vec2 f_fragment_position;
 layout (location = 1) in float f_char_index;
 
 layout (location = 0) out vec4 fragmentColor;
 
+
+
 void main() {
 
     int char_index = int(f_char_index);
-    ivec2 fragment_position = ivec2(f_fragment_position.x - 0.2, f_fragment_position.y - 0.2);
     
     int size = chars[char_index].size;
     
-    if (int(fragment_position.y) < 8 * size) {
+    ivec2 fragment_position = ivec2(f_fragment_position.x , f_fragment_position.y);
+    
+    fragmentColor = vec4(0.0, 0.0, 0.0, 0.0);
+    
+    if (draw_mode == 0)
+    {
         
-        
-        
-        fragment_position.x = fragment_position.x - 4 * size;
-        fragment_position.y = fragment_position.y - 4 * size;
-        
-        ivec2 check_coords = fragment_position;
-        
-        if (fragment_position.x < 0) check_coords.x += 1;
-        if (fragment_position.y < 0) check_coords.y += 1;
-        
-        check_coords.x = check_coords.x * 2 / size + 8;
-        check_coords.y = check_coords.y * 2 / size + 8;
-        
-        if (fragment_position.x < 0) check_coords.x -= 1;
-        if (fragment_position.y < 0) check_coords.y -= 1;
-        
-        if (PIXEL_CHAR_IF_BIT(char_font_entries[chars[char_index].pixel_char_data.value].pixel_layout, check_coords.x, check_coords.y) != 0)
-            fragmentColor = chars[char_index].pixel_char_data.color;
-        
-        else fragmentColor = vec4(0.0, 0.0, 0.0, 0.0);
+        if ((chars[char_index].pixel_char_data.masks & PIXEL_CHAR_BACKGROUND_MASK) != 0)
+            fragmentColor = vec4(chars[char_index].pixel_char_data.background_color);
+
     }
+    else if (draw_mode == 1)
+    {
+        if ((chars[char_index].pixel_char_data.masks & PIXEL_CHAR_SHADOW_MASK) != 0)
+        {
+            if (
+            f_fragment_position.x >= 0.0 &&
+            f_fragment_position.y >= 0.0 &&
+            f_fragment_position.x / float(size) < 8.0 &&
+            f_fragment_position.y / float(size) < 8.0
+            )
+            {
+        
+        
+        
+                fragment_position.x = fragment_position.x - 4 * size;
+                fragment_position.y = fragment_position.y - 4 * size;
+        
+                ivec2 check_coords = fragment_position;
+        
+                if (fragment_position.x < 0)
+                    check_coords.x += 1;
+                if (fragment_position.y < 0)
+                    check_coords.y += 1;
+        
+                check_coords.x = check_coords.x * 2 / size + 8;
+                check_coords.y = check_coords.y * 2 / size + 8;
+        
+                if (fragment_position.x < 0)
+                    check_coords.x -= 1;
+                if (fragment_position.y < 0)
+                    check_coords.y -= 1;
+        
+                if (PIXEL_CHAR_IF_BIT(char_font_entries[chars[char_index].pixel_char_data.value].pixel_layout, check_coords.x, check_coords.y) != 0)
+                    fragmentColor = vec4(chars[char_index].pixel_char_data.color.x / 3.0, chars[char_index].pixel_char_data.color.y / 3.0, chars[char_index].pixel_char_data.color.z / 3.0, chars[char_index].pixel_char_data.color.z);
+            }
+            if (fragment_position.y / size > 7 && fragment_position.y / size < 9)
+            {
+                if ((chars[char_index].pixel_char_data.masks & PIXEL_CHAR_UNDERLINE_MASK) != 0)
+                    fragmentColor = vec4(chars[char_index].pixel_char_data.color.x / 3.0, chars[char_index].pixel_char_data.color.y / 3.0, chars[char_index].pixel_char_data.color.z / 3.0, chars[char_index].pixel_char_data.color.z);
+            }
+        }
+
+    }
+    else 
+    {
     
-    else {
+        if (
+            f_fragment_position.x >= 0.0 &&
+            f_fragment_position.y >= 0.0 &&
+            f_fragment_position.x / float(size) < 8.0 &&
+            f_fragment_position.y / float(size) < 8.0
+        )
+        {
         
-        if ((chars[char_index].pixel_char_data.masks & PIXEL_CHAR_UNDERLINE_MASK) != 0)
-            fragmentColor = chars[char_index].pixel_char_data.color;
         
-        else fragmentColor = vec4(0.0, 0.0, 0.0, 0.0);
+        
+            fragment_position.x = fragment_position.x - 4 * size;
+            fragment_position.y = fragment_position.y - 4 * size;
+        
+            ivec2 check_coords = fragment_position;
+        
+            if (fragment_position.x < 0)
+                check_coords.x += 1;
+            if (fragment_position.y < 0)
+                check_coords.y += 1;
+        
+            check_coords.x = check_coords.x * 2 / size + 8;
+            check_coords.y = check_coords.y * 2 / size + 8;
+        
+            if (fragment_position.x < 0)
+                check_coords.x -= 1;
+            if (fragment_position.y < 0)
+                check_coords.y -= 1;
+        
+            if (PIXEL_CHAR_IF_BIT(char_font_entries[chars[char_index].pixel_char_data.value].pixel_layout, check_coords.x, check_coords.y) != 0)
+                fragmentColor = chars[char_index].pixel_char_data.color;
+        }
+        if (fragment_position.y / size > 7 && fragment_position.y / size < 9)
+        {
+            if ((chars[char_index].pixel_char_data.masks & PIXEL_CHAR_UNDERLINE_MASK) != 0)
+                fragmentColor = chars[char_index].pixel_char_data.color;
+        }
         
     }
-    
-    
-    
-    
-    
-    
+
 
 }

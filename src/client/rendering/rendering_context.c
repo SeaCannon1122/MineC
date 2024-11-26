@@ -166,7 +166,7 @@ VkResult new_VkSwapchainKHR(VkDevice device, VkPhysicalDevice gpu, VkSurfaceKHR 
 
 	for (uint32_t i = 0; i < format_count; i++) {
 
-		if (surface_formats[i].format == VK_FORMAT_B8G8R8A8_SRGB) {
+		if (surface_formats[i].format == VK_FORMAT_B8G8R8A8_UNORM) {
 			*surface_format = surface_formats[i];
 			found = 1;
 			break;
