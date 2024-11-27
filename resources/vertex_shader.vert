@@ -34,9 +34,19 @@ layout(set = 0, binding = 0) readonly buffer pixel_char_data {
 	character chars[];
 };
 
-layout(set = 0, binding = 1) readonly buffer font {
-	char_font_entry char_font_entries[];
+layout(set = 0, binding = 1) readonly buffer font0 {
+	char_font_entry char_font_entries_0[];
 };
+layout(set = 0, binding = 1) readonly buffer font1 {
+	char_font_entry char_font_entries_1[];
+};
+layout(set = 0, binding = 1) readonly buffer font2 {
+	char_font_entry char_font_entries_2[];
+};
+layout(set = 0, binding = 1) readonly buffer font3 {
+	char_font_entry char_font_entries_3[];
+};
+
 
 layout(push_constant) uniform PushConstants {
 	int screen_width;
@@ -70,7 +80,7 @@ void main() {
 	else if (gl_VertexIndex % 6 == 5) vertex_multiplier = ivec2(1, 0);
 
     vec2 vertex_position = vec2(ivec2(
-		-size / 2 + vertex_multiplier.x * ((char_font_entries[chars[char_index].pixel_char_data.value].width + 3) / 2 * size),
+		-size / 2 + vertex_multiplier.x * ((char_font_entries_0[chars[char_index].pixel_char_data.value].width + 3) / 2 * size),
 		-size / 2 + vertex_multiplier.y * 10 * size
 	));
 	

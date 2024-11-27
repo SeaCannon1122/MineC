@@ -38,8 +38,17 @@ layout(set = 0, binding = 0) readonly buffer pixel_char_data {
 	character chars[];
 };
 
-layout(set = 0, binding = 1) readonly buffer font {
-	char_font_entry char_font_entries[];
+layout(set = 0, binding = 1) readonly buffer font0 {
+	char_font_entry char_font_entries_0[];
+};
+layout(set = 0, binding = 1) readonly buffer font1 {
+	char_font_entry char_font_entries_1[];
+};
+layout(set = 0, binding = 1) readonly buffer font2 {
+	char_font_entry char_font_entries_2[];
+};
+layout(set = 0, binding = 1) readonly buffer font3 {
+	char_font_entry char_font_entries_3[];
 };
 
 layout(push_constant) uniform PushConstants {
@@ -106,7 +115,7 @@ void main() {
                 if (fragment_position.y < 0)
                     check_coords.y -= 1;
         
-                if (PIXEL_CHAR_IF_BIT(char_font_entries[chars[char_index].pixel_char_data.value].pixel_layout, check_coords.x, check_coords.y) != 0)
+                if (PIXEL_CHAR_IF_BIT(char_font_entries_0[chars[char_index].pixel_char_data.value].pixel_layout, check_coords.x, check_coords.y) != 0)
                     fragmentColor = vec4(chars[char_index].pixel_char_data.color.x / 3.0, chars[char_index].pixel_char_data.color.y / 3.0, chars[char_index].pixel_char_data.color.z / 3.0, chars[char_index].pixel_char_data.color.z);
             }
             if (fragment_position.y / size > 7 && fragment_position.y / size < 9)
@@ -148,7 +157,7 @@ void main() {
             if (fragment_position.y < 0)
                 check_coords.y -= 1;
         
-            if (PIXEL_CHAR_IF_BIT(char_font_entries[chars[char_index].pixel_char_data.value].pixel_layout, check_coords.x, check_coords.y) != 0)
+            if (PIXEL_CHAR_IF_BIT(char_font_entries_0[chars[char_index].pixel_char_data.value].pixel_layout, check_coords.x, check_coords.y) != 0)
                 fragmentColor = chars[char_index].pixel_char_data.color;
         }
         if (fragment_position.y / size > 7 && fragment_position.y / size < 9)

@@ -4,7 +4,7 @@ project(blocks2)
 set(CLIENT_SOURCE_FILES
     src/general/utils.c
     src/client/rendering/gui/menu.c
-    src/client/rendering/gui/pixel_char.c
+    src/test2/pixel_char.c
     src/client/game_client_body/game_client.c
     src/client/game_client_body/game_menus.c
     src/client/game_client_body/game_client_renderer.c
@@ -38,7 +38,7 @@ set(TEST_SOURCE_FILES
     src/test/main.c
     src/test/testing.c
     src/general/key_value.c
-    src/test/pixel_char.c
+    src/test2/pixel_char.c
 
     src/general/platformlib/platform/platform.c
     src/general/platformlib/networking.c
@@ -49,7 +49,7 @@ set(TEST_2_SOURCE_FILES
     src/test2/main.c
     src/test2/testing2.c
     src/client/rendering/rendering_context.c
-    src/test/pixel_char.c
+    src/test2/pixel_char.c
 
     src/general/platformlib/platform/platform.c
 

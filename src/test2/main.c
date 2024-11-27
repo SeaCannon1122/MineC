@@ -8,7 +8,7 @@
 #include <vulkan/vulkan.h>
 #include <malloc.h>
 
-#include "test/pixel_char.h"
+#include "test2/pixel_char.h"
 
 VkExtent2D screen_size;
 
@@ -31,24 +31,9 @@ VkSemaphore submit_semaphore;
 VkSemaphore aquire_semaphore;
 VkFence img_available_fence;
 
-VkDescriptorSetLayout set_layout;
-VkPipeline pipeline;
-VkPipelineLayout pipe_layout;
-VkDescriptorSet descriptor_set;
-VkDescriptorPool descriptor_pool;
-VkSampler sampler;
-
 
 VkRenderPass render_pass;
 
-#define VKCall(call) \
-do { \
-    VkResult result = (call); \
-    if (result != VK_SUCCESS) { \
-        printf("Vulkan error in \n    %s \n at %s:%d: %d\n", #call, __FILE__, __LINE__, result); \
-		DEBUG_BREAK();\
-    } \
-} while(0)
 
 static void* load_file(char* filename, int* size) {
 
@@ -189,239 +174,43 @@ int main(int argc, char* argv[]) {
 
 	VKCall(vkCreateFence(device, &fence_info, 0, &img_available_fence));
 
-	VkDescriptorSetLayoutBinding pixel_char_buffer_binding = { 0 };
-	pixel_char_buffer_binding.binding = 0;
-	pixel_char_buffer_binding.descriptorCount = 1;
-	pixel_char_buffer_binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-	pixel_char_buffer_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-
-	VkDescriptorSetLayoutBinding pixel_font_buffer_binding = { 0 };
-	pixel_font_buffer_binding.binding = 1;
-	pixel_font_buffer_binding.descriptorCount = 1;
-	pixel_font_buffer_binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-	pixel_font_buffer_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-
-	VkDescriptorSetLayoutBinding bindings[] = {
-		pixel_char_buffer_binding,
-		pixel_font_buffer_binding,
-	};
-
-	VkDescriptorSetLayoutCreateInfo set_layout_info = { 0 };
-	set_layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	set_layout_info.bindingCount = 2;
-	set_layout_info.pBindings = bindings;
-
-	VKCall(vkCreateDescriptorSetLayout(device, &set_layout_info, 0, &set_layout));
-
-	VkPushConstantRange push_constant_range = { 0 };
-	push_constant_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-	push_constant_range.offset = 0;
-	push_constant_range.size = sizeof(uint32_t) * 3;
-
-
-	VkPipelineLayoutCreateInfo pipeline_layout_info = { 0 };
-	pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	pipeline_layout_info.setLayoutCount = 1;
-	pipeline_layout_info.pSetLayouts = &set_layout;
-	pipeline_layout_info.pushConstantRangeCount = 1;
-	pipeline_layout_info.pPushConstantRanges = &push_constant_range;
-
-	VKCall(vkCreatePipelineLayout(device, &pipeline_layout_info, 0, &pipe_layout));
-
-
-	VkPipelineVertexInputStateCreateInfo vertex_input_stage = { 0 };
-	vertex_input_stage.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-
-	VkPipelineColorBlendAttachmentState color_blend_attachment = { 0 };
-	color_blend_attachment.blendEnable = VK_TRUE;
-	color_blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-	color_blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-	color_blend_attachment.colorBlendOp = VK_BLEND_OP_ADD;
-	color_blend_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-	color_blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-	color_blend_attachment.alphaBlendOp = VK_BLEND_OP_ADD;
-	color_blend_attachment.colorWriteMask =
-		VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-		VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-
-	VkPipelineColorBlendStateCreateInfo color_blend_state = { 0 };
-	color_blend_state.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-	color_blend_state.logicOpEnable = VK_FALSE;
-	color_blend_state.logicOp = VK_LOGIC_OP_COPY;
-	color_blend_state.attachmentCount = 1;
-	color_blend_state.pAttachments = &color_blend_attachment;
-	color_blend_state.blendConstants[0] = 0.0f;
-	color_blend_state.blendConstants[1] = 0.0f;
-	color_blend_state.blendConstants[2] = 0.0f;
-	color_blend_state.blendConstants[3] = 0.0f;
-
-	VkPipelineInputAssemblyStateCreateInfo input_assembly = { 0 };
-	input_assembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-	input_assembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-
-	VkRect2D initial_scissor = { 0 };
-	VkViewport initial_viewport = { 0 };
-	initial_viewport.maxDepth = 1.0f;
-
-	VkPipelineViewportStateCreateInfo viewport_state = { 0 };
-	viewport_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-	viewport_state.scissorCount = 1;
-	viewport_state.pScissors = &initial_scissor;
-	viewport_state.viewportCount = 1;
-	viewport_state.pViewports = &initial_viewport;
-
-	VkPipelineRasterizationStateCreateInfo rasterization_state = { 0 };
-	rasterization_state.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-	rasterization_state.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-	rasterization_state.cullMode = VK_CULL_MODE_BACK_BIT;
-	rasterization_state.polygonMode = VK_POLYGON_MODE_FILL;
-	rasterization_state.lineWidth = 1.0f;
-
-	VkPipelineMultisampleStateCreateInfo multi_sample_state = { 0 };
-	multi_sample_state.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-	multi_sample_state.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-
-	VkShaderModule vertex_shader, fragment_shader;
-
-	VKCall(new_VkShaderModule(device, "../../../resources/vertex_shader.spv", &vertex_shader));
-	VKCall(new_VkShaderModule(device, "../../../resources/fragment_shader.spv", &fragment_shader));
-
-	VkPipelineShaderStageCreateInfo shader_stages[] = {
-		shader_stage(vertex_shader, VK_SHADER_STAGE_VERTEX_BIT),
-		shader_stage(fragment_shader, VK_SHADER_STAGE_FRAGMENT_BIT)
-	};
-
-	VkDynamicState dynamic_states[] = {
-		VK_DYNAMIC_STATE_SCISSOR,
-		VK_DYNAMIC_STATE_VIEWPORT
-	};
-
-	VkPipelineDynamicStateCreateInfo dynamic_state = { 0 };
-	dynamic_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-	dynamic_state.pDynamicStates = dynamic_states;
-	dynamic_state.dynamicStateCount = 2;
-
-	VkGraphicsPipelineCreateInfo pipe_info = { 0 };
-	pipe_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-	pipe_info.pVertexInputState = &vertex_input_stage;
-	pipe_info.pColorBlendState = &color_blend_state;
-	pipe_info.pStages = shader_stages;
-	pipe_info.layout = pipe_layout;
-	pipe_info.renderPass = render_pass;
-	pipe_info.stageCount = 2;
-	pipe_info.pRasterizationState = &rasterization_state;
-	pipe_info.pViewportState = &viewport_state;
-	pipe_info.pDynamicState = &dynamic_state;
-	pipe_info.pMultisampleState = &multi_sample_state;
-	pipe_info.pInputAssemblyState = &input_assembly;
-
-	VKCall(vkCreateGraphicsPipelines(device, 0, 1, &pipe_info, 0, &pipeline));
-
-	vkDestroyShaderModule(device, vertex_shader, 0);
-	vkDestroyShaderModule(device, fragment_shader, 0);
-
-	struct rendering_buffer pixel_char_buffer;
-	struct rendering_buffer pixel_font_buffer;
-
 	struct rendering_memory_manager rmm;
 	VKCall(rendering_memory_manager_new(device, gpu, graphics_queue, command_pool, &rmm));
-
-	VKCall(VkBuffer_new(&rmm, 65536, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, &pixel_char_buffer));
-	VKCall(VkBuffer_new(&rmm, sizeof(struct pixel_font), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, &pixel_font_buffer));
-
-	struct pixel_font* font = load_pixel_font("../../../resources/client/assets/fonts/debug.pixelfont");
-
-	VKCall(VkBuffer_fill(&rmm, &pixel_font_buffer, font, sizeof(struct pixel_font)));
-
-	VkSamplerCreateInfo sampler_info = { 0 };
-	sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-	sampler_info.minFilter = VK_FILTER_NEAREST;
-	sampler_info.magFilter = VK_FILTER_NEAREST;
-
-	VKCall(vkCreateSampler(device, &sampler_info, 0, &sampler));
+	
+	struct pixel_char_renderer pcr;
+	pixel_char_renderer_new(&pcr, &rmm, device, render_pass);
 
 
-	VkDescriptorPoolSize pool_sizes[2];
+	struct pixel_font* font= load_pixel_font("../../../resources/client/assets/fonts/debug.pixelfont");
 
-	pool_sizes[0].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	pool_sizes[0].descriptorCount = 1;
-	pool_sizes[1].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-	pool_sizes[1].descriptorCount = 2;
-
-	VkDescriptorPoolCreateInfo descriptor_pool_info = { 0 };
-	descriptor_pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	descriptor_pool_info.maxSets = 1;
-	descriptor_pool_info.poolSizeCount = 2;
-	descriptor_pool_info.pPoolSizes = pool_sizes;
-
-	VKCall(vkCreateDescriptorPool(device, &descriptor_pool_info, 0, &descriptor_pool));
-
-
-	VkDescriptorSetAllocateInfo descriptor_set_info = { 0 };
-	descriptor_set_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	descriptor_set_info.pSetLayouts = &set_layout;
-	descriptor_set_info.descriptorSetCount = 1;
-	descriptor_set_info.descriptorPool = descriptor_pool;
-
-	VKCall(vkAllocateDescriptorSets(device, &descriptor_set_info, &descriptor_set));
-
-	VkDescriptorBufferInfo pixel_char_buffer_info = { 0 };
-	pixel_char_buffer_info.buffer = pixel_char_buffer.buffer;
-	pixel_char_buffer_info.range = VK_WHOLE_SIZE;
-
-	VkDescriptorBufferInfo pixel_font_buffer_info = { 0 };
-	pixel_font_buffer_info.buffer = pixel_font_buffer.buffer;
-	pixel_font_buffer_info.range = VK_WHOLE_SIZE;
-
-	VkWriteDescriptorSet pixel_char_buffer_write = { 0 };
-	pixel_char_buffer_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	pixel_char_buffer_write.dstSet = descriptor_set;
-	pixel_char_buffer_write.pBufferInfo = &pixel_char_buffer_info;
-	pixel_char_buffer_write.dstBinding = 0;
-	pixel_char_buffer_write.descriptorCount = 1;
-	pixel_char_buffer_write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-
-	VkWriteDescriptorSet pixel_font_buffer_write = { 0 };
-	pixel_font_buffer_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	pixel_font_buffer_write.dstSet = descriptor_set;
-	pixel_font_buffer_write.pBufferInfo = &pixel_font_buffer_info;
-	pixel_font_buffer_write.dstBinding = 1;
-	pixel_font_buffer_write.descriptorCount = 1;
-	pixel_font_buffer_write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-
-	VkWriteDescriptorSet descriptor_writes[] = { pixel_char_buffer_write, pixel_font_buffer_write };
-
-	vkUpdateDescriptorSets(device, 2, descriptor_writes, 0, 0);
-
+	pixel_char_renderer_add_font(&pcr, &rmm, font);
 
 
 #define letter_count 20
 
-	struct character {
-		uint64_t size;
-		float start_position[2];
-		struct pixel_char pixel_char_data;
-	};
+	
 
-#define string_to_pixel_char(name, str, size, x, y, flags) struct character name[sizeof(str) - 1];\
+#define string_to_pixel_char(name, str, size, x, y, flags) struct pixel_render_char name[sizeof(str) - 1];\
 for(int i = 0; i < sizeof(str) - 1; i++) {\
-if(i == 0) name[i] = (struct character){ size, {x, y}, { { 1.f, 1.f, 1.f, 1.f }, { 1.0, 1.0, 1.0, 1.0 }, str[i], flags } };\
-else name[i] = (struct character){ size, {name[i-1].start_position[0] + (float)(size * ((font->char_font_entries[name[i-1].pixel_char_data.value].width + 3) / 2 )), y}, { { 1.f, 1.f, 1.f, 1.f }, { 1.0, 1.0, 1.0, 1.0 }, str[i], flags } };\
+if(i == 0) name[i] = (struct pixel_render_char){ size, {x, y}, { { 1.f, 1.f, 1.f, 1.f }, { 1.0, 1.0, 1.0, 1.0 }, str[i], flags } };\
+else name[i] = (struct pixel_render_char){ size, {name[i-1].start_position[0] + (float)(size * ((font->char_font_entries[name[i-1].pixel_char_data.value].width + 3) / 2 )), y}, { { 1.f, 1.f, 1.f, 1.f }, { 1.0, 1.0, 1.0, 1.0 }, str[i], flags } };\
 }\
 
-	string_to_pixel_char(chars, "Hello World!", 1, 100.f, 100.f, PIXEL_CHAR_UNDERLINE_MASK | PIXEL_CHAR_SHADOW_MASK)
+	string_to_pixel_char(chars, "!!!!!!!!!!!", 10, 100.f, 100.f, PIXEL_CHAR_UNDERLINE_MASK | PIXEL_CHAR_SHADOW_MASK)
 
-	VkBuffer_fill(&rmm, &pixel_char_buffer, chars, sizeof(struct character) * letter_count);
+	VkBuffer_fill(&rmm, &pcr.pixel_char_buffer, chars, sizeof(struct pixel_render_char) * letter_count);
 
 #define FRAME_TIME_FRAMES_AVERAGE 128
 
-#define FPS 20.
+#define FPS 60.
 	double last_frame_times[FRAME_TIME_FRAMES_AVERAGE] = { 0 };
 	for (int32_t i = 0; i < FRAME_TIME_FRAMES_AVERAGE; i++) last_frame_times[i] = 1000. / FPS;
 
 	int32_t render = 1;
 
 	while (!get_key_state(KEY_ESCAPE)) {
+
+		double start_time = get_time();
 
 		struct window_event event;
 		while (window_process_next_event(&event)) if(event.type == WINDOW_EVENT_DESTROY) goto close;
@@ -465,8 +254,6 @@ else name[i] = (struct character){ size, {name[i-1].start_position[0] + (float)(
 		}
 		else render = 0;
 
-		double start_time = get_time();
-
 		if (render) {
 
 			
@@ -478,7 +265,7 @@ else name[i] = (struct character){ size, {name[i-1].start_position[0] + (float)(
 
 			VKCall(vkAcquireNextImageKHR(device, swapchain, 0, aquire_semaphore, 0, &img_index));
 
-			vkResetCommandBuffer(cmd, 0);
+			VKCall(vkResetCommandBuffer(cmd, 0));
 
 			VkCommandBufferBeginInfo begin_info = { 0 };
 			begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -513,19 +300,19 @@ else name[i] = (struct character){ size, {name[i-1].start_position[0] + (float)(
 			vkCmdBindDescriptorSets(
 				cmd,
 				VK_PIPELINE_BIND_POINT_GRAPHICS,
-				pipe_layout,
+				pcr.pipe_layout,
 				0,
 				1,
-				&descriptor_set,
+				&pcr.descriptor_set,
 				0,
 				0
 			);
 
-			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pcr.pipeline);
 
 			vkCmdPushConstants(
 				cmd,
-				pipe_layout,
+				pcr.pipe_layout,
 				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
 				0,
 				sizeof(uint32_t) * 2,
@@ -535,7 +322,7 @@ else name[i] = (struct character){ size, {name[i-1].start_position[0] + (float)(
 			for (uint32_t char_render_mode = 0; char_render_mode < 3; char_render_mode++) {
 				vkCmdPushConstants(
 					cmd,
-					pipe_layout,
+					pcr.pipe_layout,
 					VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
 					sizeof(uint32_t) * 2,
 					sizeof(uint32_t),

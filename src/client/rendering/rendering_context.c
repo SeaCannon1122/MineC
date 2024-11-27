@@ -1,5 +1,3 @@
-#include "general/platformlib/platform/platform.h"
-
 #include <stdio.h>
 #include <malloc.h>
 #include <STB_IMAGE/stb_image.h>
@@ -29,15 +27,6 @@ void* load_file(uint8_t* filename, uint32_t* size) {
 
 	return buffer;
 }
-
-#define VKCall(call) \
-do { \
-    VkResult result = (call); \
-    if (result != VK_SUCCESS) { \
-        printf("Vulkan error in \n    %s \n at %s:%d: %d\n", #call, __FILE__, __LINE__, result); \
-		DEBUG_BREAK();\
-    } \
-} while(0)
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL vulkan_debug_callbck(
 	VkDebugUtilsMessageSeverityFlagBitsEXT msg_severity,
@@ -529,4 +518,6 @@ VkResult VkImage_destroy(struct rendering_memory_manager* rmm, struct rendering_
 	vkDestroyImage(rmm->device, image->image, 0);
 	vkFreeMemory(rmm->device, image->memory, 0);
 	vkDestroyImageView(rmm->device, image->view, 0);
+
+	return VK_SUCCESS;
 }
