@@ -8,7 +8,7 @@
 #include <vulkan/vulkan.h>
 #include <malloc.h>
 
-#include "test2/pixel_char.h"
+#include "client/rendering/gui/pixel_char.h"
 
 VkExtent2D screen_size;
 

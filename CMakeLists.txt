@@ -2,15 +2,15 @@ cmake_minimum_required(VERSION 3.15)
 project(blocks2)
 
 set(CLIENT_SOURCE_FILES
-    src/general/utils.c
-    src/client/rendering/gui/menu.c
-    src/test2/pixel_char.c
+    src/client/rendering/gui/pixel_char.c
     src/client/game_client_body/game_client.c
     src/client/game_client_body/game_menus.c
     src/client/game_client_body/game_client_renderer.c
     src/client/game_client_body/game_client_simulator.c
     src/client/game_client_body/game_client_networker.c
     src/client/game_client_body/debug.c
+    src/client/game_client_body/game_logging.c
+    src/client/rendering/rendering_window.c
     src/client/main.c
     
     src/general/platformlib/platform/platform.c
@@ -38,7 +38,7 @@ set(TEST_SOURCE_FILES
     src/test/main.c
     src/test/testing.c
     src/general/key_value.c
-    src/test2/pixel_char.c
+    src/client/rendering/gui/pixel_char.c
 
     src/general/platformlib/platform/platform.c
     src/general/platformlib/networking.c
@@ -49,7 +49,7 @@ set(TEST_2_SOURCE_FILES
     src/test2/main.c
     src/test2/testing2.c
     src/client/rendering/rendering_context.c
-    src/test2/pixel_char.c
+    src/client/rendering/gui/pixel_char.c
 
     src/general/platformlib/platform/platform.c
 
@@ -95,12 +95,12 @@ elseif(UNIX)
     find_package(OpenGL REQUIRED)
     find_package(X11 REQUIRED)
     
-    include_directories(${OPENGL_INCLUDE_DIRS} ${X11_INCLUDE_DIR})
+    include_directories(${X11_INCLUDE_DIR})
 
-    target_link_libraries(blocks_client ${OPENGL_LIBRARIES} X11 pthread m)
-    target_link_libraries(blocks_test ${OPENGL_LIBRARIES} X11 pthread m)
+    target_link_libraries(blocks_client X11 pthread m)
+    target_link_libraries(blocks_test X11 pthread m)
     target_link_libraries(blocks_test2 X11 pthread m)
-    target_link_libraries(blocks_server ${OPENGL_LIBRARIES} X11 pthread m)
+    target_link_libraries(blocks_server X11 pthread m)
 endif()
 
 set(RESOURCE_DIRECTORY "${CMAKE_SOURCE_DIR}/resources")

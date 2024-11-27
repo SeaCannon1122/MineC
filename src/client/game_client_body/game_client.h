@@ -1,6 +1,6 @@
 #pragma once
 
-#include "general/keyvalue.h"
+#include "general/key_value.h"
 #include "game_menus.h"
 #include "game/game_constants.h"
 #include "game_client_networker.h"
@@ -8,6 +8,7 @@
 #include "game/game_constants.h"
 #include "game/chat.h"
 #include "game/chunk.h"
+#include "game_window.h"
 
 
 struct chat_stream_element {
@@ -73,7 +74,6 @@ struct game_client {
 		int render_distance;
 		int fov;
 		int gui_scale;
-		int resolution_scale;
 	} settings;
 	struct {
 		int max_render_distance;
