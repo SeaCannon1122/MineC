@@ -34,41 +34,6 @@ VkFence img_available_fence;
 
 VkRenderPass render_pass;
 
-
-static void* load_file(char* filename, int* size) {
-
-	FILE* file = fopen(filename, "rb");
-	if (file == NULL) return NULL;
-
-	fseek(file, 0, SEEK_END);
-	long fileSize = ftell(file);
-	rewind(file);
-
-	char* buffer = (char*)malloc(fileSize);
-	if (buffer == NULL) {
-		fclose(file);
-		return NULL;
-	}
-
-	size_t bytesRead = fread(buffer, sizeof(char), fileSize, file);
-
-	fclose(file);
-
-	*size = fileSize;
-
-	return buffer;
-}
-
-static VKAPI_ATTR VkBool32 VKAPI_CALL vulkan_debug_callbck(
-	VkDebugUtilsMessageSeverityFlagBitsEXT msg_severity,
-	VkDebugUtilsMessageTypeFlagsEXT msg_flags,
-	const VkDebugUtilsMessengerCallbackDataEXT* p_callback_data,
-	void* p_user_data
-) {
-	printf("--------------------------------------------------------------------------\n\nValidation Error: %s\n\n\n\n", p_callback_data->pMessage);
-	return 0;
-}
-
 int main(int argc, char* argv[]) {
 
 	platform_init();
@@ -181,28 +146,30 @@ int main(int argc, char* argv[]) {
 	pixel_char_renderer_new(&pcr, &rmm, device, render_pass);
 
 
-	struct pixel_font* font= load_pixel_font("../../../resources/client/assets/fonts/debug.pixelfont");
+	struct pixel_font* debug_font = load_pixel_font("../../../resources/client/assets/fonts/special.pixelfont");
+	struct pixel_font* default_font = load_pixel_font("../../../resources/client/assets/fonts/debug.pixelfont");
 
-	pixel_char_renderer_add_font(&pcr, &rmm, font);
+	pixel_char_renderer_add_font(&pcr, &rmm, debug_font);
+	pixel_char_renderer_add_font(&pcr, &rmm, default_font);
 
 
-#define letter_count 20
-
+	char pixel_str[] = "HELLOW WORLD!";
 	
 
 #define string_to_pixel_char(name, str, size, x, y, flags) struct pixel_render_char name[sizeof(str) - 1];\
 for(int i = 0; i < sizeof(str) - 1; i++) {\
-if(i == 0) name[i] = (struct pixel_render_char){ size, {x, y}, { { 1.f, 1.f, 1.f, 1.f }, { 1.0, 1.0, 1.0, 1.0 }, str[i], flags } };\
-else name[i] = (struct pixel_render_char){ size, {name[i-1].start_position[0] + (float)(size * ((font->char_font_entries[name[i-1].pixel_char_data.value].width + 3) / 2 )), y}, { { 1.f, 1.f, 1.f, 1.f }, { 1.0, 1.0, 1.0, 1.0 }, str[i], flags } };\
+if(i == 0) name[i] = (struct pixel_render_char){ size, {x, y}, { { 0.9f, 0.9f, 0.9f, 1.f }, { 1.0, 0.0, 0.0, 1.0 }, str[i], flags } };\
+else name[i] = (struct pixel_render_char){ size, {name[i-1].start_position[0] + (float)(size * ((debug_font->char_font_entries[name[i-1].pixel_char_data.value].width + 3) / 2 )), y}, { { 0.9f, 0.9f, 0.9f, 1.f }, { 1.0, 0.0, 0.0, 1.0 }, str[i], flags } };\
 }\
 
-	string_to_pixel_char(chars, "!!!!!!!!!!!", 10, 100.f, 100.f, PIXEL_CHAR_UNDERLINE_MASK | PIXEL_CHAR_SHADOW_MASK)
+	string_to_pixel_char(chars, pixel_str, 3, 100.f, 100.f, PIXEL_CHAR_SHADOW_MASK)
 
-	VkBuffer_fill(&rmm, &pcr.pixel_char_buffer, chars, sizeof(struct pixel_render_char) * letter_count);
+	pixel_char_renderer_fill_chars(&pcr, &rmm, chars, sizeof(pixel_str));
 
 #define FRAME_TIME_FRAMES_AVERAGE 128
-
 #define FPS 60.
+
+
 	double last_frame_times[FRAME_TIME_FRAMES_AVERAGE] = { 0 };
 	for (int32_t i = 0; i < FRAME_TIME_FRAMES_AVERAGE; i++) last_frame_times[i] = 1000. / FPS;
 
@@ -257,7 +224,6 @@ else name[i] = (struct pixel_render_char){ size, {name[i-1].start_position[0] + 
 		if (render) {
 
 			
-
 			uint32_t img_index;
 
 			VKCall(vkWaitForFences(device, 1, &img_available_fence, VK_TRUE, UINT64_MAX));
@@ -274,7 +240,7 @@ else name[i] = (struct pixel_render_char){ size, {name[i-1].start_position[0] + 
 			VKCall(vkBeginCommandBuffer(cmd, &begin_info));
 
 			VkClearValue clear_value = { 0 };
-			clear_value.color = (VkClearColorValue){ 0.0f, 1.0f, 1.0f, 1 };
+			clear_value.color = (VkClearColorValue){ 0.1f, 0.5f, 1.0f, 1 };
 
 			VkRenderPassBeginInfo renderpass_begin_info = { 0 };
 			renderpass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -286,52 +252,8 @@ else name[i] = (struct pixel_render_char){ size, {name[i-1].start_position[0] + 
 
 			vkCmdBeginRenderPass(cmd, &renderpass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
-			VkRect2D scissor = { 0 };
-			scissor.extent = screen_size;
-
-			VkViewport viewport = { 0 };
-			viewport.width = screen_size.width;
-			viewport.height = screen_size.height;
-			viewport.maxDepth = 1.0f;
-
-			vkCmdSetViewport(cmd, 0, 1, &viewport);
-			vkCmdSetScissor(cmd, 0, 1, &scissor);
-
-			vkCmdBindDescriptorSets(
-				cmd,
-				VK_PIPELINE_BIND_POINT_GRAPHICS,
-				pcr.pipe_layout,
-				0,
-				1,
-				&pcr.descriptor_set,
-				0,
-				0
-			);
-
-			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pcr.pipeline);
-
-			vkCmdPushConstants(
-				cmd,
-				pcr.pipe_layout,
-				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-				0,
-				sizeof(uint32_t) * 2,
-				&screen_size
-			);
-
-			for (uint32_t char_render_mode = 0; char_render_mode < 3; char_render_mode++) {
-				vkCmdPushConstants(
-					cmd,
-					pcr.pipe_layout,
-					VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-					sizeof(uint32_t) * 2,
-					sizeof(uint32_t),
-					&char_render_mode
-				);
-
-				vkCmdDraw(cmd, letter_count * 6, 1, 0, 0);
-			}
-
+			
+			pixel_char_renderer_render(&pcr, cmd, screen_size);
 
 			vkCmdEndRenderPass(cmd);
 

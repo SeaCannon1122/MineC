@@ -4,20 +4,6 @@
 
 #include <stdint.h>
 
-#if defined(_WIN32)
-
-#ifndef RESTRICT
-#define RESTRICT __restrict
-#endif
-
-#elif defined(__linux__)
-
-#ifndef RESTRICT
-#define RESTRICT restrict
-#endif
-
-#endif
-
 #define MAX_PIXEL_FONTS 4
 
 #define PIXEL_CHAR_UNDERLINE_MASK  0x80000000
@@ -26,16 +12,6 @@
 #define PIXEL_CHAR_BACKGROUND_MASK 0x10000000
 #define PIXEL_CHAR_FONT_MASK       0x000000ff
 
-#ifndef ALIGNMENTS
-#define ALIGNMENTS
-
-#define ALIGNMENT_LEFT   0
-#define ALIGNMENT_RIGHT  1
-#define ALIGNMENT_TOP    2
-#define ALIGNMENT_BOTTOM 3
-#define ALIGNMENT_MIDDLE 5
-
-#endif // !ALIGNMENTS
 
 struct pixel_font {
 	struct {
@@ -59,6 +35,7 @@ struct pixel_char_renderer {
 	struct rendering_buffer pixel_font_buffer[MAX_PIXEL_FONTS];
 	uint32_t font_count;
 
+	uint32_t chars_to_draw;
 };
 
 struct pixel_char {
@@ -74,13 +51,12 @@ struct pixel_render_char {
 	struct pixel_char pixel_char_data;
 };
 
-
-#define pixel_char_convert_string(name, str, color, background_color, masks) struct pixel_char name[sizeof(str)]; {for(int _gsc_i = 0; _gsc_i < sizeof(str); _gsc_i++) name[_gsc_i] = (struct pixel_char) {color, background_color, str[_gsc_i], masks};}
-
-#define pixel_char_convert_string_in(name, str, color, background_color, masks) {for(int _gsc_i = 0; _gsc_i < sizeof(str); _gsc_i++) name[_gsc_i] = (struct pixel_char) {color, background_color, str[_gsc_i], masks};}
-
 struct pixel_font* load_pixel_font(char* src);
 
 uint32_t pixel_char_renderer_new(struct pixel_char_renderer* pcr, struct rendering_memory_manager* rmm, VkDevice device, VkRenderPass render_pass);
 
 uint32_t pixel_char_renderer_add_font(struct pixel_char_renderer* pcr, struct rendering_memory_manager* rmm, struct pixel_font* font_data);
+
+uint32_t pixel_char_renderer_fill_chars(struct pixel_char_renderer* pcr, struct rendering_memory_manager* rmm, struct pixel_render_char* chars, uint32_t chars_count);
+
+uint32_t pixel_char_renderer_render(struct pixel_char_renderer* pcr, VkCommandBuffer cmd, VkExtent2D screen_size);

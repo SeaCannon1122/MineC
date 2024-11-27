@@ -14,7 +14,7 @@ struct pixel_font* load_pixel_font(char* src) {
 	long fileSize = ftell(file);
 	rewind(file);
 
-	void* buffer = malloc(sizeof(struct pixel_font));
+	void* buffer = calloc(1, sizeof(struct pixel_font));
 	if (buffer == NULL) {
 		fclose(file);
 		return NULL;
@@ -233,4 +233,62 @@ uint32_t pixel_char_renderer_add_font(struct pixel_char_renderer* pcr, struct re
 	vkUpdateDescriptorSets(pcr->device, 1, &pixel_font_buffer_write, 0, 0);
 
 	return 0;
+}
+
+uint32_t pixel_char_renderer_fill_chars(struct pixel_char_renderer* pcr, struct rendering_memory_manager* rmm, struct pixel_render_char* chars, uint32_t chars_count) {
+	pcr->chars_to_draw = chars_count;
+
+	VKCall(VkBuffer_fill(rmm, &pcr->pixel_char_buffer, chars, sizeof(struct pixel_render_char) * chars_count));
+
+	return 0;
+}
+
+uint32_t pixel_char_renderer_render(struct pixel_char_renderer* pcr, VkCommandBuffer cmd, VkExtent2D screen_size) {
+
+	VkRect2D scissor = { 0 };
+	scissor.extent = screen_size;
+
+	VkViewport viewport = { 0 };
+	viewport.width = screen_size.width;
+	viewport.height = screen_size.height;
+	viewport.maxDepth = 1.0f;
+
+	vkCmdSetViewport(cmd, 0, 1, &viewport);
+	vkCmdSetScissor(cmd, 0, 1, &scissor);
+
+	vkCmdBindDescriptorSets(
+		cmd,
+		VK_PIPELINE_BIND_POINT_GRAPHICS,
+		pcr->pipe_layout,
+		0,
+		1,
+		&pcr->descriptor_set,
+		0,
+		0
+	);
+
+	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pcr->pipeline);
+
+	vkCmdPushConstants(
+		cmd,
+		pcr->pipe_layout,
+		VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+		0,
+		sizeof(uint32_t) * 2,
+		&screen_size
+	);
+
+	for (uint32_t char_render_mode = 0; char_render_mode < 3; char_render_mode++) {
+		vkCmdPushConstants(
+			cmd,
+			pcr->pipe_layout,
+			VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+			sizeof(uint32_t) * 2,
+			sizeof(uint32_t),
+			&char_render_mode
+		);
+
+		vkCmdDraw(cmd, pcr->chars_to_draw * 6, 1, 0, 0);
+	}
+
 }

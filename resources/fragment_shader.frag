@@ -2,6 +2,7 @@
 
 #define PIXEL_CHAR_IF_BIT(ptr, x, y) (ptr[(x + y * 16) / 32] & (1 << ((x + y * 16) % 32)) )
 
+#define PIXEL_CHAR_SHADOW_DIVISOR 2.5
 
 #define PIXEL_CHAR_UNDERLINE_MASK  0x80000000
 #define PIXEL_CHAR_CURSIVE_MASK    0x40000000
@@ -38,18 +39,10 @@ layout(set = 0, binding = 0) readonly buffer pixel_char_data {
 	character chars[];
 };
 
-layout(set = 0, binding = 1) readonly buffer font0 {
-	char_font_entry char_font_entries_0[];
-};
-layout(set = 0, binding = 1) readonly buffer font1 {
-	char_font_entry char_font_entries_1[];
-};
-layout(set = 0, binding = 1) readonly buffer font2 {
-	char_font_entry char_font_entries_2[];
-};
-layout(set = 0, binding = 1) readonly buffer font3 {
-	char_font_entry char_font_entries_3[];
-};
+layout(set = 0, binding = 1) readonly buffer font0 { char_font_entry char_font_entries_0[]; };
+layout(set = 0, binding = 2) readonly buffer font1 { char_font_entry char_font_entries_1[]; };
+layout(set = 0, binding = 3) readonly buffer font2 { char_font_entry char_font_entries_2[]; };
+layout(set = 0, binding = 4) readonly buffer font3 { char_font_entry char_font_entries_3[]; };
 
 layout(push_constant) uniform PushConstants {
 	int screen_width;
@@ -69,6 +62,13 @@ layout (location = 0) out vec4 fragmentColor;
 void main() {
 
     int char_index = int(f_char_index);
+    
+    char_font_entry font_entry;
+	
+    if ((chars[char_index].pixel_char_data.masks & PIXEL_CHAR_FONT_MASK) == 0) font_entry = char_font_entries_0[chars[char_index].pixel_char_data.value];
+	else if ((chars[char_index].pixel_char_data.masks & PIXEL_CHAR_FONT_MASK) == 1) font_entry = char_font_entries_1[chars[char_index].pixel_char_data.value];
+	else if ((chars[char_index].pixel_char_data.masks & PIXEL_CHAR_FONT_MASK) == 2) font_entry = char_font_entries_2[chars[char_index].pixel_char_data.value];
+	else if ((chars[char_index].pixel_char_data.masks & PIXEL_CHAR_FONT_MASK) == 3) font_entry = char_font_entries_3[chars[char_index].pixel_char_data.value];
     
     int size = chars[char_index].size;
     
@@ -115,13 +115,19 @@ void main() {
                 if (fragment_position.y < 0)
                     check_coords.y -= 1;
         
-                if (PIXEL_CHAR_IF_BIT(char_font_entries_0[chars[char_index].pixel_char_data.value].pixel_layout, check_coords.x, check_coords.y) != 0)
-                    fragmentColor = vec4(chars[char_index].pixel_char_data.color.x / 3.0, chars[char_index].pixel_char_data.color.y / 3.0, chars[char_index].pixel_char_data.color.z / 3.0, chars[char_index].pixel_char_data.color.z);
+                if (PIXEL_CHAR_IF_BIT(font_entry.pixel_layout, check_coords.x, check_coords.y) != 0)
+                    fragmentColor = vec4(
+                        chars[char_index].pixel_char_data.color.xyz / PIXEL_CHAR_SHADOW_DIVISOR, 
+                        chars[char_index].pixel_char_data.color.w
+                    );
             }
             if (fragment_position.y / size > 7 && fragment_position.y / size < 9)
             {
                 if ((chars[char_index].pixel_char_data.masks & PIXEL_CHAR_UNDERLINE_MASK) != 0)
-                    fragmentColor = vec4(chars[char_index].pixel_char_data.color.x / 3.0, chars[char_index].pixel_char_data.color.y / 3.0, chars[char_index].pixel_char_data.color.z / 3.0, chars[char_index].pixel_char_data.color.z);
+                    fragmentColor = vec4(
+                        chars[char_index].pixel_char_data.color.xyz / PIXEL_CHAR_SHADOW_DIVISOR, 
+                        chars[char_index].pixel_char_data.color.w
+                    );
             }
         }
 
@@ -157,7 +163,7 @@ void main() {
             if (fragment_position.y < 0)
                 check_coords.y -= 1;
         
-            if (PIXEL_CHAR_IF_BIT(char_font_entries_0[chars[char_index].pixel_char_data.value].pixel_layout, check_coords.x, check_coords.y) != 0)
+            if (PIXEL_CHAR_IF_BIT(font_entry.pixel_layout, check_coords.x, check_coords.y) != 0)
                 fragmentColor = chars[char_index].pixel_char_data.color;
         }
         if (fragment_position.y / size > 7 && fragment_position.y / size < 9)
