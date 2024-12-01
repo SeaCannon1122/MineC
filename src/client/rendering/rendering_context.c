@@ -81,12 +81,17 @@ VkResult new_VkInstance(uint8_t* app_name, uint8_t* engine_name, VkInstance* ins
 	return VK_SUCCESS;
 }
 
-VkResult new_VkDevice(VkInstance instance, VkSurfaceKHR surface, VkPhysicalDevice* gpu, uint32_t* queue_family_index, float queue_priority, VkDevice* device) {
+VkResult new_VkDevice(VkInstance instance, VkPhysicalDevice* gpu, uint32_t* queue_family_index, float queue_priority, VkDevice* device) {
 
 	uint32_t gpu_count = 0;
 	VKCall(vkEnumeratePhysicalDevices(instance, &gpu_count, 0));
 	VkPhysicalDevice* gpus = alloca(gpu_count * sizeof(VkPhysicalDevice));
 	VKCall(vkEnumeratePhysicalDevices(instance, &gpu_count, gpus));
+
+
+	VkSurfaceKHR surface;
+	uint32_t window = window_create(0, 0, 1, 1, " ", 0);
+	VKCall(create_vulkan_surface(instance, window, &surface));
 
 	for (uint32_t i = 0; i < gpu_count; i++) {
 
@@ -98,7 +103,7 @@ VkResult new_VkDevice(VkInstance instance, VkSurfaceKHR surface, VkPhysicalDevic
 		uint32_t j = 0;
 		for (; j < queue_family_count; j++) {
 
-			if (queue_props[j].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+			if ((queue_props[j].queueFlags & VK_QUEUE_GRAPHICS_BIT) && (queue_props[j].queueFlags & VK_QUEUE_TRANSFER_BIT) && (queue_props[j].queueFlags & VK_QUEUE_COMPUTE_BIT)) {
 
 				VkBool32 surface_support = VK_FALSE;
 				VKCall(vkGetPhysicalDeviceSurfaceSupportKHR(gpus[i], j, surface, &surface_support));
@@ -108,6 +113,9 @@ VkResult new_VkDevice(VkInstance instance, VkSurfaceKHR surface, VkPhysicalDevic
 					*queue_family_index = j;
 					*gpu = gpus[i];
 
+					VKCall(destroy_vulkan_surface(instance, surface));
+					window_destroy(window);
+
 					goto gpu_found;
 				}
 
@@ -116,6 +124,9 @@ VkResult new_VkDevice(VkInstance instance, VkSurfaceKHR surface, VkPhysicalDevic
 		}
 
 	}
+
+	VKCall(destroy_vulkan_surface(instance, surface));
+	window_destroy(window);
 
 	return 187187187;
 
@@ -143,60 +154,33 @@ gpu_found:
 	return VK_SUCCESS;
 }
 
-VkResult new_VkSwapchainKHR(VkDevice device, VkPhysicalDevice gpu, VkSurfaceKHR surface, uint32_t* images_count, VkSwapchainKHR* swapchain, VkSurfaceFormatKHR* surface_format, VkImage* swapchain_images, VkImageView* swapchain_image_views) {
+VkResult get_surface_format(VkInstance instance, VkPhysicalDevice gpu, VkFormat format, VkSurfaceFormatKHR* surface_format) {
+	VkSurfaceKHR surface;
+	uint32_t window = window_create(0, 0, 1, 1, " ", 0);
+	VKCall(create_vulkan_surface(instance, window, &surface));
 
 	uint32_t format_count = 0;
 	VKCall(vkGetPhysicalDeviceSurfaceFormatsKHR(gpu, surface, &format_count, 0));
 	VkSurfaceFormatKHR* surface_formats = alloca(format_count * sizeof(VkSurfaceFormatKHR));
 	VKCall(vkGetPhysicalDeviceSurfaceFormatsKHR(gpu, surface, &format_count, surface_formats));
 
-
-	uint32_t found = 0;
-
 	for (uint32_t i = 0; i < format_count; i++) {
 
-		if (surface_formats[i].format == VK_FORMAT_B8G8R8A8_UNORM) {
+		if (surface_formats[i].format == format) {
 			*surface_format = surface_formats[i];
-			found = 1;
-			break;
+
+			VKCall(destroy_vulkan_surface(instance, surface));
+			window_destroy(window);
+
+			return VK_SUCCESS;
 		}
 	}
 
-	if(found == 0) return 187187187;
 
-	VkSurfaceCapabilitiesKHR surface_capabilities = { 0 };
-	VKCall(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(gpu, surface, &surface_capabilities));
-	
-	VkSwapchainCreateInfoKHR sc_info = { 0 };
-	sc_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-	sc_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-	sc_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-	sc_info.surface = surface;
-	sc_info.imageFormat = surface_format->format;
-	sc_info.preTransform = surface_capabilities.currentTransform;
-	sc_info.imageExtent = surface_capabilities.currentExtent;
-	sc_info.minImageCount = *images_count;
-	sc_info.imageArrayLayers = 1;
+	VKCall(destroy_vulkan_surface(instance, surface));
+	window_destroy(window);
 
-	VKCall(vkCreateSwapchainKHR(device, &sc_info, 0, swapchain));
-
-	VKCall(vkGetSwapchainImagesKHR(device, *swapchain, images_count, swapchain_images));
-
-	VkImageViewCreateInfo image_view_info = { 0 };
-	image_view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-	image_view_info.format = surface_format->format;
-	image_view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-	image_view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	image_view_info.subresourceRange.layerCount = 1;
-	image_view_info.subresourceRange.levelCount = 1;
-
-	for (uint32_t i = 0; i < *images_count; i++) {
-
-		image_view_info.image = swapchain_images[i];
-		VKCall(vkCreateImageView(device, &image_view_info, 0, &swapchain_image_views[i]));
-	}
-
-	return VK_SUCCESS;
+	return 187187187;
 }
 
 VkResult new_VkShaderModule(VkDevice device, uint8_t* file_path, VkShaderModule* shader_module) {
@@ -293,9 +277,11 @@ VkResult rendering_memory_manager_destroy(struct rendering_memory_manager* rmm) 
 
 VkResult VkBuffer_new(struct rendering_memory_manager* rmm, uint32_t size, VkBufferUsageFlags usage_flags, struct rendering_buffer* buffer) {
 
+	buffer->size = size;
+
 	VkBufferCreateInfo buffer_info = { 0 };
 	buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	buffer_info.usage = usage_flags |VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+	buffer_info.usage = usage_flags;
 	buffer_info.size = size;
 	buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
@@ -375,25 +361,23 @@ VkResult VkBuffer_destroy(struct rendering_memory_manager* rmm, struct rendering
 	return VK_SUCCESS;
 }
 
-VkResult VkImage_new(struct rendering_memory_manager* rmm, uint8_t* file_path, struct rendering_image* image) {
+VkResult VkImage_new(struct rendering_memory_manager* rmm, uint32_t width, uint32_t height, VkFormat image_format, uint32_t pixel_size, VkImageUsageFlags usage, struct rendering_image* image) {
 
-	uint32_t width, height, channels;
-	uint32_t* img = stbi_load(file_path, &width, &height, &channels, 4);
-	if (!img) return 187187187;
-
-	memcpy(rmm->staging_buffer_host_handle, img, width * height * 4);
-
-	free(img);
+	image->width = width;
+	image->height = height;
+	image->pixel_size = pixel_size;
 
 	VkImageCreateInfo image_info = { 0 };
 	image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 	image_info.mipLevels = 1;
 	image_info.arrayLayers = 1;
 	image_info.imageType = VK_IMAGE_TYPE_2D;
-	image_info.format = VK_FORMAT_R8G8B8A8_SRGB;
+	image_info.format = image_format;
 	image_info.extent = (VkExtent3D) { width, height, 1 };
 	image_info.samples = VK_SAMPLE_COUNT_1_BIT;
-	image_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+	image_info.usage = usage;
+	image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+	image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
 	image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
 	VKCall(vkCreateImage(rmm->device, &image_info, 0, &image->image));
@@ -414,11 +398,29 @@ VkResult VkImage_new(struct rendering_memory_manager* rmm, uint8_t* file_path, s
 	}
 
 	mem_alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-	mem_alloc_info.allocationSize = width * width * 4;
+	mem_alloc_info.allocationSize = width * width * pixel_size;
 
 	VKCall(vkAllocateMemory(rmm->device, &mem_alloc_info, 0, &image->memory));
 	VKCall(vkBindImageMemory(rmm->device, image->image, image->memory, 0));
 
+
+	VkImageViewCreateInfo view_info = { 0 };
+	view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+	view_info.image = image->image;
+	view_info.format = image_format;
+	view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+	view_info.subresourceRange.layerCount = 1;
+	view_info.subresourceRange.levelCount = 1;
+	view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+
+	VKCall(vkCreateImageView(rmm->device, &view_info, 0, &image->view));
+
+	return VK_SUCCESS;
+}
+
+VkResult VkImage_fill(struct rendering_memory_manager* rmm, void* image_data, VkImageUsageFlags usage, struct rendering_image* image) {
+
+	memcpy(rmm->staging_buffer_host_handle, image_data, image->width * image->height * image->pixel_size);
 
 	VkCommandBufferBeginInfo begin_info = { 0 };
 	begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -454,7 +456,7 @@ VkResult VkImage_new(struct rendering_memory_manager* rmm, uint8_t* file_path, s
 	);
 
 	VkBufferImageCopy copy_region = { 0 };
-	copy_region.imageExtent = (VkExtent3D){ width, height, 1 };
+	copy_region.imageExtent = (VkExtent3D){ image->width, image->height, 1 };
 	copy_region.imageSubresource.layerCount = 1;
 	copy_region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
@@ -499,19 +501,6 @@ VkResult VkImage_new(struct rendering_memory_manager* rmm, uint8_t* file_path, s
 	VKCall(vkWaitForFences(rmm->device, 1, &upload_fence, 1, UINT64_MAX));
 
 	vkDestroyFence(rmm->device, upload_fence, 0);
-
-	VkImageViewCreateInfo view_info = { 0 };
-	view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-	view_info.image = image->image;
-	view_info.format = VK_FORMAT_R8G8B8A8_SRGB;
-	view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	view_info.subresourceRange.layerCount = 1;
-	view_info.subresourceRange.levelCount = 1;
-	view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-
-	VKCall(vkCreateImageView(rmm->device, &view_info, 0, &image->view));
-
-	return VK_SUCCESS;
 }
 
 VkResult VkImage_destroy(struct rendering_memory_manager* rmm, struct rendering_image* image) {

@@ -1,28 +1,20 @@
-#include "testing.h"
 #include <stdio.h>
-#include <math.h>
 
-#include "general/platformlib/platform/platform.h"
-#include "client/rendering/rendering_context.h"
-
-#include <vulkan/vulkan.h>
 #include <malloc.h>
 
 #include "client/rendering/gui/pixel_char.h"
-
-VkExtent2D screen_size;
+#include "client/rendering/rendering_window.h"
 
 VkInstance instance;
 VkDebugUtilsMessengerEXT debug_messenger;
-VkSurfaceKHR surface;
+
 VkPhysicalDevice gpu;
 VkDevice device;
-VkQueue graphics_queue;
-VkSwapchainKHR swapchain;
-VkImage sc_images[5];
-uint32_t sc_image_count;
-VkFramebuffer framebuffers[5];
-VkImageView sc_image_views[5];
+
+VkSurfaceFormatKHR surface_format;
+
+VkQueue queue;
+uint32_t queue_index;
 
 VkCommandPool command_pool;
 VkCommandBuffer cmd;
@@ -30,7 +22,6 @@ VkCommandBuffer cmd;
 VkSemaphore submit_semaphore;
 VkSemaphore aquire_semaphore;
 VkFence img_available_fence;
-
 
 VkRenderPass render_pass;
 
@@ -44,29 +35,14 @@ int main(int argc, char* argv[]) {
 		printf("Running Vulkan %d.%d.%d\n", VK_API_VERSION_MAJOR(apiVersion), VK_API_VERSION_MINOR(apiVersion), VK_API_VERSION_PATCH(apiVersion));
 	}
 
-	uint32_t window = window_create(10, 10, 400, 400, "window");
-
-	screen_size.width = window_get_width(window);
-	screen_size.height = window_get_height(window);
+	struct rendering_window window;
 
 	VKCall(new_VkInstance("testapp", "testengine", &instance, &debug_messenger));
 
-	VKCall(create_vulkan_surface(instance, window, &surface));
+	VKCall(new_VkDevice(instance, &gpu, &queue_index, 1.f, &device));
+	vkGetDeviceQueue(device, queue_index, 0, &queue);
 
-	uint32_t queue_idx;
-
-	VKCall(new_VkDevice(instance, surface, &gpu, &queue_idx, 1.f, &device));
-
-	vkGetDeviceQueue(device, queue_idx, 0, &graphics_queue);
-
-	VkSurfaceCapabilitiesKHR surface_capabilities = { 0 };
-	VKCall(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(gpu, surface, &surface_capabilities));
-
-	sc_image_count = surface_capabilities.minImageCount + 1;
-	if (surface_capabilities.minImageCount == surface_capabilities.maxImageCount) sc_image_count = surface_capabilities.minImageCount;
-
-	VkSurfaceFormatKHR surface_format;
-	VKCall(new_VkSwapchainKHR(device, gpu, surface, &sc_image_count, &swapchain, &surface_format, sc_images, sc_image_views));
+	VKCall(get_surface_format(instance, gpu, VK_FORMAT_B8G8R8A8_UNORM, &surface_format));	
 
 	VkAttachmentDescription color_attachment = { 0 };
 	color_attachment.format = surface_format.format;
@@ -99,23 +75,13 @@ int main(int argc, char* argv[]) {
 
 	VKCall(vkCreateRenderPass(device, &render_pass_info, 0, &render_pass));
 
-	VkFramebufferCreateInfo framebuffer_info = { 0 };
-	framebuffer_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-	framebuffer_info.width = screen_size.width;
-	framebuffer_info.height = screen_size.height;
-	framebuffer_info.renderPass = render_pass;
-	framebuffer_info.layers = 1;
-	framebuffer_info.attachmentCount = 1;
+	rendering_window_new(&window, instance, 10, 10, 400, 400, "window");
+	rendering_window_swapchain_create(&window, gpu, device, surface_format, render_pass);
 
-	for (uint32_t i = 0; i < sc_image_count; i++) {
-		framebuffer_info.pAttachments = &sc_image_views[i];
-		VKCall(vkCreateFramebuffer(device, &framebuffer_info, 0, &framebuffers[i]));
-	}
-
-
+	
 	VkCommandPoolCreateInfo pool_info = { 0 };
 	pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-	pool_info.queueFamilyIndex = queue_idx;
+	pool_info.queueFamilyIndex = queue_index;
 	pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
 	VKCall(vkCreateCommandPool(device, &pool_info, 0, &command_pool));
@@ -140,14 +106,14 @@ int main(int argc, char* argv[]) {
 	VKCall(vkCreateFence(device, &fence_info, 0, &img_available_fence));
 
 	struct rendering_memory_manager rmm;
-	VKCall(rendering_memory_manager_new(device, gpu, graphics_queue, command_pool, &rmm));
+	VKCall(rendering_memory_manager_new(device, gpu, queue, command_pool, &rmm));
 	
 	struct pixel_char_renderer pcr;
 	pixel_char_renderer_new(&pcr, &rmm, device, render_pass);
 
 
-	struct pixel_font* debug_font = load_pixel_font("../../../resources/client/assets/fonts/special.pixelfont");
-	struct pixel_font* default_font = load_pixel_font("../../../resources/client/assets/fonts/debug.pixelfont");
+	struct pixel_font* default_font = load_pixel_font("../../../resources/client/assets/fonts/special.pixelfont");
+	struct pixel_font* debug_font = load_pixel_font("../../../resources/client/assets/fonts/debug.pixelfont");
 
 	pixel_char_renderer_add_font(&pcr, &rmm, debug_font);
 	pixel_char_renderer_add_font(&pcr, &rmm, default_font);
@@ -161,6 +127,7 @@ for(int i = 0; i < sizeof(str) - 1; i++) {\
 if(i == 0) name[i] = (struct pixel_render_char){ size, {x, y}, { { 0.9f, 0.9f, 0.9f, 1.f }, { 1.0, 0.0, 0.0, 1.0 }, str[i], flags } };\
 else name[i] = (struct pixel_render_char){ size, {name[i-1].start_position[0] + (float)(size * ((debug_font->char_font_entries[name[i-1].pixel_char_data.value].width + 3) / 2 )), y}, { { 0.9f, 0.9f, 0.9f, 1.f }, { 1.0, 0.0, 0.0, 1.0 }, str[i], flags } };\
 }\
+
 
 	string_to_pixel_char(chars, pixel_str, 3, 100.f, 100.f, PIXEL_CHAR_SHADOW_MASK)
 
@@ -182,40 +149,12 @@ else name[i] = (struct pixel_render_char){ size, {name[i-1].start_position[0] + 
 		struct window_event event;
 		while (window_process_next_event(&event)) if(event.type == WINDOW_EVENT_DESTROY) goto close;
 
-		uint32_t new_width = window_get_width(window);
-		uint32_t new_height = window_get_height(window);
+		uint32_t new_width = window_get_width(window.window);
+		uint32_t new_height = window_get_height(window.window);
 
 		if (new_width != 0 && new_height != 0) {
 
-			if (screen_size.width != new_width || screen_size.height != new_height) {
-
-				screen_size.width = new_width;
-				screen_size.height = new_height;
-
-				vkDeviceWaitIdle(device);
-
-				for (uint32_t i = 0; i < sc_image_count; i++) {
-					vkDestroyImageView(device, sc_image_views[i], 0);
-					vkDestroyFramebuffer(device, framebuffers[i], 0);
-				}
-				vkDestroySwapchainKHR(device, swapchain, 0);
-
-				new_VkSwapchainKHR(device, gpu, surface, &sc_image_count, &swapchain, &surface_format, sc_images, sc_image_views);
-
-				VkFramebufferCreateInfo framebuffer_info = { 0 };
-				framebuffer_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-				framebuffer_info.width = screen_size.width;
-				framebuffer_info.height = screen_size.height;
-				framebuffer_info.renderPass = render_pass;
-				framebuffer_info.layers = 1;
-				framebuffer_info.attachmentCount = 1;
-
-				for (uint32_t i = 0; i < sc_image_count; i++) {
-					framebuffer_info.pAttachments = &sc_image_views[i];
-					VKCall(vkCreateFramebuffer(device, &framebuffer_info, 0, &framebuffers[i]));
-				}
-
-			}
+			if (window.width != new_width || window.height != new_height) rendering_window_resize(&window, new_width, new_height);
 
 			render = 1;
 		}
@@ -229,7 +168,7 @@ else name[i] = (struct pixel_render_char){ size, {name[i-1].start_position[0] + 
 			VKCall(vkWaitForFences(device, 1, &img_available_fence, VK_TRUE, UINT64_MAX));
 			VKCall(vkResetFences(device, 1, &img_available_fence));
 
-			VKCall(vkAcquireNextImageKHR(device, swapchain, 0, aquire_semaphore, 0, &img_index));
+			VKCall(vkAcquireNextImageKHR(device, window.swapchain, 0, aquire_semaphore, 0, &img_index));
 
 			VKCall(vkResetCommandBuffer(cmd, 0));
 
@@ -242,11 +181,15 @@ else name[i] = (struct pixel_render_char){ size, {name[i-1].start_position[0] + 
 			VkClearValue clear_value = { 0 };
 			clear_value.color = (VkClearColorValue){ 0.1f, 0.5f, 1.0f, 1 };
 
+			VkExtent2D screen_size;
+			screen_size.width = window.width;
+			screen_size.height = window.height;
+
 			VkRenderPassBeginInfo renderpass_begin_info = { 0 };
 			renderpass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 			renderpass_begin_info.renderPass = render_pass;
 			renderpass_begin_info.renderArea.extent = screen_size;
-			renderpass_begin_info.framebuffer = framebuffers[img_index];
+			renderpass_begin_info.framebuffer = window.framebuffers[img_index];
 			renderpass_begin_info.pClearValues = &clear_value;
 			renderpass_begin_info.clearValueCount = 1;
 
@@ -272,17 +215,17 @@ else name[i] = (struct pixel_render_char){ size, {name[i-1].start_position[0] + 
 			submit_info.waitSemaphoreCount = 1;
 
 
-			VKCall(vkQueueSubmit(graphics_queue, 1, &submit_info, img_available_fence));
+			VKCall(vkQueueSubmit(queue, 1, &submit_info, img_available_fence));
 
 			VkPresentInfoKHR present_info = { 0 };
 			present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-			present_info.pSwapchains = &swapchain;
+			present_info.pSwapchains = &window.swapchain;
 			present_info.swapchainCount = 1;
 			present_info.pImageIndices = &img_index;
 			present_info.pWaitSemaphores = &submit_semaphore;
 			present_info.waitSemaphoreCount = 1;
 
-			VKCall(vkQueuePresentKHR(graphics_queue, &present_info));
+			VKCall(vkQueuePresentKHR(queue, &present_info));
 
 		}
 
@@ -292,7 +235,6 @@ else name[i] = (struct pixel_render_char){ size, {name[i-1].start_position[0] + 
 			last_frame_times[i + 1] = last_frame_times[i];
 			average += last_frame_times[i];
 		}
-
 
 		last_frame_times[0] = get_time() - start_time;
 
@@ -312,8 +254,6 @@ else name[i] = (struct pixel_render_char){ size, {name[i-1].start_position[0] + 
 close:
 
 	VKCall(rendering_memory_manager_destroy(&rmm));
-
-	window_destroy(window);
 
 	platform_exit();
 

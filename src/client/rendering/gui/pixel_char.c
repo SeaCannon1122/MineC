@@ -167,7 +167,7 @@ uint32_t pixel_char_renderer_new(struct pixel_char_renderer* pcr, struct renderi
 	vkDestroyShaderModule(pcr->device, fragment_shader, 0);
 
 
-	VKCall(VkBuffer_new(rmm, sizeof(struct pixel_render_char) * 16384, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, &pcr->pixel_char_buffer));
+	VKCall(VkBuffer_new(rmm, sizeof(struct pixel_render_char) * 16384, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, &pcr->pixel_char_buffer));
 
 
 	VkDescriptorPoolSize pool_size = { 0 };
@@ -213,7 +213,7 @@ uint32_t pixel_char_renderer_add_font(struct pixel_char_renderer* pcr, struct re
 
 	if (pcr->font_count >= MAX_PIXEL_FONTS) return 1;
 
-	VKCall(VkBuffer_new(rmm, sizeof(struct pixel_font), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, &pcr->pixel_font_buffer[pcr->font_count]));
+	VKCall(VkBuffer_new(rmm, sizeof(struct pixel_font), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, &pcr->pixel_font_buffer[pcr->font_count]));
 	VKCall(VkBuffer_fill(rmm, &pcr->pixel_font_buffer[pcr->font_count], font_data, sizeof(struct pixel_font)));
 
 	VkDescriptorBufferInfo pixel_font_buffer_info = { 0 };

@@ -115,7 +115,7 @@ int8_t get_key_state(int32_t key);
 
 //window functions
 
-uint32_t window_create(uint32_t posx, uint32_t posy, uint32_t width, uint32_t height, uint8_t* name);
+uint32_t window_create(uint32_t posx, uint32_t posy, uint32_t width, uint32_t height, uint8_t* name, uint32_t visible);
 
 uint32_t window_get_width(uint32_t window);
 uint32_t window_get_height(uint32_t window);
@@ -138,6 +138,8 @@ void window_set_mouse_cursor_position(uint32_t window, int32_t x, int32_t y);
 uint32_t window_process_next_event(struct window_event* event);
 
 VkResult create_vulkan_surface(VkInstance instance, uint32_t window, VkSurfaceKHR* surface);
+
+VkResult destroy_vulkan_surface(VkInstance instance, VkSurfaceKHR surface);
 
 //keysymbol Mapping
 

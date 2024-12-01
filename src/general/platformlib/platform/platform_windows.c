@@ -104,7 +104,7 @@ char get_key_state(int32_t key) {
 
 //window functions
 
-uint32_t window_create(uint32_t posx, uint32_t posy, uint32_t width, uint32_t height, uint8_t* name) {
+uint32_t window_create(uint32_t posx, uint32_t posy, uint32_t width, uint32_t height, uint8_t* name, uint32_t visible) {
 
 	uint32_t next_free_window_index = 0;
 	for (; next_free_window_index < MAX_WINDOW_COUNT; next_free_window_index++) if (window_states[next_free_window_index].hwnd == NULL) break;
@@ -123,7 +123,7 @@ uint32_t window_create(uint32_t posx, uint32_t posy, uint32_t width, uint32_t he
 		0,
 		wc.lpszClassName,
 		wide_name,
-		WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+		(visible ? WS_OVERLAPPEDWINDOW | WS_VISIBLE : 0),
 		posx,
 		posy,
 		width + 16,
@@ -213,6 +213,12 @@ VkResult create_vulkan_surface(VkInstance instance, uint32_t window, VkSurfaceKH
 	create_info.hinstance = GetModuleHandleA(NULL);
 
 	return vkCreateWin32SurfaceKHR(instance, &create_info, NULL, surface);
+}
+
+VkResult destroy_vulkan_surface(VkInstance instance, VkSurfaceKHR surface) {
+	vkDestroySurfaceKHR(instance, surface, 0);
+
+	return VK_SUCCESS;
 }
 
 LRESULT CALLBACK WinProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {

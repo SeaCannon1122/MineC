@@ -33,12 +33,8 @@ set(SERVER_SOURCE_FILES
 )
 
 set(TEST_SOURCE_FILES
-    src/general/utils.c
-
     src/test/main.c
     src/test/testing.c
-    src/general/key_value.c
-    src/client/rendering/gui/pixel_char.c
 
     src/general/platformlib/platform/platform.c
     src/general/platformlib/networking.c
@@ -49,6 +45,7 @@ set(TEST_2_SOURCE_FILES
     src/test2/main.c
     src/test2/testing2.c
     src/client/rendering/rendering_context.c
+    src/client/rendering/rendering_window.c
     src/client/rendering/gui/pixel_char.c
 
     src/general/platformlib/platform/platform.c

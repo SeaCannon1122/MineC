@@ -143,7 +143,7 @@ int8_t get_key_state(int32_t key) {
 	return key_state;
 }
 
-uint32_t window_create(uint32_t posx, uint32_t posy, uint32_t width, uint32_t height, uint8_t* name) {
+uint32_t window_create(uint32_t posx, uint32_t posy, uint32_t width, uint32_t height, uint8_t* name, uint32_t visible) {
 
 	uint32_t next_free_window_index = 0;
 	for (; next_free_window_index < MAX_WINDOW_COUNT; next_free_window_index++) if (window_states[next_free_window_index].window == 0) break;
@@ -160,7 +160,7 @@ uint32_t window_create(uint32_t posx, uint32_t posy, uint32_t width, uint32_t he
 	XSelectInput(display, window, ExposureMask | KeyPressMask | KeyReleaseMask | StructureNotifyMask | ButtonPressMask);
 	XStoreName(display, window, name);
 	XSetWMProtocols(display, window, &wm_delete_window, 1);
-	XMapWindow(display, window);
+	if(visible) XMapWindow(display, window);
 
 	window_states[next_free_window_index].window = window;
 	window_states[next_free_window_index].image = image;
@@ -259,11 +259,13 @@ VkResult create_vulkan_surface(VkInstance instance, uint32_t window, VkSurfaceKH
 	create_info.window = window_states[window].window;
 	create_info.dpy = display;
 
-	do {
-		VkResult result = vkCreateXlibSurfaceKHR(instance, &create_info, ((void*)0), surface); if (result != VK_SUCCESS) {
-			printf("Vulkan error in \n    %s \n at %s:%d: %d\n", "vkCreateXlibSurfaceKHR(instance, &create_info, NULL, surface)", "C:\\Users\\coroc\\OneDrive\\Projects\\C\\blocks2\\src\\general\\platformlib\\platform.c", 698, result); raise(5);
-		}
-	} while (0);
+	return vkCreateXlibSurfaceKHR(instance, &create_info, ((void*)0), surface);
+}
+
+VkResult destroy_vulkan_surface(VkInstance instance, VkSurfaceKHR surface) {
+	vkDestroySurfaceKHR(instance, surface, 0);
+
+	return VK_SUCCESS;
 }
 
 uint32_t window_process_next_event(struct window_event* event) {
