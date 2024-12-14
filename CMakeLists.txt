@@ -2,19 +2,18 @@ cmake_minimum_required(VERSION 3.15)
 project(blocks2)
 
 set(CLIENT_SOURCE_FILES
-    src/client/rendering/gui/pixel_char.c
-    src/client/game_client_body/game_client.c
-    src/client/game_client_body/game_menus.c
-    src/client/game_client_body/game_client_renderer.c
-    src/client/game_client_body/game_client_simulator.c
-    src/client/game_client_body/game_client_networker.c
-    src/client/game_client_body/debug.c
-    src/client/game_client_body/game_logging.c
-    src/client/rendering/rendering_window.c
+
     src/client/main.c
-    
+    src/client/game_client.c
+    src/client/application/application.c
+    src/client/graphics/graphics.c
+    src/client/graphics/graphics_device.c
+
     src/general/platformlib/platform/platform.c
     src/general/platformlib/networking.c
+    src/general/rendering/rendering_memory_manager.c
+    src/general/rendering/vulkan_helpers.c
+    src/general/rendering/rendering_window.c
 
     src/general/key_value.c
 
@@ -35,6 +34,12 @@ set(SERVER_SOURCE_FILES
 set(TEST_SOURCE_FILES
     src/test/main.c
     src/test/testing.c
+    src/test/gui_menu.c
+
+    src/general/rendering/vulkan_helpers.c
+    src/general/rendering/rendering_window.c
+    src/general/rendering/gui/pixel_char.c
+
 
     src/general/platformlib/platform/platform.c
     src/general/platformlib/networking.c
@@ -44,9 +49,10 @@ set(TEST_SOURCE_FILES
 set(TEST_2_SOURCE_FILES
     src/test2/main.c
     src/test2/testing2.c
-    src/client/rendering/rendering_context.c
-    src/client/rendering/rendering_window.c
-    src/client/rendering/gui/pixel_char.c
+    src/general/rendering/vulkan_helpers.c
+    src/general/rendering/rendering_window.c
+    src/general/rendering/rendering_memory_manager.c
+    src/general/rendering/gui/pixel_char.c
 
     src/general/platformlib/platform/platform.c
 

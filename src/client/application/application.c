@@ -1,0 +1,78 @@
+#include "application.h"
+#include "client/game_client.h"
+
+uint32_t application_create(struct game_client* game) {
+
+	uint32_t screen_width = get_screen_width();
+	uint32_t screen_height = get_screen_height();
+
+	game->application_state.window = window_create(
+		screen_width / 4,
+		screen_height / 4,
+		screen_width / 2,
+		screen_height / 2,
+		"Minecraft Clone",
+		1
+	);
+
+	if (game->application_state.window == WINDOW_CREATION_FAILED) return 1;
+
+	if (graphics_create(game) != 0) return 2;
+
+	game->application_state.window_extent.width = window_get_width(game->application_state.window);
+	game->application_state.window_extent.height = window_get_height(game->application_state.window);
+
+	return 0;
+}
+
+uint32_t application_handle_events(struct game_client* game) {
+	
+	game->application_state.frame_flags = 0;
+
+	struct window_event event;
+	while (window_process_next_event(&event)) {
+
+		switch (event.type) {
+
+		case WINDOW_EVENT_DESTROY: {
+			return 1;
+		} break;
+
+		default:
+			break;
+		}
+
+	}
+
+	uint32_t new_width = window_get_width(game->application_state.window);
+	uint32_t new_height = window_get_height(game->application_state.window);
+
+	if (new_width != 0 && new_height != 0) {
+
+		game->application_state.frame_flags |= FRAME_FLAG_SHOULD_RENDER;
+
+		if (game->application_state.window_extent.width != new_width ||
+			game->application_state.window_extent.height != new_height) {
+
+			game->application_state.window_extent.width = new_width;
+			game->application_state.window_extent.height = new_height;
+
+			game->application_state.frame_flags |= FRAME_FLAG_SIZE_CHANGE;
+
+			rendering_window_resize(game->application_state.window);
+		}
+
+		
+	}
+
+	return 0;
+}
+
+uint32_t application_destroy(struct game_client* game) {
+
+	graphics_destroy(game);
+
+	window_destroy(game->application_state.window);
+
+	return 0;
+}

@@ -1,5 +1,8 @@
 #include "pixel_char.h"
 
+#include "pixel_char_vertex_shader.h"
+#include "pixel_char_fragment_shader.h"
+
 #include <stdio.h>
 #include <malloc.h>
 
@@ -129,8 +132,16 @@ uint32_t pixel_char_renderer_new(struct pixel_char_renderer* pcr, struct renderi
 
 	VkShaderModule vertex_shader, fragment_shader;
 
-	VKCall(new_VkShaderModule(pcr->device, "../../../resources/vertex_shader.spv", &vertex_shader));
-	VKCall(new_VkShaderModule(pcr->device, "../../../resources/fragment_shader.spv", &fragment_shader));
+	VkShaderModuleCreateInfo shader_info = { 0 };
+	shader_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+
+	shader_info.pCode = pixel_char_vertex_shader;
+	shader_info.codeSize = pixel_char_vertex_shader_len;
+	VKCall(vkCreateShaderModule(pcr->device, &shader_info, 0, &vertex_shader));
+
+	shader_info.pCode = pixel_char_fragment_shader;
+	shader_info.codeSize = pixel_char_fragment_shader_len;
+	VKCall(vkCreateShaderModule(pcr->device, &shader_info, 0, &fragment_shader));
 
 	VkPipelineShaderStageCreateInfo shader_stages[] = {
 		shader_stage(vertex_shader, VK_SHADER_STAGE_VERTEX_BIT),
@@ -167,7 +178,7 @@ uint32_t pixel_char_renderer_new(struct pixel_char_renderer* pcr, struct renderi
 	vkDestroyShaderModule(pcr->device, fragment_shader, 0);
 
 
-	VKCall(VkBuffer_new(rmm, sizeof(struct pixel_render_char) * 16384, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, &pcr->pixel_char_buffer));
+	VKCall(VkBuffer_new(rmm, sizeof(struct pixel_render_char) * 16384, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, &pcr->pixel_char_buffer));
 
 
 	VkDescriptorPoolSize pool_size = { 0 };
@@ -205,6 +216,22 @@ uint32_t pixel_char_renderer_new(struct pixel_char_renderer* pcr, struct renderi
 
 	vkUpdateDescriptorSets(pcr->device, 1, &pixel_char_buffer_write, 0, 0);
 
+	return 0;
+}
+
+uint32_t pixel_char_renderer_destroy(struct pixel_char_renderer* pcr) {
+
+	vkDeviceWaitIdle(pcr->device);
+
+	vkDestroyDescriptorPool(pcr->device, pcr->descriptor_pool, 0);
+
+	vkDestroyPipeline(pcr->device, pcr->pipeline, 0);
+	vkDestroyPipelineLayout(pcr->device, pcr->pipe_layout, 0);
+
+	vkDestroyDescriptorSetLayout(pcr->device, pcr->set_layout, 0);
+
+	VkBuffer_destroy(&pcr->device, &pcr->pixel_char_buffer);
+	for (uint32_t i = 0; i < pcr->font_count; i++) VkBuffer_destroy(&pcr->device, &pcr->pixel_font_buffer[i]);
 
 	return 0;
 }
@@ -213,8 +240,8 @@ uint32_t pixel_char_renderer_add_font(struct pixel_char_renderer* pcr, struct re
 
 	if (pcr->font_count >= MAX_PIXEL_FONTS) return 1;
 
-	VKCall(VkBuffer_new(rmm, sizeof(struct pixel_font), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, &pcr->pixel_font_buffer[pcr->font_count]));
-	VKCall(VkBuffer_fill(rmm, &pcr->pixel_font_buffer[pcr->font_count], font_data, sizeof(struct pixel_font)));
+	VKCall(VkBuffer_new(rmm, sizeof(struct pixel_font), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, &pcr->pixel_font_buffer[pcr->font_count]));
+	VKCall(VkBuffer_fill(rmm, &pcr->pixel_font_buffer[pcr->font_count], font_data, sizeof(struct pixel_font), 0));
 
 	VkDescriptorBufferInfo pixel_font_buffer_info = { 0 };
 	pixel_font_buffer_info.buffer = pcr->pixel_font_buffer[pcr->font_count].buffer;
@@ -238,7 +265,7 @@ uint32_t pixel_char_renderer_add_font(struct pixel_char_renderer* pcr, struct re
 uint32_t pixel_char_renderer_fill_chars(struct pixel_char_renderer* pcr, struct rendering_memory_manager* rmm, struct pixel_render_char* chars, uint32_t chars_count) {
 	pcr->chars_to_draw = chars_count;
 
-	VKCall(VkBuffer_fill(rmm, &pcr->pixel_char_buffer, chars, sizeof(struct pixel_render_char) * chars_count));
+	VKCall(VkBuffer_fill(rmm, &pcr->pixel_char_buffer, chars, sizeof(struct pixel_render_char) * chars_count, 0));
 
 	return 0;
 }

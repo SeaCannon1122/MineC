@@ -1,214 +1,4 @@
-#include <stdio.h>
-#include <malloc.h>
-#include <STB_IMAGE/stb_image.h>
-
-#include "rendering_context.h"
-
-void* load_file(uint8_t* filename, uint32_t* size) {
-
-	FILE* file = fopen(filename, "rb");
-	if (file == NULL) return NULL;
-
-	fseek(file, 0, SEEK_END);
-	long fileSize = ftell(file);
-	rewind(file);
-
-	uint8_t* buffer = (uint8_t*)malloc(fileSize);
-	if (buffer == NULL) {
-		fclose(file);
-		return NULL;
-	}
-
-	size_t bytesRead = fread(buffer, sizeof(uint8_t), fileSize, file);
-
-	fclose(file);
-
-	*size = fileSize;
-
-	return buffer;
-}
-
-static VKAPI_ATTR VkBool32 VKAPI_CALL vulkan_debug_callbck(
-	VkDebugUtilsMessageSeverityFlagBitsEXT msg_severity,
-	VkDebugUtilsMessageTypeFlagsEXT msg_flags,
-	const VkDebugUtilsMessengerCallbackDataEXT * p_callback_data,
-	void* p_user_data
-) {
-	printf("--------------------------------------------------------------------------\n\nValidation Error: %s\n\n\n\n", p_callback_data->pMessage);
-	return 0;
-}
-
-VkResult new_VkInstance(uint8_t* app_name, uint8_t* engine_name, VkInstance* instance, VkDebugUtilsMessengerEXT* debug_messenger) {
-
-	VkApplicationInfo app_info = { 0 };
-	app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-	app_info.pApplicationName = app_name;
-	app_info.pEngineName = engine_name;
-
-	char* instance_extensions[] = {
-		PLATFORM_VK_SURFACE_EXTENSION,
-		VK_KHR_SURFACE_EXTENSION_NAME,
-		VK_EXT_DEBUG_UTILS_EXTENSION_NAME
-	};
-
-	char* layers[] = {
-		"VK_LAYER_KHRONOS_validation",
-	};
-
-	VkInstanceCreateInfo instance_info = { 0 };
-	instance_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-	instance_info.pApplicationInfo = &app_info;
-	instance_info.ppEnabledExtensionNames = instance_extensions;
-	instance_info.enabledExtensionCount = 3;
-	instance_info.ppEnabledLayerNames = layers;
-	instance_info.enabledLayerCount = 1;
-
-	VKCall(vkCreateInstance(&instance_info, 0, instance));
-
-	PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessengerEXT = vkGetInstanceProcAddr(*instance, "vkCreateDebugUtilsMessengerEXT");
-	
-	if (vkCreateDebugUtilsMessengerEXT) {
-
-		VkDebugUtilsMessengerCreateInfoEXT debug_info = { 0 };
-		debug_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-		debug_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT;
-		debug_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
-		debug_info.pfnUserCallback = vulkan_debug_callbck;
-
-		vkCreateDebugUtilsMessengerEXT(*instance, &debug_info, 0, debug_messenger);
-	}
-
-	return VK_SUCCESS;
-}
-
-VkResult new_VkDevice(VkInstance instance, VkPhysicalDevice* gpu, uint32_t* queue_family_index, float queue_priority, VkDevice* device) {
-
-	uint32_t gpu_count = 0;
-	VKCall(vkEnumeratePhysicalDevices(instance, &gpu_count, 0));
-	VkPhysicalDevice* gpus = alloca(gpu_count * sizeof(VkPhysicalDevice));
-	VKCall(vkEnumeratePhysicalDevices(instance, &gpu_count, gpus));
-
-
-	VkSurfaceKHR surface;
-	uint32_t window = window_create(0, 0, 1, 1, " ", 0);
-	VKCall(create_vulkan_surface(instance, window, &surface));
-
-	for (uint32_t i = 0; i < gpu_count; i++) {
-
-		uint32_t queue_family_count = 0;
-		vkGetPhysicalDeviceQueueFamilyProperties(gpus[i], &queue_family_count, 0);
-		VkQueueFamilyProperties* queue_props = alloca(queue_family_count * sizeof(VkQueueFamilyProperties));
-		vkGetPhysicalDeviceQueueFamilyProperties(gpus[i], &queue_family_count, queue_props);
-
-		uint32_t j = 0;
-		for (; j < queue_family_count; j++) {
-
-			if ((queue_props[j].queueFlags & VK_QUEUE_GRAPHICS_BIT) && (queue_props[j].queueFlags & VK_QUEUE_TRANSFER_BIT) && (queue_props[j].queueFlags & VK_QUEUE_COMPUTE_BIT)) {
-
-				VkBool32 surface_support = VK_FALSE;
-				VKCall(vkGetPhysicalDeviceSurfaceSupportKHR(gpus[i], j, surface, &surface_support));
-
-				if (surface_support) {
-
-					*queue_family_index = j;
-					*gpu = gpus[i];
-
-					VKCall(destroy_vulkan_surface(instance, surface));
-					window_destroy(window);
-
-					goto gpu_found;
-				}
-
-			}
-
-		}
-
-	}
-
-	VKCall(destroy_vulkan_surface(instance, surface));
-	window_destroy(window);
-
-	return 187187187;
-
-gpu_found:
-
-	VkDeviceQueueCreateInfo queue_info = { 0 };
-	queue_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-	queue_info.queueFamilyIndex = *queue_family_index;
-	queue_info.queueCount = 1;
-	queue_info.pQueuePriorities = &queue_priority;
-
-	char* device_extentions[] = {
-		VK_KHR_SWAPCHAIN_EXTENSION_NAME
-	};
-
-	VkDeviceCreateInfo device_info = { 0 };
-	device_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-	device_info.pQueueCreateInfos = &queue_info;
-	device_info.queueCreateInfoCount = 1;
-	device_info.ppEnabledExtensionNames = device_extentions;
-	device_info.enabledExtensionCount = 1;
-
-	VKCall(vkCreateDevice(*gpu, &device_info, 0, device));
-
-	return VK_SUCCESS;
-}
-
-VkResult get_surface_format(VkInstance instance, VkPhysicalDevice gpu, VkFormat format, VkSurfaceFormatKHR* surface_format) {
-	VkSurfaceKHR surface;
-	uint32_t window = window_create(0, 0, 1, 1, " ", 0);
-	VKCall(create_vulkan_surface(instance, window, &surface));
-
-	uint32_t format_count = 0;
-	VKCall(vkGetPhysicalDeviceSurfaceFormatsKHR(gpu, surface, &format_count, 0));
-	VkSurfaceFormatKHR* surface_formats = alloca(format_count * sizeof(VkSurfaceFormatKHR));
-	VKCall(vkGetPhysicalDeviceSurfaceFormatsKHR(gpu, surface, &format_count, surface_formats));
-
-	for (uint32_t i = 0; i < format_count; i++) {
-
-		if (surface_formats[i].format == format) {
-			*surface_format = surface_formats[i];
-
-			VKCall(destroy_vulkan_surface(instance, surface));
-			window_destroy(window);
-
-			return VK_SUCCESS;
-		}
-	}
-
-
-	VKCall(destroy_vulkan_surface(instance, surface));
-	window_destroy(window);
-
-	return 187187187;
-}
-
-VkResult new_VkShaderModule(VkDevice device, uint8_t* file_path, VkShaderModule* shader_module) {
-
-	uint32_t shader_size;
-	void* shader_data = load_file(file_path, &shader_size);
-
-	VkShaderModuleCreateInfo shader_info = { 0 };
-	shader_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-	shader_info.pCode = shader_data;
-	shader_info.codeSize = shader_size;
-	VKCall(vkCreateShaderModule(device, &shader_info, 0, shader_module));
-
-	free(shader_data);
-
-	return VK_SUCCESS;
-}
-
-VkPipelineShaderStageCreateInfo shader_stage(VkShaderModule shader_module, VkShaderStageFlagBits flag_bits) {
-	
-	VkPipelineShaderStageCreateInfo shader_stage = { 0 };
-	shader_stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-	shader_stage.pName = "main";
-	shader_stage.stage = flag_bits;
-	shader_stage.module = shader_module;
-
-	return shader_stage;
-}
+#include "rendering_memory_manager.h"
 
 VkResult rendering_memory_manager_new(VkDevice device, VkPhysicalDevice gpu, VkQueue graphics_queue, VkCommandPool command_pool, struct rendering_memory_manager* rmm) {
 
@@ -267,7 +57,7 @@ VkResult rendering_memory_manager_new(VkDevice device, VkPhysicalDevice gpu, VkQ
 VkResult rendering_memory_manager_destroy(struct rendering_memory_manager* rmm) {
 
 	vkUnmapMemory(rmm->device, rmm->staging_buffer_memory);
-	
+
 	vkFreeMemory(rmm->device, rmm->staging_buffer_memory, 0);
 	vkDestroyBuffer(rmm->device, rmm->staging_buffer, 0);
 	vkFreeCommandBuffers(rmm->device, rmm->command_pool, 1, &rmm->cmd);
@@ -275,7 +65,7 @@ VkResult rendering_memory_manager_destroy(struct rendering_memory_manager* rmm) 
 	return VK_SUCCESS;
 }
 
-VkResult VkBuffer_new(struct rendering_memory_manager* rmm, uint32_t size, VkBufferUsageFlags usage_flags, struct rendering_buffer* buffer) {
+VkResult VkBuffer_new(struct rendering_memory_manager* rmm, uint32_t size, VkMemoryPropertyFlags property_flags, VkBufferUsageFlags usage_flags, struct rendering_buffer* buffer) {
 
 	buffer->size = size;
 
@@ -286,9 +76,9 @@ VkResult VkBuffer_new(struct rendering_memory_manager* rmm, uint32_t size, VkBuf
 	buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
 	VKCall(vkCreateBuffer(rmm->device, &buffer_info, 0, &buffer->buffer));
-	
+
 	VkMemoryRequirements memory_requirements;
-	
+
 	vkGetBufferMemoryRequirements(rmm->device, buffer->buffer, &memory_requirements);
 
 	VkPhysicalDeviceMemoryProperties memory_properties;
@@ -297,8 +87,9 @@ VkResult VkBuffer_new(struct rendering_memory_manager* rmm, uint32_t size, VkBuf
 	VkMemoryAllocateInfo alloc_info = { 0 };
 	for (uint32_t i = 0; i < memory_properties.memoryTypeCount; i++) {
 
-		if ((memory_requirements.memoryTypeBits & (1 << i)) && (memory_properties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) {
+		if ((memory_requirements.memoryTypeBits & (1 << i)) && (memory_properties.memoryTypes[i].propertyFlags & property_flags) == property_flags) {
 			alloc_info.memoryTypeIndex = i;
+			buffer->property_flags = memory_properties.memoryTypes[i].propertyFlags;
 			break;
 		}
 	}
@@ -309,52 +100,79 @@ VkResult VkBuffer_new(struct rendering_memory_manager* rmm, uint32_t size, VkBuf
 	VKCall(vkAllocateMemory(rmm->device, &alloc_info, 0, &buffer->memory));
 	VKCall(vkBindBufferMemory(rmm->device, buffer->buffer, buffer->memory, 0));
 
+	if (buffer->property_flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) {
+		VKCall(vkMapMemory(rmm->device, buffer->memory, 0, size, 0, &buffer->memory_host_handle));
+	}
+
 	return VK_SUCCESS;
 }
 
-VkResult VkBuffer_fill(struct rendering_memory_manager* rmm, struct rendering_buffer* buffer, void* data, uint32_t size) {
+VkResult VkBuffer_fill(struct rendering_memory_manager* rmm, struct rendering_buffer* buffer, void* data, uint32_t size, uint32_t offset) {
 
-	memcpy(rmm->staging_buffer_host_handle, data, size);
+	if (buffer->size - offset < size) return 1278384;
 
-	VkCommandBufferBeginInfo begin_info = { 0 };
-	begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-	begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+	if (buffer->property_flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) {
+		memcpy((size_t)buffer->memory_host_handle + (size_t)offset, data, size);
 
-	VKCall(vkBeginCommandBuffer(rmm->cmd, &begin_info));
+		if (buffer->property_flags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT == 0) {
+			VkMappedMemoryRange memory_range = { 0 };
+			memory_range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+			memory_range.memory = buffer->memory;
+			memory_range.size = size;
+			memory_range.offset = offset;
 
-	VkBufferCopy copy_region = { 0 };
-	copy_region.srcOffset = 0;
-	copy_region.dstOffset = 0;
-	copy_region.size = size;
+			VKCall(vkFlushMappedMemoryRanges(rmm->device, 1, &memory_range));
+		}
 
-	vkCmdCopyBuffer(rmm->cmd, rmm->staging_buffer, buffer->buffer, 1, &copy_region);
+	}
+	else {
+		memcpy(rmm->staging_buffer_host_handle, data, size);
 
-	VKCall(vkEndCommandBuffer(rmm->cmd));
+		VkCommandBufferBeginInfo begin_info = { 0 };
+		begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-	VkFence upload_fence;
+		VKCall(vkBeginCommandBuffer(rmm->cmd, &begin_info));
 
-	VkFenceCreateInfo fence_info = { 0 };
-	fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+		VkBufferCopy copy_region = { 0 };
+		copy_region.srcOffset = 0;
+		copy_region.dstOffset = offset;
+		copy_region.size = size;
 
-	VKCall(vkCreateFence(rmm->device, &fence_info, 0, &upload_fence));
+		vkCmdCopyBuffer(rmm->cmd, rmm->staging_buffer, buffer->buffer, 1, &copy_region);
 
-	VKCall(vkResetFences(rmm->device, 1, &upload_fence));
+		VKCall(vkEndCommandBuffer(rmm->cmd));
 
-	VkSubmitInfo submit_info = { 0 };
-	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	submit_info.commandBufferCount = 1;
-	submit_info.pCommandBuffers = &rmm->cmd;
+		VkFence upload_fence;
 
-	VKCall(vkQueueSubmit(rmm->graphics_queue, 1, &submit_info, upload_fence));
+		VkFenceCreateInfo fence_info = { 0 };
+		fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 
-	VKCall(vkWaitForFences(rmm->device, 1, &upload_fence, 1, UINT64_MAX));
+		VKCall(vkCreateFence(rmm->device, &fence_info, 0, &upload_fence));
 
-	vkDestroyFence(rmm->device, upload_fence, 0);
+		VKCall(vkResetFences(rmm->device, 1, &upload_fence));
+
+		VkSubmitInfo submit_info = { 0 };
+		submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submit_info.commandBufferCount = 1;
+		submit_info.pCommandBuffers = &rmm->cmd;
+
+		VKCall(vkQueueSubmit(rmm->graphics_queue, 1, &submit_info, upload_fence));
+
+		VKCall(vkWaitForFences(rmm->device, 1, &upload_fence, 1, UINT64_MAX));
+
+		vkDestroyFence(rmm->device, upload_fence, 0);
+	}
 
 	return VK_SUCCESS;
 }
 
 VkResult VkBuffer_destroy(struct rendering_memory_manager* rmm, struct rendering_buffer* buffer) {
+
+	if (buffer->property_flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) {
+		vkUnmapMemory(rmm->device, buffer->memory);
+	}
+
 	vkDestroyBuffer(rmm->device, buffer->buffer, 0);
 	vkFreeMemory(rmm->device, buffer->memory, 0);
 
@@ -373,7 +191,7 @@ VkResult VkImage_new(struct rendering_memory_manager* rmm, uint32_t width, uint3
 	image_info.arrayLayers = 1;
 	image_info.imageType = VK_IMAGE_TYPE_2D;
 	image_info.format = image_format;
-	image_info.extent = (VkExtent3D) { width, height, 1 };
+	image_info.extent = (VkExtent3D){ width, height, 1 };
 	image_info.samples = VK_SAMPLE_COUNT_1_BIT;
 	image_info.usage = usage;
 	image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;

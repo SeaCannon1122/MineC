@@ -2,8 +2,8 @@
 
 #include <malloc.h>
 
-#include "client/rendering/gui/pixel_char.h"
-#include "client/rendering/rendering_window.h"
+#include "general/rendering/gui/pixel_char.h"
+#include "general/rendering/rendering_window.h"
 
 VkInstance instance;
 VkDebugUtilsMessengerEXT debug_messenger;
@@ -30,12 +30,9 @@ int main(int argc, char* argv[]) {
 	platform_init();
 	show_console_window();
 
-	uint32_t apiVersion;
-	if (vkEnumerateInstanceVersion(&apiVersion) == VK_SUCCESS) {
-		printf("Running Vulkan %d.%d.%d\n", VK_API_VERSION_MAJOR(apiVersion), VK_API_VERSION_MINOR(apiVersion), VK_API_VERSION_PATCH(apiVersion));
-	}
-
-	struct rendering_window window;
+	uint32_t major, minor, patch;
+	get_vulkan_version(&major, &minor, &patch);
+	printf("Running Vulkan %d.%d.%d\n", major, minor, patch);
 
 	VKCall(new_VkInstance("testapp", "testengine", &instance, &debug_messenger));
 
@@ -44,66 +41,22 @@ int main(int argc, char* argv[]) {
 
 	VKCall(get_surface_format(instance, gpu, VK_FORMAT_B8G8R8A8_UNORM, &surface_format));	
 
-	VkAttachmentDescription color_attachment = { 0 };
-	color_attachment.format = surface_format.format;
-	color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-	color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-	color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-	color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-	color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-	color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	color_attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+	rendering_window_create_rendering_pass(device, surface_format, &render_pass);
 
-	VkAttachmentDescription attachments[] = {
-		color_attachment
-	};
+	uint32_t window = window_create(10, 10, 400, 400, "window", 1);
+	uint32_t window_width = window_get_width(window);
+	uint32_t window_height = window_get_height(window);
 
-	VkAttachmentReference color_attachment_reference = { 0 };
-	color_attachment_reference.attachment = 0;
-	color_attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-	VkSubpassDescription subpass_description = { 0 };
-	subpass_description.colorAttachmentCount = 1;
-	subpass_description.pColorAttachments = &color_attachment_reference;
-
-	VkRenderPassCreateInfo render_pass_info = { 0 };
-	render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-	render_pass_info.pAttachments = attachments;
-	render_pass_info.attachmentCount = 1;
-	render_pass_info.subpassCount = 1;
-	render_pass_info.pSubpasses = &subpass_description;
-
-	VKCall(vkCreateRenderPass(device, &render_pass_info, 0, &render_pass));
-
-	rendering_window_new(&window, instance, 10, 10, 400, 400, "window");
-	rendering_window_swapchain_create(&window, gpu, device, surface_format, render_pass);
+	rendering_window_new(window, instance);
+	rendering_window_swapchain_create(window, gpu, device, surface_format, render_pass);
 
 	
-	VkCommandPoolCreateInfo pool_info = { 0 };
-	pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-	pool_info.queueFamilyIndex = queue_index;
-	pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+	VKCall(command_pool_create(device, queue_index, &command_pool));
+	VKCall(command_buffer_allocate(device, command_pool, &cmd));
 
-	VKCall(vkCreateCommandPool(device, &pool_info, 0, &command_pool));
-
-	VkCommandBufferAllocateInfo alloc_info = { 0 };
-	alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	alloc_info.commandBufferCount = 1;
-	alloc_info.commandPool = command_pool;
-	alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	VKCall(vkAllocateCommandBuffers(device, &alloc_info, &cmd));
-
-	VkSemaphoreCreateInfo sema_info = { 0 };
-	sema_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-	VKCall(vkCreateSemaphore(device, &sema_info, 0, &aquire_semaphore));
-	VKCall(vkCreateSemaphore(device, &sema_info, 0, &submit_semaphore));
-
-	VkFenceCreateInfo fence_info = { 0 };
-	fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-	fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-	VKCall(vkCreateFence(device, &fence_info, 0, &img_available_fence));
+	VKCall(semaphore_create(device, &aquire_semaphore));
+	VKCall(semaphore_create(device, &submit_semaphore));
+	VKCall(fence_create(device, &img_available_fence));
 
 	struct rendering_memory_manager rmm;
 	VKCall(rendering_memory_manager_new(device, gpu, queue, command_pool, &rmm));
@@ -119,7 +72,7 @@ int main(int argc, char* argv[]) {
 	pixel_char_renderer_add_font(&pcr, &rmm, default_font);
 
 
-	char pixel_str[] = "HELLOW WORLD!";
+	char pixel_str[] = "HELLO!!!";
 	
 
 #define string_to_pixel_char(name, str, size, x, y, flags) struct pixel_render_char name[sizeof(str) - 1];\
@@ -129,7 +82,7 @@ else name[i] = (struct pixel_render_char){ size, {name[i-1].start_position[0] + 
 }\
 
 
-	string_to_pixel_char(chars, pixel_str, 3, 100.f, 100.f, PIXEL_CHAR_SHADOW_MASK)
+	string_to_pixel_char(chars, pixel_str, 40, 100.f, 100.f, PIXEL_CHAR_SHADOW_MASK | PIXEL_CHAR_BACKGROUND_MASK | PIXEL_CHAR_CURSIVE_MASK |PIXEL_CHAR_UNDERLINE_MASK)
 
 	pixel_char_renderer_fill_chars(&pcr, &rmm, chars, sizeof(pixel_str));
 
@@ -140,8 +93,6 @@ else name[i] = (struct pixel_render_char){ size, {name[i-1].start_position[0] + 
 	double last_frame_times[FRAME_TIME_FRAMES_AVERAGE] = { 0 };
 	for (int32_t i = 0; i < FRAME_TIME_FRAMES_AVERAGE; i++) last_frame_times[i] = 1000. / FPS;
 
-	int32_t render = 1;
-
 	while (!get_key_state(KEY_ESCAPE)) {
 
 		double start_time = get_time();
@@ -149,26 +100,23 @@ else name[i] = (struct pixel_render_char){ size, {name[i-1].start_position[0] + 
 		struct window_event event;
 		while (window_process_next_event(&event)) if(event.type == WINDOW_EVENT_DESTROY) goto close;
 
-		uint32_t new_width = window_get_width(window.window);
-		uint32_t new_height = window_get_height(window.window);
+		uint32_t new_width = window_get_width(window);
+		uint32_t new_height = window_get_height(window);
 
 		if (new_width != 0 && new_height != 0) {
 
-			if (window.width != new_width || window.height != new_height) rendering_window_resize(&window, new_width, new_height);
+			if (window_width != new_width || window_height != new_height) rendering_window_resize(window);
 
-			render = 1;
-		}
-		else render = 0;
-
-		if (render) {
-
+			window_width = new_width;
+			window_height = new_height;
 			
 			uint32_t img_index;
 
 			VKCall(vkWaitForFences(device, 1, &img_available_fence, VK_TRUE, UINT64_MAX));
 			VKCall(vkResetFences(device, 1, &img_available_fence));
 
-			VKCall(vkAcquireNextImageKHR(device, window.swapchain, 0, aquire_semaphore, 0, &img_index));
+			VkRenderPassBeginInfo renderpass_begin_info = { 0 };
+			rendering_window_renderpass_begin_info(window, &renderpass_begin_info, render_pass, aquire_semaphore);
 
 			VKCall(vkResetCommandBuffer(cmd, 0));
 
@@ -178,23 +126,11 @@ else name[i] = (struct pixel_render_char){ size, {name[i-1].start_position[0] + 
 
 			VKCall(vkBeginCommandBuffer(cmd, &begin_info));
 
-			VkClearValue clear_value = { 0 };
-			clear_value.color = (VkClearColorValue){ 0.1f, 0.5f, 1.0f, 1 };
-
-			VkExtent2D screen_size;
-			screen_size.width = window.width;
-			screen_size.height = window.height;
-
-			VkRenderPassBeginInfo renderpass_begin_info = { 0 };
-			renderpass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			renderpass_begin_info.renderPass = render_pass;
-			renderpass_begin_info.renderArea.extent = screen_size;
-			renderpass_begin_info.framebuffer = window.framebuffers[img_index];
-			renderpass_begin_info.pClearValues = &clear_value;
-			renderpass_begin_info.clearValueCount = 1;
-
 			vkCmdBeginRenderPass(cmd, &renderpass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
+			VkExtent2D screen_size;
+			screen_size.width = window_width;
+			screen_size.height = window_height;
 			
 			pixel_char_renderer_render(&pcr, cmd, screen_size);
 
@@ -217,15 +153,7 @@ else name[i] = (struct pixel_render_char){ size, {name[i-1].start_position[0] + 
 
 			VKCall(vkQueueSubmit(queue, 1, &submit_info, img_available_fence));
 
-			VkPresentInfoKHR present_info = { 0 };
-			present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-			present_info.pSwapchains = &window.swapchain;
-			present_info.swapchainCount = 1;
-			present_info.pImageIndices = &img_index;
-			present_info.pWaitSemaphores = &submit_semaphore;
-			present_info.waitSemaphoreCount = 1;
-
-			VKCall(vkQueuePresentKHR(queue, &present_info));
+			rendering_window_present_image(window, queue, &submit_semaphore, 1);
 
 		}
 
@@ -253,7 +181,23 @@ else name[i] = (struct pixel_render_char){ size, {name[i-1].start_position[0] + 
 
 close:
 
+	pixel_char_renderer_destroy(&pcr);
+	
 	VKCall(rendering_memory_manager_destroy(&rmm));
+
+	rendering_window_destroy(window);
+	window_destroy(window);
+
+	vkDestroySemaphore(device, submit_semaphore, 0);
+	vkDestroySemaphore(device, aquire_semaphore, 0);
+	vkDestroyFence(device, img_available_fence, 0);
+	vkDestroyRenderPass(device, render_pass, 0);
+	vkFreeCommandBuffers(device, command_pool, 1, &cmd);
+	vkDestroyCommandPool(device, command_pool, 0);
+
+	vkDestroyDevice(device, 0);
+
+	VKCall(destroy_VkInstance(instance, debug_messenger));
 
 	platform_exit();
 

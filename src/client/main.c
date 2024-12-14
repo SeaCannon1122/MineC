@@ -1,4 +1,4 @@
-﻿#include "game_client_body/game_client.h"
+﻿#include "game_client.h"
 #include "general/platformlib/networking.h"
 #include "general/platformlib/platform/platform.h"
 

@@ -1,7 +1,7 @@
 #pragma once 
 
-#include "client/rendering/rendering_context.h"
-
+#include "general/rendering/vulkan_helpers.h"
+#include "general/rendering/rendering_memory_manager.h"
 #include <stdint.h>
 
 #define MAX_PIXEL_FONTS 4
@@ -54,6 +54,7 @@ struct pixel_render_char {
 struct pixel_font* load_pixel_font(char* src);
 
 uint32_t pixel_char_renderer_new(struct pixel_char_renderer* pcr, struct rendering_memory_manager* rmm, VkDevice device, VkRenderPass render_pass);
+uint32_t pixel_char_renderer_destroy(struct pixel_char_renderer* pcr);
 
 uint32_t pixel_char_renderer_add_font(struct pixel_char_renderer* pcr, struct rendering_memory_manager* rmm, struct pixel_font* font_data);
 

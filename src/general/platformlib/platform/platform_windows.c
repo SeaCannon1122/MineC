@@ -14,6 +14,9 @@ struct window_state {
 	int32_t y_position;
 };
 
+uint32_t screen_width;
+uint32_t screen_height;
+
 struct window_state window_states[MAX_WINDOW_COUNT];
 WNDCLASSW wc;
 uint8_t keyStates[256] = { 0 };
@@ -102,6 +105,14 @@ char get_key_state(int32_t key) {
 	return keyState;
 }
 
+uint32_t get_screen_width() {
+	return screen_width;
+}
+
+uint32_t get_screen_height() {
+	return screen_width;
+}
+
 //window functions
 
 uint32_t window_create(uint32_t posx, uint32_t posy, uint32_t width, uint32_t height, uint8_t* name, uint32_t visible) {
@@ -133,6 +144,8 @@ uint32_t window_create(uint32_t posx, uint32_t posy, uint32_t width, uint32_t he
 		GetModuleHandleA(NULL),
 		NULL
 	);
+
+	if(window_states[next_free_window_index].hwnd == NULL) return WINDOW_CREATION_FAILED;
 
 	SendMessageA(window_states[next_free_window_index].hwnd, WM_SIZE, 0, 0);
 
@@ -351,6 +364,9 @@ void platform_init() {
 	}
 
 	hide_console_window();
+
+	screen_width = GetSystemMetrics(SM_CXSCREEN);
+	screen_height = GetSystemMetrics(SM_CYSCREEN);
 
 	FILE* fstdout;
 	freopen_s(&fstdout, "CONOUT$", "w", stdout);

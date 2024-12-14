@@ -113,6 +113,9 @@ void join_thread(void* thread_handle);
 
 int8_t get_key_state(int32_t key);
 
+uint32_t get_screen_width();
+uint32_t get_screen_height();
+
 //window functions
 
 uint32_t window_create(uint32_t posx, uint32_t posy, uint32_t width, uint32_t height, uint8_t* name, uint32_t visible);
