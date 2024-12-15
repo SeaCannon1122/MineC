@@ -41,7 +41,7 @@ uint32_t list_gpus(struct game_client* game) {
 		VKCall(vkGetPhysicalDeviceSurfaceFormatsKHR(game->graphics_state.gpus[i], rws.surface, &format_count, surface_formats));
 
 		uint32_t found_format = 0;
-		for (uint32_t k = 0; k < format_count; k++) if (surface_formats[i].format == VK_FORMAT_B8G8R8A8_UNORM) {
+		for (uint32_t k = 0; k < format_count; k++) if (surface_formats[k].format == VK_FORMAT_B8G8R8A8_UNORM) {
 			game->graphics_state.gpu_surface_formats[i] = surface_formats[k];
 			found_format = 1;
 			break;

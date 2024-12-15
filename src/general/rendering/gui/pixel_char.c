@@ -77,9 +77,67 @@ uint32_t pixel_char_renderer_new(struct pixel_char_renderer* pcr, struct renderi
 
 	VKCall(vkCreatePipelineLayout(pcr->device, &pipeline_layout_info, 0, &pcr->pipe_layout));
 
+	VkVertexInputBindingDescription vertex_binding_description = { 0 };
+	vertex_binding_description.binding = 0;
+	vertex_binding_description.stride = sizeof(struct pixel_render_char);
+	vertex_binding_description.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
+
+
+	VkVertexInputAttributeDescription vertex_attribute_descriptions[] = {
+		
+		// Color (4 x 8-bit)
+		{
+			.binding = 0,
+			.location = 0,
+			.format = VK_FORMAT_R8G8B8A8_UNORM,
+			.offset = offsetof(struct pixel_render_char, color[0])
+		},
+		// Background color (4 x 8-bit)
+		{
+			.binding = 0,
+			.location = 1,
+			.format = VK_FORMAT_R8G8B8A8_UNORM,
+			.offset = offsetof(struct pixel_render_char, background_color[0])
+		},
+		// Value (32-bit integer)
+		{
+			.binding = 0,
+			.location = 2,
+			.format = VK_FORMAT_R32_UINT,
+			.offset = offsetof(struct pixel_render_char, value)
+		},
+		// Start position (2 x 16-bit integers)
+		{
+			.binding = 0,
+			.location = 3,
+			.format = VK_FORMAT_R16G16_SINT,
+			.offset = offsetof(struct pixel_render_char, position[0])
+		},
+		// Masks (16-bit integer)
+		{
+			.binding = 0,
+			.location = 4,
+			.format = VK_FORMAT_R16_UINT,
+			.offset = offsetof(struct pixel_render_char, masks)
+		},
+		// Size (16-bit integer)
+		{
+			.binding = 0,
+			.location = 5,
+			.format = VK_FORMAT_R16_SINT,
+			.offset = offsetof(struct pixel_render_char, size)
+		},
+		
+	};
+
 
 	VkPipelineVertexInputStateCreateInfo vertex_input_stage = { 0 };
 	vertex_input_stage.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+	vertex_input_stage.vertexBindingDescriptionCount = 1;
+	vertex_input_stage.pVertexBindingDescriptions = &vertex_binding_description;
+	vertex_input_stage.vertexAttributeDescriptionCount = 6;
+	vertex_input_stage.pVertexAttributeDescriptions = vertex_attribute_descriptions;
+
 
 	VkPipelineColorBlendAttachmentState color_blend_attachment = { 0 };
 	color_blend_attachment.blendEnable = VK_TRUE;
@@ -132,6 +190,9 @@ uint32_t pixel_char_renderer_new(struct pixel_char_renderer* pcr, struct renderi
 
 	VkShaderModule vertex_shader, fragment_shader;
 
+	/*VKCall(new_VkShaderModule(pcr->device, "../../../resources/vertex_shader.spv", &vertex_shader));
+	VKCall(new_VkShaderModule(pcr->device, "../../../resources/fragment_shader.spv", &fragment_shader));*/
+
 	VkShaderModuleCreateInfo shader_info = { 0 };
 	shader_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 
@@ -178,7 +239,7 @@ uint32_t pixel_char_renderer_new(struct pixel_char_renderer* pcr, struct renderi
 	vkDestroyShaderModule(pcr->device, fragment_shader, 0);
 
 
-	VKCall(VkBuffer_new(rmm, sizeof(struct pixel_render_char) * 16384, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, &pcr->pixel_char_buffer));
+	VKCall(VkBuffer_new(rmm, sizeof(struct pixel_render_char) * 16384, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, &pcr->pixel_char_buffer));
 
 
 	VkDescriptorPoolSize pool_size = { 0 };
@@ -201,20 +262,6 @@ uint32_t pixel_char_renderer_new(struct pixel_char_renderer* pcr, struct renderi
 	descriptor_set_info.descriptorPool = pcr->descriptor_pool;
 
 	VKCall(vkAllocateDescriptorSets(pcr->device, &descriptor_set_info, &pcr->descriptor_set));
-
-	VkDescriptorBufferInfo pixel_char_buffer_info = { 0 };
-	pixel_char_buffer_info.buffer = pcr->pixel_char_buffer.buffer;
-	pixel_char_buffer_info.range = VK_WHOLE_SIZE;
-
-	VkWriteDescriptorSet pixel_char_buffer_write = { 0 };
-	pixel_char_buffer_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	pixel_char_buffer_write.dstSet = pcr->descriptor_set;
-	pixel_char_buffer_write.pBufferInfo = &pixel_char_buffer_info;
-	pixel_char_buffer_write.dstBinding = 0;
-	pixel_char_buffer_write.descriptorCount = 1;
-	pixel_char_buffer_write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-
-	vkUpdateDescriptorSets(pcr->device, 1, &pixel_char_buffer_write, 0, 0);
 
 	return 0;
 }
@@ -247,8 +294,6 @@ uint32_t pixel_char_renderer_add_font(struct pixel_char_renderer* pcr, struct re
 	pixel_font_buffer_info.buffer = pcr->pixel_font_buffer[pcr->font_count].buffer;
 	pixel_font_buffer_info.range = VK_WHOLE_SIZE;
 
-	pcr->font_count++;
-
 	VkWriteDescriptorSet pixel_font_buffer_write = { 0 };
 	pixel_font_buffer_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	pixel_font_buffer_write.dstSet = pcr->descriptor_set;
@@ -258,6 +303,8 @@ uint32_t pixel_char_renderer_add_font(struct pixel_char_renderer* pcr, struct re
 	pixel_font_buffer_write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 
 	vkUpdateDescriptorSets(pcr->device, 1, &pixel_font_buffer_write, 0, 0);
+
+	pcr->font_count++;
 
 	return 0;
 }
@@ -296,6 +343,9 @@ uint32_t pixel_char_renderer_render(struct pixel_char_renderer* pcr, VkCommandBu
 
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pcr->pipeline);
 
+	VkDeviceSize device_size = 0;
+	vkCmdBindVertexBuffers(cmd, 0, 1, &pcr->pixel_char_buffer.buffer, &device_size);
+
 	vkCmdPushConstants(
 		cmd,
 		pcr->pipe_layout,
@@ -315,7 +365,7 @@ uint32_t pixel_char_renderer_render(struct pixel_char_renderer* pcr, VkCommandBu
 			&char_render_mode
 		);
 
-		vkCmdDraw(cmd, pcr->chars_to_draw * 6, 1, 0, 0);
+		vkCmdDraw(cmd, 6, pcr->chars_to_draw, 0, 0);
 	}
 
 }

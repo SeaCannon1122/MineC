@@ -97,12 +97,13 @@ int32_t rendering_window_destroy(uint32_t window) {
 	return 0;
 }
 
-int32_t rendering_window_swapchain_create(uint32_t window, VkPhysicalDevice gpu, VkDevice device, VkSurfaceFormatKHR surface_format, VkRenderPass render_pass) {
+int32_t rendering_window_swapchain_create(uint32_t window, VkPhysicalDevice gpu, VkDevice device, VkSurfaceFormatKHR surface_format, VkPresentModeKHR present_mode, VkRenderPass render_pass) {
 
 	rws[window].gpu = gpu;
 	rws[window].device = device;
 	rws[window].surface_format = surface_format;
 	rws[window].render_pass = render_pass;
+	rws[window].present_mode = present_mode;
 
 	VkSurfaceCapabilitiesKHR surface_capabilities = { 0 };
 	VKCall(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(rws[window].gpu, rws[window].surface, &surface_capabilities));
@@ -112,15 +113,16 @@ int32_t rendering_window_swapchain_create(uint32_t window, VkPhysicalDevice gpu,
 
 	VkSwapchainCreateInfoKHR sc_info = { 0 };
 	sc_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+	sc_info.surface = rws[window].surface;
+	sc_info.minImageCount = rws[window].sc_image_count;
+	sc_info.imageFormat = surface_format.format;
 	sc_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 	sc_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-	sc_info.surface = rws[window].surface;
-	sc_info.imageFormat = surface_format.format;
 	sc_info.preTransform = surface_capabilities.currentTransform;
 	sc_info.imageExtent = surface_capabilities.currentExtent;
-	sc_info.minImageCount = rws[window].sc_image_count;
 	sc_info.imageArrayLayers = 1;
-
+	sc_info.presentMode = present_mode;
+	
 	VKCall(vkCreateSwapchainKHR(rws[window].device, &sc_info, 0, &rws[window].swapchain));
 
 	VKCall(vkGetSwapchainImagesKHR(rws[window].device, rws[window].swapchain, &rws[window].sc_image_count, rws[window].sc_images));
@@ -176,7 +178,7 @@ int32_t rendering_window_resize(uint32_t window) {
 	rws[window].height = window_get_height(rws[window].window);
 
 	rendering_window_swapchain_destroy(window);
-	rendering_window_swapchain_create(window, rws[window].gpu, rws[window].device, rws[window].surface_format, rws[window].render_pass);
+	rendering_window_swapchain_create(window, rws[window].gpu, rws[window].device, rws[window].surface_format, rws[window].present_mode, rws[window].render_pass);
 
 	return 0;
 }

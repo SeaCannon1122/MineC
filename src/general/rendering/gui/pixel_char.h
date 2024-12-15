@@ -6,11 +6,11 @@
 
 #define MAX_PIXEL_FONTS 4
 
-#define PIXEL_CHAR_UNDERLINE_MASK  0x80000000
-#define PIXEL_CHAR_CURSIVE_MASK    0x40000000
-#define PIXEL_CHAR_SHADOW_MASK     0x20000000
-#define PIXEL_CHAR_BACKGROUND_MASK 0x10000000
-#define PIXEL_CHAR_FONT_MASK       0x000000ff
+#define PIXEL_CHAR_UNDERLINE_MASK  0x8000
+#define PIXEL_CHAR_CURSIVE_MASK    0x4000
+#define PIXEL_CHAR_SHADOW_MASK     0x2000
+#define PIXEL_CHAR_BACKGROUND_MASK 0x1000
+#define PIXEL_CHAR_FONT_MASK       0x00ff
 
 
 struct pixel_font {
@@ -39,16 +39,19 @@ struct pixel_char_renderer {
 };
 
 struct pixel_char {
-	float color[4];
-	float background_color[4];
-	uint64_t value;
-	uint64_t masks;
+	uint8_t color[4];
+	uint8_t background_color[4];
+	uint32_t value;
+	uint16_t masks;
 };
 
 struct pixel_render_char {
-	uint64_t size;
-	float start_position[2];
-	struct pixel_char pixel_char_data;
+	uint8_t color[4];
+	uint8_t background_color[4];
+	uint32_t value;
+	uint16_t position[2];
+	uint16_t masks;
+	int16_t size;
 };
 
 struct pixel_font* load_pixel_font(char* src);

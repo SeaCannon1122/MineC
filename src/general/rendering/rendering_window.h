@@ -21,6 +21,7 @@ struct rendering_window_state {
 	VkImageView sc_image_views[5];
 	VkFramebuffer framebuffers[5];
 	uint32_t sc_image_index;
+	VkPresentModeKHR present_mode;
 
 	VkRenderPass render_pass;
 };
@@ -32,7 +33,7 @@ int32_t rendering_window_present_image(uint32_t window, VkQueue queue, VkSemapho
 int32_t rendering_window_new(uint32_t window, VkInstance instance);
 int32_t rendering_window_destroy(uint32_t window);
 
-int32_t rendering_window_swapchain_create(uint32_t window, VkPhysicalDevice gpu, VkDevice device, VkSurfaceFormatKHR surface_format, VkRenderPass render_pass);
+int32_t rendering_window_swapchain_create(uint32_t window, VkPhysicalDevice gpu, VkDevice device, VkSurfaceFormatKHR surface_format, VkPresentModeKHR present_mode, VkRenderPass render_pass);
 int32_t rendering_window_swapchain_destroy(uint32_t window);
 
 int32_t rendering_window_resize(uint32_t window);

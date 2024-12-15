@@ -4,11 +4,11 @@
 
 #define PIXEL_CHAR_SHADOW_DIVISOR 2.5
 
-#define PIXEL_CHAR_UNDERLINE_MASK  0x80000000
-#define PIXEL_CHAR_CURSIVE_MASK    0x40000000
-#define PIXEL_CHAR_SHADOW_MASK     0x20000000
-#define PIXEL_CHAR_BACKGROUND_MASK 0x10000000
-#define PIXEL_CHAR_FONT_MASK       0x0fffffff
+#define PIXEL_CHAR_UNDERLINE_MASK  0x8000
+#define PIXEL_CHAR_CURSIVE_MASK    0x4000
+#define PIXEL_CHAR_SHADOW_MASK     0x2000
+#define PIXEL_CHAR_BACKGROUND_MASK 0x1000
+#define PIXEL_CHAR_FONT_MASK       0x00ff
 
 struct char_font_entry
 {
@@ -17,75 +17,49 @@ struct char_font_entry
     int pixel_layout[8];
 };
 
-struct pixel_char
-{
-    vec4 color;
-    vec4 background_color;
-    uint value;
-    uint space;
-    uint masks;
-};
-
-struct character
-{
-    int size;
-    vec2 start_position;
-    pixel_char pixel_char_data;
-};
-
-
-
-layout(set = 0, binding = 0) readonly buffer pixel_char_data {
-	character chars[];
-};
-
-layout(set = 0, binding = 1) readonly buffer font0 { char_font_entry char_font_entries_0[]; };
-layout(set = 0, binding = 2) readonly buffer font1 { char_font_entry char_font_entries_1[]; };
-layout(set = 0, binding = 3) readonly buffer font2 { char_font_entry char_font_entries_2[]; };
-layout(set = 0, binding = 4) readonly buffer font3 { char_font_entry char_font_entries_3[]; };
+layout(set = 0, binding = 0) readonly buffer font0 { char_font_entry char_font_entries_0[]; };
+layout(set = 0, binding = 1) readonly buffer font1 { char_font_entry char_font_entries_1[]; };
+layout(set = 0, binding = 2) readonly buffer font2 { char_font_entry char_font_entries_2[]; };
+layout(set = 0, binding = 3) readonly buffer font3 { char_font_entry char_font_entries_3[]; };
 
 layout(push_constant) uniform PushConstants {
 	int screen_width;
 	int screen_height;
-	int draw_mode;
+	uint draw_mode;
 };
 
-
-
-layout (location = 0) in vec2 f_fragment_position;
-layout (location = 1) in float f_char_index;
+layout(location = 0) in vec4 color;
+layout(location = 1) in vec4 background_color;
+layout(location = 2) flat in uint value;
+layout(location = 3) in vec2 f_fragment_position;
+layout(location = 4) flat in uint masks;
+layout(location = 5) flat in int size;
 
 layout (location = 0) out vec4 fragmentColor;
 
 
-
 void main() {
-
-    int char_index = int(f_char_index);
     
     char_font_entry font_entry;
 	
-    if ((chars[char_index].pixel_char_data.masks & PIXEL_CHAR_FONT_MASK) == 0) font_entry = char_font_entries_0[chars[char_index].pixel_char_data.value];
-	else if ((chars[char_index].pixel_char_data.masks & PIXEL_CHAR_FONT_MASK) == 1) font_entry = char_font_entries_1[chars[char_index].pixel_char_data.value];
-	else if ((chars[char_index].pixel_char_data.masks & PIXEL_CHAR_FONT_MASK) == 2) font_entry = char_font_entries_2[chars[char_index].pixel_char_data.value];
-	else if ((chars[char_index].pixel_char_data.masks & PIXEL_CHAR_FONT_MASK) == 3) font_entry = char_font_entries_3[chars[char_index].pixel_char_data.value];
+    if ((masks & PIXEL_CHAR_FONT_MASK) == 0) font_entry = char_font_entries_0[value];
+	else if ((masks & PIXEL_CHAR_FONT_MASK) == 1) font_entry = char_font_entries_1[value];
+	else if ((masks & PIXEL_CHAR_FONT_MASK) == 2) font_entry = char_font_entries_2[value];
+	else if ((masks & PIXEL_CHAR_FONT_MASK) == 3) font_entry = char_font_entries_3[value];
     
-    int size = chars[char_index].size;
-    
-    ivec2 fragment_position = ivec2(f_fragment_position.x , f_fragment_position.y);
+    ivec2 fragment_position = ivec2(f_fragment_position);
     
     fragmentColor = vec4(0.0, 0.0, 0.0, 0.0);
     
     if (draw_mode == 0)
-    {
-        
-        if ((chars[char_index].pixel_char_data.masks & PIXEL_CHAR_BACKGROUND_MASK) != 0)
-            fragmentColor = vec4(chars[char_index].pixel_char_data.background_color);
+    { 
+        if ((masks & PIXEL_CHAR_BACKGROUND_MASK) != 0)
+            fragmentColor = background_color;
 
     }
     else if (draw_mode == 1)
     {
-        if ((chars[char_index].pixel_char_data.masks & PIXEL_CHAR_SHADOW_MASK) != 0)
+        if ((masks & PIXEL_CHAR_SHADOW_MASK) != 0)
         {
             if (
             f_fragment_position.x >= 0.0 &&
@@ -94,8 +68,6 @@ void main() {
             f_fragment_position.y / float(size) < 8.0
             )
             {
-        
-        
         
                 fragment_position.x = fragment_position.x - 4 * size;
                 fragment_position.y = fragment_position.y - 4 * size;
@@ -117,16 +89,16 @@ void main() {
         
                 if (PIXEL_CHAR_IF_BIT(font_entry.pixel_layout, check_coords.x, check_coords.y) != 0)
                     fragmentColor = vec4(
-                        chars[char_index].pixel_char_data.color.xyz / PIXEL_CHAR_SHADOW_DIVISOR, 
-                        chars[char_index].pixel_char_data.color.w
+                        color.xyz / PIXEL_CHAR_SHADOW_DIVISOR, 
+                        color.w
                     );
             }
             if (fragment_position.y / size > 7 && fragment_position.y / size < 9)
             {
-                if ((chars[char_index].pixel_char_data.masks & PIXEL_CHAR_UNDERLINE_MASK) != 0)
+                if ((masks & PIXEL_CHAR_UNDERLINE_MASK) != 0)
                     fragmentColor = vec4(
-                        chars[char_index].pixel_char_data.color.xyz / PIXEL_CHAR_SHADOW_DIVISOR, 
-                        chars[char_index].pixel_char_data.color.w
+                        color.xyz / PIXEL_CHAR_SHADOW_DIVISOR, 
+                        color.w
                     );
             }
         }
@@ -142,8 +114,6 @@ void main() {
             f_fragment_position.y / float(size) < 8.0
         )
         {
-        
-        
         
             fragment_position.x = fragment_position.x - 4 * size;
             fragment_position.y = fragment_position.y - 4 * size;
@@ -164,12 +134,12 @@ void main() {
                 check_coords.y -= 1;
         
             if (PIXEL_CHAR_IF_BIT(font_entry.pixel_layout, check_coords.x, check_coords.y) != 0)
-                fragmentColor = chars[char_index].pixel_char_data.color;
+                fragmentColor = color;
         }
         if (fragment_position.y / size > 7 && fragment_position.y / size < 9)
         {
-            if ((chars[char_index].pixel_char_data.masks & PIXEL_CHAR_UNDERLINE_MASK) != 0)
-                fragmentColor = chars[char_index].pixel_char_data.color;
+            if ((masks & PIXEL_CHAR_UNDERLINE_MASK) != 0)
+                fragmentColor = color;
         }
         
     }

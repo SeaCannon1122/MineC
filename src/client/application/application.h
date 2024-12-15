@@ -46,6 +46,8 @@ struct application_state {
 	
 };
 
+struct game_client;
+
 uint32_t application_create(struct game_client* game);
 
 uint32_t application_handle_events(struct game_client* game);

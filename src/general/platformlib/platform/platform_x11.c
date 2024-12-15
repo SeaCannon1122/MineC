@@ -143,6 +143,14 @@ int8_t get_key_state(int32_t key) {
 	return key_state;
 }
 
+uint32_t get_screen_width() {
+	return display_width;
+}
+
+uint32_t get_screen_height() {
+	return display_height;
+}
+
 uint32_t window_create(uint32_t posx, uint32_t posy, uint32_t width, uint32_t height, uint8_t* name, uint32_t visible) {
 
 	uint32_t next_free_window_index = 0;

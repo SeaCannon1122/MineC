@@ -48,7 +48,7 @@ int main(int argc, char* argv[]) {
 	uint32_t window_height = window_get_height(window);
 
 	rendering_window_new(window, instance);
-	rendering_window_swapchain_create(window, gpu, device, surface_format, render_pass);
+	rendering_window_swapchain_create(window, gpu, device, surface_format, VK_PRESENT_MODE_FIFO_KHR, render_pass);
 
 	
 	VKCall(command_pool_create(device, queue_index, &command_pool));
@@ -72,17 +72,24 @@ int main(int argc, char* argv[]) {
 	pixel_char_renderer_add_font(&pcr, &rmm, default_font);
 
 
-	char pixel_str[] = "HELLO!!!";
+	char pixel_str[] = "HELLOW WORLD!";
 	
+	struct pixel_render_char {
+		uint8_t color[4];
+		uint8_t background_color[4];
+		uint32_t value;
+		uint16_t position[2];
+		uint16_t masks;
+		uint16_t size;
+	};
 
 #define string_to_pixel_char(name, str, size, x, y, flags) struct pixel_render_char name[sizeof(str) - 1];\
 for(int i = 0; i < sizeof(str) - 1; i++) {\
-if(i == 0) name[i] = (struct pixel_render_char){ size, {x, y}, { { 0.9f, 0.9f, 0.9f, 1.f }, { 1.0, 0.0, 0.0, 1.0 }, str[i], flags } };\
-else name[i] = (struct pixel_render_char){ size, {name[i-1].start_position[0] + (float)(size * ((debug_font->char_font_entries[name[i-1].pixel_char_data.value].width + 3) / 2 )), y}, { { 0.9f, 0.9f, 0.9f, 1.f }, { 1.0, 0.0, 0.0, 1.0 }, str[i], flags } };\
+if(i == 0) name[i] = (struct pixel_render_char){ { 220, 220, 220, 255 }, { 255, 0, 0, 255 }, str[i], {x, y}, flags, size };\
+else name[i] = (struct pixel_render_char){ { 220, 220, 220, 255 }, { 255, 0, 0, 255 }, str[i], {name[i-1].position[0] + (size * ((debug_font->char_font_entries[name[i-1].value].width + 3) / 2 )), y}, flags, size  };\
 }\
 
-
-	string_to_pixel_char(chars, pixel_str, 40, 100.f, 100.f, PIXEL_CHAR_SHADOW_MASK | PIXEL_CHAR_BACKGROUND_MASK | PIXEL_CHAR_CURSIVE_MASK |PIXEL_CHAR_UNDERLINE_MASK)
+	string_to_pixel_char(chars, pixel_str, 20, 100, 100, PIXEL_CHAR_SHADOW_MASK | PIXEL_CHAR_BACKGROUND_MASK | PIXEL_CHAR_CURSIVE_MASK |PIXEL_CHAR_UNDERLINE_MASK)
 
 	pixel_char_renderer_fill_chars(&pcr, &rmm, chars, sizeof(pixel_str));
 
@@ -112,7 +119,6 @@ else name[i] = (struct pixel_render_char){ size, {name[i-1].start_position[0] + 
 			
 			uint32_t img_index;
 
-			VKCall(vkWaitForFences(device, 1, &img_available_fence, VK_TRUE, UINT64_MAX));
 			VKCall(vkResetFences(device, 1, &img_available_fence));
 
 			VkRenderPassBeginInfo renderpass_begin_info = { 0 };
@@ -154,6 +160,8 @@ else name[i] = (struct pixel_render_char){ size, {name[i-1].start_position[0] + 
 			VKCall(vkQueueSubmit(queue, 1, &submit_info, img_available_fence));
 
 			rendering_window_present_image(window, queue, &submit_semaphore, 1);
+
+			VKCall(vkWaitForFences(device, 1, &img_available_fence, VK_TRUE, UINT64_MAX));
 
 		}
 
