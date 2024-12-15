@@ -315,8 +315,7 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 
 		if (we != NULL) { 
 			we->type = WINDOW_EVENT_CHAR;
-			we->info.window_event_char.utf16_char = utf16_char;
-			we->info.window_event_char.utf8_char = utf8_char;
+			we->info.window_event_char.unicode = utf16_char;
 		}
 	} break;
 

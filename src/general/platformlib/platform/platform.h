@@ -13,6 +13,8 @@ enum window_event_type {
 	WINDOW_EVENT_UNFOCUS,
 	WINDOW_EVENT_MOUSE_SCROLL,
 	WINDOW_EVENT_CHAR,
+	WINDOW_EVENT_KEY_UP,
+	WINDOW_EVENT_KEY_DOWN,
 	WINDOW_EVENT_SIZE,
 };
 
@@ -69,8 +71,6 @@ struct window_event {
 			uint32_t scroll_steps;
 		} window_event_mouse_scroll;
 		struct {
-			uint32_t utf8_char;
-			uint32_t utf16_char;
 			uint32_t unicode;
 		} window_event_char;
 		struct {

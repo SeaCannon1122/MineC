@@ -26,23 +26,19 @@ set(SERVER_SOURCE_FILES
 
     src/general/platformlib/platform/platform.c
     src/general/platformlib/networking.c
-
-    src/general/utils.c
     src/general/key_value.c
 )
 
 set(TEST_SOURCE_FILES
     src/test/main.c
-    src/test/testing.c
-    src/test/gui_menu.c
-
+    src/test/resource_manager.c
     src/general/rendering/vulkan_helpers.c
     src/general/rendering/rendering_window.c
+    src/general/rendering/rendering_memory_manager.c
     src/general/rendering/gui/pixel_char.c
 
-
     src/general/platformlib/platform/platform.c
-    src/general/platformlib/networking.c
+    src/general/key_value.c
 
 )
 

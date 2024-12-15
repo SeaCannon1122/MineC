@@ -1,0 +1,5 @@
+game_settings: dynamic/game_settings.settings.yaml
+game_constants: dynamic/game_constants.settings.yaml
+textures: assets/textures.resourcelayout.yaml
+sounds: assets/sounds.resourcelayout.yaml
+shaders: assets/shaders.resourcelayout.yaml

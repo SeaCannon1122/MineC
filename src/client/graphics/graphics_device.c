@@ -35,7 +35,8 @@ uint32_t graphics_device_create(struct game_client* game, uint32_t gpu_index) {
 		game->application_state.window, 
 		game->graphics_state.gpu, 
 		game->graphics_state.device, 
-		game->graphics_state.surface_format, 
+		game->graphics_state.surface_format,
+		VK_PRESENT_MODE_FIFO_KHR,
 		game->graphics_state.window_render_pass
 	);
 

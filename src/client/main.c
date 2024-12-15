@@ -10,7 +10,7 @@ int main(int argc, char* argv[]) {
 	show_console_window();
 
 	struct game_client game;
-	uint32_t game_return_status = run_game_client(&game, "../../../resources/client/resourcelayout.keyvalue");
+	uint32_t game_return_status = run_game_client(&game, "../../../resources/client/root.resourcelayout.yaml");
 
 	networking_exit();
 	platform_exit();

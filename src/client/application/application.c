@@ -22,12 +22,15 @@ uint32_t application_create(struct game_client* game) {
 	game->application_state.window_extent.width = window_get_width(game->application_state.window);
 	game->application_state.window_extent.height = window_get_height(game->application_state.window);
 
+	memset(&game->application_state.input_state, 0, sizeof(game->application_state.input_state));
+
 	return 0;
 }
 
 uint32_t application_handle_events(struct game_client* game) {
 	
 	game->application_state.frame_flags = 0;
+	game->application_state.input_state.character_count = 0;
 
 	struct window_event event;
 	while (window_process_next_event(&event)) {
@@ -36,6 +39,13 @@ uint32_t application_handle_events(struct game_client* game) {
 
 		case WINDOW_EVENT_DESTROY: {
 			return 1;
+		} break;
+
+		case WINDOW_EVENT_CHAR: {
+			if (game->application_state.input_state.character_count < MAX_FRAME_CHAR_INPUTS) {
+				game->application_state.input_state.characters[game->application_state.input_state.character_count] = event.info.window_event_char.unicode;
+			}
+			game->application_state.input_state.character_count++;
 		} break;
 
 		default:
