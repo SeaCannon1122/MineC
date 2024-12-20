@@ -9,6 +9,7 @@ set(CLIENT_SOURCE_FILES
     src/client/graphics/graphics.c
     src/client/graphics/graphics_device.c
 
+    src/general/resource_manager.c
     src/general/platformlib/platform/platform.c
     src/general/platformlib/networking.c
     src/general/rendering/rendering_memory_manager.c
@@ -31,7 +32,7 @@ set(SERVER_SOURCE_FILES
 
 set(TEST_SOURCE_FILES
     src/test/main.c
-    src/test/resource_manager.c
+    src/general/resource_manager.c
     src/general/rendering/vulkan_helpers.c
     src/general/rendering/rendering_window.c
     src/general/rendering/rendering_memory_manager.c

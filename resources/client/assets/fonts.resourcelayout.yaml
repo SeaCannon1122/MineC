@@ -1,0 +1,3 @@
+debug_pixelfont: "fonts/debug.pixelfont"
+default_pixelfont: "fonts/default.pixelfont"
+special_pixelfont: "fonts/special.pixelfont"

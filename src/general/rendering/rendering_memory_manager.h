@@ -23,17 +23,19 @@ struct rendering_buffer {
 struct rendering_memory_manager {
 	VkDevice device;
 	VkPhysicalDevice gpu;
-	VkQueue graphics_queue;
+	VkQueue queue;
+	uint32_t queue_index;
 	VkCommandPool command_pool;
 
 	VkCommandBuffer cmd;
+	VkFence cmd_fence;
 
 	VkBuffer staging_buffer;
 	VkDeviceMemory staging_buffer_memory;
 	void* staging_buffer_host_handle;
 };
 
-VkResult rendering_memory_manager_new(VkDevice device, VkPhysicalDevice gpu, VkQueue graphics_queue, VkCommandPool command_pool, struct rendering_memory_manager* rmm);
+VkResult rendering_memory_manager_new(VkDevice device, VkPhysicalDevice gpu, VkQueue queue, uint32_t queue_index, size_t staging_buffer_size, struct rendering_memory_manager* rmm);
 VkResult rendering_memory_manager_destroy(struct rendering_memory_manager* rmm);
 
 VkResult VkBuffer_new(struct rendering_memory_manager* rmm, uint32_t size, VkMemoryPropertyFlags property_flags, VkBufferUsageFlags usage_flags, struct rendering_buffer* buffer);

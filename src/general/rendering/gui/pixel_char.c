@@ -35,29 +35,20 @@ uint32_t pixel_char_renderer_new(struct pixel_char_renderer* pcr, struct renderi
 	pcr->device = device;
 	pcr->font_count = 0;
 
-	VkDescriptorSetLayoutBinding pixel_char_buffer_binding = { 0 };
-	pixel_char_buffer_binding.binding = 0;
-	pixel_char_buffer_binding.descriptorCount = 1;
-	pixel_char_buffer_binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-	pixel_char_buffer_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-
 	VkDescriptorSetLayoutBinding pixel_font_buffer_binding = { 0 };
 	pixel_font_buffer_binding.descriptorCount = 1;
 	pixel_font_buffer_binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 	pixel_font_buffer_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 
-	VkDescriptorSetLayoutBinding bindings[MAX_PIXEL_FONTS + 1] = {
-		pixel_char_buffer_binding,
-	};
-
+	VkDescriptorSetLayoutBinding bindings[MAX_PIXEL_FONTS];
 	for (int32_t i = 0; i < MAX_PIXEL_FONTS; i++) {
-		pixel_font_buffer_binding.binding = i + 1;
-		bindings[i + 1] = pixel_font_buffer_binding;
+		pixel_font_buffer_binding.binding = i;
+		bindings[i] = pixel_font_buffer_binding;
 	}
 
 	VkDescriptorSetLayoutCreateInfo set_layout_info = { 0 };
 	set_layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	set_layout_info.bindingCount = MAX_PIXEL_FONTS + 1;
+	set_layout_info.bindingCount = MAX_PIXEL_FONTS;
 	set_layout_info.pBindings = bindings;
 
 	VKCall(vkCreateDescriptorSetLayout(pcr->device, &set_layout_info, 0, &pcr->set_layout));

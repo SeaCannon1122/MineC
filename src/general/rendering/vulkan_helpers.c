@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <malloc.h>
-#include <STB_IMAGE/stb_image.h>
 
 #include "vulkan_helpers.h"
 
@@ -165,6 +164,7 @@ gpu_found:
 	char* device_extentions[] = {
 		VK_KHR_SWAPCHAIN_EXTENSION_NAME
 	};
+
 
 	VkDeviceCreateInfo device_info = { 0 };
 	device_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;

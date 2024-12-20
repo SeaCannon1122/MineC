@@ -28,6 +28,7 @@ uint32_t graphics_device_create(struct game_client* game, uint32_t gpu_index) {
 	device_info.enabledExtensionCount = 1;
 
 	VKCall(vkCreateDevice(game->graphics_state.gpu, &device_info, 0, &game->graphics_state.device));
+	vkGetDeviceQueue(game->graphics_state.device, game->graphics_state.queue_index, 0, &game->graphics_state.queue);
 
 	rendering_window_create_rendering_pass(game->graphics_state.device, game->graphics_state.surface_format, &game->graphics_state.window_render_pass);
 
@@ -51,7 +52,8 @@ uint32_t graphics_device_create(struct game_client* game, uint32_t gpu_index) {
 		game->graphics_state.device, 
 		game->graphics_state.gpu, 
 		game->graphics_state.queue, 
-		game->graphics_state.command_pool, 
+		game->graphics_state.queue_index,
+		10000000,
 		&game->graphics_state.rmm
 	));
 

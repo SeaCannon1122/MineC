@@ -1,18 +1,45 @@
 #include "rendering_memory_manager.h"
 
-VkResult rendering_memory_manager_new(VkDevice device, VkPhysicalDevice gpu, VkQueue graphics_queue, VkCommandPool command_pool, struct rendering_memory_manager* rmm) {
+VkResult rendering_memory_manager_new(VkDevice device, VkPhysicalDevice gpu, VkQueue queue, uint32_t queue_index, size_t staging_buffer_size, struct rendering_memory_manager* rmm) {
 
-	rmm->command_pool = command_pool;
 	rmm->device = device;
 	rmm->gpu = gpu;
-	rmm->graphics_queue = graphics_queue;
+	rmm->queue = queue;
+	rmm->queue_index = queue_index;
+
+	//command_pool
+
+	VkCommandPoolCreateInfo pool_info = { 0 };
+	pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	pool_info.queueFamilyIndex = queue_index;
+	pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+
+	VKCall(vkCreateCommandPool(device, &pool_info, 0, &rmm->command_pool));
+
+	//command buffer
+
+	VkCommandBufferAllocateInfo cmd_alloc_info = { 0 };
+	cmd_alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	cmd_alloc_info.commandBufferCount = 1;
+	cmd_alloc_info.commandPool = rmm->command_pool;
+	cmd_alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	VKCall(vkAllocateCommandBuffers(device, &cmd_alloc_info, &rmm->cmd));
+
+	VKCall(vkResetCommandBuffer(rmm->cmd, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT));
+
+	//fence 
+
+	VkFenceCreateInfo fence_info = { 0 };
+	fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+
+	VKCall(vkCreateFence(rmm->device, &fence_info, 0, &rmm->cmd_fence));
 
 	//staging buffer
 
 	VkBufferCreateInfo buffer_info = { 0 };
 	buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 	buffer_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-	buffer_info.size = 10000000;
+	buffer_info.size = staging_buffer_size;
 
 	VKCall(vkCreateBuffer(device, &buffer_info, 0, &rmm->staging_buffer));
 
@@ -33,23 +60,12 @@ VkResult rendering_memory_manager_new(VkDevice device, VkPhysicalDevice gpu, VkQ
 	}
 
 	alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-	alloc_info.allocationSize = 10000000;
+	alloc_info.allocationSize = staging_buffer_size;
 
 	VKCall(vkAllocateMemory(device, &alloc_info, 0, &rmm->staging_buffer_memory));
 
 	VKCall(vkBindBufferMemory(device, rmm->staging_buffer, rmm->staging_buffer_memory, 0));
-	VKCall(vkMapMemory(device, rmm->staging_buffer_memory, 0, 10000000, 0, &rmm->staging_buffer_host_handle));
-
-	//command buffer
-
-	VkCommandBufferAllocateInfo cmd_alloc_info = { 0 };
-	cmd_alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	cmd_alloc_info.commandBufferCount = 1;
-	cmd_alloc_info.commandPool = command_pool;
-	cmd_alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	VKCall(vkAllocateCommandBuffers(device, &cmd_alloc_info, &rmm->cmd));
-
-	VKCall(vkResetCommandBuffer(rmm->cmd, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT));
+	VKCall(vkMapMemory(device, rmm->staging_buffer_memory, 0, staging_buffer_size, 0, &rmm->staging_buffer_host_handle));
 
 	return VK_SUCCESS;
 }
@@ -60,7 +76,11 @@ VkResult rendering_memory_manager_destroy(struct rendering_memory_manager* rmm) 
 
 	vkFreeMemory(rmm->device, rmm->staging_buffer_memory, 0);
 	vkDestroyBuffer(rmm->device, rmm->staging_buffer, 0);
+
+	vkDestroyFence(rmm->device, rmm->cmd_fence, 0);
+
 	vkFreeCommandBuffers(rmm->device, rmm->command_pool, 1, &rmm->cmd);
+	vkDestroyCommandPool(rmm->device, rmm->command_pool, 0);
 
 	return VK_SUCCESS;
 }
@@ -128,6 +148,8 @@ VkResult VkBuffer_fill(struct rendering_memory_manager* rmm, struct rendering_bu
 	else {
 		memcpy(rmm->staging_buffer_host_handle, data, size);
 
+		VKCall(vkResetFences(rmm->device, 1, &rmm->cmd_fence));
+
 		VkCommandBufferBeginInfo begin_info = { 0 };
 		begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 		begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
@@ -143,25 +165,15 @@ VkResult VkBuffer_fill(struct rendering_memory_manager* rmm, struct rendering_bu
 
 		VKCall(vkEndCommandBuffer(rmm->cmd));
 
-		VkFence upload_fence;
-
-		VkFenceCreateInfo fence_info = { 0 };
-		fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-
-		VKCall(vkCreateFence(rmm->device, &fence_info, 0, &upload_fence));
-
-		VKCall(vkResetFences(rmm->device, 1, &upload_fence));
-
 		VkSubmitInfo submit_info = { 0 };
 		submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 		submit_info.commandBufferCount = 1;
 		submit_info.pCommandBuffers = &rmm->cmd;
 
-		VKCall(vkQueueSubmit(rmm->graphics_queue, 1, &submit_info, upload_fence));
+		VKCall(vkQueueSubmit(rmm->queue, 1, &submit_info, rmm->cmd_fence));
 
-		VKCall(vkWaitForFences(rmm->device, 1, &upload_fence, 1, UINT64_MAX));
+		VKCall(vkWaitForFences(rmm->device, 1, &rmm->cmd_fence, 1, UINT64_MAX));
 
-		vkDestroyFence(rmm->device, upload_fence, 0);
 	}
 
 	return VK_SUCCESS;
@@ -240,6 +252,8 @@ VkResult VkImage_fill(struct rendering_memory_manager* rmm, void* image_data, Vk
 
 	memcpy(rmm->staging_buffer_host_handle, image_data, image->width * image->height * image->pixel_size);
 
+	VKCall(vkResetFences(rmm->device, 1, &rmm->cmd_fence));
+
 	VkCommandBufferBeginInfo begin_info = { 0 };
 	begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
@@ -300,25 +314,16 @@ VkResult VkImage_fill(struct rendering_memory_manager* rmm, void* image_data, Vk
 
 	VKCall(vkEndCommandBuffer(rmm->cmd));
 
-	VkFence upload_fence;
-
-	VkFenceCreateInfo fence_info = { 0 };
-	fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-
-	VKCall(vkCreateFence(rmm->device, &fence_info, 0, &upload_fence));
-
-	VKCall(vkResetFences(rmm->device, 1, &upload_fence));
-
 	VkSubmitInfo submit_info = { 0 };
 	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	submit_info.commandBufferCount = 1;
 	submit_info.pCommandBuffers = &rmm->cmd;
 
-	VKCall(vkQueueSubmit(rmm->graphics_queue, 1, &submit_info, upload_fence));
+	VKCall(vkQueueSubmit(rmm->queue, 1, &submit_info, rmm->cmd_fence));
 
-	VKCall(vkWaitForFences(rmm->device, 1, &upload_fence, 1, UINT64_MAX));
+	VKCall(vkWaitForFences(rmm->device, 1, &rmm->cmd_fence, 1, UINT64_MAX));
 
-	vkDestroyFence(rmm->device, upload_fence, 0);
+	return VK_SUCCESS;
 }
 
 VkResult VkImage_destroy(struct rendering_memory_manager* rmm, struct rendering_image* image) {

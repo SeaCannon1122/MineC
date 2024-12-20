@@ -5,7 +5,7 @@
 #include "general/rendering/gui/pixel_char.h"
 #include "general/rendering/rendering_window.h"
 
-#include "resource_manager.h"
+#include "general/resource_manager.h"
 
 VkInstance instance;
 VkDebugUtilsMessengerEXT debug_messenger;
@@ -32,7 +32,7 @@ int main(int argc, char* argv[]) {
 	platform_init();
 	show_console_window();
 
-	resource_manager_new("../../../resources/client/root.resourcelayout.yaml");
+	resource_manager_new("resources/client/root.resourcelayout.yaml");
 
 	return 0;
 
@@ -65,7 +65,7 @@ int main(int argc, char* argv[]) {
 	VKCall(fence_create(device, &img_available_fence));
 
 	struct rendering_memory_manager rmm;
-	VKCall(rendering_memory_manager_new(device, gpu, queue, command_pool, &rmm));
+	VKCall(rendering_memory_manager_new(device, gpu, queue, queue_index, 10000000, &rmm));
 
 	struct pixel_char_renderer pcr;
 	pixel_char_renderer_new(&pcr, &rmm, device, render_pass);

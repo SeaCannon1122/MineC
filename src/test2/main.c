@@ -59,17 +59,17 @@ int main(int argc, char* argv[]) {
 	VKCall(fence_create(device, &img_available_fence));
 
 	struct rendering_memory_manager rmm;
-	VKCall(rendering_memory_manager_new(device, gpu, queue, command_pool, &rmm));
+	VKCall(rendering_memory_manager_new(device, gpu, queue, queue_index, 10000000, &rmm));
 	
 	struct pixel_char_renderer pcr;
 	pixel_char_renderer_new(&pcr, &rmm, device, render_pass);
 
 
-	struct pixel_font* default_font = load_pixel_font("../../../resources/client/assets/fonts/special.pixelfont");
+	struct pixel_font* special_font = load_pixel_font("../../../resources/client/assets/fonts/special.pixelfont");
 	struct pixel_font* debug_font = load_pixel_font("../../../resources/client/assets/fonts/debug.pixelfont");
 
-	pixel_char_renderer_add_font(&pcr, &rmm, debug_font);
-	pixel_char_renderer_add_font(&pcr, &rmm, default_font);
+	pixel_char_renderer_add_font(&pcr, &rmm, special_font);
+	pixel_char_renderer_add_font(&pcr, &rmm, special_font);
 
 
 	char pixel_str[] = "HELLOW WORLD!";
