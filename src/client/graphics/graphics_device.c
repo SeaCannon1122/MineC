@@ -17,8 +17,11 @@ uint32_t graphics_device_create(struct game_client* game, uint32_t gpu_index) {
 	queue_info.pQueuePriorities = &queue_priority;
 
 	char* device_extentions[] = {
-		VK_KHR_SWAPCHAIN_EXTENSION_NAME
+		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 	};
+
+	VkPhysicalDeviceFeatures2 physical_features2 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
+	vkGetPhysicalDeviceFeatures2(game->graphics_state.gpu, &physical_features2);
 
 	VkDeviceCreateInfo device_info = { 0 };
 	device_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -26,6 +29,7 @@ uint32_t graphics_device_create(struct game_client* game, uint32_t gpu_index) {
 	device_info.queueCreateInfoCount = 1;
 	device_info.ppEnabledExtensionNames = device_extentions;
 	device_info.enabledExtensionCount = 1;
+	device_info.pNext = &physical_features2;
 
 	VKCall(vkCreateDevice(game->graphics_state.gpu, &device_info, 0, &game->graphics_state.device));
 	vkGetDeviceQueue(game->graphics_state.device, game->graphics_state.queue_index, 0, &game->graphics_state.queue);

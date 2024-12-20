@@ -162,7 +162,7 @@ uint32_t resource_manager_new(struct resource_manager* rm, uint8_t* file_path) {
 	rm->image_count = 1;
 	rm->images = malloc(sizeof(struct resource_manager_image) * (image_file_count + 1));
 	rm->images_name_map = key_value_new(image_file_count + 1, image_file_count * 20);
-	key_value_set_integer(&rm->images_name_map, "default_image", 0);
+	key_value_set_integer(&rm->images_name_map, "default", 0);
 	rm->images[0].data = default_image;
 	rm->images[0].width = default_image_width;
 	rm->images[0].height = default_image_height;
@@ -244,29 +244,10 @@ uint32_t resource_manager_new(struct resource_manager* rm, uint8_t* file_path) {
 
 	}
 
-
-
-
-}
-
-uint32_t _resource_manager_unuse_vulkan_device(struct resource_manager* rm) {
-
-	if (rm->image_count) {
-
-		for (uint32_t i = 0; i < rm->image_count; i++) {
-
-			vkDestroyImage(rm->device, rm->images[i].image, 0);
-			vkDestroyImageView(rm->device, rm->images[i].image_view, 0);
-		}
-
-		vkFreeMemory(rm->device, rm->images_memory, 0);
-	}
-
+	return 0;
 }
 
 uint32_t resource_manager_use_vulkan_device(struct resource_manager* rm, VkDevice device, VkPhysicalDevice gpu, VkQueue queue, uint32_t queue_index) {
-
-	if (rm->device) _resource_manager_unuse_vulkan_device(rm);
 
 	rm->device = device;
 	rm->gpu = gpu;
@@ -504,17 +485,34 @@ uint32_t resource_manager_use_vulkan_device(struct resource_manager* rm, VkDevic
 	return 0;
 }
 
+uint32_t resource_manager_drop_vulkan_device(struct resource_manager* rm) {
+
+	if (rm->image_count) {
+
+		for (uint32_t i = 0; i < rm->image_count; i++) {
+
+			vkDestroyImage(rm->device, rm->images[i].image, 0);
+			vkDestroyImageView(rm->device, rm->images[i].image_view, 0);
+		}
+
+		vkFreeMemory(rm->device, rm->images_memory, 0);
+	}
+
+	return 0;
+}
+
 uint32_t resource_manager_destroy(struct resource_manager* rm) {
 
-	if (rm->device) _resource_manager_unuse_vulkan_device(rm);
+	if (rm->device) resource_manager_drop_vulkan_device(rm);
 
+	return 0;
 }
 
 
-uint64_t resource_manager_get_image_index(struct resource_manager* rm, uint8_t* name) {
+uint32_t resource_manager_get_image_index(struct resource_manager* rm, uint8_t* name) {
 
 	uint64_t image_index;
-	key_value_get_integer(rm->images_name_map, name, 0, &image_index);
+	key_value_get_integer(&rm->images_name_map, name, 0, &image_index);
 
 	return image_index;
 }

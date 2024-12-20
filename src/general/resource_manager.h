@@ -37,10 +37,11 @@ struct resource_manager {
 uint32_t resource_manager_new(struct resource_manager* rm, uint8_t* file_path);
 
 uint32_t resource_manager_use_vulkan_device(struct resource_manager* rm, VkDevice device, VkPhysicalDevice gpu, VkQueue queue, uint32_t queue_index);
+uint32_t resource_manager_drop_vulkan_device(struct resource_manager* rm);
 
 uint32_t resource_manager_destroy(struct resource_manager* rm);
 
-uint64_t resource_manager_get_image_index(struct resource_manager* rm, uint8_t* name);
+uint32_t resource_manager_get_image_index(struct resource_manager* rm, uint8_t* name);
 
 #endif // !RESOURCE_MANAGER_H
 

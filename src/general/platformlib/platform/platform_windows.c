@@ -7,7 +7,8 @@
 
 struct window_state {
 	HWND hwnd;
-	uint16_t active;
+	uint8_t active;
+	uint8_t registered_active;
 	int32_t window_width;
 	int32_t window_height;
 	int32_t x_position;
@@ -152,6 +153,7 @@ uint32_t window_create(uint32_t posx, uint32_t posy, uint32_t width, uint32_t he
 	window_states[next_free_window_index].window_width = width;
 	window_states[next_free_window_index].window_height = height;
 	window_states[next_free_window_index].active = 1;
+	window_states[next_free_window_index].registered_active = 1;
 
 	return next_free_window_index;
 }
@@ -174,6 +176,8 @@ int32_t window_is_active(uint32_t window) {
 
 void window_destroy(uint32_t window) {
 	if (window_states[window].active) SendMessage(window_states[window].hwnd, WM_CLOSE, 0, 0);
+	window_states[window].active = 0;
+	window_states[window].registered_active = 0;
 	window_states[window].hwnd = NULL;
 }
 
@@ -234,10 +238,13 @@ VkResult destroy_vulkan_surface(VkInstance instance, VkSurfaceKHR surface) {
 	return VK_SUCCESS;
 }
 
+uint32_t event_type;
+
 LRESULT CALLBACK WinProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 
-	if (uMsg == WM_CLOSE) { 
+	if (uMsg == WM_CLOSE) {
 		DestroyWindow(hwnd); 
+
 		return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 	}
 
@@ -249,7 +256,7 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 		PostQuitMessage(0);
 		window_states[window_check].active = 0;
 
-		if (we != NULL) we->type = WINDOW_EVENT_DESTROY;
+		event_type = WINDOW_EVENT_DESTROY;
 	} break;
 
 	case WM_SIZE: {
@@ -261,8 +268,9 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 		window_states[window_check].window_width = rect.right - rect.left;
 		window_states[window_check].window_height = rect.bottom - rect.top;
 	
+		event_type = WINDOW_EVENT_SIZE;
+
 		if (we != NULL) { 
-			we->type = WINDOW_EVENT_SIZE; 
 			we->info.window_event_size.width = rect.right - rect.left;
 			we->info.window_event_size.height = rect.bottom - rect.top;
 		}
@@ -276,8 +284,9 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 		window_states[window_check].x_position = rect.left;
 		window_states[window_check].y_position = rect.top;
 
+		event_type = WINDOW_EVENT_MOVE;
+
 		if (we != NULL) {
-			we->type = WINDOW_EVENT_MOVE;
 			we->info.window_event_move.x_position = rect.left;
 			we->info.window_event_move.y_position = rect.top;
 		}
@@ -286,21 +295,21 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	case WM_SETFOCUS: {
 		is_trackable_window_event = 1;
 
-		if (we != NULL) we->type = WINDOW_EVENT_FOCUS;
+		event_type = WINDOW_EVENT_FOCUS;
 	} break;
 
 	case WM_KILLFOCUS: {
 		is_trackable_window_event = 1;
 
-		if (we != NULL) we->type = WINDOW_EVENT_UNFOCUS;
+		event_type = WINDOW_EVENT_UNFOCUS;
 	} break;
 
 
 	case WM_MOUSEWHEEL: {
 		is_trackable_window_event = 1;
 
+		event_type = WINDOW_EVENT_MOUSE_SCROLL;
 		if (we != NULL) {
-			we->type = WINDOW_EVENT_MOUSE_SCROLL;
 			we->info.window_event_mouse_scroll.scroll_steps = GET_WHEEL_DELTA_WPARAM(wParam) / 120;
 		}
 			
@@ -313,8 +322,8 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 		uint32_t utf8_char = 0;
 		uint32_t bytes_written = WideCharToMultiByte(CP_UTF8, 0, &utf16_char, 1, &utf8_char, sizeof(utf8_char), NULL, NULL);
 
+		event_type = WINDOW_EVENT_CHAR;
 		if (we != NULL) { 
-			we->type = WINDOW_EVENT_CHAR;
 			we->info.window_event_char.unicode = utf16_char;
 		}
 	} break;
@@ -333,7 +342,17 @@ uint32_t window_process_next_event(struct window_event* event) {
 	for (; window_check != (first_window_checked - 1 + MAX_WINDOW_COUNT) % MAX_WINDOW_COUNT; window_check = (window_check + 1) % MAX_WINDOW_COUNT) {
 
 
-		while (window_states[window_check].active) {
+		while (window_states[window_check].registered_active) {
+
+			if (window_states[window_check].active == 0) {
+				window_states[window_check].registered_active = 0;
+				if (we) {
+					we->window = window_check;
+					we->type = WINDOW_EVENT_DESTROY;
+				}
+				we = NULL;
+				return 1;
+			}
 
 			is_trackable_window_event = 0;
 
@@ -342,7 +361,13 @@ uint32_t window_process_next_event(struct window_event* event) {
 				DispatchMessageW(&message);
 
 				if (is_trackable_window_event) {
-					if (we) we->window = window_check;
+
+					if (event_type == WINDOW_EVENT_DESTROY) window_states[window_check].registered_active = 0;
+
+					if (we) {
+						we->window = window_check;
+						we->type = event_type;
+					}
 					we = NULL;
 					return 1;
 				}

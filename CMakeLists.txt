@@ -8,6 +8,9 @@ set(CLIENT_SOURCE_FILES
     src/client/application/application.c
     src/client/graphics/graphics.c
     src/client/graphics/graphics_device.c
+    src/client/resources/resources.c
+    src/client/renderer/renderer.c
+    src/client/settings.c
 
     src/general/resource_manager.c
     src/general/platformlib/platform/platform.c

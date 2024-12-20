@@ -35,6 +35,8 @@ uint32_t list_gpus(struct game_client* game) {
 		game->application_state.machine_info.gpus[i].vulkan_version_minor = VK_API_VERSION_MINOR(dev_prop.apiVersion);
 		game->application_state.machine_info.gpus[i].vulkan_version_patch = VK_API_VERSION_PATCH(dev_prop.apiVersion);
 
+		if (VK_API_VERSION_MAJOR(dev_prop.apiVersion) < 1 || VK_API_VERSION_MINOR(dev_prop.apiVersion) < 2) continue;
+
 		uint32_t format_count = 0;
 		VKCall(vkGetPhysicalDeviceSurfaceFormatsKHR(game->graphics_state.gpus[i], rws.surface, &format_count, 0));
 		VkSurfaceFormatKHR* surface_formats = alloca(format_count * sizeof(VkSurfaceFormatKHR));
@@ -88,6 +90,7 @@ uint32_t graphics_create(struct game_client* game) {
 	char* instance_extensions[] = {
 		PLATFORM_VK_SURFACE_EXTENSION,
 		VK_KHR_SURFACE_EXTENSION_NAME,
+		VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
 		VK_EXT_DEBUG_UTILS_EXTENSION_NAME
 	};
 
@@ -99,7 +102,7 @@ uint32_t graphics_create(struct game_client* game) {
 	instance_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 	instance_info.pApplicationInfo = &app_info;
 	instance_info.ppEnabledExtensionNames = instance_extensions;
-	instance_info.enabledExtensionCount = 3;
+	instance_info.enabledExtensionCount = 4;
 	instance_info.ppEnabledLayerNames = layers;
 	instance_info.enabledLayerCount = 1;
 

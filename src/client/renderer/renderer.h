@@ -5,13 +5,17 @@
 
 struct renderer {
 	
-	struct {
-		//menu textures
-		uint16_t menu_background;
-
-	} texture_atlas;
+	int a;
 
 };
+
+struct game_client;
+
+uint32_t renderer_create(struct game_client* game);
+
+uint32_t renderer_resize(struct game_client* game);
+
+uint32_t renderer_destroy(struct game_client* game);
 
 #endif // !RENDERER_H
 
