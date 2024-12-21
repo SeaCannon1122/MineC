@@ -75,6 +75,11 @@ uint32_t application_handle_events(struct game_client* game) {
 		
 	}
 
+	struct point2d_int mouse_position = window_get_mouse_cursor_position(game->application_state.window);
+
+	game->application_state.input_state.mouse_coords.x = mouse_position.x;
+	game->application_state.input_state.mouse_coords.y = mouse_position.y;
+
 	return 0;
 }
 

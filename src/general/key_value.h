@@ -2,6 +2,7 @@
 #define KEY_VALUE_H
 
 #include <stdint.h>
+#include <stdlib.h>
 
 enum key_value_return_type {
     KAY_VALUE_ERROR_INDEX_OUT_OF_BOUNDS = 0b10001,
@@ -30,11 +31,11 @@ struct key_value_pair {
     } value;
 };
 
-enum key_value_return_type key_value_set_integer(void** key_value_map, uint8_t* name, uint64_t value);
+enum key_value_return_type key_value_set_integer(void** key_value_map, uint8_t* name, int64_t value);
 enum key_value_return_type key_value_set_float(void** key_value_map, uint8_t* name, float value);
 enum key_value_return_type key_value_set_string(void** key_value_map, uint8_t* name, uint8_t* value);
 
-enum key_value_return_type key_value_get_integer(void** key_value_map, uint8_t* name, uint64_t default_value, uint64_t* buffer);
+enum key_value_return_type key_value_get_integer(void** key_value_map, uint8_t* name, int64_t default_value, int64_t* buffer);
 enum key_value_return_type key_value_get_float(void** key_value_map, uint8_t* name, float default_value, float* buffer);
 enum key_value_return_type key_value_get_string(void** key_value_map, uint8_t* name, uint8_t* default_value, uint8_t* buffer, size_t buffer_size);
 

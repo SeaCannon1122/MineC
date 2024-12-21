@@ -1,1 +1,2 @@
-dirt_texture: "textures/blocks/dirt.png"
+block_textures: "textures/block_textures.resourcelayout.yaml"
+menu_textures: "textures/menu_textures.resourcelayout.yaml"

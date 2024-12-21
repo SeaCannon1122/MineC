@@ -13,7 +13,6 @@
 
 struct window_state {
 	Window window;
-	XImage* image;
 	XIC ic;
 	unsigned int* pixels;
 	int32_t active;
@@ -163,15 +162,12 @@ uint32_t window_create(uint32_t posx, uint32_t posy, uint32_t width, uint32_t he
 
 	unsigned int* pixels = malloc(display_width * display_height * sizeof(unsigned int));
 
-	XImage* image = XCreateImage(display, DefaultVisual(display, screen), DefaultDepth(display, screen), ZPixmap, 0, (char*)pixels, display_width, display_height, 32, 0);
-
 	XSelectInput(display, window, ExposureMask | KeyPressMask | KeyReleaseMask | StructureNotifyMask | ButtonPressMask);
 	XStoreName(display, window, name);
 	XSetWMProtocols(display, window, &wm_delete_window, 1);
 	if(visible) XMapWindow(display, window);
 
 	window_states[next_free_window_index].window = window;
-	window_states[next_free_window_index].image = image;
 	window_states[next_free_window_index].ic = ic;
 	window_states[next_free_window_index].pixels = pixels;
 	window_states[next_free_window_index].window_width = width;
@@ -218,20 +214,7 @@ void window_destroy(uint32_t window) {
 	if (window_states[window].active) XDestroyWindow(display, window_states[window].window);
 	window_states[window].window = 0;
 
-	XDestroyImage(window_states[window].image);
-}
-
-void window_draw(uint32_t window, uint8_t* buffer, int32_t width, int32_t height, int32_t scalar) {
-
-	if (!window_states[window].active) return;
-	for (int32_t i = 0; i < width * scalar && i < display_width; i++) {
-		for (int32_t j = 0; j < height * scalar && j < display_height; j++) {
-			window_states[window].pixels[i + display_width * j] = ((uint32_t*)buffer)[i / scalar + width * (j / scalar)];
-		}
-	}
-
-	XPutImage(display, window_states[window].window, DefaultGC(display, screen), window_states[window].image, 0, 0, 0, 0, width * scalar, height * scalar);
-
+	
 }
 
 struct point2d_int window_get_mouse_cursor_position(uint32_t window) {

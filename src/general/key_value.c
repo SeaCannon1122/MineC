@@ -19,7 +19,7 @@ struct key_value_entry {
     uint32_t type;
     uint32_t key;
     union {
-        uint64_t integer;
+        int64_t integer;
         float floating;
         uint32_t string;
     } value;
@@ -63,7 +63,7 @@ void* _key_value_add_string(void* key_value_map, uint8_t* string, uint32_t* stri
     return key_value_map;
 }
 
-enum key_value_return_type key_value_set_integer(void** key_value_map, uint8_t* name, uint64_t value) {
+enum key_value_return_type key_value_set_integer(void** key_value_map, uint8_t* name, int64_t value) {
     struct key_value_meta_data* meta_data = *key_value_map;
     struct key_value_entry* maps = (size_t)*key_value_map + sizeof(struct key_value_meta_data);
     uint8_t* strings = (size_t)*key_value_map + sizeof(struct key_value_meta_data) + meta_data->maps_block_length * sizeof(struct key_value_entry);
@@ -159,7 +159,7 @@ enum key_value_return_type key_value_set_string(void** key_value_map, uint8_t* n
     return KEY_VALUE_INFO_ADDED_PAIR;
 }
 
-enum key_value_return_type key_value_get_integer(void** key_value_map, uint8_t* name, uint64_t default_value, uint64_t* buffer) {
+enum key_value_return_type key_value_get_integer(void** key_value_map, uint8_t* name, int64_t default_value, int64_t* buffer) {
 
     struct key_value_meta_data* meta_data = *key_value_map;
     struct key_value_entry* maps = (size_t)*key_value_map + sizeof(struct key_value_meta_data);
@@ -262,25 +262,38 @@ void key_value_combind(void** key_value_map_main, void** key_value_map_additum) 
 }
 
 enum key_value_return_type key_value_load_yaml(void** key_value_map, uint8_t* file_path) {
-    FILE* file = fopen(file_path, "r");
+    FILE* file = fopen(file_path, "rb");
     if (file == NULL) return KEY_VALUE_ERROR_COULDNT_OPEN_FILE;
 
     fseek(file, 0, SEEK_END);
     long fileSize = ftell(file) + 1;
     rewind(file);
 
-    uint8_t* buffer = (uint8_t*)malloc(fileSize);
+    uint8_t* carrige_return_buffer = (uint8_t*)malloc(fileSize);
 
-    size_t bytesRead = fread(buffer, sizeof(char), fileSize, file);
+    size_t bytesRead = fread(carrige_return_buffer, sizeof(char), fileSize, file);
 
     fclose(file);
+
+    carrige_return_buffer[fileSize - 1] = 0;
+
+    uint8_t* buffer = (uint8_t*)malloc(fileSize);
+
+    uint32_t offset = 0;
+
+    for (uint32_t i = 0; i < fileSize; i++) {
+        if (carrige_return_buffer[i] == '\r') offset++;
+        else buffer[i - offset] = carrige_return_buffer[i];
+    }
+
+    free(carrige_return_buffer);
+
+    fileSize -= offset;
 
     void* temp_key_value_map = key_value_new(_ENTRY_EXPANSION_SIZE, _STRINGS_EXPANSION_SIZE);
 
     uint32_t line_breaks = 0;
     for (uint32_t i = 0; i < fileSize - line_breaks; i++) if (buffer[i] == '\n') line_breaks++;
-
-    buffer[fileSize - 1 - line_breaks] = 0;
 
     uint32_t text_i = 0;
     for (uint32_t lines_i = 0; lines_i < line_breaks + 1; lines_i++) {

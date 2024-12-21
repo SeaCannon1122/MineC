@@ -38,13 +38,6 @@ struct pixel_char_renderer {
 	uint32_t chars_to_draw;
 };
 
-struct pixel_char {
-	uint8_t color[4];
-	uint8_t background_color[4];
-	uint32_t value;
-	uint16_t masks;
-};
-
 struct pixel_render_char {
 	uint8_t color[4];
 	uint8_t background_color[4];

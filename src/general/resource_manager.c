@@ -42,6 +42,26 @@ uint32_t default_image_width = 16;
 uint32_t default_image_height = 16;
 
 
+uint8_t* _resource_manager_load_file(uint8_t* src, uint32_t* size) {
+
+	FILE* file = fopen(src, "rb");
+	if (file == NULL) return NULL;
+
+	fseek(file, 0, SEEK_END);
+	long fileSize = ftell(file);
+	rewind(file);
+
+	uint8_t* buffer = malloc(fileSize);
+
+	size_t bytesRead = fread(buffer, 1, fileSize, file);
+
+	fclose(file);
+
+	*size = bytesRead;
+
+	return buffer;
+}
+
 uint32_t _load_resource_layout(uint8_t* file_path) {
 
 	uint8_t sub_path[512];
@@ -156,21 +176,27 @@ uint32_t resource_manager_new(struct resource_manager* rm, uint8_t* file_path) {
 
 		printf("%s\n", &layout_maps_paths[error_index][0]);
 
-		return NULL; 
+		return 1; 
 	}
 
 	rm->image_count = 1;
 	rm->images = malloc(sizeof(struct resource_manager_image) * (image_file_count + 1));
-	rm->images_name_map = key_value_new(image_file_count + 1, image_file_count * 20);
+	rm->images_name_map = key_value_new(image_file_count + 1 + 5, image_file_count * 20);
 	key_value_set_integer(&rm->images_name_map, "default", 0);
 	rm->images[0].data = default_image;
 	rm->images[0].width = default_image_width;
 	rm->images[0].height = default_image_height;
 
+	rm->shader_count = 0;
+	rm->shaders = malloc(sizeof(struct resource_manager_image) * shader_file_count);
+	rm->shaders_names_map = key_value_new(shader_file_count + 5, shader_file_count * 20);
+
+	rm->pixelfont_count = 0;
+	rm->pixelfonts = malloc(sizeof(struct pixel_font*) * pixelfont_file_count);
+	rm->pixelfonts_names_map = key_value_new(pixelfont_file_count + 5, pixelfont_file_count * 20);
+
 	rm->key_value_count = 0;
 	rm->audio_count = 0;
-	rm->shader_count = 0;
-	rm->pixelfont_count = 0;
 
 	uint8_t sub_path[512];
 
@@ -213,11 +239,7 @@ uint32_t resource_manager_new(struct resource_manager* rm, uint8_t* file_path) {
 
 				rm->images[rm->image_count].data = stbi_load(sub_path, &rm->images[rm->image_count].width, &rm->images[rm->image_count].height, &comp, 0);
 
-				if (rm->images[rm->image_count].data == NULL) {
-
-					printf("[RESOURCE MANAGER] Couldn't load file %s from %s\n", sub_path, &layout_maps_paths[i][0]);
-
-				}
+				if (rm->images[rm->image_count].data == NULL) printf("[RESOURCE MANAGER] Couldn't load %s from %s\n", sub_path, &layout_maps_paths[i][0]);
 
 				else {
 					key_value_set_integer(&rm->images_name_map, pair.key, rm->image_count);
@@ -235,9 +257,28 @@ uint32_t resource_manager_new(struct resource_manager* rm, uint8_t* file_path) {
 			}
 			else if (strcmp(&pair.value.string[dot1 + 1], "spv") == 0) {
 
+				rm->shaders[rm->shader_count].source_data = _resource_manager_load_file(sub_path, &rm->shaders[rm->shader_count].source_data_size);
+
+				if (rm->shaders[rm->shader_count].source_data == NULL) printf("[RESOURCE MANAGER] Couldn't load %s from %s\n", sub_path, &layout_maps_paths[i][0]);
+
+				else {
+					key_value_set_integer(&rm->shaders_names_map, pair.key, rm->shader_count);
+
+					rm->shader_count++;
+				}
 			}
+
 			else if (strcmp(&pair.value.string[dot1 + 1], "pixelfont") == 0) {
 
+				rm->pixelfonts[rm->pixelfont_count] = load_pixel_font(sub_path);
+
+				if (rm->pixelfonts[rm->pixelfont_count] == NULL) printf("[RESOURCE MANAGER] Couldn't load %s from %s\n", sub_path, &layout_maps_paths[i][0]);
+
+				else {
+					key_value_set_integer(&rm->pixelfonts_names_map, pair.key, rm->pixelfont_count);
+
+					rm->pixelfont_count++;
+				}
 			}
 
 		}
@@ -482,20 +523,32 @@ uint32_t resource_manager_use_vulkan_device(struct resource_manager* rm, VkDevic
 	vkFreeCommandBuffers(device, command_pool, 1, &cmd);
 	vkDestroyCommandPool(device, command_pool, 0);
 
+	for (uint32_t i = 0; i < rm->shader_count; i++) {
+
+		VkShaderModuleCreateInfo shader_info = { 0 };
+		shader_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+		shader_info.pCode = rm->shaders[i].source_data;
+		shader_info.pCode = rm->shaders[i].source_data_size;
+		VKCall(vkCreateShaderModule(rm->device, &shader_info, 0, &rm->shaders[i].shader_module));
+
+	}
+
 	return 0;
 }
 
 uint32_t resource_manager_drop_vulkan_device(struct resource_manager* rm) {
 
-	if (rm->image_count) {
+	for (uint32_t i = 0; i < rm->image_count; i++) {
 
-		for (uint32_t i = 0; i < rm->image_count; i++) {
+		vkDestroyImage(rm->device, rm->images[i].image, 0);
+		vkDestroyImageView(rm->device, rm->images[i].image_view, 0);
+	}
 
-			vkDestroyImage(rm->device, rm->images[i].image, 0);
-			vkDestroyImageView(rm->device, rm->images[i].image_view, 0);
-		}
+	vkFreeMemory(rm->device, rm->images_memory, 0);
 
-		vkFreeMemory(rm->device, rm->images_memory, 0);
+	for (uint32_t i = 0; i < rm->shader_count; i++) {
+	
+		vkDestroyShaderModule(rm->device, rm->shaders[i].shader_module, 0);
 	}
 
 	rm->device = 0;
@@ -507,9 +560,17 @@ uint32_t resource_manager_destroy(struct resource_manager* rm) {
 
 	if (rm->device) resource_manager_drop_vulkan_device(rm);
 
+	free(rm->images_name_map);
+	free(rm->images);
+
+	free(rm->shaders_names_map);
+	free(rm->shaders);
+
+	free(rm->pixelfonts_names_map);
+	free(rm->pixelfonts);
+
 	return 0;
 }
-
 
 uint32_t resource_manager_get_image_index(struct resource_manager* rm, uint8_t* name) {
 
@@ -517,4 +578,20 @@ uint32_t resource_manager_get_image_index(struct resource_manager* rm, uint8_t* 
 	key_value_get_integer(&rm->images_name_map, name, 0, &image_index);
 
 	return image_index;
+}
+
+int32_t resource_manager_get_shader_index(struct resource_manager* rm, uint8_t* name) {
+
+	int64_t shader_index;
+	key_value_get_integer(&rm->shaders_names_map, name, -1, &shader_index);
+
+	return shader_index;
+}
+
+int32_t resource_manager_get_pixelfont_index(struct resource_manager* rm, uint8_t* name) {
+
+	int64_t pixelfont_index;
+	key_value_get_integer(&rm->pixelfonts_names_map, name, -1, &pixelfont_index);
+
+	return pixelfont_index;
 }

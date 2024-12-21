@@ -1,1 +1,2 @@
-test: "test"
+menu_vertex: "shaders/menu_vertex.spv"
+menu_fragment: "shaders/menu_fragment.spv"

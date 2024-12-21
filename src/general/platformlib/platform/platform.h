@@ -132,8 +132,6 @@ int32_t window_is_active(uint32_t window);
 
 void window_destroy(uint32_t window);
 
-void window_draw(uint32_t window, uint8_t* buffer, int32_t width, int32_t height, int32_t scalar);
-
 struct point2d_int window_get_mouse_cursor_position(uint32_t window);
 
 void window_set_mouse_cursor_position(uint32_t window, int32_t x, int32_t y);

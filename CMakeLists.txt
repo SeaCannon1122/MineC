@@ -13,6 +13,8 @@ set(CLIENT_SOURCE_FILES
     src/client/simulator/simulator.c
     src/client/simulator/networker.c
     src/client/renderer/renderer.c
+    src/client/gui/gui.c
+    src/client/gui/menus.c
 
     src/general/resource_manager.c
     src/general/platformlib/platform/platform.c
@@ -20,7 +22,7 @@ set(CLIENT_SOURCE_FILES
     src/general/rendering/rendering_memory_manager.c
     src/general/rendering/vulkan_helpers.c
     src/general/rendering/rendering_window.c
-
+    src/general/rendering/gui/pixel_char.c
     src/general/key_value.c
 
 )

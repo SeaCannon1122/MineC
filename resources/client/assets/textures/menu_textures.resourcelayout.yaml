@@ -1,0 +1,5 @@
+menu_background: "menu/background.png"
+menu_button: "menu/button_texture.png"
+menu_button_hover: "menu/button_texture_hover.png"
+menu_button_short: "menu/button_texture_short.png"
+menu_button_hover_short: "menu/button_texture_hover_short.png"

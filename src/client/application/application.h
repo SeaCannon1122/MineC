@@ -112,6 +112,11 @@ struct application_state {
 			
 		} keyboard;
 
+		struct mouse_coords {
+			uint32_t x;
+			uint32_t y;
+		} mouse_coords;
+
 	} input_state;
 
 };

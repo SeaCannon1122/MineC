@@ -181,26 +181,6 @@ void window_destroy(uint32_t window) {
 	window_states[window].hwnd = NULL;
 }
 
-void window_draw(uint32_t window, uint8_t* buffer, int32_t width, int32_t height, int32_t scalar) {
-
-	if (!window_states[window].active) return;
-
-	HDC hdc = GetDC(window_states[window].hwnd);
-
-	BITMAPINFO bitmapInfo = { 0 };
-	bitmapInfo.bmiHeader.biWidth = width;
-	bitmapInfo.bmiHeader.biHeight = -height;
-	bitmapInfo.bmiHeader.biSize = sizeof(BITMAPINFO);
-	bitmapInfo.bmiHeader.biPlanes = 1;
-	bitmapInfo.bmiHeader.biBitCount = 32;
-	bitmapInfo.bmiHeader.biCompression = BI_RGB;
-
-	SetStretchBltMode(hdc, COLORONCOLOR);
-	StretchDIBits(hdc, 0, 0, width * scalar, height * scalar, 0, 0, width, height, buffer, &bitmapInfo, DIB_RGB_COLORS, SRCCOPY);
-
-	ReleaseDC(window_states[window].hwnd, hdc);
-}
-
 struct point2d_int window_get_mouse_cursor_position(uint32_t window) {
 	if (!window_states[window].active) return (struct point2d_int) { -1, -1 };
 

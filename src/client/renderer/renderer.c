@@ -4,6 +4,8 @@
 
 uint32_t renderer_create(struct game_client* game) {
 
+
+
 	return 0;
 }
 

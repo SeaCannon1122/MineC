@@ -4,8 +4,8 @@
 #include <general/resource_manager.h>
 
 enum resources_samplers {
-	RESOURCES_SAMPLER_DEFAULT,
-	RESOURCES_SAMPLER_INGAME_DEFAULT,
+	RESOURCE_SAMPLER_DEFAULT,
+	RESOURCE_SAMPLER_INGAME_DEFAULT,
 };
 
 struct resources_sampler_configuration {
@@ -35,6 +35,7 @@ static const struct resources_sampler_configuration resources_sampler_configurat
 enum resources_images {
 	RESOURCE_IMAGE_DEAFULT,
 	RESOURCE_IMAGE_DIRT,
+	RESOURCE_IMAGE_STONE
 };
 
 struct resources_image_configuration {
@@ -43,26 +44,40 @@ struct resources_image_configuration {
 };
 
 static const struct resources_image_configuration resources_image_configurations[] = {
-	{"default", RESOURCES_SAMPLER_DEFAULT},
-	{"dirt", RESOURCES_SAMPLER_DEFAULT},
+	{"default", RESOURCE_SAMPLER_DEFAULT},
+	{"dirt", RESOURCE_SAMPLER_DEFAULT},
+	{"stone", RESOURCE_SAMPLER_DEFAULT},
 };
 
 #define RESOURCES_SAMPLER_COUNT sizeof(resources_sampler_configurations) / sizeof(resources_sampler_configurations[0])
-#define RESOURCES_TEXTURE_ATLAS_LENGTH sizeof(resources_image_configurations) / sizeof(resources_image_configurations[0])
+#define RESOURCES_IMAGES_COUNT sizeof(resources_image_configurations) / sizeof(resources_image_configurations[0])
 
-enum resources_pixel_fonts {
-	RESOURCES_PIXEL_FONT_DEFAULT,
-	RESOURCES_PIXEL_FONT_DEBUG,
-	RESOURCES_PIXEL_FONT_SPECIAL
+enum resources_shaders {
+	RESOURCE_SHADER_MENU_VERTEX,
+	RESOURCE_SHADER_MENU_FRAGMENT,
 };
 
-static uint8_t* resources_pixel_font_tokens[] = {
+static uint8_t* resources_shader_tokens[] = {
+	"menu_vertex",
+	"menu_fragment"
+};
+
+#define RESOURCES_SHADERS_COUNT sizeof(resources_shader_tokens) / sizeof(resources_shader_tokens[0])
+
+
+enum resources_pixelfonts {
+	RESOURCE_PIXEL_FONT_DEFAULT,
+	RESOURCE_PIXEL_FONT_DEBUG,
+	RESOURCE_PIXEL_FONT_SPECIAL
+};
+
+static uint8_t* resources_pixelfont_tokens[] = {
 	"default",
 	"debug",
 	"special"
 };
 
-#define RESOURCES_PIXEL_FONT_COUNT sizeof(resources_pixel_font_tokens) / sizeof(resources_pixel_font_tokens[0])
+#define RESOURCES_PIXELFONTS_COUNT sizeof(resources_pixelfont_tokens) / sizeof(resources_pixelfont_tokens[0])
 
 struct resource_state {
 
@@ -72,15 +87,20 @@ struct resource_state {
 	struct resource_manager resource_manager;
 
 	//images
-	uint32_t texture_atlas[RESOURCES_TEXTURE_ATLAS_LENGTH];
+	uint32_t image_atlas[RESOURCES_IMAGES_COUNT];
 	VkSampler samplers[RESOURCES_SAMPLER_COUNT];
 
-	VkDescriptorImageInfo descriptor_image_infos[RESOURCES_TEXTURE_ATLAS_LENGTH];
+	VkDescriptorImageInfo descriptor_image_infos[RESOURCES_IMAGES_COUNT];
+	//shaders
+
+	uint32_t shader_atlas[RESOURCES_SHADERS_COUNT];
 
 	//pixelfonts
-	uint32_t pixel_font_atlas[RESOURCES_PIXEL_FONT_COUNT];
+	uint32_t pixelfont_atlas[RESOURCES_PIXELFONTS_COUNT];
 
 };
+
+struct game_client;
 
 uint32_t resources_create(struct game_client* game, uint32_t* resource_path);
 

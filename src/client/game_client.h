@@ -10,6 +10,7 @@
 #include "renderer/renderer.h"
 #include "simulator/simulator.h"
 #include "simulator/networker.h"
+#include "gui/gui.h"
 
 struct game_client {
 
@@ -20,6 +21,7 @@ struct game_client {
 	struct renderer renderer;
 	struct simulator_state simulator_state;
 	struct networker_state networker_state;
+	struct gui_state gui_state;
 
 };
 
