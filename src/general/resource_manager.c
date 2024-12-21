@@ -498,6 +498,8 @@ uint32_t resource_manager_drop_vulkan_device(struct resource_manager* rm) {
 		vkFreeMemory(rm->device, rm->images_memory, 0);
 	}
 
+	rm->device = 0;
+
 	return 0;
 }
 

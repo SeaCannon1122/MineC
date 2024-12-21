@@ -6,11 +6,13 @@ set(CLIENT_SOURCE_FILES
     src/client/main.c
     src/client/game_client.c
     src/client/application/application.c
-    src/client/graphics/graphics.c
-    src/client/graphics/graphics_device.c
+    src/client/application/graphics.c
+    src/client/application/graphics_device.c
     src/client/resources/resources.c
+    src/client/resources/settings.c
+    src/client/simulator/simulator.c
+    src/client/simulator/networker.c
     src/client/renderer/renderer.c
-    src/client/settings.c
 
     src/general/resource_manager.c
     src/general/platformlib/platform/platform.c
@@ -59,11 +61,6 @@ set(TEST_2_SOURCE_FILES
 )
 
 find_package(Vulkan REQUIRED)
-add_library(test_lib SHARED src/test/test_lib.c)
-
-add_executable(dummy src/dummy_main.c)
-target_link_libraries(dummy test_lib)
-
 include_directories(${Vulkan_INCLUDE_DIRS})
 link_libraries(${Vulkan_LIBRARIES})
 
@@ -95,7 +92,6 @@ if(WIN32)
     target_link_libraries(blocks_test2)
 
 elseif(UNIX)
-    find_package(OpenGL REQUIRED)
     find_package(X11 REQUIRED)
     
     include_directories(${X11_INCLUDE_DIR})

@@ -4,4 +4,5 @@
 
 uint32_t settings_initialize(struct game_client* game) {
 
+	return 0;
 }

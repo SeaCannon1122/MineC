@@ -108,7 +108,7 @@ uint32_t graphics_create(struct game_client* game) {
 
 	VKCall(vkCreateInstance(&instance_info, 0, &game->graphics_state.instance));
 
-	PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessengerEXT = vkGetInstanceProcAddr(game->graphics_state.instance, "vkCreateDebugUtilsMessengerEXT");
+	PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessengerEXT = (PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(game->graphics_state.instance, "vkCreateDebugUtilsMessengerEXT");
 
 	game->graphics_state.debug_messenger = 0;
 	if (vkCreateDebugUtilsMessengerEXT) {

@@ -1,5 +1,5 @@
 #ifndef SETTINGS_H
-#define SETIINGS_H
+#define SETTINGS_H
 
 #include <stdint.h>
 
@@ -18,6 +18,8 @@ struct settings_state {
 	} game_constants;
 
 };
+
+struct game_client;
 
 uint32_t settings_initialize(struct game_client* game);
 
