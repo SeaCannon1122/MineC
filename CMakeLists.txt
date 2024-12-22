@@ -6,15 +6,12 @@ set(CLIENT_SOURCE_FILES
     src/client/main.c
     src/client/game_client.c
     src/client/application/application.c
-    src/client/application/graphics.c
-    src/client/application/graphics_device.c
     src/client/resources/resources.c
     src/client/resources/settings.c
     src/client/simulator/simulator.c
     src/client/simulator/networker.c
     src/client/renderer/renderer.c
-    src/client/gui/gui.c
-    src/client/gui/menus.c
+    src/client/renderer/backend/renderer_backend.c
 
     src/general/resource_manager.c
     src/general/platformlib/platform/platform.c
@@ -74,6 +71,7 @@ add_executable(blocks_server ${SERVER_SOURCE_FILES})
 add_executable(blocks_test ${TEST_SOURCE_FILES})
 add_executable(blocks_test2 ${TEST_2_SOURCE_FILES})
 
+add_compile_definitions(CLIENT_GRAPHICS_API_VULKAN=1)
 
 if(WIN32)
 

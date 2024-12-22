@@ -11,7 +11,7 @@ int main(int argc, char* argv[]) {
 	show_console_window();
 
 	struct game_client game;
-	uint32_t game_return_status = run_game_client(&game, "../../../resources/client/root.resourcelayout.yaml");
+	uint32_t game_return_status = game_client_run(&game, "../../../resources/client/root.resourcelayout.yaml");
 
 	if (game_return_status != 0) {
 		printf("Press any key to exit ...");

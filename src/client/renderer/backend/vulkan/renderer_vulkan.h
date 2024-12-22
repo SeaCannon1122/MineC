@@ -1,15 +1,13 @@
-#ifndef GRAPHICS_H
-#define GRAPHICS_H
+#ifndef RENDERER_VULKAN_H
+#define RENDERER_VULKAN_H
 
-#include "general/rendering/vulkan_helpers.h"
+#include <stdint.h>
+#include "general/platformlib/platform/platform.h"
 #include "general/rendering/rendering_memory_manager.h"
-#include "general/rendering/rendering_window.h"
+#include "client/resources/resources.h"
 
-#include "graphics_device.h"
+struct renderer_backend {
 
-struct graphics_state {
-	
-	//static
 	VkPhysicalDevice gpus[16];
 	uint32_t gpu_queue_indices[16];
 	VkSurfaceFormatKHR gpu_surface_formats[16];
@@ -37,11 +35,13 @@ struct graphics_state {
 	VkFence img_available_fence;
 
 	VkRenderPass window_render_pass;
+
+	struct {
+		VkImage image;
+		VkImageView image_view;
+	} image_atlas[RESOURCES_IMAGES_COUNT];
+	VkDeviceMemory image_memory;
+
 };
 
-#endif // !GRAPHICS_H
-
-struct game_client;
-
-uint32_t graphics_create(struct game_client* game);
-uint32_t graphics_destroy(struct game_client* game);
+#endif // !RENDERER_VULKAN_H

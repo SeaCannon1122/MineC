@@ -17,8 +17,6 @@ uint32_t application_create(struct game_client* game) {
 
 	if (game->application_state.window == WINDOW_CREATION_FAILED) return 1;
 
-	if (graphics_create(game) != 0) return 2;
-
 	game->application_state.window_extent.width = window_get_width(game->application_state.window);
 	game->application_state.window_extent.height = window_get_height(game->application_state.window);
 
@@ -68,8 +66,6 @@ uint32_t application_handle_events(struct game_client* game) {
 			game->application_state.window_extent.height = new_height;
 
 			game->application_state.frame_flags |= FRAME_FLAG_SIZE_CHANGE;
-
-			rendering_window_resize(game->application_state.window);
 		}
 
 		
@@ -84,8 +80,6 @@ uint32_t application_handle_events(struct game_client* game) {
 }
 
 uint32_t application_destroy(struct game_client* game) {
-
-	graphics_destroy(game);
 
 	window_destroy(game->application_state.window);
 
