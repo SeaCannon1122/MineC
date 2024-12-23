@@ -76,11 +76,15 @@ uint32_t renderer_backend_create(struct game_client* game) {
 
 	}
 
+	pixel_char_renderer_new(&game->renderer_state.backend.pcr, game->renderer_state.backend.device, game->renderer_state.backend.gpu, game->renderer_state.backend.window_render_pass);
+
 	return 0;
 }
 
 
 uint32_t renderer_backend_destroy(struct game_client* game) {
+
+	pixel_char_renderer_destroy(&game->renderer_state.backend.pcr);
 
 	for (uint32_t i = 0; i < RENDERER_SAMPLING_CONFIGURATIONS_COUNT; i++) {
 		vkDestroySampler(game->renderer_state.backend.device, game->renderer_state.backend.samplers[i], 0);

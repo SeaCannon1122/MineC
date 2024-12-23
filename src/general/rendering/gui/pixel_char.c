@@ -303,13 +303,14 @@ uint32_t pixel_char_renderer_destroy(struct pixel_char_renderer* pcr) {
 	return 0;
 }
 
-uint32_t pixel_char_renderer_add_font(struct pixel_char_renderer* pcr, VkBuffer buffer, uint32_t font_index) {
+uint32_t pixel_char_renderer_add_font(struct pixel_char_renderer* pcr, VkBuffer buffer, uint32_t offset, uint32_t font_index) {
 
 	if (font_index >= MAX_PIXEL_FONTS) return 1;
 
 	VkDescriptorBufferInfo pixel_font_buffer_info = { 0 };
 	pixel_font_buffer_info.buffer = buffer;
-	pixel_font_buffer_info.range = VK_WHOLE_SIZE;
+	pixel_font_buffer_info.range = sizeof(struct pixel_font);
+	pixel_font_buffer_info.offset = offset;
 
 	VkWriteDescriptorSet pixel_font_buffer_write = { 0 };
 	pixel_font_buffer_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;

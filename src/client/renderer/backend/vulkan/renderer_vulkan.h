@@ -51,6 +51,10 @@ struct renderer_backend {
 
 	VkDescriptorImageInfo descriptor_image_infos[RENDERER_IMAGES_COUNT];
 
+	struct pixel_char_renderer pcr;
+	VkDeviceMemory pixelfonts_memory;
+	VkBuffer pixelfont_buffer;
+
 };
 
 #endif // !RENDERER_VULKAN_H

@@ -80,17 +80,14 @@ uint32_t renderer_backend_load_resources(struct game_client* game) {
 
 	VKCall(vkCreateBuffer(game->renderer_state.backend.device, &buffer_info, 0, &staging_buffer));
 
-	VkMemoryRequirements memory_requirements;
+	VkMemoryRequirements staging_memory_requirements;
 
-	vkGetBufferMemoryRequirements(game->renderer_state.backend.device, staging_buffer, &memory_requirements);
-
-	VkPhysicalDeviceMemoryProperties staging_memory_properties;
-	vkGetPhysicalDeviceMemoryProperties(game->renderer_state.backend.gpu, &staging_memory_properties);
+	vkGetBufferMemoryRequirements(game->renderer_state.backend.device, staging_buffer, &staging_memory_requirements);
 
 	VkMemoryAllocateInfo alloc_info = { 0 };
-	for (uint32_t i = 0; i < staging_memory_properties.memoryTypeCount; i++) {
+	for (uint32_t i = 0; i < memory_properties.memoryTypeCount; i++) {
 
-		if ((memory_requirements.memoryTypeBits & (1 << i)) && (staging_memory_properties.memoryTypes[i].propertyFlags & (VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)) == (VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)) {
+		if ((staging_memory_requirements.memoryTypeBits & (1 << i)) && (memory_properties.memoryTypes[i].propertyFlags & (VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)) == (VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)) {
 			alloc_info.memoryTypeIndex = i;
 			break;
 		}
@@ -285,17 +282,75 @@ uint32_t renderer_backend_load_resources(struct game_client* game) {
 		memory_bound += game->renderer_state.backend.images[i].mem_requirements.size;
 	}
 
+	for (uint32_t i = 0; i < RENDERER_IMAGES_COUNT; i++) {
+		game->renderer_state.backend.descriptor_image_infos[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		game->renderer_state.backend.descriptor_image_infos[i].imageView = game->renderer_state.backend.images[renderer_images[i].resource_image_index].image_view;
+		game->renderer_state.backend.descriptor_image_infos[i].sampler = game->renderer_state.backend.samplers[renderer_images[i].sampling_configuarion];
+	}
+
+
+	//pixelfonts
+	buffer_info.size = sizeof(struct pixel_font) * RESOURCES_PIXELFONTS_COUNT;
+	buffer_info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+	VKCall(vkCreateBuffer(game->renderer_state.backend.device, &buffer_info, 0, &game->renderer_state.backend.pixelfont_buffer));
+
+	VkMemoryRequirements mem_requirements;
+	vkGetBufferMemoryRequirements(game->renderer_state.backend.device, game->renderer_state.backend.pixelfont_buffer, &mem_requirements);
+
+	alloc_info.allocationSize = mem_requirements.size;
+
+	for (uint32_t i = 0; i < memory_properties.memoryTypeCount; i++) {
+
+		if ((mem_requirements.memoryTypeBits & (1 << i)) && (memory_properties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) {
+			alloc_info.memoryTypeIndex = i;
+			break;
+		}
+	}
+
+	VKCall(vkAllocateMemory(game->renderer_state.backend.device, &alloc_info, 0, &game->renderer_state.backend.pixelfonts_memory));
+	VKCall(vkBindBufferMemory(game->renderer_state.backend.device, game->renderer_state.backend.pixelfont_buffer, game->renderer_state.backend.pixelfonts_memory, 0));
+
+	for (uint32_t i = 0; i < RESOURCES_PIXELFONTS_COUNT; i++) {
+
+		memcpy(staging_buffer_host_handle, game->resource_state.pixelfont_atlas[i], sizeof(struct pixel_font));
+
+		VKCall(vkResetFences(game->renderer_state.backend.device, 1, &game->renderer_state.backend.queue_fence));
+
+		VkCommandBufferBeginInfo begin_info = { 0 };
+		begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+		VKCall(vkBeginCommandBuffer(game->renderer_state.backend.cmd, &begin_info));
+
+		VkBufferCopy copy_region = { 0 };
+		copy_region.srcOffset = 0;
+		copy_region.dstOffset = i * sizeof(struct pixel_font);
+		copy_region.size = sizeof(struct pixel_font);
+
+		vkCmdCopyBuffer(game->renderer_state.backend.cmd, staging_buffer, game->renderer_state.backend.pixelfont_buffer, 1, &copy_region);
+
+		VKCall(vkEndCommandBuffer(game->renderer_state.backend.cmd));
+
+		VkSubmitInfo submit_info = { 0 };
+		submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submit_info.commandBufferCount = 1;
+		submit_info.pCommandBuffers = &game->renderer_state.backend.cmd;
+
+		VKCall(vkQueueSubmit(game->renderer_state.backend.queue, 1, &submit_info, game->renderer_state.backend.queue_fence));
+
+		VKCall(vkWaitForFences(game->renderer_state.backend.device, 1, &game->renderer_state.backend.queue_fence, 1, UINT64_MAX));
+
+		pixel_char_renderer_add_font(&game->renderer_state.backend.pcr, game->renderer_state.backend.pixelfont_buffer, i * sizeof(struct pixel_font), i);
+
+	}
 
 	vkUnmapMemory(game->renderer_state.backend.device, staging_buffer_memory);
 
 	vkFreeMemory(game->renderer_state.backend.device, staging_buffer_memory, 0);
 	vkDestroyBuffer(game->renderer_state.backend.device, staging_buffer, 0);
 
-	for (uint32_t i = 0; i < RENDERER_IMAGES_COUNT; i++) {
-		game->renderer_state.backend.descriptor_image_infos[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		game->renderer_state.backend.descriptor_image_infos[i].imageView = game->renderer_state.backend.images[renderer_images[i].resource_image_index].image_view;
-		game->renderer_state.backend.descriptor_image_infos[i].sampler = game->renderer_state.backend.samplers[renderer_images[i].sampling_configuarion];
-	}
+	
 
 
 	return 0;
@@ -318,6 +373,9 @@ uint32_t update_descriptor_set_images(struct game_client* game, VkDescriptorSet 
 }
 
 uint32_t renderer_backend_unload_resources(struct game_client* game) {
+
+	vkDestroyBuffer(game->renderer_state.backend.device, game->renderer_state.backend.pixelfont_buffer, 0);
+	vkFreeMemory(game->renderer_state.backend.device, game->renderer_state.backend.pixelfonts_memory, 0);
 
 	for (uint32_t i = 0; i < RESOURCES_IMAGES_COUNT; i++) {
 
