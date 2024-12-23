@@ -1,3 +1,5 @@
+#pragma once
+
 #ifndef KEY_VALUE_H
 #define KEY_VALUE_H
 

@@ -1,3 +1,5 @@
+#pragma once
+
 #ifndef RENDERING_MEMORY_MANAGER_H
 #define RENDERING_MEMORY_MANAGER_H
 

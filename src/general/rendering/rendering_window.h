@@ -1,5 +1,7 @@
 #pragma once
 
+#pragma once
+
 #include <vulkan/vulkan.h>
 
 struct rendering_window_state {

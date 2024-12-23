@@ -52,7 +52,7 @@ uint32_t renderer_backend_device_create(struct game_client* game, uint32_t gpu_i
 
 	VKCall(semaphore_create(game->renderer_state.backend.device, &game->renderer_state.backend.aquire_semaphore));
 	VKCall(semaphore_create(game->renderer_state.backend.device, &game->renderer_state.backend.submit_semaphore));
-	VKCall(fence_create(game->renderer_state.backend.device, &game->renderer_state.backend.img_available_fence));
+	VKCall(fence_create(game->renderer_state.backend.device, &game->renderer_state.backend.queue_fence));
 
 	VKCall(rendering_memory_manager_new(
 		game->renderer_state.backend.device,
@@ -72,7 +72,7 @@ uint32_t renderer_backend_device_destroy(struct game_client* game) {
 
 	vkDestroySemaphore(game->renderer_state.backend.device, game->renderer_state.backend.submit_semaphore, 0);
 	vkDestroySemaphore(game->renderer_state.backend.device, game->renderer_state.backend.aquire_semaphore, 0);
-	vkDestroyFence(game->renderer_state.backend.device, game->renderer_state.backend.img_available_fence, 0);
+	vkDestroyFence(game->renderer_state.backend.device, game->renderer_state.backend.queue_fence, 0);
 	vkDestroyRenderPass(game->renderer_state.backend.device, game->renderer_state.backend.window_render_pass, 0);
 	vkFreeCommandBuffers(game->renderer_state.backend.device, game->renderer_state.backend.command_pool, 1, &game->renderer_state.backend.cmd);
 	vkDestroyCommandPool(game->renderer_state.backend.device, game->renderer_state.backend.command_pool, 0);

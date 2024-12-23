@@ -1,3 +1,5 @@
+#pragma once
+
 #ifndef RENDERER_BACKEND_H
 #define RENDERER_BACKEND_H
 
@@ -5,7 +7,7 @@
 
 #include "vulkan/renderer_vulkan.h"
 
-uint8_t* shader_token_prefix = "vk_";
+static uint8_t* shader_token_prefix = "vk_";
 
 #elif CLIENT_GRAPHICS_API_OPENGL
 

@@ -1,3 +1,5 @@
+#pragma once
+
 #ifndef GAME_CLIENT_H
 #define GAME_CLIENT_H
 

@@ -1,3 +1,5 @@
+#pragma once
+
 #ifndef RENDERER_VULKAN_H
 #define RENDERER_VULKAN_H
 
@@ -5,6 +7,8 @@
 #include "general/platformlib/platform/platform.h"
 #include "general/rendering/rendering_memory_manager.h"
 #include "client/resources/resources.h"
+
+#include "client/renderer/renderer_images.h"
 
 struct renderer_backend {
 
@@ -32,15 +36,18 @@ struct renderer_backend {
 
 	VkSemaphore submit_semaphore;
 	VkSemaphore aquire_semaphore;
-	VkFence img_available_fence;
+	VkFence queue_fence;
 
 	VkRenderPass window_render_pass;
+
+	VkSampler samplers[RENDERER_SAMPLING_CONFIGURATIONS_COUNT];
 
 	struct {
 		VkImage image;
 		VkImageView image_view;
-	} image_atlas[RESOURCES_IMAGES_COUNT];
-	VkDeviceMemory image_memory;
+		VkMemoryRequirements mem_requirements;
+	} images[RESOURCES_IMAGES_COUNT];
+	VkDeviceMemory images_memory;
 
 };
 

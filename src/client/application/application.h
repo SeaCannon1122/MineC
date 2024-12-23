@@ -1,3 +1,5 @@
+#pragma once
+
 #ifndef APPLICATION_STATE_H
 #define APPLICATION_STATE_H
 

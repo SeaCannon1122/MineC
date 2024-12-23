@@ -2,14 +2,20 @@
 
 #include "client/game_client.h"
 
+#include "renderer_images.h"
+
 uint32_t renderer_create(struct game_client* game) {
 
 	renderer_backend_create(game);
+
+	renderer_backend_load_resources(game);
 
 	return 0;
 }
 
 uint32_t renderer_destroy(struct game_client* game) {
+
+	renderer_backend_unload_resources(game);
 
 	renderer_backend_destroy(game);
 
