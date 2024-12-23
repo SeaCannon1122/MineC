@@ -210,7 +210,6 @@ int32_t window_is_active(uint32_t window) {
 
 void window_destroy(uint32_t window) {
 
-	XDestroyIC(window_states[window].ic);
 	if (window_states[window].active) XDestroyWindow(display, window_states[window].window);
 	window_states[window].window = 0;
 

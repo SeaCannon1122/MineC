@@ -12,6 +12,8 @@ uint32_t game_client_run(struct game_client* game, uint8_t* resource_path) {
 
 		renderer_render(game);
 
+		sleep_for_ms(20);
+
 	}
 
 	renderer_destroy(game);

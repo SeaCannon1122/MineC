@@ -25,7 +25,8 @@ uint32_t renderer_backend_list_gpus(struct game_client* game) {
 		VkPhysicalDeviceProperties dev_prop;
 		vkGetPhysicalDeviceProperties(game->renderer_state.backend.gpus[i], &dev_prop);
 
-		memcpy(game->application_state.machine_info.gpus[i].name, dev_prop.deviceName, 256);
+		memcpy(game->application_state.machine_info.gpus[i].name, dev_prop.deviceName, 64);
+		game->application_state.machine_info.gpus[i].name[64] = 0;
 		game->application_state.machine_info.gpus[i].usable = 0;
 		game->application_state.machine_info.gpus[i].gpu_type = dev_prop.deviceType;
 		game->application_state.machine_info.gpus[i].vulkan_version_major = VK_API_VERSION_MAJOR(dev_prop.apiVersion);

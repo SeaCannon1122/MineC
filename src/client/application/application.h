@@ -5,7 +5,7 @@
 
 #include <stdint.h>
 
-#define MAX_FRAME_CHAR_INPUTS 256
+#define MAX_FRAME_CHAR_INPUTS 64
 
 enum gpu_type {
 	GPU_TYPE_GPU = 2,
@@ -35,7 +35,7 @@ struct application_state {
 
 	struct machine_info {
 		struct gpus {
-			uint8_t name[256];
+			uint8_t name[64];
 			uint32_t usable;
 			uint32_t vulkan_version_major;
 			uint32_t vulkan_version_minor;

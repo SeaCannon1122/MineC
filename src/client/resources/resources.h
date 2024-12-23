@@ -5,7 +5,7 @@
 
 #include <general/resource_manager.h>
 
-static uint32_t default_image[] = {
+static const uint32_t default_image[] = {
 	0xeff800ff, 0xeff800ff, 0xeff800ff, 0xeff800ff, 0xeff800ff, 0xeff800ff, 0xeff800ff, 0xeff800ff,   0xff000000, 0xff000000, 0xff000000, 0xff000000, 0xff000000, 0xff000000, 0xff000000, 0xff000000,
 	0xeff800ff, 0xeff800ff, 0xeff800ff, 0xeff800ff, 0xeff800ff, 0xeff800ff, 0xeff800ff, 0xeff800ff,   0xff000000, 0xff000000, 0xff000000, 0xff000000, 0xff000000, 0xff000000, 0xff000000, 0xff000000,
 	0xeff800ff, 0xeff800ff, 0xeff800ff, 0xeff800ff, 0xeff800ff, 0xeff800ff, 0xeff800ff, 0xeff800ff,   0xff000000, 0xff000000, 0xff000000, 0xff000000, 0xff000000, 0xff000000, 0xff000000, 0xff000000,
@@ -24,15 +24,15 @@ static uint32_t default_image[] = {
 	0xff000000, 0xff000000, 0xff000000, 0xff000000, 0xff000000, 0xff000000, 0xff000000, 0xff000000,   0xeff800ff, 0xeff800ff, 0xeff800ff, 0xeff800ff, 0xeff800ff, 0xeff800ff, 0xeff800ff, 0xeff800ff,
 	0xff000000, 0xff000000, 0xff000000, 0xff000000, 0xff000000, 0xff000000, 0xff000000, 0xff000000,   0xeff800ff, 0xeff800ff, 0xeff800ff, 0xeff800ff, 0xeff800ff, 0xeff800ff, 0xeff800ff, 0xeff800ff,
 };
-static uint32_t default_image_width = 16;
-static uint32_t default_image_height = 16;
+static const uint32_t default_image_width = 16;
+static const uint32_t default_image_height = 16;
 
 enum resources_images {
 	RESOURCE_IMAGE_DIRT,
 	RESOURCE_IMAGE_STONE
 };
 
-static uint8_t* resources_image_tokens[] = {
+static const uint8_t* const resources_image_tokens[] = {
 	"dirt",
 	"stone",
 };
@@ -44,7 +44,7 @@ enum resources_shaders {
 	RESOURCE_SHADER_MENU_FRAGMENT,
 };
 
-static uint8_t* resources_shader_tokens[] = {
+static const uint8_t* const resources_shader_tokens[] = {
 	"menu_vertex",
 	"menu_fragment"
 };
@@ -54,14 +54,14 @@ static uint8_t* resources_shader_tokens[] = {
 
 enum resources_pixelfonts {
 	RESOURCE_PIXEL_FONT_DEFAULT,
-	RESOURCE_PIXEL_FONT_DEBUG,
-	RESOURCE_PIXEL_FONT_SPECIAL
+	RESOURCE_PIXEL_FONT_WIDE,
+	RESOURCE_PIXEL_FONT_RECTANGULAR
 };
 
-static uint8_t* resources_pixelfont_tokens[] = {
+static const uint8_t* const resources_pixelfont_tokens[] = {
 	"default",
-	"debug",
-	"special"
+	"wide",
+	"rectangular"
 };
 
 #define RESOURCES_PIXELFONTS_COUNT sizeof(resources_pixelfont_tokens) / sizeof(resources_pixelfont_tokens[0])
@@ -73,6 +73,11 @@ struct resource_state {
 
 	//images
 	struct resource_manager_image image_atlas[RESOURCES_IMAGES_COUNT];
+
+	//pixelfonts
+	struct pixel_font* pixelfont_atlas[RESOURCES_PIXELFONTS_COUNT];
+	struct pixel_font* error_pixelfont;
+
 };
 
 struct game_client;

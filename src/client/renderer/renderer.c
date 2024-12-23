@@ -27,6 +27,7 @@ uint32_t renderer_render(struct game_client* game) {
 	if (game->application_state.frame_flags & FRAME_FLAG_SHOULD_RENDER == 0) return 0;
 
 	if (game->application_state.frame_flags & FRAME_FLAG_SIZE_CHANGE) {
+		renderer_backend_resize(game);
 
 	}
 

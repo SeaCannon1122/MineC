@@ -49,6 +49,8 @@ struct renderer_backend {
 	} images[RESOURCES_IMAGES_COUNT];
 	VkDeviceMemory images_memory;
 
+	VkDescriptorImageInfo descriptor_image_infos[RENDERER_IMAGES_COUNT];
+
 };
 
 #endif // !RENDERER_VULKAN_H

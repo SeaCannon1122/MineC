@@ -291,6 +291,28 @@ uint32_t renderer_backend_load_resources(struct game_client* game) {
 	vkFreeMemory(game->renderer_state.backend.device, staging_buffer_memory, 0);
 	vkDestroyBuffer(game->renderer_state.backend.device, staging_buffer, 0);
 
+	for (uint32_t i = 0; i < RENDERER_IMAGES_COUNT; i++) {
+		game->renderer_state.backend.descriptor_image_infos[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		game->renderer_state.backend.descriptor_image_infos[i].imageView = game->renderer_state.backend.images[renderer_images[i].resource_image_index].image_view;
+		game->renderer_state.backend.descriptor_image_infos[i].sampler = game->renderer_state.backend.samplers[renderer_images[i].sampling_configuarion];
+	}
+
+
+	return 0;
+}
+
+uint32_t update_descriptor_set_images(struct game_client* game, VkDescriptorSet dst_set, uint32_t dst_binding, uint32_t dst_array_element) {
+
+	VkWriteDescriptorSet descriptor_set_update_write = { 0 };
+	descriptor_set_update_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	descriptor_set_update_write.dstSet = dst_set;
+	descriptor_set_update_write.dstBinding = dst_binding;
+	descriptor_set_update_write.dstArrayElement = dst_array_element;
+	descriptor_set_update_write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	descriptor_set_update_write.descriptorCount = RESOURCES_IMAGES_COUNT;
+	descriptor_set_update_write.pImageInfo = game->renderer_state.backend.descriptor_image_infos;
+
+	vkUpdateDescriptorSets(game->renderer_state.backend.device, 1, &descriptor_set_update_write, 0, NULL);
 
 	return 0;
 }

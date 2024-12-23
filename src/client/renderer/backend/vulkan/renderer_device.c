@@ -2,6 +2,8 @@
 
 uint32_t renderer_backend_device_create(struct game_client* game, uint32_t gpu_index) {
 
+	game->application_state.machine_info.gpu_index = gpu_index;
+
 	game->renderer_state.backend.queue_index = game->renderer_state.backend.gpu_queue_indices[gpu_index];
 	game->renderer_state.backend.gpu = game->renderer_state.backend.gpus[gpu_index];
 	game->renderer_state.backend.surface_format = game->renderer_state.backend.gpu_surface_formats[gpu_index];

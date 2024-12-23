@@ -30,10 +30,10 @@ struct pixel_font* load_pixel_font(char* src) {
 	return buffer;
 }
 
-uint32_t pixel_char_renderer_new(struct pixel_char_renderer* pcr, struct rendering_memory_manager* rmm, VkDevice device, VkRenderPass render_pass) {
+uint32_t pixel_char_renderer_new(struct pixel_char_renderer* pcr, VkDevice device, VkPhysicalDevice gpu, VkRenderPass render_pass) {
 
 	pcr->device = device;
-	pcr->font_count = 0;
+	pcr->gpu = gpu;
 
 	VkDescriptorSetLayoutBinding pixel_font_buffer_binding = { 0 };
 	pixel_font_buffer_binding.descriptorCount = 1;
@@ -229,9 +229,38 @@ uint32_t pixel_char_renderer_new(struct pixel_char_renderer* pcr, struct renderi
 	vkDestroyShaderModule(pcr->device, vertex_shader, 0);
 	vkDestroyShaderModule(pcr->device, fragment_shader, 0);
 
+	uint32_t pixel_char_buffer_size = 4096;
 
-	VKCall(VkBuffer_new(rmm, sizeof(struct pixel_render_char) * 16384, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, &pcr->pixel_char_buffer));
+	VkBufferCreateInfo buffer_info = { 0 };
+	buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	buffer_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+	buffer_info.size = pixel_char_buffer_size;
+	buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
+	VKCall(vkCreateBuffer(pcr->device, &buffer_info, 0, &pcr->pixel_char_buffer));
+
+	VkMemoryRequirements memory_requirements;
+
+	vkGetBufferMemoryRequirements(pcr->device, pcr->pixel_char_buffer, &memory_requirements);
+
+	VkPhysicalDeviceMemoryProperties memory_properties;
+	vkGetPhysicalDeviceMemoryProperties(pcr->gpu, &memory_properties);
+
+	VkMemoryAllocateInfo alloc_info = { 0 };
+	for (uint32_t i = 0; i < memory_properties.memoryTypeCount; i++) {
+
+		if ((memory_requirements.memoryTypeBits & (1 << i)) && (memory_properties.memoryTypes[i].propertyFlags & (VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)) == (VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)) {
+			alloc_info.memoryTypeIndex = i;
+			break;
+		}
+	}
+
+	alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	alloc_info.allocationSize = (pixel_char_buffer_size < memory_requirements.size ? memory_requirements.size : pixel_char_buffer_size);
+
+	VKCall(vkAllocateMemory(pcr->device, &alloc_info, 0, &pcr->pixel_char_buffer_memory));
+	VKCall(vkBindBufferMemory(pcr->device, pcr->pixel_char_buffer, pcr->pixel_char_buffer_memory, 0));
+	VKCall(vkMapMemory(pcr->device, pcr->pixel_char_buffer_memory, 0, pixel_char_buffer_size, 0, &pcr->pixel_char_buffer_host_handle));
 
 	VkDescriptorPoolSize pool_size = { 0 };
 	pool_size.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
@@ -265,45 +294,40 @@ uint32_t pixel_char_renderer_destroy(struct pixel_char_renderer* pcr) {
 
 	vkDestroyPipeline(pcr->device, pcr->pipeline, 0);
 	vkDestroyPipelineLayout(pcr->device, pcr->pipe_layout, 0);
-
 	vkDestroyDescriptorSetLayout(pcr->device, pcr->set_layout, 0);
 
-	VkBuffer_destroy(&pcr->device, &pcr->pixel_char_buffer);
-	for (uint32_t i = 0; i < pcr->font_count; i++) VkBuffer_destroy(&pcr->device, &pcr->pixel_font_buffer[i]);
+	vkUnmapMemory(pcr->device, pcr->pixel_char_buffer_memory);
+	vkFreeMemory(pcr->device, pcr->pixel_char_buffer_memory, 0);
+	vkDestroyBuffer(pcr->device, pcr->pixel_char_buffer, 0);
 
 	return 0;
 }
 
-uint32_t pixel_char_renderer_add_font(struct pixel_char_renderer* pcr, struct rendering_memory_manager* rmm, struct pixel_font* font_data) {
+uint32_t pixel_char_renderer_add_font(struct pixel_char_renderer* pcr, VkBuffer buffer, uint32_t font_index) {
 
-	if (pcr->font_count >= MAX_PIXEL_FONTS) return 1;
-
-	VKCall(VkBuffer_new(rmm, sizeof(struct pixel_font), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, &pcr->pixel_font_buffer[pcr->font_count]));
-	VKCall(VkBuffer_fill(rmm, &pcr->pixel_font_buffer[pcr->font_count], font_data, sizeof(struct pixel_font), 0));
+	if (font_index >= MAX_PIXEL_FONTS) return 1;
 
 	VkDescriptorBufferInfo pixel_font_buffer_info = { 0 };
-	pixel_font_buffer_info.buffer = pcr->pixel_font_buffer[pcr->font_count].buffer;
+	pixel_font_buffer_info.buffer = buffer;
 	pixel_font_buffer_info.range = VK_WHOLE_SIZE;
 
 	VkWriteDescriptorSet pixel_font_buffer_write = { 0 };
 	pixel_font_buffer_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	pixel_font_buffer_write.dstSet = pcr->descriptor_set;
 	pixel_font_buffer_write.pBufferInfo = &pixel_font_buffer_info;
-	pixel_font_buffer_write.dstBinding = pcr->font_count;
+	pixel_font_buffer_write.dstBinding = font_index;
 	pixel_font_buffer_write.descriptorCount = 1;
 	pixel_font_buffer_write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 
 	vkUpdateDescriptorSets(pcr->device, 1, &pixel_font_buffer_write, 0, 0);
 
-	pcr->font_count++;
-
 	return 0;
 }
 
-uint32_t pixel_char_renderer_fill_chars(struct pixel_char_renderer* pcr, struct rendering_memory_manager* rmm, struct pixel_render_char* chars, uint32_t chars_count) {
+uint32_t pixel_char_renderer_fill_chars(struct pixel_char_renderer* pcr, struct pixel_render_char* chars, uint32_t chars_count) {
 	pcr->chars_to_draw = chars_count;
 
-	VKCall(VkBuffer_fill(rmm, &pcr->pixel_char_buffer, chars, sizeof(struct pixel_render_char) * chars_count, 0));
+	memcpy(pcr->pixel_char_buffer_host_handle, chars, sizeof(struct pixel_render_char)* chars_count);
 
 	return 0;
 }
@@ -335,7 +359,7 @@ uint32_t pixel_char_renderer_render(struct pixel_char_renderer* pcr, VkCommandBu
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pcr->pipeline);
 
 	VkDeviceSize device_size = 0;
-	vkCmdBindVertexBuffers(cmd, 0, 1, &pcr->pixel_char_buffer.buffer, &device_size);
+	vkCmdBindVertexBuffers(cmd, 0, 1, &pcr->pixel_char_buffer, &device_size);
 
 	vkCmdPushConstants(
 		cmd,

@@ -21,8 +21,6 @@ uint32_t renderer_backend_create(struct game_client* game) {
 	game->renderer_state.backend.device = 0;
 	for (int i = 0; i < game->application_state.machine_info.gpu_count; i++) if (game->application_state.machine_info.gpus[i].usable) {
 
-		game->application_state.machine_info.gpu_index = i;
-
 		renderer_backend_device_create(game, i);
 		break;
 	}

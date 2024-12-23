@@ -5,6 +5,8 @@
 #include "general/rendering/gui/pixel_char.h"
 #include "general/rendering/rendering_window.h"
 
+#include "general/rendering/rendering_memory_manager.h"
+
 VkInstance instance;
 VkDebugUtilsMessengerEXT debug_messenger;
 
@@ -62,17 +64,27 @@ int main(int argc, char* argv[]) {
 	VKCall(rendering_memory_manager_new(device, gpu, queue, queue_index, 10000000, &rmm));
 	
 	struct pixel_char_renderer pcr;
-	pixel_char_renderer_new(&pcr, &rmm, device, render_pass);
+	pixel_char_renderer_new(&pcr, device, gpu, render_pass);
 
 
-	struct pixel_font* special_font = load_pixel_font("../../../resources/client/assets/fonts/special.pixelfont");
+	struct pixel_font* rectangular_font = load_pixel_font("../../../resources/client/assets/fonts/default.pixelfont");
 	struct pixel_font* debug_font = load_pixel_font("../../../resources/client/assets/fonts/debug.pixelfont");
 
-	pixel_char_renderer_add_font(&pcr, &rmm, special_font);
-	pixel_char_renderer_add_font(&pcr, &rmm, special_font);
+	/*rectangular_font->char_font_entries[33].layout[6] += 3;*/
+
+	struct rendering_buffer rectangular_font_buffer;
+	struct rendering_buffer debug_font_buffer;
+
+	VkBuffer_new(&rmm, sizeof(struct pixel_font), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, &rectangular_font_buffer);
+	VkBuffer_new(&rmm, sizeof(struct pixel_font), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, &debug_font_buffer);
+	VkBuffer_fill(&rmm, &rectangular_font_buffer, rectangular_font, sizeof(struct pixel_font), 0);
+	VkBuffer_fill(&rmm, &debug_font_buffer, debug_font, sizeof(struct pixel_font), 0);
+
+	pixel_char_renderer_add_font(&pcr, rectangular_font_buffer.buffer, 0);
+	pixel_char_renderer_add_font(&pcr, debug_font_buffer.buffer, 2);
 
 
-	char pixel_str[] = "HELLOW WORLD!";
+	char pixel_str[] = "HELLOW WORLD! This is so crazy right now! 1+1 = 2*2^4-80 / 3";
 	
 	struct pixel_render_char {
 		uint8_t color[4];
@@ -83,15 +95,15 @@ int main(int argc, char* argv[]) {
 		uint16_t size;
 	};
 
-#define string_to_pixel_char(name, str, size, x, y, flags) struct pixel_render_char name[sizeof(str) - 1];\
+#define string_to_pixel_char(name, str, size, x, y, flags, r, g, b, a, r_b, g_b, b_b, a_b) struct pixel_render_char name[sizeof(str) - 1];\
 for(int i = 0; i < sizeof(str) - 1; i++) {\
-if(i == 0) name[i] = (struct pixel_render_char){ { 220, 220, 220, 255 }, { 255, 0, 0, 255 }, str[i], {x, y}, flags, size };\
-else name[i] = (struct pixel_render_char){ { 220, 220, 220, 255 }, { 255, 0, 0, 255 }, str[i], {name[i-1].position[0] + (size * ((debug_font->char_font_entries[name[i-1].value].width + 3) / 2 )), y}, flags, size  };\
+if(i == 0) name[i] = (struct pixel_render_char){ { r, g, b, a }, { r_b, g_b, b_b, a_b }, str[i], {x, y}, flags, size };\
+else name[i] = (struct pixel_render_char){ { r, g, b, a }, { r_b, g_b, b_b, a_b }, str[i], {name[i-1].position[0] + (size * ((rectangular_font->char_font_entries[name[i-1].value].width + 3) / 2 )), y}, flags, size  };\
 }\
 
-	string_to_pixel_char(chars, pixel_str, 20, 100, 100, PIXEL_CHAR_SHADOW_MASK | PIXEL_CHAR_BACKGROUND_MASK | PIXEL_CHAR_CURSIVE_MASK |PIXEL_CHAR_UNDERLINE_MASK)
+	string_to_pixel_char(chars, pixel_str, 3, 100, 100, PIXEL_CHAR_BACKGROUND_MASK | PIXEL_CHAR_UNDERLINE_MASK, 255, 255, 0, 127, 127, 0, 255, 255)
 
-	pixel_char_renderer_fill_chars(&pcr, &rmm, chars, sizeof(pixel_str));
+	pixel_char_renderer_fill_chars(&pcr, chars, sizeof(pixel_str));
 
 #define FRAME_TIME_FRAMES_AVERAGE 128
 #define FPS 60.
@@ -188,6 +200,9 @@ else name[i] = (struct pixel_render_char){ { 220, 220, 220, 255 }, { 255, 0, 0, 
 	
 
 close:
+
+	VkBuffer_destroy(&rmm, &rectangular_font_buffer);
+	VkBuffer_destroy(&rmm, &debug_font_buffer);
 
 	pixel_char_renderer_destroy(&pcr);
 	
