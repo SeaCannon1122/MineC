@@ -5,6 +5,7 @@
 
 #include <stdio.h>
 #include <malloc.h>
+#include <string.h>
 
 #define __PIXEL_CHAR_WIDTH(c, font_map) (((struct pixel_font*)((font_map)[(c).masks & PIXEL_CHAR_FONT_MASK]))->char_font_entries[(c).value].width)
 
@@ -229,7 +230,7 @@ uint32_t pixel_char_renderer_new(struct pixel_char_renderer* pcr, VkDevice devic
 	vkDestroyShaderModule(pcr->device, vertex_shader, 0);
 	vkDestroyShaderModule(pcr->device, fragment_shader, 0);
 
-	uint32_t pixel_char_buffer_size = 4096;
+	uint32_t pixel_char_buffer_size = 4096 * sizeof(struct pixel_render_char);
 
 	VkBufferCreateInfo buffer_info = { 0 };
 	buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;

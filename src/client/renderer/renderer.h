@@ -5,6 +5,16 @@
 
 #include "backend/renderer_backend.h"
 
+struct renderer_rectangle {
+
+	int16_t x[4];
+	int16_t y[4];
+	float u[4];
+	float v[4];
+
+	uint32_t renderer_image_index;
+};
+
 struct renderer_state {
 
 	struct renderer_backend backend;

@@ -1,2 +1,2 @@
-vk_menu_vertex: "shaders/menu_vertex.spv"
-vk_menu_fragment: "shaders/menu_fragment.spv"
+vk_basic_vertex: "shaders/basic_vertex.spv"
+vk_basic_fragment: "shaders/basic_fragment.spv"

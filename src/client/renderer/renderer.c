@@ -31,6 +31,51 @@ uint32_t renderer_render(struct game_client* game) {
 
 	}
 
+	char pixel_str[] = "WWLLOW!";
+
+#define string_to_pixel_char(name, str, size, x, y, flags, r, g, b, a, r_b, g_b, b_b, a_b) struct pixel_render_char name[sizeof(str) - 1];\
+for(int i = 0; i < sizeof(str) - 1; i++) {\
+if(i == 0) name[i] = (struct pixel_render_char){ { r, g, b, a }, { r_b, g_b, b_b, a_b }, str[i], {x, y}, flags, size };\
+else name[i] = (struct pixel_render_char){ { r, g, b, a }, { r_b, g_b, b_b, a_b }, str[i], {name[i-1].position[0] + (size * ((game->resource_state.pixelfont_atlas[RESOURCE_PIXEL_FONT_DEFAULT]->char_font_entries[name[i-1].value].width + 3) / 2 )), y}, flags, size  };\
+}\
+
+	string_to_pixel_char(chars, pixel_str, 3, 100 + 3 * game->resource_state.image_atlas[RESOURCE_IMAGE_BUTTON].width / 2 - 40, 100 + 3 * game->resource_state.image_atlas[RESOURCE_IMAGE_BUTTON].height / 2 - 10, PIXEL_CHAR_UNDERLINE_MASK | PIXEL_CHAR_SHADOW_MASK, 255, 255, 255, 255, 127, 0, 255, 255)
+
+	chars[1].masks |= 2;
+
+	renderer_backend_set_pixel_chars(game, chars, sizeof(pixel_str) - 1);
+
+	struct renderer_rectangle rectangles[8];
+
+	rectangles[0].renderer_image_index = RESOURCE_IMAGE_BUTTON;
+
+	rectangles[0].u[0] = 0;
+	rectangles[0].u[1] = 0;
+	rectangles[0].u[2] = 1;
+	rectangles[0].u[3] = 1;
+
+	rectangles[0].v[0] = 0;
+	rectangles[0].v[1] = 1;
+	rectangles[0].v[2] = 1;
+	rectangles[0].v[3] = 0;
+
+	rectangles[0].x[0] = 100;
+	rectangles[0].x[1] = 100;
+	rectangles[0].x[2] = 100 + 3 * game->resource_state.image_atlas[RESOURCE_IMAGE_BUTTON].width;
+	rectangles[0].x[3] = 100 + 3 * game->resource_state.image_atlas[RESOURCE_IMAGE_BUTTON].width;
+
+	rectangles[0].y[0] = 100;
+	rectangles[0].y[1] = 100 + 3 * game->resource_state.image_atlas[RESOURCE_IMAGE_BUTTON].height;
+	rectangles[0].y[2] = 100 + 3 * game->resource_state.image_atlas[RESOURCE_IMAGE_BUTTON].height;
+	rectangles[0].y[3] = 100;
+
+
+
+	renderer_backend_set_rectangles(game, rectangles, 2);
+
+	renderer_backend_render(game);
+
+	return 0;
 }
 
 uint32_t renderer_reload_resources(struct game_client* game) {
@@ -39,4 +84,5 @@ uint32_t renderer_reload_resources(struct game_client* game) {
 
 	renderer_backend_load_resources(game);
 	
+	return 0;
 }

@@ -15,7 +15,7 @@ int main(int argc, char* argv[]) {
 
 	if (game_return_status != 0) {
 		printf("Press any key to exit ...");
-		getch();
+		getchar();
 	}
 
 	networking_exit();

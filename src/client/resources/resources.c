@@ -4,7 +4,7 @@
 
 #include "client/game_client.h"
 
-uint32_t resources_create(struct game_client* game, uint32_t* resource_path) {
+uint32_t resources_create(struct game_client* game, uint8_t* resource_path) {
 	resource_manager_new(&game->resource_state.resource_manager, resource_path);
 
 	sprintf(game->resource_state.resource_manager_root_path, resource_path);

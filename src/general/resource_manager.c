@@ -204,7 +204,7 @@ uint32_t resource_manager_new(struct resource_manager* rm, uint8_t* file_path) {
 			if (strcmp(&pair.value.string[dot1 + 1], "png") == 0) {
 				uint32_t comp;
 
-				rm->images[rm->image_count].data = stbi_load(sub_path, &rm->images[rm->image_count].width, &rm->images[rm->image_count].height, &comp, 0);
+				rm->images[rm->image_count].data = stbi_load(sub_path, &rm->images[rm->image_count].width, &rm->images[rm->image_count].height, &comp, 4);
 
 				if (rm->images[rm->image_count].data == NULL) printf("[RESOURCE MANAGER] Couldn't load %s from %s\n", sub_path, &layout_maps_paths[i][0]);
 
@@ -222,7 +222,12 @@ uint32_t resource_manager_new(struct resource_manager* rm, uint8_t* file_path) {
 			else if (strcmp(&pair.value.string[dot1 + 1], "mp3") == 0) {
 
 			}
-			else if (strcmp(&pair.value.string[dot1 + 1], "spv") == 0) {
+			else if (
+				strcmp(&pair.value.string[dot1 + 1], "spv") == 0 || 
+				strcmp(&pair.value.string[dot1 + 1], "vert") == 0 || 
+				strcmp(&pair.value.string[dot1 + 1], "frag") == 0 || 
+				strcmp(&pair.value.string[dot1 + 1], "glsl") == 0 
+			) {
 
 				rm->shaders[rm->shader_count].source_data = _resource_manager_load_file(sub_path, &rm->shaders[rm->shader_count].source_data_size);
 

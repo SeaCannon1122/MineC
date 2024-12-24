@@ -8,6 +8,8 @@ uint32_t floor_log2(uint32_t n) {
 	return log;
 }
 
+#define max(x, y) (x > y ? x : y)
+
 uint32_t renderer_backend_load_resources(struct game_client* game) {
 
 	size_t max_image_memory_size = 0;
@@ -26,7 +28,7 @@ uint32_t renderer_backend_load_resources(struct game_client* game) {
 		image_info.mipLevels = mip_level_counts[i];
 		image_info.arrayLayers = 1;
 		image_info.imageType = VK_IMAGE_TYPE_2D;
-		image_info.format = VK_FORMAT_B8G8R8A8_SRGB;;
+		image_info.format = VK_FORMAT_R8G8B8A8_UNORM;;
 		image_info.extent = (VkExtent3D){ game->resource_state.image_atlas[i].width, game->resource_state.image_atlas[i].height, 1 };
 		image_info.samples = VK_SAMPLE_COUNT_1_BIT;
 		image_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
@@ -110,15 +112,13 @@ uint32_t renderer_backend_load_resources(struct game_client* game) {
 		VkImageViewCreateInfo view_info = { 0 };
 		view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 		view_info.image = game->renderer_state.backend.images[i].image;
-		view_info.format = VK_FORMAT_B8G8R8A8_SRGB;
+		view_info.format = VK_FORMAT_R8G8B8A8_UNORM;
 		view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 		view_info.subresourceRange.layerCount = 1;
 		view_info.subresourceRange.levelCount = mip_level_counts[i];
 		view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
 
 		VKCall(vkCreateImageView(game->renderer_state.backend.device, &view_info, 0, &game->renderer_state.backend.images[i].image_view));
-
-		game->renderer_state.backend.images[i].mem_requirements = (VkMemoryRequirements){ 0 };
 
 		memcpy(staging_buffer_host_handle, game->resource_state.image_atlas[i].data, game->resource_state.image_atlas[i].width * game->resource_state.image_atlas[i].height * 4);
 
@@ -157,7 +157,6 @@ uint32_t renderer_backend_load_resources(struct game_client* game) {
 		copy_region.imageExtent = (VkExtent3D){ game->resource_state.image_atlas[i].width, game->resource_state.image_atlas[i].height, 1};
 		copy_region.imageSubresource.layerCount = 1;
 		copy_region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		copy_region.bufferOffset = memory_bound;
 
 		vkCmdCopyBufferToImage(game->renderer_state.backend.cmd, staging_buffer, game->renderer_state.backend.images[i].image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_region);
 
@@ -282,12 +281,58 @@ uint32_t renderer_backend_load_resources(struct game_client* game) {
 		memory_bound += game->renderer_state.backend.images[i].mem_requirements.size;
 	}
 
+	VkDescriptorSetLayoutBinding binding = { 0 };
+	binding.binding = 0;
+	binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	binding.descriptorCount = RENDERER_IMAGES_COUNT;
+	binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	binding.pImmutableSamplers = 0;
+
+	VkDescriptorSetLayoutCreateInfo layout_create_info = { 0 };
+	layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	layout_create_info.bindingCount = 1;
+	layout_create_info.pBindings = &binding;
+
+	VKCall(vkCreateDescriptorSetLayout(game->renderer_state.backend.device, &layout_create_info, 0, &game->renderer_state.backend.images_descriptor_set_layout));
+
+	VkDescriptorPoolSize pool_size = { 0 };
+	pool_size.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	pool_size.descriptorCount = RENDERER_IMAGES_COUNT;
+
+	VkDescriptorPoolCreateInfo pool_create_info = { 0 };
+	pool_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	pool_create_info.poolSizeCount = 1;
+	pool_create_info.pPoolSizes = &pool_size;
+	pool_create_info.maxSets = 1;
+
+	VKCall(vkCreateDescriptorPool(game->renderer_state.backend.device, &pool_create_info, 0, &game->renderer_state.backend.images_descriptor_pool));
+
+	VkDescriptorSetAllocateInfo descriptor_set_alloc_info = { 0 };
+	descriptor_set_alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	descriptor_set_alloc_info.descriptorPool = game->renderer_state.backend.images_descriptor_pool;
+	descriptor_set_alloc_info.descriptorSetCount = 1;
+	descriptor_set_alloc_info.pSetLayouts = &game->renderer_state.backend.images_descriptor_set_layout;
+
+	VKCall(vkAllocateDescriptorSets(game->renderer_state.backend.device, &descriptor_set_alloc_info, &game->renderer_state.backend.images_descriptor_set));
+
+	VkDescriptorImageInfo descriptor_image_infos[RENDERER_IMAGES_COUNT];
+
 	for (uint32_t i = 0; i < RENDERER_IMAGES_COUNT; i++) {
-		game->renderer_state.backend.descriptor_image_infos[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		game->renderer_state.backend.descriptor_image_infos[i].imageView = game->renderer_state.backend.images[renderer_images[i].resource_image_index].image_view;
-		game->renderer_state.backend.descriptor_image_infos[i].sampler = game->renderer_state.backend.samplers[renderer_images[i].sampling_configuarion];
+		descriptor_image_infos[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		descriptor_image_infos[i].imageView = game->renderer_state.backend.images[renderer_images[i].resource_image_index].image_view;
+		descriptor_image_infos[i].sampler = game->renderer_state.backend.samplers[renderer_images[i].sampling_configuarion];
 	}
 
+	VkWriteDescriptorSet descriptor_set_update_write = { 0 };
+	descriptor_set_update_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	descriptor_set_update_write.dstSet = game->renderer_state.backend.images_descriptor_set;
+	descriptor_set_update_write.dstBinding = 0;
+	descriptor_set_update_write.dstArrayElement = 0;
+	descriptor_set_update_write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	descriptor_set_update_write.descriptorCount = RENDERER_IMAGES_COUNT;
+	descriptor_set_update_write.pImageInfo = descriptor_image_infos;
+
+	vkUpdateDescriptorSets(game->renderer_state.backend.device, 1, &descriptor_set_update_write, 0, NULL);
 
 	//pixelfonts
 	buffer_info.size = sizeof(struct pixel_font) * RESOURCES_PIXELFONTS_COUNT;
@@ -351,28 +396,18 @@ uint32_t renderer_backend_load_resources(struct game_client* game) {
 	vkDestroyBuffer(game->renderer_state.backend.device, staging_buffer, 0);
 
 	
+	initialize_rectangles(game);
 
-
-	return 0;
-}
-
-uint32_t update_descriptor_set_images(struct game_client* game, VkDescriptorSet dst_set, uint32_t dst_binding, uint32_t dst_array_element) {
-
-	VkWriteDescriptorSet descriptor_set_update_write = { 0 };
-	descriptor_set_update_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	descriptor_set_update_write.dstSet = dst_set;
-	descriptor_set_update_write.dstBinding = dst_binding;
-	descriptor_set_update_write.dstArrayElement = dst_array_element;
-	descriptor_set_update_write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	descriptor_set_update_write.descriptorCount = RESOURCES_IMAGES_COUNT;
-	descriptor_set_update_write.pImageInfo = game->renderer_state.backend.descriptor_image_infos;
-
-	vkUpdateDescriptorSets(game->renderer_state.backend.device, 1, &descriptor_set_update_write, 0, NULL);
 
 	return 0;
 }
 
 uint32_t renderer_backend_unload_resources(struct game_client* game) {
+
+	vkDeviceWaitIdle(game->renderer_state.backend.device);
+
+	vkDestroyDescriptorPool(game->renderer_state.backend.device, game->renderer_state.backend.images_descriptor_pool, 0);
+	vkDestroyDescriptorSetLayout(game->renderer_state.backend.device, game->renderer_state.backend.images_descriptor_set_layout, 0);
 
 	vkDestroyBuffer(game->renderer_state.backend.device, game->renderer_state.backend.pixelfont_buffer, 0);
 	vkFreeMemory(game->renderer_state.backend.device, game->renderer_state.backend.pixelfonts_memory, 0);
@@ -384,6 +419,8 @@ uint32_t renderer_backend_unload_resources(struct game_client* game) {
 	}
 
 	vkFreeMemory(game->renderer_state.backend.device, game->renderer_state.backend.images_memory, 0);
+
+	uninitialize_rectangles(game);
 
 	return 0;
 }

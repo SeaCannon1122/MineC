@@ -42,6 +42,7 @@ struct renderer_backend {
 
 	VkSampler samplers[RENDERER_SAMPLING_CONFIGURATIONS_COUNT];
 
+	//images
 	struct {
 		VkImage image;
 		VkImageView image_view;
@@ -49,11 +50,23 @@ struct renderer_backend {
 	} images[RESOURCES_IMAGES_COUNT];
 	VkDeviceMemory images_memory;
 
-	VkDescriptorImageInfo descriptor_image_infos[RENDERER_IMAGES_COUNT];
+	VkDescriptorSetLayout images_descriptor_set_layout;
+	VkDescriptorPool images_descriptor_pool;
+	VkDescriptorSet images_descriptor_set;
 
 	struct pixel_char_renderer pcr;
 	VkDeviceMemory pixelfonts_memory;
 	VkBuffer pixelfont_buffer;
+
+	uint32_t rectangles_pipeline_usable_bool;
+	VkPipelineLayout rectangles_pipeline_layout;
+	VkPipeline rectangles_pipeline;
+
+	VkBuffer rectangles_buffer;
+	VkDeviceMemory rectangles_buffer_memory;
+	void* rectangles_buffer_memory_host_handle;
+
+	uint32_t rectangles_count;
 
 };
 

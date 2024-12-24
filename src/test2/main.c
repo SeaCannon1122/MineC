@@ -94,7 +94,7 @@ else name[i] = (struct pixel_render_char){ { r, g, b, a }, { r_b, g_b, b_b, a_b 
 	string_to_pixel_char(chars, pixel_str, 20, 100, 100, PIXEL_CHAR_BACKGROUND_MASK | PIXEL_CHAR_UNDERLINE_MASK, 255, 255, 0, 127, 127, 0, 255, 255)
 
 	chars[1].masks |= 1;
-	pixel_char_renderer_fill_chars(&pcr, chars, sizeof(pixel_str));
+	pixel_char_renderer_fill_chars(&pcr, chars, sizeof(chars) / sizeof(chars[0]));
 
 #define FRAME_TIME_FRAMES_AVERAGE 128
 #define FPS 60.
@@ -119,8 +119,6 @@ else name[i] = (struct pixel_render_char){ { r, g, b, a }, { r_b, g_b, b_b, a_b 
 
 			window_width = new_width;
 			window_height = new_height;
-			
-			uint32_t img_index;
 
 			VKCall(vkResetFences(device, 1, &img_available_fence));
 

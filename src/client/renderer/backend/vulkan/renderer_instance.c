@@ -1,5 +1,7 @@
 #include "../renderer_backend.h"
 
+#include <string.h>
+
 static VKAPI_ATTR VkBool32 VKAPI_CALL vulkan_debug_callbck(
 	VkDebugUtilsMessageSeverityFlagBitsEXT msg_severity,
 	VkDebugUtilsMessageTypeFlagsEXT msg_flags,

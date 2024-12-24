@@ -7,8 +7,6 @@
 
 #include "vulkan/renderer_vulkan.h"
 
-static uint8_t* shader_token_prefix = "vk_";
-
 #elif CLIENT_GRAPHICS_API_OPENGL
 
 //opengl in the future???
@@ -27,5 +25,10 @@ uint32_t renderer_backend_resize(struct game_client* game);
 
 uint32_t renderer_backend_load_resources(struct game_client* game);
 uint32_t renderer_backend_unload_resources(struct game_client* game);
+
+uint32_t renderer_backend_set_pixel_chars(struct game_client* game, struct pixel_render_char* chars, uint32_t chars_count);
+uint32_t renderer_backend_set_rectangles(struct game_client* game, struct renderer_rectangle* rectangles, uint32_t rectangles_count);
+
+uint32_t renderer_backend_render(struct game_client* game);
 
 #endif // RENDERER_BACKEND_H
