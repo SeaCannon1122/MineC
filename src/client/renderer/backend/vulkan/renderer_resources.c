@@ -281,28 +281,49 @@ uint32_t renderer_backend_load_resources(struct game_client* game) {
 		memory_bound += game->renderer_state.backend.images[i].mem_requirements.size;
 	}
 
-	VkDescriptorSetLayoutBinding binding = { 0 };
-	binding.binding = 0;
-	binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	binding.descriptorCount = RENDERER_IMAGES_COUNT;
-	binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-	binding.pImmutableSamplers = 0;
+
+	//images descriptor set
+	VkDescriptorSetLayoutBinding image_binding = { 0 };
+	image_binding.binding = 0;
+	image_binding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+	image_binding.descriptorCount = RESOURCES_IMAGES_COUNT;
+	image_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+	
+	VkDescriptorSetLayoutBinding sampler_binding = { 0 };
+	sampler_binding.binding = 1;
+	sampler_binding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+	sampler_binding.descriptorCount = RENDERER_SAMPLING_CONFIGURATIONS_COUNT;
+	sampler_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+	VkDescriptorSetLayoutBinding bindings[] = {
+		image_binding,
+		sampler_binding
+	};
 
 	VkDescriptorSetLayoutCreateInfo layout_create_info = { 0 };
 	layout_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	layout_create_info.bindingCount = 1;
-	layout_create_info.pBindings = &binding;
+	layout_create_info.bindingCount = 2;
+	layout_create_info.pBindings = bindings;
 
 	VKCall(vkCreateDescriptorSetLayout(game->renderer_state.backend.device, &layout_create_info, 0, &game->renderer_state.backend.images_descriptor_set_layout));
 
-	VkDescriptorPoolSize pool_size = { 0 };
-	pool_size.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	pool_size.descriptorCount = RENDERER_IMAGES_COUNT;
+	VkDescriptorPoolSize pool_size_images = { 0 };
+	pool_size_images.type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+	pool_size_images.descriptorCount = RESOURCES_IMAGES_COUNT;
+
+	VkDescriptorPoolSize pool_size_samplers = { 0 };
+	pool_size_samplers.type = VK_DESCRIPTOR_TYPE_SAMPLER;
+	pool_size_samplers.descriptorCount = RENDERER_SAMPLING_CONFIGURATIONS_COUNT;
+
+	VkDescriptorPoolSize pool_sizes[] = {
+		pool_size_images,
+		pool_size_samplers
+	};
 
 	VkDescriptorPoolCreateInfo pool_create_info = { 0 };
 	pool_create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	pool_create_info.poolSizeCount = 1;
-	pool_create_info.pPoolSizes = &pool_size;
+	pool_create_info.poolSizeCount = 2;
+	pool_create_info.pPoolSizes = pool_sizes;
 	pool_create_info.maxSets = 1;
 
 	VKCall(vkCreateDescriptorPool(game->renderer_state.backend.device, &pool_create_info, 0, &game->renderer_state.backend.images_descriptor_pool));
@@ -315,24 +336,46 @@ uint32_t renderer_backend_load_resources(struct game_client* game) {
 
 	VKCall(vkAllocateDescriptorSets(game->renderer_state.backend.device, &descriptor_set_alloc_info, &game->renderer_state.backend.images_descriptor_set));
 
-	VkDescriptorImageInfo descriptor_image_infos[RENDERER_IMAGES_COUNT];
+	VkDescriptorImageInfo descriptor_image_infos[RESOURCES_IMAGES_COUNT];
 
-	for (uint32_t i = 0; i < RENDERER_IMAGES_COUNT; i++) {
+	for (uint32_t i = 0; i < RESOURCES_IMAGES_COUNT; i++) {
 		descriptor_image_infos[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		descriptor_image_infos[i].imageView = game->renderer_state.backend.images[renderer_images[i].resource_image_index].image_view;
-		descriptor_image_infos[i].sampler = game->renderer_state.backend.samplers[renderer_images[i].sampling_configuarion];
+		descriptor_image_infos[i].imageView = game->renderer_state.backend.images[i].image_view;
+		descriptor_image_infos[i].sampler = VK_NULL_HANDLE;
 	}
 
-	VkWriteDescriptorSet descriptor_set_update_write = { 0 };
-	descriptor_set_update_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	descriptor_set_update_write.dstSet = game->renderer_state.backend.images_descriptor_set;
-	descriptor_set_update_write.dstBinding = 0;
-	descriptor_set_update_write.dstArrayElement = 0;
-	descriptor_set_update_write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	descriptor_set_update_write.descriptorCount = RENDERER_IMAGES_COUNT;
-	descriptor_set_update_write.pImageInfo = descriptor_image_infos;
+	VkDescriptorImageInfo descriptor_sampler_infos[RENDERER_SAMPLING_CONFIGURATIONS_COUNT];
 
-	vkUpdateDescriptorSets(game->renderer_state.backend.device, 1, &descriptor_set_update_write, 0, NULL);
+	for (uint32_t i = 0; i < RENDERER_SAMPLING_CONFIGURATIONS_COUNT; i++) {
+		descriptor_sampler_infos[i].imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		descriptor_sampler_infos[i].imageView = VK_NULL_HANDLE;
+		descriptor_sampler_infos[i].sampler = game->renderer_state.backend.samplers[i];
+	}
+
+	VkWriteDescriptorSet descriptor_update_images_write = { 0 };
+	descriptor_update_images_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	descriptor_update_images_write.dstSet = game->renderer_state.backend.images_descriptor_set;
+	descriptor_update_images_write.dstBinding = 0;
+	descriptor_update_images_write.dstArrayElement = 0;
+	descriptor_update_images_write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+	descriptor_update_images_write.descriptorCount = RESOURCES_IMAGES_COUNT;
+	descriptor_update_images_write.pImageInfo = descriptor_image_infos;
+
+	VkWriteDescriptorSet descriptor_update_samplers_write = { 0 };
+	descriptor_update_samplers_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	descriptor_update_samplers_write.dstSet = game->renderer_state.backend.images_descriptor_set;
+	descriptor_update_samplers_write.dstBinding = 1;
+	descriptor_update_samplers_write.dstArrayElement = 0;
+	descriptor_update_samplers_write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+	descriptor_update_samplers_write.descriptorCount = RENDERER_SAMPLING_CONFIGURATIONS_COUNT;
+	descriptor_update_samplers_write.pImageInfo = descriptor_sampler_infos;
+
+	VkWriteDescriptorSet descriptor_update_writes[] = {
+		descriptor_update_images_write,
+		descriptor_update_samplers_write
+	};
+
+	vkUpdateDescriptorSets(game->renderer_state.backend.device, 2, descriptor_update_writes, 0, NULL);
 
 	//pixelfonts
 	buffer_info.size = sizeof(struct pixel_font) * RESOURCES_PIXELFONTS_COUNT;

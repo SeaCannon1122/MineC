@@ -47,7 +47,8 @@ else name[i] = (struct pixel_render_char){ { r, g, b, a }, { r_b, g_b, b_b, a_b 
 
 	struct renderer_rectangle rectangles[8];
 
-	rectangles[0].renderer_image_index = RESOURCE_IMAGE_BUTTON;
+	rectangles[0].image_index = RESOURCE_IMAGE_DIRT;
+	rectangles[0].sampler_index = SAMPLING_CONFIGURATION_DEFAULT;
 
 	rectangles[0].u[0] = 0;
 	rectangles[0].u[1] = 0;
@@ -61,15 +62,36 @@ else name[i] = (struct pixel_render_char){ { r, g, b, a }, { r_b, g_b, b_b, a_b 
 
 	rectangles[0].x[0] = 100;
 	rectangles[0].x[1] = 100;
-	rectangles[0].x[2] = 100 + 3 * game->resource_state.image_atlas[RESOURCE_IMAGE_BUTTON].width;
-	rectangles[0].x[3] = 100 + 3 * game->resource_state.image_atlas[RESOURCE_IMAGE_BUTTON].width;
+	rectangles[0].x[2] = 100 + game->resource_state.image_atlas[RESOURCE_IMAGE_DIRT].width / 2;
+	rectangles[0].x[3] = 100 + game->resource_state.image_atlas[RESOURCE_IMAGE_DIRT].width / 2;
 
 	rectangles[0].y[0] = 100;
-	rectangles[0].y[1] = 100 + 3 * game->resource_state.image_atlas[RESOURCE_IMAGE_BUTTON].height;
-	rectangles[0].y[2] = 100 + 3 * game->resource_state.image_atlas[RESOURCE_IMAGE_BUTTON].height;
+	rectangles[0].y[1] = 100 + game->resource_state.image_atlas[RESOURCE_IMAGE_DIRT].height / 2;
+	rectangles[0].y[2] = 100 + game->resource_state.image_atlas[RESOURCE_IMAGE_DIRT].height / 2;
 	rectangles[0].y[3] = 100;
 
+	rectangles[1].image_index = RESOURCE_IMAGE_DIRT;
+	rectangles[1].sampler_index = SAMPLING_CONFIGURATION_SMOOTH;
 
+	rectangles[1].u[0] = 0;
+	rectangles[1].u[1] = 0;
+	rectangles[1].u[2] = 1;
+	rectangles[1].u[3] = 1;
+
+	rectangles[1].v[0] = 0;
+	rectangles[1].v[1] = 1;
+	rectangles[1].v[2] = 1;
+	rectangles[1].v[3] = 0;
+
+	rectangles[1].x[0] = 100 + game->resource_state.image_atlas[RESOURCE_IMAGE_DIRT].width / 2;
+	rectangles[1].x[1] = 100 + game->resource_state.image_atlas[RESOURCE_IMAGE_DIRT].width / 2;
+	rectangles[1].x[2] = 100 + game->resource_state.image_atlas[RESOURCE_IMAGE_DIRT].width;
+	rectangles[1].x[3] = 100 + game->resource_state.image_atlas[RESOURCE_IMAGE_DIRT].width;
+
+	rectangles[1].y[0] = 100;
+	rectangles[1].y[1] = 100 + game->resource_state.image_atlas[RESOURCE_IMAGE_DIRT].height / 2;
+	rectangles[1].y[2] = 100 + game->resource_state.image_atlas[RESOURCE_IMAGE_DIRT].height / 2;
+	rectangles[1].y[3] = 100;
 
 	renderer_backend_set_rectangles(game, rectangles, 2);
 

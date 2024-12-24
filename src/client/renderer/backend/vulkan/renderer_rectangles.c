@@ -8,8 +8,8 @@ struct render_rectangle_vertex {
 	int16_t y;
 	float u;
 	float v;
-
-	uint32_t renderer_image_index;
+	int16_t image_index;
+	int16_t sampler_index;
 };
 
 uint32_t initialize_rectangles(struct game_client* game) {
@@ -130,10 +130,16 @@ uint32_t initialize_rectangles(struct game_client* game) {
 		{
 			.binding = 0,
 			.location = 2,
-			.format = VK_FORMAT_R32_UINT,
+			.format = VK_FORMAT_R16_UINT,
 			.offset = 2 * sizeof(int16_t) + 2 * sizeof(float)
 		},
-
+		//sampler index
+		{
+			.binding = 0,
+			.location = 3,
+			.format = VK_FORMAT_R16_UINT,
+			.offset = 3 * sizeof(int16_t) + 2 * sizeof(float)
+		},
 	};
 
 
@@ -141,7 +147,7 @@ uint32_t initialize_rectangles(struct game_client* game) {
 	vertex_input_stage.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 	vertex_input_stage.vertexBindingDescriptionCount = 1;
 	vertex_input_stage.pVertexBindingDescriptions = &vertex_binding_description;
-	vertex_input_stage.vertexAttributeDescriptionCount = 3;
+	vertex_input_stage.vertexAttributeDescriptionCount = 4;
 	vertex_input_stage.pVertexAttributeDescriptions = vertex_attribute_descriptions;
 
 
@@ -258,23 +264,23 @@ uint32_t renderer_backend_set_rectangles(struct game_client* game, struct render
 		struct render_rectangle_vertex* vertex_buffer = game->renderer_state.backend.rectangles_buffer_memory_host_handle;
 
 		vertex_buffer[i * 6 + 0] = (struct render_rectangle_vertex){
-			rectangles[i].x[0], rectangles[i].y[0], rectangles[i].u[0], rectangles[i].v[0], rectangles[i].renderer_image_index
+			rectangles[i].x[0], rectangles[i].y[0], rectangles[i].u[0], rectangles[i].v[0], rectangles[i].image_index, rectangles[i].sampler_index
 		};
 		vertex_buffer[i * 6 + 1] = (struct render_rectangle_vertex){
-			rectangles[i].x[1], rectangles[i].y[1], rectangles[i].u[1], rectangles[i].v[1], rectangles[i].renderer_image_index
+			rectangles[i].x[1], rectangles[i].y[1], rectangles[i].u[1], rectangles[i].v[1], rectangles[i].image_index, rectangles[i].sampler_index
 		};
 		vertex_buffer[i * 6 + 2] = (struct render_rectangle_vertex){
-			rectangles[i].x[2], rectangles[i].y[2], rectangles[i].u[2], rectangles[i].v[2], rectangles[i].renderer_image_index
+			rectangles[i].x[2], rectangles[i].y[2], rectangles[i].u[2], rectangles[i].v[2], rectangles[i].image_index, rectangles[i].sampler_index
 		};
 
 		vertex_buffer[i * 6 + 3] = (struct render_rectangle_vertex){
-			rectangles[i].x[2], rectangles[i].y[2], rectangles[i].u[2], rectangles[i].v[2], rectangles[i].renderer_image_index
+			rectangles[i].x[2], rectangles[i].y[2], rectangles[i].u[2], rectangles[i].v[2], rectangles[i].image_index, rectangles[i].sampler_index
 		};
 		vertex_buffer[i * 6 + 4] = (struct render_rectangle_vertex){
-			rectangles[i].x[3], rectangles[i].y[3], rectangles[i].u[3], rectangles[i].v[3], rectangles[i].renderer_image_index
+			rectangles[i].x[3], rectangles[i].y[3], rectangles[i].u[3], rectangles[i].v[3], rectangles[i].image_index, rectangles[i].sampler_index
 		};
 		vertex_buffer[i * 6 + 5] = (struct render_rectangle_vertex){
-			rectangles[i].x[0], rectangles[i].y[0], rectangles[i].u[0], rectangles[i].v[0], rectangles[i].renderer_image_index
+			rectangles[i].x[0], rectangles[i].y[0], rectangles[i].u[0], rectangles[i].v[0], rectangles[i].image_index, rectangles[i].sampler_index
 		};
 
 	}

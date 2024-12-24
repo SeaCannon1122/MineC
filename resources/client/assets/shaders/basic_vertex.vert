@@ -8,13 +8,16 @@ layout(push_constant) uniform PushConstants {
 layout(location = 0) in ivec2 in_position;
 layout(location = 1) in vec2 in_image_uv;
 layout(location = 2) in uint in_texture_index;
+layout(location = 3) in uint in_sampler_index;
 
 layout(location = 0) out vec2 image_uv;
 layout(location = 1) flat out uint texture_index;
+layout(location = 2) flat out uint sampler_index;
 
 void main() {
     
     texture_index = in_texture_index;
+    sampler_index = in_sampler_index;
 	
     image_uv = in_image_uv;
 	

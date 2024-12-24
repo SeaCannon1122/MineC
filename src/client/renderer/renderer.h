@@ -12,7 +12,8 @@ struct renderer_rectangle {
 	float u[4];
 	float v[4];
 
-	uint32_t renderer_image_index;
+	int16_t image_index;
+	int16_t sampler_index;
 };
 
 struct renderer_state {
