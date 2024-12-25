@@ -116,7 +116,7 @@ VkResult new_VkDevice(VkInstance instance, VkPhysicalDevice* gpu, uint32_t* queu
 	uint32_t window = window_create(0, 0, 1, 1, " ", 0);
 	VKCall(create_vulkan_surface(instance, window, &surface));
 
-	for (uint32_t i = 0; i < gpu_count; i++) {
+	for (uint32_t i = 2; i < gpu_count; i++) {
 
 		uint32_t queue_family_count = 0;
 		vkGetPhysicalDeviceQueueFamilyProperties(gpus[i], &queue_family_count, 0);

@@ -1,6 +1,6 @@
 #ifdef CLIENT_GRAPHICS_API_VULKAN
 
-#include "vulkan/renderer_vulkan.c"
+#include "vulkan/vulkan_backend.c"
 
 #elif CLIENT_GRAPHICS_API_OPENGL
 

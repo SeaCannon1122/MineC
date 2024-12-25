@@ -3,9 +3,11 @@
 #ifndef RENDERER_BACKEND_H
 #define RENDERER_BACKEND_H
 
+#include "../renderer.h"
+
 #ifdef CLIENT_GRAPHICS_API_VULKAN
 
-#include "vulkan/renderer_vulkan.h"
+#include "vulkan/vulkan_backend.h"
 
 #elif CLIENT_GRAPHICS_API_OPENGL
 

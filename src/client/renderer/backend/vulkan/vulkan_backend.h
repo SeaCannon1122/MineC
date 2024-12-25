@@ -8,8 +8,8 @@
 #include "general/rendering/rendering_memory_manager.h"
 #include "client/resources/resources.h"
 
-#include "client/renderer/renderer_images.h"
-
+#include "general/rendering/gui/pixel_char.h"
+	
 struct renderer_backend {
 
 	VkPhysicalDevice gpus[16];
@@ -40,7 +40,7 @@ struct renderer_backend {
 
 	VkRenderPass window_render_pass;
 
-	VkSampler samplers[RENDERER_SAMPLING_CONFIGURATIONS_COUNT];
+	VkSampler samplers[RESOURCES_SAMPLERS_COUNT];
 
 	//images
 	struct {

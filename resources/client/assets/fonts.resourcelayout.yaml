@@ -1,4 +1,4 @@
-debug: "fonts/debug.pixelfont"
-default: "fonts/default.pixelfont"
-wide: "fonts/wide.pixelfont"
-rectangular: "fonts/rectangular.pixelfont"
+pixelfont_debug: "fonts/debug.pixelfont"
+pixelfont_default: "fonts/default.pixelfont"
+pixelfont_wide: "fonts/wide.pixelfont"
+pixelfont_rectangular: "fonts/rectangular.pixelfont"

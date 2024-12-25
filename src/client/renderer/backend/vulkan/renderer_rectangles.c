@@ -65,16 +65,16 @@ uint32_t initialize_rectangles(struct game_client* game) {
 
 	VKCall(vkCreatePipelineLayout(game->renderer_state.backend.device, &pipeline_layout_info, 0, &game->renderer_state.backend.rectangles_pipeline_layout));
 
-	struct resource_manager_shader vertex_source;
-	uint32_t get_vertex_shader_return_value  = resource_manager_get_shader(&game->resource_state.resource_manager, "vk_basic_vertex", &vertex_source);
+	struct resource_manager_binary vertex_source;
+	uint32_t get_vertex_shader_return_value  = resource_manager_get_binary(&game->resource_state.resource_manager, "vk_basic_vertex", &vertex_source);
 	if (get_vertex_shader_return_value) {
 		printf("[RENDERER BACKEND] Couldn't find shader matching token 'vk_basic_vertex'\n");
 
 		return 1;
 	}
 
-	struct resource_manager_shader fragment_source;
-	uint32_t get_fragment_shader_return_value = resource_manager_get_shader(&game->resource_state.resource_manager, "vk_basic_fragment", &fragment_source);
+	struct resource_manager_binary fragment_source;
+	uint32_t get_fragment_shader_return_value = resource_manager_get_binary(&game->resource_state.resource_manager, "vk_basic_fragment", &fragment_source);
 	if (get_fragment_shader_return_value) {
 		printf("[RENDERER BACKEND] Couldn't find shader matching token 'vk_basic_fragment'\n");
 
@@ -86,16 +86,16 @@ uint32_t initialize_rectangles(struct game_client* game) {
 	VkShaderModuleCreateInfo shader_info = { 0 };
 	shader_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 
-	shader_info.pCode = vertex_source.source_data;
-	shader_info.codeSize = vertex_source.source_data_size;
+	shader_info.pCode = (uint32_t*)vertex_source.data;
+	shader_info.codeSize = vertex_source.size;
 	if (vkCreateShaderModule(game->renderer_state.backend.device, &shader_info, 0, &vertex_shader) != VK_SUCCESS) {
 		printf("[RENDERER BACKEND] Couldn't compile shader from token 'vk_basic_vertex'\n");
 
 		return 1;
 	}
 
-	shader_info.pCode = fragment_source.source_data;
-	shader_info.codeSize = fragment_source.source_data_size;
+	shader_info.pCode = (uint32_t*)fragment_source.data;
+	shader_info.codeSize = fragment_source.size;
 	if (vkCreateShaderModule(game->renderer_state.backend.device, &shader_info, 0, &fragment_shader) != VK_SUCCESS) {
 		printf("[RENDERER BACKEND] Couldn't compile shader from token 'vk_basic_fragment'\n");
 

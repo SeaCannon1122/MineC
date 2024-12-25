@@ -4,6 +4,8 @@
 #define RENDERER_H
 
 #include "backend/renderer_backend.h"
+#include "backend/vulkan/vulkan_backend.h"
+#include <stdint.h>
 
 struct renderer_rectangle {
 
@@ -30,6 +32,10 @@ uint32_t renderer_create(struct game_client* game);
 uint32_t renderer_destroy(struct game_client* game);
 
 uint32_t renderer_render(struct game_client* game);
+
+uint32_t renderer_list_gpus(struct game_client* game);
+
+uint32_t renderer_use_gpu(struct game_client* game, uint32_t gpu_index);
 
 uint32_t renderer_reload_resources(struct game_client* game);
 

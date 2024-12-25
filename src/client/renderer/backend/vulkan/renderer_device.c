@@ -31,7 +31,7 @@ uint32_t renderer_backend_device_create(struct game_client* game, uint32_t gpu_i
 	device_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 	device_info.pQueueCreateInfos = &queue_info;
 	device_info.queueCreateInfoCount = 1;
-	device_info.ppEnabledExtensionNames = device_extentions;
+	device_info.ppEnabledExtensionNames = (const char* const*) device_extentions;
 	device_info.enabledExtensionCount = 3;
 	device_info.pNext = &features12;
 

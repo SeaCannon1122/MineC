@@ -1,0 +1,12 @@
+minFilter: LINEAR
+magFilter: NEAREST
+mipmapMode: NEAREST
+addressModeU: REPEAT
+addressModeV: CLAMP_TO_EDGE
+mipLodBias: 0.0
+anisotropyEnable: DISABLE
+maxAnisotropy: 0.0
+compareEnable: ENABLE
+compareOp: NEVER
+minLod: 0.0
+maxLod: 16.0

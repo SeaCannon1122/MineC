@@ -252,9 +252,9 @@ void key_value_combind(void** key_value_map_main, void** key_value_map_additum) 
 
         switch (pair.type)
         {
-        case VALUE_TYPE_INTEGER: key_value_set_integer(key_value_map_main, pair.key, pair.value.integer);
-        case VALUE_TYPE_FLOAT: key_value_set_float(key_value_map_main, pair.key, pair.value.floating);
-        case VALUE_TYPE_STRING: key_value_set_string(key_value_map_main, pair.key, pair.value.string);
+        case VALUE_TYPE_INTEGER: key_value_set_integer(key_value_map_main, pair.key, pair.value.integer); break;
+        case VALUE_TYPE_FLOAT: key_value_set_float(key_value_map_main, pair.key, pair.value.floating); break;
+        case VALUE_TYPE_STRING: key_value_set_string(key_value_map_main, pair.key, pair.value.string); break;
         }
 
     }
@@ -366,7 +366,7 @@ enum key_value_return_type key_value_load_yaml(void** key_value_map, uint8_t* fi
                 }
             }
             float_val *= negative;
-            key_value_set_integer(&temp_key_value_map, &buffer[key_start], float_val);
+            key_value_set_float(&temp_key_value_map, &buffer[key_start], float_val);
         }
 
         skip_spaces

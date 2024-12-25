@@ -1,6 +1,7 @@
 #include "../renderer_backend.h"
 
 #include <string.h>
+#include <malloc.h>
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL vulkan_debug_callbck(
 	VkDebugUtilsMessageSeverityFlagBitsEXT msg_severity,
@@ -101,9 +102,9 @@ uint32_t renderer_backend_instance_create(struct game_client* game) {
 	VkInstanceCreateInfo instance_info = { 0 };
 	instance_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 	instance_info.pApplicationInfo = &app_info;
-	instance_info.ppEnabledExtensionNames = instance_extensions;
+	instance_info.ppEnabledExtensionNames = (const char* const*)instance_extensions;
 	instance_info.enabledExtensionCount = 4;
-	instance_info.ppEnabledLayerNames = layers;
+	instance_info.ppEnabledLayerNames = (const char* const*)layers;
 	instance_info.enabledLayerCount = 1;
 
 	VKCall(vkCreateInstance(&instance_info, 0, &game->renderer_state.backend.instance));

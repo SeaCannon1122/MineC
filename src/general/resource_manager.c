@@ -5,8 +5,6 @@
 #include <string.h>
 #include <STB_IMAGE/stb_image.h>
 
-#include "general/rendering/vulkan_helpers.h"
-
 void* layout_maps[32];
 uint8_t layout_maps_paths[32][512];
 uint32_t layout_maps_length;
@@ -14,8 +12,7 @@ uint32_t layout_maps_length;
 uint32_t image_file_count;
 uint32_t key_value_file_count;
 uint32_t audio_file_count;
-uint32_t shader_file_count;
-uint32_t pixelfont_file_count;
+uint32_t binary_file_count;
 
 uint8_t* _resource_manager_load_file(uint8_t* src, uint32_t* size) {
 
@@ -77,6 +74,8 @@ uint32_t _load_resource_layout(uint8_t* file_path) {
 		struct key_value_pair pair;
 		key_value_get_pair(layout_maps[layout_maps_index], &pair, i);
 
+		if (pair.type != VALUE_TYPE_STRING) continue;
+
 		int32_t value = strlen(pair.value.string);
 
 		uint32_t dot1 = -1;
@@ -88,9 +87,10 @@ uint32_t _load_resource_layout(uint8_t* file_path) {
 				break;
 			}
 		}
-		if (dot1 == -1) continue;
-
-		
+		if (dot1 == -1) {
+			binary_file_count++;
+			continue;
+		}
 
 		int32_t dot2 = -1;
 		for (; value >= 0; value--) {
@@ -107,13 +107,7 @@ uint32_t _load_resource_layout(uint8_t* file_path) {
 			if (strcmp(&pair.value.string[dot1 + 1], "png") == 0) image_file_count++;
 			else if (strcmp(&pair.value.string[dot1 + 1], "yaml") == 0) key_value_file_count++;
 			else if (strcmp(&pair.value.string[dot1 + 1], "mp3") == 0) audio_file_count++;
-			else if (
-				strcmp(&pair.value.string[dot1 + 1], "spv") == 0 || 
-				strcmp(&pair.value.string[dot1 + 1], "vert") == 0 || 
-				strcmp(&pair.value.string[dot1 + 1], "frag") == 0 ||
-				strcmp(&pair.value.string[dot1 + 1], "glsl") == 0
-				) shader_file_count++;
-			else if (strcmp(&pair.value.string[dot1 + 1], "pixelfont") == 0) pixelfont_file_count++;
+			else binary_file_count++;
 
 			continue;
 		}
@@ -145,24 +139,22 @@ uint32_t resource_manager_new(struct resource_manager* rm, uint8_t* file_path) {
 	image_file_count = 0;
 	key_value_file_count = 0;
 	audio_file_count = 0;
-	shader_file_count = 0;
-	pixelfont_file_count = 0;
+	binary_file_count = 0;
 
 	_load_resource_layout(file_path);
 
 	rm->image_count = 0;
 	rm->images = malloc(sizeof(struct resource_manager_image) * image_file_count);
-	rm->images_name_map = key_value_new(image_file_count + 5, image_file_count * 20);
+	rm->images_name_map = key_value_new(image_file_count + 5, image_file_count * 40);
 
-	rm->shader_count = 0;
-	rm->shaders = malloc(sizeof(struct resource_manager_image) * shader_file_count);
-	rm->shaders_names_map = key_value_new(shader_file_count + 5, shader_file_count * 20);
-
-	rm->pixelfont_count = 0;
-	rm->pixelfonts = malloc(sizeof(struct pixel_font*) * pixelfont_file_count);
-	rm->pixelfonts_names_map = key_value_new(pixelfont_file_count + 5, pixelfont_file_count * 20);
+	rm->binaries_count = 0;
+	rm->binaries = malloc(sizeof(struct resource_manager_image) * binary_file_count);
+	rm->binaries_names_map = key_value_new(binary_file_count + 5, binary_file_count * 40);
 
 	rm->key_value_count = 0;
+	rm->key_value_maps = malloc(sizeof(void*) * key_value_file_count);
+	rm->key_value_maps_names_map = key_value_new(key_value_file_count + 5, key_value_file_count * 40);
+
 	rm->audio_count = 0;
 
 	uint8_t sub_path[512];
@@ -186,6 +178,8 @@ uint32_t resource_manager_new(struct resource_manager* rm, uint8_t* file_path) {
 			struct key_value_pair pair;
 			key_value_get_pair(layout_maps[i], &pair, key_i);
 
+			if (pair.type != VALUE_TYPE_STRING) continue;
+
 			int32_t value = strlen(pair.value.string);
 			sprintf(&sub_path[sub_path_length], pair.value.string);
 
@@ -198,7 +192,7 @@ uint32_t resource_manager_new(struct resource_manager* rm, uint8_t* file_path) {
 					break;
 				}
 			}
-			if (dot1 == -1) continue;
+			if (dot1 == -1) dot1 = strlen(pair.value.string) - 1;
 			
 
 			if (strcmp(&pair.value.string[dot1 + 1], "png") == 0) {
@@ -218,38 +212,58 @@ uint32_t resource_manager_new(struct resource_manager* rm, uint8_t* file_path) {
 
 			else if (strcmp(&pair.value.string[dot1 + 1], "yaml") == 0) {
 
+				int32_t dot2 = -1;
+				for (; value >= 0; value--) {
+					if (pair.value.string[value] == '/') break;
+					if (pair.value.string[value] == '.') {
+						dot2 = value;
+						break;
+					}
+				}
+
+				if (dot2 != -1) {
+					value++;
+					for (; pair.value.string[value] == "resourcelayout"[value - dot2 - 1]; value++);
+
+					if (value == dot1) continue;
+
+				}
+				
+				rm->key_value_maps[rm->key_value_count] = key_value_new(20, 200);
+	
+				enum key_value_return_type load_return_type	 = key_value_load_yaml(&rm->key_value_maps[rm->key_value_count], sub_path);
+
+				if (load_return_type & KEY_VALUE_ERROR_MASK) {
+
+					free(rm->key_value_maps[rm->key_value_count]);
+
+					if (load_return_type == KEY_VALUE_ERROR_COULDNT_OPEN_FILE) printf("[RESOURCE MANAGER] Couldn't open %s from %s\n", sub_path, &layout_maps_paths[i][0]);
+					else if (load_return_type == KEY_VALUE_ERROR_FILE_INVALID_SYNTAX) printf("[RESOURCE MANAGER] Invalid syntax in %s from %s\n", sub_path, &layout_maps_paths[i][0]);
+
+				}
+
+				else {
+					key_value_set_integer(&rm->key_value_maps_names_map, pair.key, rm->key_value_count);
+
+					rm->key_value_count++;
+				}
+
+
 			}
 			else if (strcmp(&pair.value.string[dot1 + 1], "mp3") == 0) {
 
 			}
-			else if (
-				strcmp(&pair.value.string[dot1 + 1], "spv") == 0 || 
-				strcmp(&pair.value.string[dot1 + 1], "vert") == 0 || 
-				strcmp(&pair.value.string[dot1 + 1], "frag") == 0 || 
-				strcmp(&pair.value.string[dot1 + 1], "glsl") == 0 
-			) {
 
-				rm->shaders[rm->shader_count].source_data = _resource_manager_load_file(sub_path, &rm->shaders[rm->shader_count].source_data_size);
+			else {
 
-				if (rm->shaders[rm->shader_count].source_data == NULL) printf("[RESOURCE MANAGER] Couldn't load %s from %s\n", sub_path, &layout_maps_paths[i][0]);
+				rm->binaries[rm->binaries_count].data = _resource_manager_load_file(sub_path, &rm->binaries[rm->binaries_count].size);
+
+				if (rm->binaries[rm->binaries_count].data == NULL) printf("[RESOURCE MANAGER] Couldn't load %s from %s\n", sub_path, &layout_maps_paths[i][0]);
 
 				else {
-					key_value_set_integer(&rm->shaders_names_map, pair.key, rm->shader_count);
+					key_value_set_integer(&rm->binaries_names_map, pair.key, rm->binaries_count);
 
-					rm->shader_count++;
-				}
-			}
-
-			else if (strcmp(&pair.value.string[dot1 + 1], "pixelfont") == 0) {
-
-				rm->pixelfonts[rm->pixelfont_count] = load_pixel_font(sub_path);
-
-				if (rm->pixelfonts[rm->pixelfont_count] == NULL) printf("[RESOURCE MANAGER] Couldn't load %s from %s\n", sub_path, &layout_maps_paths[i][0]);
-
-				else {
-					key_value_set_integer(&rm->pixelfonts_names_map, pair.key, rm->pixelfont_count);
-
-					rm->pixelfont_count++;
+					rm->binaries_count++;
 				}
 			}
 
@@ -268,13 +282,13 @@ uint32_t resource_manager_destroy(struct resource_manager* rm) {
 	free(rm->images_name_map);
 	free(rm->images);
 
-	for (uint32_t i = 0; i < rm->shader_count; i++) free(rm->shaders[i].source_data);
-	free(rm->shaders_names_map);
-	free(rm->shaders);
+	for (uint32_t i = 0; i < rm->binaries_count; i++) free(rm->binaries[i].data);
+	free(rm->binaries_names_map);
+	free(rm->binaries);
 
-	for (uint32_t i = 0; i < rm->pixelfont_count; i++) free(rm->pixelfonts[i]);
-	free(rm->pixelfonts_names_map);
-	free(rm->pixelfonts);
+	for (uint32_t i = 0; i < rm->key_value_count; i++) free(rm->key_value_maps[i]);
+	free(rm->key_value_maps_names_map);
+	free(rm->key_value_maps);
 
 	return 0;
 }
@@ -292,26 +306,33 @@ uint32_t resource_manager_get_image(struct resource_manager* rm, uint8_t* name, 
 }
 
 
-uint32_t resource_manager_get_shader(struct resource_manager* rm, uint8_t* name, struct resource_manager_shader* shader) {
+uint32_t resource_manager_get_binary(struct resource_manager* rm, uint8_t* name, struct resource_manager_binary* binary) {
 
-	int64_t shader_index;
-	key_value_get_integer(&rm->shaders_names_map, name, -1, &shader_index);
+	int64_t binarie_index;
+	key_value_get_integer(&rm->binaries_names_map, name, -1, &binarie_index);
 	
-	if (shader_index == -1) return 1;
+	if (binarie_index == -1) return 1;
 
-	*shader = rm->shaders[shader_index];
+	*binary = rm->binaries[binarie_index];
 
 	return 0;
 }
 
-uint32_t resource_manager_get_pixelfont(struct resource_manager* rm, uint8_t* name, struct pixel_font** pixelfont) {
 
-	int64_t pixelfont_index;
-	key_value_get_integer(&rm->pixelfonts_names_map, name, -1, &pixelfont_index);
+uint32_t resource_manager_get_key_value_map(struct resource_manager* rm, uint8_t* name, void** key_value_map) {
 
-	if (pixelfont_index == -1) return 1;
+	int64_t key_value_index;
+	key_value_get_integer(&rm->key_value_maps_names_map, name, -1, &key_value_index);
 
-	*pixelfont = rm->pixelfonts[pixelfont_index];
+	if (key_value_index == -1) return 1;
+
+	uint32_t size = key_value_get_size(rm->key_value_maps[key_value_index]);
+
+	void* map_copy = key_value_new(size, size * 40);
+	
+	key_value_combind(&map_copy, &rm->key_value_maps[key_value_index]);
+
+	*key_value_map = map_copy;
 
 	return 0;
 }
