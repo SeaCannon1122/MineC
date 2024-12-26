@@ -5,7 +5,7 @@
 
 #include <stdint.h>
 
-#include "general/rendering/gui/pixel_char.h"
+#include "general/pixel_char/pixel_char.h"
 
 #include "menus.h"
 

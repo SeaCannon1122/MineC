@@ -3,33 +3,32 @@
 #ifndef RENDERER_VULKAN_H
 #define RENDERER_VULKAN_H
 
-#include <stdint.h>
 #include "general/platformlib/platform/platform.h"
-#include "general/rendering/rendering_memory_manager.h"
 #include "client/resources/resources.h"
 
-#include "general/rendering/gui/pixel_char.h"
+#include "general/pixel_char/pixel_char.h"
 	
 struct renderer_backend {
 
+	//instance
 	VkPhysicalDevice gpus[16];
 	uint32_t gpu_queue_indices[16];
 	VkSurfaceFormatKHR gpu_surface_formats[16];
 
-
-	int32_t dummy_window;
-	VkSurfaceFormatKHR surface_format;
-
 	VkInstance instance;
 	VkDebugUtilsMessengerEXT debug_messenger;
+
+	//surface
+	VkSurfaceKHR surface;
+	VkSurfaceFormatKHR surface_format;
+
+	//device dependent
 
 	//Device
 	VkPhysicalDevice gpu;
 	VkDevice device;
 	VkQueue queue;
 	uint32_t queue_index;
-
-	struct rendering_memory_manager rmm;
 
 	VkCommandPool command_pool;
 	VkCommandBuffer cmd;
@@ -40,7 +39,18 @@ struct renderer_backend {
 
 	VkRenderPass window_render_pass;
 
-	VkSampler samplers[RESOURCES_SAMPLERS_COUNT];
+	//swapchain
+	VkSwapchainKHR swapchain;
+	uint32_t swapchain_image_count;
+	VkImage swapchain_images[5];
+	VkImageView swapchain_image_views[5];
+	VkFramebuffer framebuffers[5];
+	uint32_t swapchain_image_index;
+
+	VkSurfaceCapabilitiesKHR surface_capabilities;
+	VkPresentModeKHR present_mode;
+
+	//resource dependent
 
 	//images
 	struct {
@@ -49,6 +59,8 @@ struct renderer_backend {
 		VkMemoryRequirements mem_requirements;
 	} images[RESOURCES_IMAGES_COUNT];
 	VkDeviceMemory images_memory;
+
+	VkSampler samplers[RESOURCES_SAMPLERS_COUNT];
 
 	VkDescriptorSetLayout images_descriptor_set_layout;
 	VkDescriptorPool images_descriptor_pool;

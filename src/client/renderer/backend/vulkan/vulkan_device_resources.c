@@ -13,7 +13,9 @@ uint32_t floor_log2(uint32_t n) {
 uint32_t initialize_rectangles(struct game_client* game);
 uint32_t uninitialize_rectangles(struct game_client* game);
 
-uint32_t renderer_backend_load_resources(struct game_client* game) {
+uint32_t vulkan_device_resources_create(struct game_client* game) {
+
+	pixel_char_renderer_new(&game->renderer_state.backend.pcr, game->renderer_state.backend.device, game->renderer_state.backend.gpu, game->renderer_state.backend.window_render_pass);
 
 	size_t max_image_memory_size = 0;
 
@@ -496,11 +498,11 @@ uint32_t renderer_backend_load_resources(struct game_client* game) {
 	return 0;
 }
 
-uint32_t renderer_backend_unload_resources(struct game_client* game) {
-
-	uninitialize_rectangles(game);
+uint32_t vulkan_device_resources_destroy(struct game_client* game) {
 
 	vkDeviceWaitIdle(game->renderer_state.backend.device);
+
+	uninitialize_rectangles(game);
 
 	vkDestroyDescriptorPool(game->renderer_state.backend.device, game->renderer_state.backend.images_descriptor_pool, 0);
 	vkDestroyDescriptorSetLayout(game->renderer_state.backend.device, game->renderer_state.backend.images_descriptor_set_layout, 0);
@@ -519,6 +521,8 @@ uint32_t renderer_backend_unload_resources(struct game_client* game) {
 	}
 
 	vkFreeMemory(game->renderer_state.backend.device, game->renderer_state.backend.images_memory, 0);
+
+	pixel_char_renderer_destroy(&game->renderer_state.backend.pcr);
 
 	return 0;
 }

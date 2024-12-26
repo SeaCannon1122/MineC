@@ -1,4 +1,4 @@
-#include "../renderer_backend.h"
+#include "vulkan_backend.h"
 
 #include <string.h>
 #include <malloc.h>
@@ -14,10 +14,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vulkan_debug_callbck(
 }
 
 
-uint32_t renderer_backend_list_gpus(struct game_client* game) {
-
-	struct rendering_window_state rws;
-	rendering_window_get_data(game->renderer_state.backend.dummy_window, &rws);
+uint32_t vulkan_list_gpus(struct game_client* game) {
 
 	uint32_t gpu_count = 0;
 	VKCall(vkEnumeratePhysicalDevices(game->renderer_state.backend.instance, &gpu_count, 0));
@@ -39,9 +36,9 @@ uint32_t renderer_backend_list_gpus(struct game_client* game) {
 		if (VK_API_VERSION_MAJOR(dev_prop.apiVersion) < 1 || VK_API_VERSION_MINOR(dev_prop.apiVersion) < 2) continue;
 
 		uint32_t format_count = 0;
-		VKCall(vkGetPhysicalDeviceSurfaceFormatsKHR(game->renderer_state.backend.gpus[i], rws.surface, &format_count, 0));
+		VKCall(vkGetPhysicalDeviceSurfaceFormatsKHR(game->renderer_state.backend.gpus[i], game->renderer_state.backend.surface, &format_count, 0));
 		VkSurfaceFormatKHR* surface_formats = alloca(format_count * sizeof(VkSurfaceFormatKHR));
-		VKCall(vkGetPhysicalDeviceSurfaceFormatsKHR(game->renderer_state.backend.gpus[i], rws.surface, &format_count, surface_formats));
+		VKCall(vkGetPhysicalDeviceSurfaceFormatsKHR(game->renderer_state.backend.gpus[i], game->renderer_state.backend.surface, &format_count, surface_formats));
 
 		uint32_t found_format = 0;
 		for (uint32_t k = 0; k < format_count; k++) if (surface_formats[k].format == VK_FORMAT_B8G8R8A8_UNORM) {
@@ -61,7 +58,7 @@ uint32_t renderer_backend_list_gpus(struct game_client* game) {
 			if ((queue_props[j].queueFlags & VK_QUEUE_GRAPHICS_BIT) && (queue_props[j].queueFlags & VK_QUEUE_TRANSFER_BIT) && (queue_props[j].queueFlags & VK_QUEUE_COMPUTE_BIT)) {
 
 				VkBool32 surface_support = VK_FALSE;
-				VKCall(vkGetPhysicalDeviceSurfaceSupportKHR(game->renderer_state.backend.gpus[i], j, rws.surface, &surface_support));
+				VKCall(vkGetPhysicalDeviceSurfaceSupportKHR(game->renderer_state.backend.gpus[i], j, game->renderer_state.backend.surface, &surface_support));
 
 				if (surface_support) {
 					game->renderer_state.backend.gpu_queue_indices[i] = j;
@@ -81,7 +78,7 @@ uint32_t renderer_backend_list_gpus(struct game_client* game) {
 
 }
 
-uint32_t renderer_backend_instance_create(struct game_client* game) {
+uint32_t vulkan_instance_create(struct game_client* game) {
 
 	VkApplicationInfo app_info = { 0 };
 	app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -123,20 +120,16 @@ uint32_t renderer_backend_instance_create(struct game_client* game) {
 		vkCreateDebugUtilsMessengerEXT(game->renderer_state.backend.instance, &debug_info, 0, &game->renderer_state.backend.debug_messenger);
 	}
 
-	game->renderer_state.backend.dummy_window = window_create(50, 50, 50, 50, "a", 0);
-	rendering_window_new(game->renderer_state.backend.dummy_window, game->renderer_state.backend.instance);
+	VKCall(create_vulkan_surface(game->renderer_state.backend.instance, game->application_state.window, &game->renderer_state.backend.surface));
 
-	rendering_window_new(game->application_state.window, game->renderer_state.backend.instance);
+	vulkan_list_gpus(game);
 
 	return 0;
 }
 
-uint32_t renderer_backend_instance_destroy(struct game_client* game) {
+uint32_t vulkan_instance_destroy(struct game_client* game) {
 
-	rendering_window_destroy(game->renderer_state.backend.dummy_window);
-	rendering_window_destroy(game->application_state.window);
-
-	window_destroy(game->renderer_state.backend.dummy_window);
+	VKCall(destroy_vulkan_surface(game->renderer_state.backend.instance, game->renderer_state.backend.surface));
 
 	PFN_vkDestroyDebugUtilsMessengerEXT vkDestroyDebugUtilsMessengerEXT = vkGetInstanceProcAddr(game->renderer_state.backend.instance, "vkDestroyDebugUtilsMessengerEXT");
 

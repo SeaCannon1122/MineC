@@ -46,60 +46,38 @@ else name[i] = (struct pixel_render_char){ { r, g, b, a }, { r_b, g_b, b_b, a_b 
 
 	struct renderer_rectangle rectangles[8];
 
-	rectangles[2].image_index = IMAGE_DIRT;
-	rectangles[2].sampler_index = SAMPLER_DEFAULT;
+	rectangles[0].image_index = IMAGE_DIRT;
+	rectangles[0].sampler_index = SAMPLER_DEFAULT;
 
-	rectangles[2].u[0] = 0;
-	rectangles[2].u[1] = 0;
-	rectangles[2].u[2] = 1;
-	rectangles[2].u[3] = 1;
+	rectangles[0].u[0] = 0;
+	rectangles[0].u[1] = 0;
+	rectangles[0].u[2] = 1;
+	rectangles[0].u[3] = 1;
 
-	rectangles[2].v[0] = 0;
-	rectangles[2].v[1] = 1;
-	rectangles[2].v[2] = 1;
-	rectangles[2].v[3] = 0;
+	rectangles[0].v[0] = 0;
+	rectangles[0].v[1] = 1;
+	rectangles[0].v[2] = 1;
+	rectangles[0].v[3] = 0;
 
-	rectangles[2].x[0] = 100;
-	rectangles[2].x[1] = 100;
-	rectangles[2].x[2] = 100 + 4 * game->resource_state.image_atlas[IMAGE_DIRT].width / 2;
-	rectangles[2].x[3] = 100 + 4 * game->resource_state.image_atlas[IMAGE_DIRT].width / 2;
+	rectangles[0].x[0] = 100;
+	rectangles[0].x[1] = 100;
+	rectangles[0].x[2] = 100 + 4 * game->resource_state.image_atlas[IMAGE_DIRT].width / 2;
+	rectangles[0].x[3] = 100 + 4 * game->resource_state.image_atlas[IMAGE_DIRT].width / 2;
 
-	rectangles[2].y[0] = 100;
-	rectangles[2].y[1] = 100 + 4 * game->resource_state.image_atlas[IMAGE_DIRT].height / 2;
-	rectangles[2].y[2] = 100 + 4 * game->resource_state.image_atlas[IMAGE_DIRT].height / 2;
-	rectangles[2].y[3] = 100;
+	rectangles[0].y[0] = 100;
+	rectangles[0].y[1] = 100 + 4 * game->resource_state.image_atlas[IMAGE_DIRT].height / 2;
+	rectangles[0].y[2] = 100 + 4 * game->resource_state.image_atlas[IMAGE_DIRT].height / 2;
+	rectangles[0].y[3] = 100;
 
-	rectangles[1].image_index = IMAGE_STONE;
-	rectangles[1].sampler_index = SAMPLER_SMOOTH;
 
-	rectangles[1].u[0] = 0;
-	rectangles[1].u[1] = 0;
-	rectangles[1].u[2] = 1;
-	rectangles[1].u[3] = 1;
-
-	rectangles[1].v[0] = 0;
-	rectangles[1].v[1] = 1;
-	rectangles[1].v[2] = 1;
-	rectangles[1].v[3] = 0;
-
-	rectangles[1].x[0] = 100;
-	rectangles[1].x[1] = 100;
-	rectangles[1].x[2] = 100 + 25*game->resource_state.image_atlas[IMAGE_STONE].width;
-	rectangles[1].x[3] = 100 + 25*game->resource_state.image_atlas[IMAGE_STONE].width;
-
-	rectangles[1].y[0] = 100;
-	rectangles[1].y[1] = 100 + 25 *game->resource_state.image_atlas[IMAGE_STONE].height;
-	rectangles[1].y[2] = 100 + 25 *game->resource_state.image_atlas[IMAGE_STONE].height;
-	rectangles[1].y[3] = 100;
-
-	renderer_backend_set_rectangles(game, &rectangles[1], 2);
+	renderer_backend_set_rectangles(game, rectangles, 1);
 
 	renderer_backend_render(game);
 
 	return 0;
 }
 
-uint32_t renderer_reload_resources(struct game_client* game) {
+uint32_t renderer_update_resources(struct game_client* game) {
 
 	renderer_backend_unload_resources(game);
 
@@ -108,12 +86,9 @@ uint32_t renderer_reload_resources(struct game_client* game) {
 	return 0;
 }
 
-uint32_t renderer_list_gpus(struct game_client* game) {
-
-	return 0;
-}
-
 uint32_t renderer_use_gpu(struct game_client* game, uint32_t gpu_index) {
+
+	renderer_backend_use_gpu(game, gpu_index);
 
 	return 0;
 }

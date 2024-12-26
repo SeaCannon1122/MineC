@@ -13,13 +13,11 @@ set(CLIENT_SOURCE_FILES
     src/client/renderer/renderer.c
     src/client/renderer/backend/renderer_backend.c
 
+    src/general/rendering/vulkan_helpers.c
     src/general/resource_manager.c
     src/general/platformlib/platform/platform.c
     src/general/platformlib/networking.c
-    src/general/rendering/rendering_memory_manager.c
-    src/general/rendering/vulkan_helpers.c
-    src/general/rendering/rendering_window.c
-    src/general/rendering/gui/pixel_char.c
+    src/general/pixel_char/pixel_char.c
     src/general/key_value.c
 
 )
@@ -40,7 +38,7 @@ set(TEST_SOURCE_FILES
     src/general/rendering/vulkan_helpers.c
     src/general/rendering/rendering_window.c
     src/general/rendering/rendering_memory_manager.c
-    src/general/rendering/gui/pixel_char.c
+    src/general/pixel_char/pixel_char.c
 
     src/general/platformlib/platform/platform.c
     src/general/key_value.c
@@ -53,7 +51,7 @@ set(TEST_2_SOURCE_FILES
     src/general/rendering/vulkan_helpers.c
     src/general/rendering/rendering_window.c
     src/general/rendering/rendering_memory_manager.c
-    src/general/rendering/gui/pixel_char.c
+    src/general/pixel_char/pixel_char.c
 
     src/general/platformlib/platform/platform.c
 

@@ -4,8 +4,6 @@
 #define RENDERER_H
 
 #include "backend/renderer_backend.h"
-#include "backend/vulkan/vulkan_backend.h"
-#include <stdint.h>
 
 struct renderer_rectangle {
 

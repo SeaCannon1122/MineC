@@ -3,8 +3,6 @@
 #ifndef RENDERER_BACKEND_H
 #define RENDERER_BACKEND_H
 
-#include "../renderer.h"
-
 #ifdef CLIENT_GRAPHICS_API_VULKAN
 
 #include "vulkan/vulkan_backend.h"
@@ -15,8 +13,7 @@
 
 #endif // CLIENT_GRAPHICS_API_VULKAN
 
-
-uint32_t renderer_backend_list_gpus(struct game_client* game);
+struct game_client;
 
 uint32_t renderer_backend_use_gpu(struct game_client* game, uint32_t gpu_index);
 

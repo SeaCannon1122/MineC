@@ -92,7 +92,6 @@ int32_t rendering_window_destroy(uint32_t window) {
 	if (rws[window].swapchain) rendering_window_swapchain_destroy(window);
 
 	VKCall(destroy_vulkan_surface(rws[window].instance, rws[window].surface));
-	window_destroy(rws[window].window);
 
 	return 0;
 }

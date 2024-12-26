@@ -1,4 +1,4 @@
-#include "../renderer_backend.h"
+#include "vulkan_backend.h"
 
 #include <stdio.h>
 
@@ -200,9 +200,21 @@ uint32_t initialize_rectangles(struct game_client* game) {
 	multi_sample_state.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 	multi_sample_state.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
+	VkPipelineShaderStageCreateInfo vertex_shader_stage = { 0 };
+	vertex_shader_stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	vertex_shader_stage.pName = "main";
+	vertex_shader_stage.stage = VK_SHADER_STAGE_VERTEX_BIT;
+	vertex_shader_stage.module = vertex_shader;
+
+	VkPipelineShaderStageCreateInfo fragment_shader_stage = { 0 };
+	fragment_shader_stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	fragment_shader_stage.pName = "main";
+	fragment_shader_stage.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+	fragment_shader_stage.module = fragment_shader;
+
 	VkPipelineShaderStageCreateInfo shader_stages[] = {
-		shader_stage(vertex_shader, VK_SHADER_STAGE_VERTEX_BIT),
-		shader_stage(fragment_shader, VK_SHADER_STAGE_FRAGMENT_BIT)
+		vertex_shader_stage,
+		fragment_shader_stage
 	};
 
 	VkDynamicState dynamic_states[] = {

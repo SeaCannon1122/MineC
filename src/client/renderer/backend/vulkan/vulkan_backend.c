@@ -1,35 +1,34 @@
-#include "../renderer_backend.h"
+#include "vulkan_backend.h"
 
 #include "client/game_client.h"
 
-#include "client/game_client.h"
-#include "general/rendering/rendering_window.h"
-
-#include "renderer_device.c"
-#include "renderer_instance.c"
-#include "vulkan_resources.c"
+#include "vulkan_device.c"
+#include "vulkan_instance.c"
+#include "vulkan_device_swapchain_and_framebuffers.c"
+#include "vulkan_device_renderpasses.c"
+#include "vulkan_device_resources.c"
 #include "renderer_rectangles.c"
 
 uint32_t renderer_backend_create(struct game_client* game) {
 
-	renderer_backend_instance_create(game);
-
-	renderer_backend_list_gpus(game);
+	vulkan_instance_create(game);
 
 	game->renderer_state.backend.device = 0;
 	for (int i = 0; i < game->application_state.machine_info.gpu_count; i++) if (game->application_state.machine_info.gpus[i].usable) {
 
-		renderer_backend_device_create(game, i);
+		vulkan_device_create(game, i);
 		break;
 	}
 
 	if (game->renderer_state.backend.device == 0) {
-		renderer_backend_device_destroy(game);
+		vulkan_instance_destroy(game);
 		return 1;
 	}
 
+	vulkan_device_renderpasses_create(game);
 
-	pixel_char_renderer_new(&game->renderer_state.backend.pcr, game->renderer_state.backend.device, game->renderer_state.backend.gpu, game->renderer_state.backend.window_render_pass);
+	vulkan_device_swapchain_and_framebuffers_create(game);
+	
 
 	return 0;
 }
@@ -37,36 +36,56 @@ uint32_t renderer_backend_create(struct game_client* game) {
 
 uint32_t renderer_backend_destroy(struct game_client* game) {
 
-	pixel_char_renderer_destroy(&game->renderer_state.backend.pcr);
+	vulkan_device_swapchain_and_framebuffers_destroy(game);
 
-	if (game->renderer_state.backend.device != 0) renderer_backend_device_destroy(game);
+	vulkan_device_renderpasses_destroy(game);
 
-	renderer_backend_instance_destroy(game);
+	vulkan_device_destroy(game);
+
+	vulkan_instance_destroy(game);
 
 	return 0;
+}
+
+uint32_t renderer_backend_load_resources(struct game_client* game) {
+
+	vulkan_device_resources_create(game);
+
+	return 0;
+}
+
+uint32_t renderer_backend_unload_resources(struct game_client* game) {
+
+	vulkan_device_resources_destroy(game);
+
 }
 
 uint32_t renderer_backend_use_gpu(struct game_client* game, uint32_t gpu_index) {
 	if (gpu_index >= game->application_state.machine_info.gpu_count) return 1;
 	if (game->application_state.machine_info.gpus[gpu_index].usable == 0) return 2;
 
-	renderer_backend_unload_resources(game);
+	vulkan_device_resources_destroy(game);
 
-	pixel_char_renderer_destroy(&game->renderer_state.backend.pcr);
+	vulkan_device_swapchain_and_framebuffers_destroy(game);
 
-	renderer_backend_device_destroy(game);
-	renderer_backend_device_create(game, gpu_index);
+	vulkan_device_renderpasses_destroy(game);
 
-	pixel_char_renderer_new(&game->renderer_state.backend.pcr, game->renderer_state.backend.device, game->renderer_state.backend.gpu, game->renderer_state.backend.window_render_pass);
+	vulkan_device_destroy(game);
+	vulkan_device_create(game, gpu_index);
 
-	renderer_backend_load_resources(game);
+	vulkan_device_renderpasses_create(game);
+
+	vulkan_device_swapchain_and_framebuffers_create(game);
+
+	vulkan_device_resources_create(game);
 
 	return 0;
 }
 
 uint32_t renderer_backend_resize(struct game_client* game) {
 
-	rendering_window_resize(game->application_state.window);
+	vulkan_device_swapchain_and_framebuffers_destroy(game);
+	vulkan_device_swapchain_and_framebuffers_create(game);
 
 	return 0;
 }
@@ -75,8 +94,8 @@ uint32_t renderer_backend_render(struct game_client* game) {
 
 	VKCall(vkResetFences(game->renderer_state.backend.device, 1, &game->renderer_state.backend.queue_fence));
 
-	VkRenderPassBeginInfo renderpass_begin_info = { 0 };
-	rendering_window_renderpass_begin_info(game->application_state.window, &renderpass_begin_info, game->renderer_state.backend.window_render_pass, game->renderer_state.backend.aquire_semaphore);
+	uint32_t swapchain_image_index;
+	VKCall(vkAcquireNextImageKHR(game->renderer_state.backend.device, game->renderer_state.backend.swapchain, 0, game->renderer_state.backend.aquire_semaphore, 0, &swapchain_image_index));
 
 	VKCall(vkResetCommandBuffer(game->renderer_state.backend.cmd, 0));
 
@@ -86,11 +105,18 @@ uint32_t renderer_backend_render(struct game_client* game) {
 
 	VKCall(vkBeginCommandBuffer(game->renderer_state.backend.cmd, &begin_info));
 
-	vkCmdBeginRenderPass(game->renderer_state.backend.cmd, &renderpass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
-
 	VkExtent2D screen_size;
 	screen_size.width = game->application_state.window_extent.width;
 	screen_size.height = game->application_state.window_extent.height;
+
+	VkRenderPassBeginInfo renderpass_begin_info = { 0 };
+	renderpass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+	renderpass_begin_info.renderPass = game->renderer_state.backend.window_render_pass;
+	renderpass_begin_info.renderArea.extent = screen_size;
+	renderpass_begin_info.framebuffer = game->renderer_state.backend.framebuffers[swapchain_image_index];
+
+	vkCmdBeginRenderPass(game->renderer_state.backend.cmd, &renderpass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
+
 
 	//rectangles
 	if (game->renderer_state.backend.rectangles_pipeline_usable_bool != 0 && game->renderer_state.backend.rectangles_count != 0) {
@@ -158,7 +184,15 @@ uint32_t renderer_backend_render(struct game_client* game) {
 
 	VKCall(vkQueueSubmit(game->renderer_state.backend.queue, 1, &submit_info, game->renderer_state.backend.queue_fence));
 
-	rendering_window_present_image(game->application_state.window, game->renderer_state.backend.queue, &game->renderer_state.backend.submit_semaphore, 1);
+	VkPresentInfoKHR present_info = { 0 };
+	present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	present_info.pSwapchains = &game->renderer_state.backend.swapchain;
+	present_info.swapchainCount = 1;
+	present_info.pImageIndices = &swapchain_image_index;
+	present_info.pWaitSemaphores = &game->renderer_state.backend.submit_semaphore;
+	present_info.waitSemaphoreCount = 1;
+
+	VKCall(vkQueuePresentKHR(game->renderer_state.backend.queue, &present_info));
 
 	VKCall(vkWaitForFences(game->renderer_state.backend.device, 1, &game->renderer_state.backend.queue_fence, VK_TRUE, UINT64_MAX));
 

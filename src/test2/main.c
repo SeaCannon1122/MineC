@@ -2,7 +2,7 @@
 
 #include <malloc.h>
 
-#include "general/rendering/gui/pixel_char.h"
+#include "general/pixel_char/pixel_char.h"
 #include "general/rendering/rendering_window.h"
 
 #include "general/rendering/rendering_memory_manager.h"
