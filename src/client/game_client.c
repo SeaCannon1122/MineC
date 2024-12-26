@@ -8,13 +8,9 @@ uint32_t game_client_run(struct game_client* game, uint8_t* resource_path) {
 
 	renderer_create(game);
 
-	//renderer_backend_use_gpu(game, 2);
-
 	while (application_handle_events(game) == 0) {
 
 		renderer_render(game);
-
-		sleep_for_ms(20);
 
 	}
 

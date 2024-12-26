@@ -1,5 +1,8 @@
-menu_background: "menu/background.png"
-menu_button: "menu/button_texture.png"
-menu_button_hover: "menu/button_texture_hover.png"
-menu_button_short: "menu/button_texture_short.png"
-menu_button_hover_short: "menu/button_texture_hover_short.png"
+menu_background: menu/background.png
+menu_button: menu/button.png
+menu_button_hover: menu/button_hover.png
+menu_button_disabled: menu/button_disabled.png
+menu_button_short: menu/button_short.png
+menu_button_hover_short: menu/button_hover_short.png
+menu_button_disabled_short: menu/button_disabled_short.png
+ingame_background: menu/ingame_background.png

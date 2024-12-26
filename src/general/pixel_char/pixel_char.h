@@ -1,6 +1,6 @@
 #pragma once 
 
-#include "general/rendering/vulkan_helpers.h"
+#include <vulkan/vulkan.h>
 #include <stdint.h>
 
 #define MAX_PIXEL_FONTS 4
@@ -38,7 +38,7 @@ struct pixel_char_renderer {
 	uint32_t chars_to_draw;
 };
 
-struct pixel_render_char {
+struct pixel_char {
 	uint8_t color[4];
 	uint8_t background_color[4];
 	uint32_t value;
@@ -49,11 +49,20 @@ struct pixel_render_char {
 
 struct pixel_font* load_pixel_font(char* src);
 
-uint32_t pixel_char_renderer_new(struct pixel_char_renderer* pcr, VkDevice device, VkPhysicalDevice gpu, VkRenderPass render_pass);
+uint32_t pixel_char_renderer_new(
+	struct pixel_char_renderer* pcr,
+	VkDevice device,
+	VkPhysicalDevice gpu,
+	VkRenderPass render_pass,
+	uint8_t* vertex_shader_custom,
+	uint32_t vertex_shader_custom_length,
+	uint8_t* fragment_shader_custom,
+	uint32_t fragment_shader__custom_length
+);
 uint32_t pixel_char_renderer_destroy(struct pixel_char_renderer* pcr);
 
 uint32_t pixel_char_renderer_add_font(struct pixel_char_renderer* pcr, VkBuffer buffer, uint32_t offset, uint32_t font_index);
 
-uint32_t pixel_char_renderer_fill_chars(struct pixel_char_renderer* pcr, struct pixel_render_char* chars, uint32_t chars_count);
+uint32_t pixel_char_renderer_fill_chars(struct pixel_char_renderer* pcr, struct pixel_char* chars, uint32_t chars_count);
 
 uint32_t pixel_char_renderer_render(struct pixel_char_renderer* pcr, VkCommandBuffer cmd, VkExtent2D screen_size);

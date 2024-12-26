@@ -1,2 +1,4 @@
-vk_basic_vertex: "shaders/basic_vertex.spv"
-vk_basic_fragment: "shaders/basic_fragment.spv"
+vk_basic_vertex: shaders/basic.vert.spv
+vk_basic_fragment: shaders/basic.frag.spv
+vk_pixel_char_vertex: shaders/pixel_char.vert.spv
+vk_pixel_char_fragment: shaders/pixel_char.frag.spv

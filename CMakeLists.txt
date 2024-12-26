@@ -13,7 +13,6 @@ set(CLIENT_SOURCE_FILES
     src/client/renderer/renderer.c
     src/client/renderer/backend/renderer_backend.c
 
-    src/general/rendering/vulkan_helpers.c
     src/general/resource_manager.c
     src/general/platformlib/platform/platform.c
     src/general/platformlib/networking.c
@@ -24,7 +23,7 @@ set(CLIENT_SOURCE_FILES
 
 set(SERVER_SOURCE_FILES
     src/server/main.c
-    src/server/game_server_body/game_server.c
+    src/server/game_server.c
     src/server/game_server_body/game_simulator.c
 
     src/general/platformlib/platform/platform.c

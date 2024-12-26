@@ -7,7 +7,7 @@
 #include "vulkan_device_swapchain_and_framebuffers.c"
 #include "vulkan_device_renderpasses.c"
 #include "vulkan_device_resources.c"
-#include "renderer_rectangles.c"
+#include "vulkan_device_resources_rectangles.c"
 
 uint32_t renderer_backend_create(struct game_client* game) {
 
@@ -29,6 +29,7 @@ uint32_t renderer_backend_create(struct game_client* game) {
 
 	vulkan_device_swapchain_and_framebuffers_create(game);
 	
+	game->renderer_state.backend.resources_created = 0;
 
 	return 0;
 }
@@ -49,6 +50,8 @@ uint32_t renderer_backend_destroy(struct game_client* game) {
 
 uint32_t renderer_backend_load_resources(struct game_client* game) {
 
+	game->renderer_state.backend.resources_created = 1;
+
 	vulkan_device_resources_create(game);
 
 	return 0;
@@ -56,15 +59,20 @@ uint32_t renderer_backend_load_resources(struct game_client* game) {
 
 uint32_t renderer_backend_unload_resources(struct game_client* game) {
 
+	game->renderer_state.backend.resources_created = 0;
+
 	vulkan_device_resources_destroy(game);
 
+	return 0;
 }
 
 uint32_t renderer_backend_use_gpu(struct game_client* game, uint32_t gpu_index) {
 	if (gpu_index >= game->application_state.machine_info.gpu_count) return 1;
 	if (game->application_state.machine_info.gpus[gpu_index].usable == 0) return 2;
 
-	vulkan_device_resources_destroy(game);
+	uint32_t resources = game->renderer_state.backend.resources_created;
+
+	if (resources) vulkan_device_resources_destroy(game);
 
 	vulkan_device_swapchain_and_framebuffers_destroy(game);
 
@@ -77,7 +85,7 @@ uint32_t renderer_backend_use_gpu(struct game_client* game, uint32_t gpu_index) 
 
 	vulkan_device_swapchain_and_framebuffers_create(game);
 
-	vulkan_device_resources_create(game);
+	if (resources) vulkan_device_resources_create(game);
 
 	return 0;
 }
@@ -92,10 +100,15 @@ uint32_t renderer_backend_resize(struct game_client* game) {
 
 uint32_t renderer_backend_render(struct game_client* game) {
 
+	VKCall(vkWaitForFences(game->renderer_state.backend.device, 1, &game->renderer_state.backend.queue_fence, VK_TRUE, UINT64_MAX));
+
 	VKCall(vkResetFences(game->renderer_state.backend.device, 1, &game->renderer_state.backend.queue_fence));
 
 	uint32_t swapchain_image_index;
-	VKCall(vkAcquireNextImageKHR(game->renderer_state.backend.device, game->renderer_state.backend.swapchain, 0, game->renderer_state.backend.aquire_semaphore, 0, &swapchain_image_index));
+	if (vkAcquireNextImageKHR(game->renderer_state.backend.device, game->renderer_state.backend.swapchain, 0, game->renderer_state.backend.aquire_semaphore, 0, &swapchain_image_index) != VK_SUCCESS) {
+		printf("[RENDERER BACKEND] Error aquireing next swapchain image\n");
+		return 1;
+	}
 
 	VKCall(vkResetCommandBuffer(game->renderer_state.backend.cmd, 0));
 
@@ -194,14 +207,12 @@ uint32_t renderer_backend_render(struct game_client* game) {
 
 	VKCall(vkQueuePresentKHR(game->renderer_state.backend.queue, &present_info));
 
-	VKCall(vkWaitForFences(game->renderer_state.backend.device, 1, &game->renderer_state.backend.queue_fence, VK_TRUE, UINT64_MAX));
-
 	return 0;
 }
 
-uint32_t renderer_backend_set_pixel_chars(struct game_client* game, struct pixel_render_char* chars, uint32_t chars_count) {
+uint32_t renderer_backend_set_pixel_chars(struct game_client* game, struct pixel_char* chars, uint32_t chars_count) {
 
 	pixel_char_renderer_fill_chars(&game->renderer_state.backend.pcr, chars, chars_count);
 
 	return 0;
-}
+};

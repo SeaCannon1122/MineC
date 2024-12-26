@@ -7,7 +7,30 @@
 #include <malloc.h>
 #include <string.h>
 
-#define __PIXEL_CHAR_WIDTH(c, font_map) (((struct pixel_font*)((font_map)[(c).masks & PIXEL_CHAR_FONT_MASK]))->char_font_entries[(c).value].width)
+#if defined(_WIN32)
+
+#define DEBUG_BREAK() __debugbreak()
+
+
+#elif defined(__linux__)
+#include <signal.h>
+#define DEBUG_BREAK() raise(SIGTRAP)
+
+#elif defined(__APPLE__)
+
+#define DEBUG_BREAK __builtin_trap()
+#define RESTRICT restrict
+
+#endif
+
+#define VKCall(call) \
+do { \
+    VkResult result = (call); \
+    if (result != VK_SUCCESS) { \
+        printf("Vulkan error in \n    %s \n at %s:%d: %d\n", #call, __FILE__, __LINE__, result); \
+		DEBUG_BREAK();\
+    } \
+} while(0)
 
 struct pixel_font* load_pixel_font(char* src) {
 
@@ -31,10 +54,49 @@ struct pixel_font* load_pixel_font(char* src) {
 	return buffer;
 }
 
-uint32_t pixel_char_renderer_new(struct pixel_char_renderer* pcr, VkDevice device, VkPhysicalDevice gpu, VkRenderPass render_pass) {
+uint32_t pixel_char_renderer_new(
+	struct pixel_char_renderer* pcr, 
+	VkDevice device, 
+	VkPhysicalDevice gpu,
+	VkRenderPass render_pass, 
+	uint8_t* vertex_shader_custom,
+	uint32_t vertex_shader_custom_length, 
+	uint8_t* fragment_shader_custom, 
+	uint32_t fragment_shader_custom_length
+) {
 
 	pcr->device = device;
 	pcr->gpu = gpu;
+
+
+	uint8_t* vertex_source = (vertex_shader_custom == 0 ? vertex_shader_default : vertex_shader_custom);
+	uint32_t vertex_source_length = (vertex_shader_custom == 0 ? vertex_shader_default_length : vertex_shader_custom_length);
+
+	uint8_t* fragment_source = (fragment_shader_custom == 0 ? fragment_shader_default : fragment_shader_custom);
+	uint32_t fragment_source_length = (fragment_shader_custom == 0 ? fragment_shader_default_length : fragment_shader_custom_length);
+
+	VkShaderModule vertex_shader, fragment_shader;
+
+	VkShaderModuleCreateInfo shader_info = { 0 };
+	shader_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+
+	shader_info.pCode = vertex_source;
+	shader_info.codeSize = vertex_source_length;
+	if (vkCreateShaderModule(pcr->device, &shader_info, 0, &vertex_shader) != VK_SUCCESS) {
+		printf("[PIXELCHAR RENDERER] Couldn't create Vertex-ShaderModule\n");
+
+		return 1;
+	}
+
+	shader_info.pCode = fragment_source;
+	shader_info.codeSize = fragment_source_length;
+	if (vkCreateShaderModule(pcr->device, &shader_info, 0, &fragment_shader) != VK_SUCCESS) {
+		printf("[PIXELCHAR RENDERER] Couldn't create Fragment-ShaderModule\n");
+
+		vkDestroyShaderModule(pcr->device, vertex_shader, 0);
+		return 1;
+	}
+
 
 	VkDescriptorSetLayoutBinding pixel_font_buffer_binding = { 0 };
 	pixel_font_buffer_binding.descriptorCount = 1;
@@ -59,7 +121,6 @@ uint32_t pixel_char_renderer_new(struct pixel_char_renderer* pcr, VkDevice devic
 	push_constant_range.offset = 0;
 	push_constant_range.size = sizeof(uint32_t) * 3;
 
-
 	VkPipelineLayoutCreateInfo pipeline_layout_info = { 0 };
 	pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	pipeline_layout_info.setLayoutCount = 1;
@@ -71,7 +132,7 @@ uint32_t pixel_char_renderer_new(struct pixel_char_renderer* pcr, VkDevice devic
 
 	VkVertexInputBindingDescription vertex_binding_description = { 0 };
 	vertex_binding_description.binding = 0;
-	vertex_binding_description.stride = sizeof(struct pixel_render_char);
+	vertex_binding_description.stride = sizeof(struct pixel_char);
 	vertex_binding_description.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
 
 
@@ -82,42 +143,42 @@ uint32_t pixel_char_renderer_new(struct pixel_char_renderer* pcr, VkDevice devic
 			.binding = 0,
 			.location = 0,
 			.format = VK_FORMAT_R8G8B8A8_UNORM,
-			.offset = offsetof(struct pixel_render_char, color[0])
+			.offset = offsetof(struct pixel_char, color[0])
 		},
 		// Background color (4 x 8-bit)
 		{
 			.binding = 0,
 			.location = 1,
 			.format = VK_FORMAT_R8G8B8A8_UNORM,
-			.offset = offsetof(struct pixel_render_char, background_color[0])
+			.offset = offsetof(struct pixel_char, background_color[0])
 		},
 		// Value (32-bit integer)
 		{
 			.binding = 0,
 			.location = 2,
 			.format = VK_FORMAT_R32_UINT,
-			.offset = offsetof(struct pixel_render_char, value)
+			.offset = offsetof(struct pixel_char, value)
 		},
 		// Start position (2 x 16-bit integers)
 		{
 			.binding = 0,
 			.location = 3,
 			.format = VK_FORMAT_R16G16_SINT,
-			.offset = offsetof(struct pixel_render_char, position[0])
+			.offset = offsetof(struct pixel_char, position[0])
 		},
 		// Masks (16-bit integer)
 		{
 			.binding = 0,
 			.location = 4,
 			.format = VK_FORMAT_R16_UINT,
-			.offset = offsetof(struct pixel_render_char, masks)
+			.offset = offsetof(struct pixel_char, masks)
 		},
 		// Size (16-bit integer)
 		{
 			.binding = 0,
 			.location = 5,
 			.format = VK_FORMAT_R16_SINT,
-			.offset = offsetof(struct pixel_render_char, size)
+			.offset = offsetof(struct pixel_char, size)
 		},
 		
 	};
@@ -180,25 +241,21 @@ uint32_t pixel_char_renderer_new(struct pixel_char_renderer* pcr, VkDevice devic
 	multi_sample_state.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 	multi_sample_state.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
-	VkShaderModule vertex_shader, fragment_shader;
+	VkPipelineShaderStageCreateInfo vertex_shader_stage = { 0 };
+	vertex_shader_stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	vertex_shader_stage.pName = "main";
+	vertex_shader_stage.stage = VK_SHADER_STAGE_VERTEX_BIT;
+	vertex_shader_stage.module = vertex_shader;
 
-	/*VKCall(new_VkShaderModule(pcr->device, "../../../resources/vertex_shader.spv", &vertex_shader));
-	VKCall(new_VkShaderModule(pcr->device, "../../../resources/fragment_shader.spv", &fragment_shader));*/
-
-	VkShaderModuleCreateInfo shader_info = { 0 };
-	shader_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-
-	shader_info.pCode = pixel_char_vertex_shader;
-	shader_info.codeSize = pixel_char_vertex_shader_len;
-	VKCall(vkCreateShaderModule(pcr->device, &shader_info, 0, &vertex_shader));
-
-	shader_info.pCode = pixel_char_fragment_shader;
-	shader_info.codeSize = pixel_char_fragment_shader_len;
-	VKCall(vkCreateShaderModule(pcr->device, &shader_info, 0, &fragment_shader));
+	VkPipelineShaderStageCreateInfo fragment_shader_stage = { 0 };
+	fragment_shader_stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	fragment_shader_stage.pName = "main";
+	fragment_shader_stage.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+	fragment_shader_stage.module = fragment_shader;
 
 	VkPipelineShaderStageCreateInfo shader_stages[] = {
-		shader_stage(vertex_shader, VK_SHADER_STAGE_VERTEX_BIT),
-		shader_stage(fragment_shader, VK_SHADER_STAGE_FRAGMENT_BIT)
+		vertex_shader_stage,
+		fragment_shader_stage
 	};
 
 	VkDynamicState dynamic_states[] = {
@@ -225,12 +282,21 @@ uint32_t pixel_char_renderer_new(struct pixel_char_renderer* pcr, VkDevice devic
 	pipe_info.pMultisampleState = &multi_sample_state;
 	pipe_info.pInputAssemblyState = &input_assembly;
 
-	VKCall(vkCreateGraphicsPipelines(pcr->device, 0, 1, &pipe_info, 0, &pcr->pipeline));
+	VkResult pipeline_result = vkCreateGraphicsPipelines(pcr->device, 0, 1, &pipe_info, 0, &pcr->pipeline);
 
 	vkDestroyShaderModule(pcr->device, vertex_shader, 0);
 	vkDestroyShaderModule(pcr->device, fragment_shader, 0);
 
-	uint32_t pixel_char_buffer_size = 4096 * sizeof(struct pixel_render_char);
+	if (pipeline_result != VK_SUCCESS) {
+		printf("[PIXELCHAR RENDERER] Couldn't create pixelchar graphics pipeline\n");
+
+		vkDestroyPipelineLayout(pcr->device, pcr->pipe_layout, 0);
+		vkDestroyDescriptorSetLayout(pcr->device, pcr->set_layout, 0);
+
+		return 1;
+	}
+
+	uint32_t pixel_char_buffer_size = 4096 * sizeof(struct pixel_char);
 
 	VkBufferCreateInfo buffer_info = { 0 };
 	buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -326,10 +392,10 @@ uint32_t pixel_char_renderer_add_font(struct pixel_char_renderer* pcr, VkBuffer 
 	return 0;
 }
 
-uint32_t pixel_char_renderer_fill_chars(struct pixel_char_renderer* pcr, struct pixel_render_char* chars, uint32_t chars_count) {
+uint32_t pixel_char_renderer_fill_chars(struct pixel_char_renderer* pcr, struct pixel_char* chars, uint32_t chars_count) {
 	pcr->chars_to_draw = chars_count;
 
-	memcpy(pcr->pixel_char_buffer_host_handle, chars, sizeof(struct pixel_render_char)* chars_count);
+	memcpy(pcr->pixel_char_buffer_host_handle, chars, sizeof(struct pixel_char)* chars_count);
 
 	return 0;
 }
@@ -385,4 +451,5 @@ uint32_t pixel_char_renderer_render(struct pixel_char_renderer* pcr, VkCommandBu
 		vkCmdDraw(cmd, 6, pcr->chars_to_draw, 0, 0);
 	}
 
+	return 0;
 }

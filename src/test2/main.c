@@ -85,10 +85,10 @@ int main(int argc, char* argv[]) {
 
 	char pixel_str[] = "WWLLOW!";
 	
-#define string_to_pixel_char(name, str, size, x, y, flags, r, g, b, a, r_b, g_b, b_b, a_b) struct pixel_render_char name[sizeof(str) - 1];\
+#define string_to_pixel_char(name, str, size, x, y, flags, r, g, b, a, r_b, g_b, b_b, a_b) struct pixel_char name[sizeof(str) - 1];\
 for(int i = 0; i < sizeof(str) - 1; i++) {\
-if(i == 0) name[i] = (struct pixel_render_char){ { r, g, b, a }, { r_b, g_b, b_b, a_b }, str[i], {x, y}, flags, size };\
-else name[i] = (struct pixel_render_char){ { r, g, b, a }, { r_b, g_b, b_b, a_b }, str[i], {name[i-1].position[0] + (size * ((rectangular_font->char_font_entries[name[i-1].value].width + 3) / 2 )), y}, flags, size  };\
+if(i == 0) name[i] = (struct pixel_char){ { r, g, b, a }, { r_b, g_b, b_b, a_b }, str[i], {x, y}, flags, size };\
+else name[i] = (struct pixel_char){ { r, g, b, a }, { r_b, g_b, b_b, a_b }, str[i], {name[i-1].position[0] + (size * ((rectangular_font->char_font_entries[name[i-1].value].width + 3) / 2 )), y}, flags, size  };\
 }\
 
 	string_to_pixel_char(chars, pixel_str, 20, 100, 100, PIXEL_CHAR_BACKGROUND_MASK | PIXEL_CHAR_UNDERLINE_MASK, 255, 255, 0, 127, 127, 0, 255, 255)

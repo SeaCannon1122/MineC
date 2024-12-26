@@ -5,9 +5,21 @@
 
 #include "general/platformlib/platform/platform.h"
 #include "client/resources/resources.h"
+#include "client/renderer/renderer_samplers.h"
 
 #include "general/pixel_char/pixel_char.h"
-	
+
+#include <stdio.h>
+
+#define VKCall(call) \
+do { \
+    VkResult result = (call); \
+    if (result != VK_SUCCESS) { \
+        printf("Vulkan error in \n    %s \n at %s:%d: %d\n", #call, __FILE__, __LINE__, result); \
+		DEBUG_BREAK();\
+    } \
+} while(0)
+
 struct renderer_backend {
 
 	//instance
@@ -50,6 +62,8 @@ struct renderer_backend {
 	VkSurfaceCapabilitiesKHR surface_capabilities;
 	VkPresentModeKHR present_mode;
 
+	uint32_t resources_created;
+
 	//resource dependent
 
 	//images
@@ -60,12 +74,13 @@ struct renderer_backend {
 	} images[RESOURCES_IMAGES_COUNT];
 	VkDeviceMemory images_memory;
 
-	VkSampler samplers[RESOURCES_SAMPLERS_COUNT];
+	VkSampler samplers[SAMPLERS_COUNT];
 
 	VkDescriptorSetLayout images_descriptor_set_layout;
 	VkDescriptorPool images_descriptor_pool;
 	VkDescriptorSet images_descriptor_set;
 
+	uint32_t pixel_char_renderer_usable;
 	struct pixel_char_renderer pcr;
 	VkDeviceMemory pixelfonts_memory;
 	VkBuffer pixelfont_buffer;

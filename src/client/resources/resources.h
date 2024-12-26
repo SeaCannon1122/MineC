@@ -28,16 +28,28 @@ static const uint32_t default_image_width = 16;
 static const uint32_t default_image_height = 16;
 
 enum resources_images {
+	IMAGE_MENU_BACKGROUND,
+	IMAGE_MENU_BUTTON,
+	IMAGE_MENU_BUTTON_HOVER,
+	IMAGE_MENU_BUTTON_DISABLED,
+	IMAGE_MENU_BUTTON_SHORT,
+	IMAGE_MENU_BUTTON_HOVER_SHORT,
+	IMAGE_MENU_BUTTON_DISABLED_SHORT,
 	IMAGE_DIRT,
 	IMAGE_STONE,
-	IMAGE_BUTTON,
 	IMAGE_TEX_2
 };
 
 static const uint8_t* const resources_image_tokens[] = {
+	"menu_background",
+	"menu_button",
+	"menu_button_hover",
+	"menu_button_disabled",
+	"menu_button_short",
+	"menu_button_hover_short",
+	"menu_button_disabled_short",
 	"dirt",
 	"stone",
-	"menu_button",
 	"tex2",
 };
 
@@ -57,49 +69,17 @@ static const uint8_t* const resources_pixelfont_tokens[] = {
 
 #define RESOURCES_PIXELFONTS_COUNT sizeof(resources_pixelfont_tokens) / sizeof(resources_pixelfont_tokens[0])
 
-enum sampler_parameters {
-	SAMPLING_DISABLE,
-	SAMPLING_ENABLE,
-	SAMPLING_LINEAR,
-	SAMPLING_NEAREST,
-	SAMPLING_REPEAT,
-	SAMPLING_CLAMP_TO_EDGE,
-	SAMPLING_COMPARE_NEVER,
-	SAMPLING_COMPARE_ALWAYS,
-	SAMPLING_COMPARE_LESS,
-	SAMPLING_COMPARE_EQUAL,
-	SAMPLING_COMPARE_GREATER,
-	SAMPLING_COMPARE_LESS_EQUAL,
-	SAMPLING_COMPARE_GREATER_EQUAL,
-	SAMPLING_COMPARE_NOT_EQUAL
+enum resources_key_value_maps {
+	RESOURCES_KVM_SAMPLER_DEFAULT,
+	RESOURCES_KVM_SAMPLER_SMOOTH,
 };
 
-struct sampler_configuration {
-	uint32_t min_filter;
-	uint32_t mag_filter;
-	uint32_t mipmap_mode;
-	uint32_t address_mode_u;
-	uint32_t address_mode_v;
-	float mip_lod_bias;
-	uint32_t anisotropy_enable;
-	float max_anisotropy;
-	uint32_t compare_enable;
-	uint32_t compare_op;
-	float min_lod;
-	float max_lod;
-};
-
-enum resources_sampler_configurations {
-	SAMPLER_DEFAULT,
-	SAMPLER_SMOOTH,
-};
-
-static const uint8_t* const resources_sampler_tokens[] = {
+static const uint8_t* const resources_key_value_map_tokens[] = {
 	"sampler_default",
 	"sampler_smooth"
 };
 
-#define RESOURCES_SAMPLERS_COUNT sizeof(resources_sampler_tokens) / sizeof(resources_sampler_tokens[0])
+#define RESOURCES_KVM_COUNT sizeof(resources_key_value_map_tokens) / sizeof(resources_key_value_map_tokens[0])
 
 struct resource_state {
 
@@ -109,8 +89,8 @@ struct resource_state {
 	//images
 	struct resource_manager_image image_atlas[RESOURCES_IMAGES_COUNT];
 
-	//samplers
-	struct sampler_configuration sampler_atlas[RESOURCES_SAMPLERS_COUNT];
+	//key value maps
+	void* key_value_map_atlas[RESOURCES_KVM_COUNT];
 
 	//pixelfonts
 	struct pixel_font* pixelfont_atlas[RESOURCES_PIXELFONTS_COUNT];

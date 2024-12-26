@@ -80,7 +80,7 @@ int main(int argc, char* argv[]) {
 
 	char pixel_str[] = "HELLOW WORLD!";
 
-	struct pixel_render_char {
+	struct pixel_char {
 		uint8_t color[4];
 		uint8_t background_color[4];
 		uint32_t value;
@@ -89,10 +89,10 @@ int main(int argc, char* argv[]) {
 		uint16_t size;
 	};
 
-#define string_to_pixel_char(name, str, size, x, y, flags) struct pixel_render_char name[sizeof(str) - 1];\
+#define string_to_pixel_char(name, str, size, x, y, flags) struct pixel_char name[sizeof(str) - 1];\
 for(int i = 0; i < sizeof(str) - 1; i++) {\
-if(i == 0) name[i] = (struct pixel_render_char){ { 220, 220, 220, 255 }, { 255, 0, 0, 255 }, str[i], {x, y}, flags, size };\
-else name[i] = (struct pixel_render_char){ { 220, 220, 220, 255 }, { 255, 0, 0, 255 }, str[i], {name[i-1].position[0] + (size * ((debug_font->char_font_entries[name[i-1].value].width + 3) / 2 )), y}, flags, size  };\
+if(i == 0) name[i] = (struct pixel_char){ { 220, 220, 220, 255 }, { 255, 0, 0, 255 }, str[i], {x, y}, flags, size };\
+else name[i] = (struct pixel_char){ { 220, 220, 220, 255 }, { 255, 0, 0, 255 }, str[i], {name[i-1].position[0] + (size * ((debug_font->char_font_entries[name[i-1].value].width + 3) / 2 )), y}, flags, size  };\
 }\
 
 	string_to_pixel_char(chars, pixel_str, 20, 100, 100, PIXEL_CHAR_SHADOW_MASK | PIXEL_CHAR_BACKGROUND_MASK | PIXEL_CHAR_CURSIVE_MASK | PIXEL_CHAR_UNDERLINE_MASK)

@@ -1,1 +1,2 @@
 sampler_default: samplers/default_sampler.yaml
+sampler_smooth: samplers/smooth_sampler.yaml

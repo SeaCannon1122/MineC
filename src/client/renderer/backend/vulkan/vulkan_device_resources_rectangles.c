@@ -12,7 +12,7 @@ struct render_rectangle_vertex {
 	int16_t sampler_index;
 };
 
-uint32_t initialize_rectangles(struct game_client* game) {
+uint32_t vulkan_device_resources_rectangles_create(struct game_client* game) {
 
 	game->renderer_state.backend.rectangles_count = 0; 
 
@@ -89,7 +89,7 @@ uint32_t initialize_rectangles(struct game_client* game) {
 	shader_info.pCode = (uint32_t*)vertex_source.data;
 	shader_info.codeSize = vertex_source.size;
 	if (vkCreateShaderModule(game->renderer_state.backend.device, &shader_info, 0, &vertex_shader) != VK_SUCCESS) {
-		printf("[RENDERER BACKEND] Couldn't compile shader from token 'vk_basic_vertex'\n");
+		printf("[RENDERER BACKEND] Couldn't create ShaderModule from token 'vk_basic_vertex'\n");
 
 		return 1;
 	}
@@ -97,7 +97,7 @@ uint32_t initialize_rectangles(struct game_client* game) {
 	shader_info.pCode = (uint32_t*)fragment_source.data;
 	shader_info.codeSize = fragment_source.size;
 	if (vkCreateShaderModule(game->renderer_state.backend.device, &shader_info, 0, &fragment_shader) != VK_SUCCESS) {
-		printf("[RENDERER BACKEND] Couldn't compile shader from token 'vk_basic_fragment'\n");
+		printf("[RENDERER BACKEND] Couldn't create ShaderModule from token 'vk_basic_fragment'\n");
 
 		vkDestroyShaderModule(game->renderer_state.backend.device, vertex_shader, 0);
 
@@ -254,7 +254,7 @@ uint32_t initialize_rectangles(struct game_client* game) {
 	game->renderer_state.backend.rectangles_pipeline_usable_bool = 1;
 }
 
-uint32_t uninitialize_rectangles(struct game_client* game) {
+uint32_t vulkan_device_resources_rectangles_destroy(struct game_client* game) {
 
 	vkDeviceWaitIdle(game->renderer_state.backend.device);
 
