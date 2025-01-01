@@ -1,4 +1,3 @@
-pixelfont_debug: fonts/debug.pixelfont
 pixelfont_default: fonts/default.pixelfont
 pixelfont_wide: fonts/wide.pixelfont
-pixelfont_rectangular: fonts/rectangular.pixelfont
+pixelfont_smooth: fonts/smooth.pixelfont

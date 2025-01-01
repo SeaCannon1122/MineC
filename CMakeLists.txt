@@ -13,6 +13,7 @@ set(CLIENT_SOURCE_FILES
     src/client/renderer/renderer.c
     src/client/renderer/backend/renderer_backend.c
     src/client/gui/gui.c
+    src/client/gui/gui_menus.c
 
     src/general/resource_manager.c
     src/general/platformlib/platform/platform.c

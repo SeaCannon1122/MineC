@@ -36,46 +36,13 @@ uint32_t renderer_render(struct game_client* game) {
 		renderer_backend_resize(game);
 
 	}
-
-	char* pixel_str[] = {
-		"This is a very long text.",
-		"Well, at least if you compare it to what else i have written to this screen so far.",
-		"Objectively speaking, this text is actually quite small but still large enough for it to not fit in a singular line!",
-		"Hello World! WHat are yall doing on this fine evening? I'm just coding :) :=> ^-^",
-		"rectangles[0].u[2] = (float)game->application_state.window_extent.width / (float)(4 * game->resource_state.image_atlas[IMAGE_MENU_BACKGROUND].width);",
-		"https://www.youtube.com/watch?v=tLhfuc_KCpM",
-		"Amphipoea oculea, the ear moth, is a moth of the family Noctuidae. It was first described by",
-		"Carl Linnaeus in 1761 and it is found in most of the Palearctic realm.[citation needed] It is",
-		"The wingspan is 29-34 mm. Forewing pale or dark ferruginous brown; the veins brown; inner and outer lines",
-		"double, brown, wide apart; the inner curved outwards between, and toothed inwards on, the veins; the outer with the inner arm thin, lunulate-dentate, ",
-		"the outer thick, continuous and parallel; a thick dark median shade running between the ",
-		"stigmata; submarginal line indistinct, waved, angled on vein 7, above which it is preceded by a ",
-		"dark costal patch; orbicular stigma rounded, orange, with a brown ring; reniform white, with the",
-		"veins across it brown and containing on the discocellular a brown-outlined lunule, of which the",
-		"centre is yellowish; the colour with brown outline; hindwing fuscous grey, paler towards base; ",
-	};
-
-#define string_to_pixel_char(name, str, size, x, y, flags, r, g, b, a, r_b, g_b, b_b, a_b) struct pixel_char name[300];\
-for(int i = 0; i < strlen(str); i++) {\
-if(i == 0) name[i] = (struct pixel_char){ { r, g, b, a }, { r_b, g_b, b_b, a_b }, str[i], {x, y}, flags, size };\
-else name[i] = (struct pixel_char){ { r, g, b, a }, { r_b, g_b, b_b, a_b }, str[i], {name[i-1].position[0] + (size * ((game->resource_state.pixelfont_atlas[PIXELFONT_DEFAULT]->char_font_entries[name[i-1].value].width + 3) / 2 )), y}, flags, size  };\
-}\
-
-	for (int j = 0; j < 15; j++) {
-
-		string_to_pixel_char(chars, pixel_str[j], 4, 50, 50 + j * 50, PIXELFONT_DEFAULT | PIXEL_CHAR_SHADOW_MASK | (j % 2 == 1 ? PIXEL_CHAR_UNDERLINE_MASK : 0) | PIXEL_CHAR_BACKGROUND_MASK, 255, 255, 255, 255, 100, 100, 100, 180)
-
-		renderer_backend_add_pixel_chars(game, chars, strlen(pixel_str[j]));
-
-	}
-
 	
 	double time = get_time();
 
 	struct renderer_rectangle rectangles[8];
 
-	rectangles[0].image_index = 0x00ff00ff;//IMAGE_MENU_BACKGROUND;
-	rectangles[0].sampler_index = -1;// SAMPLER_SMOOTH;
+	rectangles[0].image_index = IMAGE_MENU_BACKGROUND;
+	rectangles[0].sampler_index = SAMPLER_SMOOTH;
 
 
 
@@ -104,6 +71,8 @@ else name[i] = (struct pixel_char){ { r, g, b, a }, { r_b, g_b, b_b, a_b }, str[
 
 
 	renderer_backend_add_rectangles(game, rectangles, 1);
+
+	gui_menus_render(game);
 
 	renderer_backend_render(game);
 

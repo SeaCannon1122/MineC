@@ -2,7 +2,8 @@
 
 #define PIXEL_CHAR_IF_BIT(ptr, x, y) (ptr[(x + y * 16) / 32] & (1 << ((x + y * 16) % 32)) )
 
-#define PIXEL_CHAR_SHADOW_DIVISOR 3.5
+#define PIXEL_CHAR_SHADOW_COLOR_DIVISOR 5.0
+#define PIXEL_CHAR_SHADOW_ALPHA_DIVISOR 1.4
 
 #define PIXEL_CHAR_UNDERLINE_MASK  0x8000
 #define PIXEL_CHAR_CURSIVE_MASK    0x4000
@@ -89,16 +90,16 @@ void main() {
         
                 if (PIXEL_CHAR_IF_BIT(font_entry.pixel_layout, check_coords.x, check_coords.y) != 0)
                     fragmentColor = vec4(
-                        color.xyz / PIXEL_CHAR_SHADOW_DIVISOR, 
-                        color.w
+                        color.xyz / PIXEL_CHAR_SHADOW_COLOR_DIVISOR,
+                        color.w / PIXEL_CHAR_SHADOW_ALPHA_DIVISOR
                     );
             }
             if (fragment_position.y / size > 7 && fragment_position.y / size < 9)
             {
                 if ((masks & PIXEL_CHAR_UNDERLINE_MASK) != 0)
                     fragmentColor = vec4(
-                        color.xyz / PIXEL_CHAR_SHADOW_DIVISOR, 
-                        color.w
+                        color.xyz / PIXEL_CHAR_SHADOW_COLOR_DIVISOR,
+                        color.w / PIXEL_CHAR_SHADOW_ALPHA_DIVISOR
                     );
             }
         }

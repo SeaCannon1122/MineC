@@ -58,13 +58,13 @@ static const uint8_t* const resources_image_tokens[] = {
 enum resources_pixelfonts {
 	PIXELFONT_DEFAULT,
 	PIXELFONT_WIDE,
-	PIXELFONT_RECTANGULAR
+	PIXELFONT_SMOOTH
 };
 
 static const uint8_t* const resources_pixelfont_tokens[] = {
 	"pixelfont_default",
 	"pixelfont_wide",
-	"pixelfont_rectangular"
+	"pixelfont_smooth",
 };
 
 #define RESOURCES_PIXELFONTS_COUNT sizeof(resources_pixelfont_tokens) / sizeof(resources_pixelfont_tokens[0])
