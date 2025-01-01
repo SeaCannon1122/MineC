@@ -100,13 +100,16 @@ uint32_t renderer_backend_resize(struct game_client* game) {
 
 uint32_t renderer_backend_render(struct game_client* game) {
 
-	VKCall(vkWaitForFences(game->renderer_state.backend.device, 1, &game->renderer_state.backend.queue_fence, VK_TRUE, UINT64_MAX));
+	if (game->renderer_state.backend.queue_used) VKCall(vkWaitForFences(game->renderer_state.backend.device, 1, &game->renderer_state.backend.queue_fence, VK_TRUE, UINT64_MAX));
 
 	VKCall(vkResetFences(game->renderer_state.backend.device, 1, &game->renderer_state.backend.queue_fence));
+
+	game->renderer_state.backend.queue_used = 0;
 
 	uint32_t swapchain_image_index;
 	if (vkAcquireNextImageKHR(game->renderer_state.backend.device, game->renderer_state.backend.swapchain, 0, game->renderer_state.backend.aquire_semaphore, 0, &swapchain_image_index) != VK_SUCCESS) {
 		printf("[RENDERER BACKEND] Error aquireing next swapchain image\n");
+		
 		return 1;
 	}
 
@@ -174,6 +177,7 @@ uint32_t renderer_backend_render(struct game_client* game) {
 
 	}
 
+	game->renderer_state.backend.rectangles_count = 0;
 
 	//pixel_chars
 	pixel_char_renderer_render(&game->renderer_state.backend.pcr, game->renderer_state.backend.cmd, screen_size);
@@ -194,8 +198,9 @@ uint32_t renderer_backend_render(struct game_client* game) {
 	submit_info.signalSemaphoreCount = 1;
 	submit_info.waitSemaphoreCount = 1;
 
-
 	VKCall(vkQueueSubmit(game->renderer_state.backend.queue, 1, &submit_info, game->renderer_state.backend.queue_fence));
+
+	
 
 	VkPresentInfoKHR present_info = { 0 };
 	present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -207,12 +212,14 @@ uint32_t renderer_backend_render(struct game_client* game) {
 
 	VKCall(vkQueuePresentKHR(game->renderer_state.backend.queue, &present_info));
 
+	game->renderer_state.backend.queue_used = 1;
+
 	return 0;
 }
 
-uint32_t renderer_backend_set_pixel_chars(struct game_client* game, struct pixel_char* chars, uint32_t chars_count) {
+uint32_t renderer_backend_add_pixel_chars(struct game_client* game, struct pixel_char* chars, uint32_t chars_count) {
 
-	pixel_char_renderer_fill_chars(&game->renderer_state.backend.pcr, chars, chars_count);
+	pixel_char_renderer_add_chars(&game->renderer_state.backend.pcr, chars, chars_count);
 
 	return 0;
 };

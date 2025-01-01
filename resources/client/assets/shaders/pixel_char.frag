@@ -2,7 +2,7 @@
 
 #define PIXEL_CHAR_IF_BIT(ptr, x, y) (ptr[(x + y * 16) / 32] & (1 << ((x + y * 16) % 32)) )
 
-#define PIXEL_CHAR_SHADOW_DIVISOR 3.0
+#define PIXEL_CHAR_SHADOW_DIVISOR 3.5
 
 #define PIXEL_CHAR_UNDERLINE_MASK  0x8000
 #define PIXEL_CHAR_CURSIVE_MASK    0x4000

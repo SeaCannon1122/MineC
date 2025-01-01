@@ -12,6 +12,7 @@ set(CLIENT_SOURCE_FILES
     src/client/simulator/networker.c
     src/client/renderer/renderer.c
     src/client/renderer/backend/renderer_backend.c
+    src/client/gui/gui.c
 
     src/general/resource_manager.c
     src/general/platformlib/platform/platform.c

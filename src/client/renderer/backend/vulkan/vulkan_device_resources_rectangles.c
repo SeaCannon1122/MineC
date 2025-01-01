@@ -8,8 +8,8 @@ struct render_rectangle_vertex {
 	int16_t y;
 	float u;
 	float v;
-	int16_t image_index;
-	int16_t sampler_index;
+	int32_t image_index_or_color;
+	int32_t sampler_index;
 };
 
 uint32_t vulkan_device_resources_rectangles_create(struct game_client* game) {
@@ -130,15 +130,15 @@ uint32_t vulkan_device_resources_rectangles_create(struct game_client* game) {
 		{
 			.binding = 0,
 			.location = 2,
-			.format = VK_FORMAT_R16_UINT,
+			.format = VK_FORMAT_R32_SINT,
 			.offset = 2 * sizeof(int16_t) + 2 * sizeof(float)
 		},
 		//sampler index
 		{
 			.binding = 0,
 			.location = 3,
-			.format = VK_FORMAT_R16_UINT,
-			.offset = 3 * sizeof(int16_t) + 2 * sizeof(float)
+			.format = VK_FORMAT_R32_SINT,
+			.offset = 2 * sizeof(int16_t) + 2 * sizeof(float) + sizeof(int32_t)
 		},
 	};
 
@@ -252,6 +252,8 @@ uint32_t vulkan_device_resources_rectangles_create(struct game_client* game) {
 	}
 
 	game->renderer_state.backend.rectangles_pipeline_usable_bool = 1;
+
+	return 0;
 }
 
 uint32_t vulkan_device_resources_rectangles_destroy(struct game_client* game) {
@@ -264,16 +266,15 @@ uint32_t vulkan_device_resources_rectangles_destroy(struct game_client* game) {
 	vkUnmapMemory(game->renderer_state.backend.device, game->renderer_state.backend.rectangles_buffer_memory);
 	vkFreeMemory(game->renderer_state.backend.device, game->renderer_state.backend.rectangles_buffer_memory, 0);
 	vkDestroyBuffer(game->renderer_state.backend.device, game->renderer_state.backend.rectangles_buffer, 0);
+
+	return 0;
 }
 
-uint32_t renderer_backend_set_rectangles(struct game_client* game, struct renderer_rectangle* rectangles, uint32_t rectangles_count) {
+uint32_t renderer_backend_add_rectangles(struct game_client* game, struct renderer_rectangle* rectangles, uint32_t rectangles_count) {
 
-	game->renderer_state.backend.rectangles_count = rectangles_count;
+	struct render_rectangle_vertex* vertex_buffer = (size_t)game->renderer_state.backend.rectangles_buffer_memory_host_handle + (size_t)game->renderer_state.backend.rectangles_count * sizeof(struct render_rectangle_vertex) * 6;
 
 	for (uint32_t i = 0; i < rectangles_count; i++) {
-
-
-		struct render_rectangle_vertex* vertex_buffer = game->renderer_state.backend.rectangles_buffer_memory_host_handle;
 
 		vertex_buffer[i * 6 + 0] = (struct render_rectangle_vertex){
 			rectangles[i].x[0], rectangles[i].y[0], rectangles[i].u[0], rectangles[i].v[0], rectangles[i].image_index, rectangles[i].sampler_index
@@ -296,6 +297,8 @@ uint32_t renderer_backend_set_rectangles(struct game_client* game, struct render
 		};
 
 	}
+
+	game->renderer_state.backend.rectangles_count += rectangles_count;
 
 	return 0;
 }

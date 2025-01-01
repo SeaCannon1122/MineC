@@ -40,6 +40,7 @@ uint32_t vulkan_device_resources_create(struct game_client* game) {
 		game->renderer_state.backend.device,
 		game->renderer_state.backend.gpu,
 		game->renderer_state.backend.window_render_pass,
+		4096,
 		vertex_source.data,
 		vertex_source.size,
 		fragment_source.data,

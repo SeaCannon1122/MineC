@@ -71,6 +71,8 @@ uint32_t vulkan_device_create(struct game_client* game, uint32_t gpu_index) {
 
 	VKCall(vkCreateFence(game->renderer_state.backend.device, &fence_info, 0, &game->renderer_state.backend.queue_fence));
 
+	game->renderer_state.backend.queue_used = 0;
+
 	return 0;
 }
 

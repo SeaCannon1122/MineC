@@ -42,6 +42,8 @@ struct renderer_backend {
 	VkQueue queue;
 	uint32_t queue_index;
 
+	uint32_t queue_used;
+
 	VkCommandPool command_pool;
 	VkCommandBuffer cmd;
 

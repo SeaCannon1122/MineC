@@ -34,6 +34,7 @@ struct pixel_char_renderer {
 	VkBuffer pixel_char_buffer;
 	VkDeviceMemory pixel_char_buffer_memory;
 	void* pixel_char_buffer_host_handle;
+	uint32_t buffer_length;
 
 	uint32_t chars_to_draw;
 };
@@ -54,6 +55,7 @@ uint32_t pixel_char_renderer_new(
 	VkDevice device,
 	VkPhysicalDevice gpu,
 	VkRenderPass render_pass,
+	uint32_t buffer_length,
 	uint8_t* vertex_shader_custom,
 	uint32_t vertex_shader_custom_length,
 	uint8_t* fragment_shader_custom,
@@ -63,6 +65,6 @@ uint32_t pixel_char_renderer_destroy(struct pixel_char_renderer* pcr);
 
 uint32_t pixel_char_renderer_add_font(struct pixel_char_renderer* pcr, VkBuffer buffer, uint32_t offset, uint32_t font_index);
 
-uint32_t pixel_char_renderer_fill_chars(struct pixel_char_renderer* pcr, struct pixel_char* chars, uint32_t chars_count);
+uint32_t pixel_char_renderer_add_chars(struct pixel_char_renderer* pcr, struct pixel_char* chars, uint32_t chars_count);
 
 uint32_t pixel_char_renderer_render(struct pixel_char_renderer* pcr, VkCommandBuffer cmd, VkExtent2D screen_size);

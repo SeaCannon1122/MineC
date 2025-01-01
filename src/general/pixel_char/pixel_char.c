@@ -59,11 +59,14 @@ uint32_t pixel_char_renderer_new(
 	VkDevice device, 
 	VkPhysicalDevice gpu,
 	VkRenderPass render_pass, 
+	uint32_t buffer_length,
 	uint8_t* vertex_shader_custom,
 	uint32_t vertex_shader_custom_length, 
 	uint8_t* fragment_shader_custom, 
 	uint32_t fragment_shader_custom_length
 ) {
+
+	pcr->buffer_length = buffer_length;
 
 	pcr->device = device;
 	pcr->gpu = gpu;
@@ -296,7 +299,7 @@ uint32_t pixel_char_renderer_new(
 		return 1;
 	}
 
-	uint32_t pixel_char_buffer_size = 4096 * sizeof(struct pixel_char);
+	uint32_t pixel_char_buffer_size = pcr->buffer_length * sizeof(struct pixel_char);
 
 	VkBufferCreateInfo buffer_info = { 0 };
 	buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -350,6 +353,8 @@ uint32_t pixel_char_renderer_new(
 
 	VKCall(vkAllocateDescriptorSets(pcr->device, &descriptor_set_info, &pcr->descriptor_set));
 
+	pcr->chars_to_draw = 0;
+
 	return 0;
 }
 
@@ -392,10 +397,11 @@ uint32_t pixel_char_renderer_add_font(struct pixel_char_renderer* pcr, VkBuffer 
 	return 0;
 }
 
-uint32_t pixel_char_renderer_fill_chars(struct pixel_char_renderer* pcr, struct pixel_char* chars, uint32_t chars_count) {
-	pcr->chars_to_draw = chars_count;
+uint32_t pixel_char_renderer_add_chars(struct pixel_char_renderer* pcr, struct pixel_char* chars, uint32_t chars_count) {
 
-	memcpy(pcr->pixel_char_buffer_host_handle, chars, sizeof(struct pixel_char)* chars_count);
+	memcpy((size_t)pcr->pixel_char_buffer_host_handle + sizeof(struct pixel_char) * (size_t)pcr->chars_to_draw, chars, sizeof(struct pixel_char) * chars_count);
+
+	pcr->chars_to_draw += chars_count;
 
 	return 0;
 }
@@ -450,6 +456,8 @@ uint32_t pixel_char_renderer_render(struct pixel_char_renderer* pcr, VkCommandBu
 
 		vkCmdDraw(cmd, 6, pcr->chars_to_draw, 0, 0);
 	}
+
+	pcr->chars_to_draw = 0;
 
 	return 0;
 }
