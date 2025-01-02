@@ -121,6 +121,8 @@ struct application_state {
 
 	} input_state;
 
+	double time;
+
 };
 
 struct game_client;

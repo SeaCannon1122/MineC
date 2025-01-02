@@ -11,7 +11,8 @@ enum menus {
 	MENU_NONE,
 	MENU_MAIN,
 	MENU_SETTINGS,
-	MENU_JOIN_SERVER,
+	MENU_JOIN_GAME,
+	MENU_SERVER_INTERMEDIATE,
 	MENU_INGAME_MAIN
 };
 
@@ -22,9 +23,43 @@ struct gui_menus_state {
 	struct {
 		void* menu_handle;
 
-		void* title_label_handle;
+		void* title_label;
+
+		void* join_game_button;
+		void* join_game_label;
+
+		void* options_button;
+		void* options_label;
+
+		void* quit_game_button;
+		void* quit_game_label;
 
 	} main;
+
+	struct {
+		void* menu_handle;
+
+		void* join_a_server_label;
+
+		void* ip_label;
+		void* ip_textfield;
+		uint32_t* ip_textfield_ptr;
+
+		void* port_label;
+		void* port_textfield;
+		uint32_t* port_textfield_ptr;
+
+		void* join_label;
+		void* join_button;
+		
+		void* back_label;
+		void* back_button;
+
+	} join_game;
+
+	struct {
+		void* menu_handle;
+	} server_intermediate;
 };
 
 struct game_client;

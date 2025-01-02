@@ -35,6 +35,8 @@ enum resources_images {
 	IMAGE_MENU_BUTTON_SHORT,
 	IMAGE_MENU_BUTTON_HOVER_SHORT,
 	IMAGE_MENU_BUTTON_DISABLED_SHORT,
+	IMAGE_MENU_TEXTFIELD,
+	IMAGE_MENU_TEXTFIELD_SELECTED,
 	IMAGE_DIRT,
 	IMAGE_STONE,
 	IMAGE_TEX_2
@@ -48,6 +50,8 @@ static const uint8_t* const resources_image_tokens[] = {
 	"menu_button_short",
 	"menu_button_hover_short",
 	"menu_button_disabled_short",
+	"menu_textfield",
+	"menu_textfield_selected",
 	"dirt",
 	"stone",
 	"tex2",

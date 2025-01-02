@@ -7,7 +7,7 @@ set(CLIENT_SOURCE_FILES
     src/client/game_client.c
     src/client/application/application.c
     src/client/resources/resources.c
-    src/client/resources/settings.c
+    src/client/settings/settings.c
     src/client/simulator/simulator.c
     src/client/simulator/networker.c
     src/client/renderer/renderer.c

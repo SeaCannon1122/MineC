@@ -76,6 +76,8 @@ uint32_t application_handle_events(struct game_client* game) {
 	game->application_state.input_state.mouse_coords.x = mouse_position.x;
 	game->application_state.input_state.mouse_coords.y = mouse_position.y;
 
+	game->application_state.time = get_time();
+
 	return 0;
 }
 

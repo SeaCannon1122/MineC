@@ -8,10 +8,19 @@
 #include "application/application.h"
 #include "renderer/renderer.h"
 #include "gui/gui_menus.h"
+#include "settings/settings.h"
 #include "simulator/simulator.h"
 #include "simulator/networker.h"
 
+static uint32_t game_strlen(uint32_t* str) {
+	uint32_t len = 0;
+	for (; str[len] != 0; len++);
+	return len;
+}
+
 struct game_client {
+
+	struct settings_state settings_state;
 
 	struct resource_state resource_state;
 	struct application_state application_state;

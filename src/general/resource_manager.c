@@ -102,7 +102,7 @@ uint32_t _load_resource_layout(uint8_t* file_path) {
 			}
 		}
 
-		if (dot1 - dot2 != sizeof("resourcelayout")) {
+		if (dot1 - dot2 != sizeof("resourcelayout") || dot2 == -1) {
 
 			if (strcmp(&pair.value.string[dot1 + 1], "png") == 0) image_file_count++;
 			else if (strcmp(&pair.value.string[dot1 + 1], "yaml") == 0) key_value_file_count++;

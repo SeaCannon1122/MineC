@@ -9,7 +9,7 @@ struct settings_state {
 
 	struct game_settings {
 
-		uint8_t gui_size;
+		uint32_t gui_scale;
 
 	} game_settings;
 
@@ -23,6 +23,8 @@ struct settings_state {
 
 struct game_client;
 
-uint32_t settings_initialize(struct game_client* game);
+uint32_t settings_load(struct game_client* game);
+
+uint32_t settings_save(struct game_client* game);
 
 #endif // !SETTINGS_H

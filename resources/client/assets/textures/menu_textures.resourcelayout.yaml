@@ -5,4 +5,6 @@ menu_button_disabled: menu/button_disabled.png
 menu_button_short: menu/button_short.png
 menu_button_hover_short: menu/button_hover_short.png
 menu_button_disabled_short: menu/button_disabled_short.png
+menu_textfield: menu/textfield.png
+menu_textfield_selected: menu/textfield_selected.png
 ingame_background: menu/ingame_background.png

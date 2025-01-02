@@ -46,8 +46,8 @@ uint32_t renderer_render(struct game_client* game) {
 
 
 
-	float time_dx = -fmod(time / 3000.f, 1.f);
-	float time_dy = -fmod(time / 3000.f, 1.f);
+	float time_dx = -fmod(time / 2000.f, 1.f);
+	float time_dy = -fmod(time / 3500.f, 1.f);
 
 	rectangles[0].u[0] = time_dx;
 	rectangles[0].u[1] = time_dx;
