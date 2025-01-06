@@ -3,11 +3,12 @@
 #ifndef GAME_CLIENT_H
 #define GAME_CLIENT_H
 
-#include <stdint.h>
 #include <stdio.h>
-#include <string.h>
 #include <malloc.h>
+#include <string.h>
+#include <time.h>
 #include <math.h>
+#include <stdarg.h>
 
 #include <general/platformlib/platform/platform.h>
 #include <general/platformlib/networking/networking.h>

@@ -13,6 +13,8 @@ uint32_t game_client_run(struct game_client* game, uint8_t* resource_path) {
 	simulator_start(game);
 	networker_start(game);
 
+	while (get_key_state(KEY_MOUSE_LEFT) & 0b1 != 0);
+
 	while (application_handle_events(game) == 0) {
 
 		gui_menus_simulation_frame(game);

@@ -127,6 +127,7 @@ uint32_t gui_menus_create(struct game_client* game) {
 	gui_set_item_position(game->gui_menus_state.join_game.menu_handle, game->gui_menus_state.join_game.password_textfield, 0.5, 0.5, 0, 40, 0.5, 0.5, 0);
 
 	uint32_t ip_default_text[] = { '1', '2', '7',  '.', '0',  '.',  '0',  '.',  '1',  ':',  '1',  '2',  '3',  '4',  '5' };
+	//uint32_t ip_default_text[] = { '1', '9', '2',  '.', '1', '6', '8', '.',  '4',  '.',  '8',  ':',  '1',  '2',  '3',  '4',  '5' };
 	uint32_t username_default_text[] = { 'S', 'e', 'a',  'C',  'a',  'n',  'n',  'o',  'n',  '1',  '1',  '2',  '2' };
 	uint32_t password_default_text[] = { '1', '2', '3',  '4',  '5',  '6',  '7',  '8',  '9' };
 
@@ -161,6 +162,8 @@ uint32_t gui_menus_create(struct game_client* game) {
 	game->gui_menus_state.server_intermediate.back_button = gui_add_button(game->gui_menus_state.server_intermediate.menu_handle, GUI_SIZE_NORMAL);
 	gui_set_item_position(game->gui_menus_state.server_intermediate.menu_handle, game->gui_menus_state.server_intermediate.back_button, 0.5, 0.5, 0, 50, 0.5, 0.5, 0);
 
+	game->gui_menus_state.server_intermediate.status = NETWORKER_STAUS_INACTIVE;
+
 	//
 
 	game->gui_menus_state.active_menu = MENU_MAIN;
@@ -176,7 +179,7 @@ uint32_t gui_menus_destroy(struct game_client* game) {
 	return 0;
 }
 
-uint32_t join_menu_check_syntax(struct game_client* game) {
+uint32_t join_menu_check_syntax(struct game_client* game, uint8_t* ret_ip_nums, uint16_t* ret_port) {
 
 	uint32_t* ip = game->gui_menus_state.join_game.ip_textfield_ptr;
 
@@ -202,6 +205,12 @@ uint32_t join_menu_check_syntax(struct game_client* game) {
 
 	if (num_i == 0 || ip[num_start + num_i] != 0 || port > (uint32_t)UINT16_MAX) return 0;
 
+	ret_ip_nums[0] = ip_nums[0];
+	ret_ip_nums[1] = ip_nums[1];
+	ret_ip_nums[2] = ip_nums[2];
+	ret_ip_nums[3] = ip_nums[3];
+	ret_port[0] = port;
+
 	return 1;
 }
 
@@ -221,31 +230,74 @@ uint32_t gui_menus_simulation_frame(struct game_client* game) {
 
 		gui_scene_simulate(game, game->gui_menus_state.join_game.menu_handle, game->settings_state.game_settings.gui_scale);
 
-		if (join_menu_check_syntax(game)) gui_set_item_visibility(game->gui_menus_state.join_game.menu_handle, game->gui_menus_state.join_game.invalid_syntax_label, 0);
+		uint8_t ip_nums[4];
+		uint16_t port;
+		uint32_t synax_correct = join_menu_check_syntax(game, ip_nums, &port);
+
+		if (synax_correct) gui_set_item_visibility(game->gui_menus_state.join_game.menu_handle, game->gui_menus_state.join_game.invalid_syntax_label, 0);
 		else gui_set_item_visibility(game->gui_menus_state.join_game.menu_handle, game->gui_menus_state.join_game.invalid_syntax_label, 1);
 
-		if (game_strlen(game->gui_menus_state.join_game.ip_textfield_ptr) && game_strlen(game->gui_menus_state.join_game.username_textfield_ptr) && game_strlen(game->gui_menus_state.join_game.password_textfield_ptr)) gui_enable_disable_button(game->gui_menus_state.join_game.menu_handle, game->gui_menus_state.join_game.join_button, 0);
+		if (synax_correct && game_strlen(game->gui_menus_state.join_game.username_textfield_ptr) && game_strlen(game->gui_menus_state.join_game.password_textfield_ptr)) gui_enable_disable_button(game->gui_menus_state.join_game.menu_handle, game->gui_menus_state.join_game.join_button, 0);
 		else gui_enable_disable_button(game->gui_menus_state.join_game.menu_handle, game->gui_menus_state.join_game.join_button, 1);
 
 		if (gui_is_button_clicked(game->gui_menus_state.join_game.menu_handle, game->gui_menus_state.join_game.back_button)) game->gui_menus_state.active_menu = MENU_MAIN;
 		if (gui_is_button_clicked(game->gui_menus_state.join_game.menu_handle, game->gui_menus_state.join_game.join_button)) {
 
-			
-
-			/*game->networker_state.ip_writing = 1;
+			game->networker_state.ip_writing = 1;
 			while (game->networker_state.ip_reading == 1);
+
+			game->networker_state.ip_nums[0] = ip_nums[0];
+			game->networker_state.ip_nums[1] = ip_nums[1];
+			game->networker_state.ip_nums[2] = ip_nums[2];
+			game->networker_state.ip_nums[3] = ip_nums[3];
+			game->networker_state.port = port;
 
 			game->networker_state.ip_writing = 0;
 
 			game->gui_menus_state.active_menu = MENU_SERVER_INTERMEDIATE;
 			game->networker_state.request_flag_abort_connection = 0;
-			game->networker_state.request_flag_connect = 1;*/
+			game->networker_state.request_flag_connect = 1;
 		}
 		
 
 	} break;
 
 	case MENU_SERVER_INTERMEDIATE: {
+
+		if (game->gui_menus_state.server_intermediate.status != game->networker_state.status) {
+			game->gui_menus_state.server_intermediate.status = game->networker_state.status;
+
+			uint8_t* status_text;
+
+			switch (game->gui_menus_state.server_intermediate.status) {
+			
+			case NETWORKER_STAUS_INACTIVE:
+				status_text = "Couldn't connect to the server";
+				break;
+
+			case NETWORKER_STATUS_CONNECTING:
+				status_text = "Connecting ...";
+				break;
+
+			case NETWORKER_STATUS_CONNECTED:
+				status_text = "Connected";
+				break;
+
+			default:
+				status_text = " ";
+				break;
+			}
+
+			uint32_t status_text_length = strlen(status_text);
+
+			struct game_char game_char_status_text[64];
+			for (uint32_t i = 0; i < status_text_length; i++)
+				game_char_status_text[i] = (struct game_char){ {255, 255, 255, 255}, {0, 0, 0, 0}, status_text[i], PIXEL_CHAR_SHADOW_MASK };
+			
+			gui_set_label(game->gui_menus_state.server_intermediate.menu_handle, game->gui_menus_state.server_intermediate.status_label, game_char_status_text, status_text_length, 1, 4, 0.5);
+
+
+		}
 
 		gui_scene_simulate(game, game->gui_menus_state.server_intermediate.menu_handle, game->settings_state.game_settings.gui_scale);
 

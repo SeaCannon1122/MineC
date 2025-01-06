@@ -3,6 +3,7 @@
 #include <malloc.h>
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 #include <STB_IMAGE/stb_image.h>
 
 void* layout_maps[32];

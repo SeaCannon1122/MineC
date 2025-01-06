@@ -361,17 +361,16 @@ uint32_t gui_scene_simulate(struct game_client* game, void* scene, uint32_t scal
 
 						if (items[i].item_info.text_field.cursor_index > 0) {
 
-							memmove(&buffer_ptr[items[i].item_info.text_field.cursor_index - 1], &buffer_ptr[items[i].item_info.text_field.cursor_index], (items[i].item_info.text_field.size - items[i].item_info.text_field.cursor_index) * sizeof(uint32_t));
+							memmove(&buffer_ptr[items[i].item_info.text_field.cursor_index - 1], &buffer_ptr[items[i].item_info.text_field.cursor_index], (items[i].item_info.text_field.size - items[i].item_info.text_field.cursor_index + 1) * sizeof(uint32_t));
 							items[i].item_info.text_field.cursor_index--;
 							items[i].item_info.text_field.size--;
-							buffer_ptr[items[i].item_info.text_field.size] = (uint32_t)'\0';
 							items[i].item_info.text_field.cursor_blinking_time_start = game->application_state.time;
 						}
 					}
 
 					else if(items[i].item_info.text_field.size < items[i].item_info.text_field.max_size) {
 
-						memmove(&buffer_ptr[items[i].item_info.text_field.cursor_index + 1], &buffer_ptr[items[i].item_info.text_field.cursor_index], (items[i].item_info.text_field.size - items[i].item_info.text_field.cursor_index) * sizeof(uint32_t));
+						memmove(&buffer_ptr[items[i].item_info.text_field.cursor_index + 1], &buffer_ptr[items[i].item_info.text_field.cursor_index], (items[i].item_info.text_field.size - items[i].item_info.text_field.cursor_index + 1) * sizeof(uint32_t));
 						buffer_ptr[items[i].item_info.text_field.cursor_index] = game->application_state.input_state.characters[j];
 						items[i].item_info.text_field.cursor_index++;
 						items[i].item_info.text_field.size++;

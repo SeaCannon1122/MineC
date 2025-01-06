@@ -91,7 +91,9 @@ uint32_t networking_io_status(void* handle) {
 
 uint32_t networking_signal_shutdown(void* handle) {
 
-    if (shutdown((SOCKET)handle, SD_SEND) == SOCKET_ERROR) {
+    int shutdown_return_value = shutdown((SOCKET)handle, SD_SEND);
+
+    if (shutdown_return_value == SOCKET_ERROR) {
         printf("WSA ERROR: shutdown %d\n", WSAGetLastError());
         return NETWORKING_ERROR;
     }
@@ -227,8 +229,18 @@ uint32_t networking_client_connection_status(void* server_handle) {
     struct timeval timeout = { 0, 0 };
 
     int result = select((size_t)server_handle + 1, NULL, &write_fds, NULL, &timeout);
-    if (result == SOCKET_ERROR) NETWORKING_ERROR;
-    if (result == 0) return NETWORKING_ERROR_CONNECTING;
+    if (result == SOCKET_ERROR) return NETWORKING_ERROR;
+    if (result == 0) {
+
+        int error = 0;
+        socklen_t len = sizeof(error);
+        if (getsockopt(server_handle, SOL_SOCKET, SO_ERROR, &error, &len) != 0) {
+            perror("getsockopt failed");
+            return NETWORKING_ERROR;
+        }
+        if (error != 0 && error != WSAEINPROGRESS) return NETWORKING_ERROR_COULD_NOT_CONNECT;
+        return NETWORKING_ERROR_CONNECTING;
+    }
 
     int error = 0;
     socklen_t len = sizeof(error);
@@ -238,6 +250,7 @@ uint32_t networking_client_connection_status(void* server_handle) {
     }
 
     if (error == 0) return NETWORKING_SUCCESS;
+    if (error == WSAEINPROGRESS) return NETWORKING_ERROR_CONNECTING;
     else return NETWORKING_ERROR_COULD_NOT_CONNECT;
 
 }

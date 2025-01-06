@@ -9,6 +9,7 @@ enum networker_status {
 	NETWORKER_STAUS_INACTIVE,
 	NETWORKER_STATUS_CONNECTING,
 	NETWORKER_STATUS_CONNECTED,
+	NETWORKER_STATUS_WAITING_ON_CLOSING,
 };
 
 struct networker_state {
@@ -17,7 +18,8 @@ struct networker_state {
 	uint8_t request_exit_flag;
 
 	uint32_t status;
-	uint32_t sub_status;
+
+	uint32_t tried_connecting;
 
 	// interaction
 	uint8_t request_flag_connect;
