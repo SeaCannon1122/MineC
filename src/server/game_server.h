@@ -1,11 +1,7 @@
 #pragma once
 
-#include <stdbool.h>
-#include <stdio.h>
-
-#include "game/game_constants.h"
-#include "game/networking_packets/networking_packets.h"
-#include "game/chat.h"
+#ifndef GAME_SERVER_H
+#define GAME_SERVER_H
 
 #define CLIENT_CHAT_QUEUE_LENGTH 8
 
@@ -39,8 +35,11 @@ struct game_server {
 
 };
 
-void new_game_server(struct game_server* game, char* resource_path);
+uint32_t game_server_run(struct game_server* game, uint8_t resource_path);
 
-void run_game_server(struct game_server* game);
+#endif // !GAME_SERVER_H
 
-void delete_game_server(struct game_server* game);
+
+
+
+

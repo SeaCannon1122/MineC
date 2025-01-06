@@ -44,10 +44,15 @@ struct gui_menus_state {
 		void* ip_label;
 		void* ip_textfield;
 		uint32_t* ip_textfield_ptr;
+		void* invalid_syntax_label;
 
-		void* port_label;
-		void* port_textfield;
-		uint32_t* port_textfield_ptr;
+		void* username_label;
+		void* username_textfield;
+		uint32_t* username_textfield_ptr;
+
+		void* password_label;
+		void* password_textfield;
+		uint32_t* password_textfield_ptr;
 
 		void* join_label;
 		void* join_button;
@@ -59,6 +64,14 @@ struct gui_menus_state {
 
 	struct {
 		void* menu_handle;
+
+		void* status_label;
+
+		void* message_label;
+
+		void* back_label;
+		void* back_button;
+
 	} server_intermediate;
 };
 

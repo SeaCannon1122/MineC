@@ -1,7 +1,4 @@
 ﻿#include "game_client.h"
-#include "general/platformlib/networking.h"
-#include "general/platformlib/platform/platform.h"
-#include <stdio.h>
 
 int main(int argc, char* argv[]) {
 

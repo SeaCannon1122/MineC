@@ -1,11 +1,5 @@
-#include "renderer.h"
-
 #include "client/game_client.h"
 
-#include <stdio.h>
-#include <string.h>
-
-#include <math.h>
 uint32_t renderer_load_samplers(struct game_client* game);
 
 uint32_t renderer_create(struct game_client* game) {
@@ -214,5 +208,6 @@ else {\
 
 
 	}
-
+	
+	return 0;
 }

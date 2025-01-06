@@ -1,9 +1,3 @@
-#include "gui.h"
-
-#include <string.h>
-#include <malloc.h>
-#include <math.h>
-
 #include "client/game_client.h"
 
 enum gui_items {
@@ -33,7 +27,7 @@ struct _gui_item {
 	float alignment_x;
 	float alignment_y;
 	uint16_t z;
-	uint16_t disabled;
+	uint16_t visibility;
 	uint32_t gui_item_type;
 	union {
 		struct {
@@ -114,6 +108,18 @@ uint32_t gui_set_item_position(
 	items[(uint32_t)item_handle].alignment_x = alignment_x;
 	items[(uint32_t)item_handle].alignment_y = alignment_y;
 	items[(uint32_t)item_handle].z = z;
+	items[(uint32_t)item_handle].visibility = 1;
+
+	return 0;
+}
+
+uint32_t gui_set_item_visibility(void* scene, void* item_handle, uint16_t visibility) {
+
+	struct _gui_scene_header* header = scene;
+	if ((uint32_t)item_handle >= header->item_count) return 1;
+
+	struct _gui_item* items = (size_t)scene + sizeof(struct _gui_scene_header);
+	items[(uint32_t)item_handle].visibility = visibility;
 
 	return 0;
 }
@@ -251,6 +257,28 @@ void* gui_add_textfield(void* scene, uint16_t buffer_size, uint32_t** buffer_poi
 	return item_handle;
 }
 
+uint32_t gui_set_textfield_text(void* scene, void* textfield_handle, uint32_t* text, uint32_t text_length) {
+
+	struct _gui_scene_header* header = scene;
+
+	if ((uint32_t)textfield_handle >= header->item_count) return 1;
+
+	struct _gui_item* items = (size_t)scene + sizeof(struct _gui_scene_header);
+
+	if (items[(uint32_t)textfield_handle].item_info.text_field.max_size < text_length) return 1;
+
+	items[(uint32_t)textfield_handle].item_info.text_field.size = text_length;
+
+	uint32_t* buffer_ptr = (size_t)scene + sizeof(struct _gui_scene_header) + (size_t)header->item_count * sizeof(struct _gui_item) + (size_t)header->labeltext_buffer_length * sizeof(struct game_char) + (size_t)items[(uint32_t)textfield_handle].item_info.text_field.index * sizeof(uint32_t);
+
+	memcpy(buffer_ptr, text, text_length * sizeof(uint32_t));
+	buffer_ptr[text_length] = 0;
+
+	items[(uint32_t)textfield_handle].item_info.text_field.cursor_index = text_length;
+
+	return 0;
+}
+
 uint32_t gui_scene_simulate(struct game_client* game, void* scene, uint32_t scale) {
 
 	struct _gui_scene_header* header = scene;
@@ -263,6 +291,8 @@ uint32_t gui_scene_simulate(struct game_client* game, void* scene, uint32_t scal
 	uint8_t arrow_right = get_key_state(KEY_ARROW_RIGHT);
 
 	for (uint32_t i = 0; i < header->item_index; i++) {
+
+		if (items[i].visibility == 0) continue;
 
 		float anchor_x = items[i].x * (float)game->application_state.window_extent.width + (float)(items[i].offset_x * (int32_t)scale);
 		float anchor_y = items[i].y * (float)game->application_state.window_extent.height + (float)(items[i].offset_y * (int32_t)scale);
@@ -331,7 +361,7 @@ uint32_t gui_scene_simulate(struct game_client* game, void* scene, uint32_t scal
 
 						if (items[i].item_info.text_field.cursor_index > 0) {
 
-							memmove(&buffer_ptr[items[i].item_info.text_field.cursor_index - 1], &buffer_ptr[items[i].item_info.text_field.cursor_index], (items[i].item_info.text_field.size - items[i].item_info.text_field.cursor_index) * sizeof(struct game_char));
+							memmove(&buffer_ptr[items[i].item_info.text_field.cursor_index - 1], &buffer_ptr[items[i].item_info.text_field.cursor_index], (items[i].item_info.text_field.size - items[i].item_info.text_field.cursor_index) * sizeof(uint32_t));
 							items[i].item_info.text_field.cursor_index--;
 							items[i].item_info.text_field.size--;
 							buffer_ptr[items[i].item_info.text_field.size] = (uint32_t)'\0';
@@ -341,7 +371,7 @@ uint32_t gui_scene_simulate(struct game_client* game, void* scene, uint32_t scal
 
 					else if(items[i].item_info.text_field.size < items[i].item_info.text_field.max_size) {
 
-						memmove(&buffer_ptr[items[i].item_info.text_field.cursor_index + 1], &buffer_ptr[items[i].item_info.text_field.cursor_index], (items[i].item_info.text_field.size - items[i].item_info.text_field.cursor_index) * sizeof(struct game_char));
+						memmove(&buffer_ptr[items[i].item_info.text_field.cursor_index + 1], &buffer_ptr[items[i].item_info.text_field.cursor_index], (items[i].item_info.text_field.size - items[i].item_info.text_field.cursor_index) * sizeof(uint32_t));
 						buffer_ptr[items[i].item_info.text_field.cursor_index] = game->application_state.input_state.characters[j];
 						items[i].item_info.text_field.cursor_index++;
 						items[i].item_info.text_field.size++;
@@ -368,6 +398,8 @@ uint32_t gui_scene_render(struct game_client* game, void* scene, uint32_t scale)
 	struct _gui_item* items = (size_t)scene + sizeof(struct _gui_scene_header);
 
 	for (uint32_t i = 0; i < header->item_index; i++) {
+
+		if (items[i].visibility == 0) continue;
 
 		float anchor_x = items[i].x * (float)game->application_state.window_extent.width  + (float)(items[i].offset_x * (int32_t)scale);
 		float anchor_y = items[i].y * (float)game->application_state.window_extent.height + (float)(items[i].offset_y * (int32_t)scale);

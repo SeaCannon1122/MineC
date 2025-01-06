@@ -1,8 +1,3 @@
-#include "resources.h"
-
-#include <stdio.h>
-#include <string.h>
-
 #include "client/game_client.h"
 
 

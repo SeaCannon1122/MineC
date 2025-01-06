@@ -3,7 +3,7 @@
 #ifndef RESOURCES_H
 #define RESOURCES_H
 
-#include <general/resource_manager.h>
+#include "general/resource_manager.h"
 
 static const uint32_t default_image[] = {
 	0xff00f8ef, 0xff00f8ef, 0xff00f8ef, 0xff00f8ef, 0xff00f8ef, 0xff00f8ef, 0xff00f8ef, 0xff00f8ef,   0xff000000, 0xff000000, 0xff000000, 0xff000000, 0xff000000, 0xff000000, 0xff000000, 0xff000000,

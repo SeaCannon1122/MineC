@@ -5,12 +5,13 @@ uint32_t game_client_run(struct game_client* game, uint8_t* resource_path) {
 	application_create(game);
 
 	resources_create(game, resource_path);
-
 	settings_load(game);
 
 	gui_menus_create(game);
-
 	renderer_create(game);
+
+	simulator_start(game);
+	networker_start(game);
 
 	while (application_handle_events(game) == 0) {
 
@@ -23,8 +24,10 @@ uint32_t game_client_run(struct game_client* game, uint8_t* resource_path) {
 		sleep_for_ms(16);
 	}
 
-	renderer_destroy(game);
+	networker_stop(game);
+	simulator_stop(game);
 
+	renderer_destroy(game);
 	gui_menus_destroy(game);
 
 	resources_destroy(game);

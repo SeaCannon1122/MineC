@@ -1,4 +1,3 @@
-#include "application.h"
 #include "client/game_client.h"
 
 uint32_t application_create(struct game_client* game) {
@@ -8,7 +7,7 @@ uint32_t application_create(struct game_client* game) {
 
 	game->application_state.window = window_create(
 		screen_width / 4,
-		screen_height / 4,
+		screen_height / 8,
 		screen_width / 2,
 		screen_height / 2,
 		"Minecraft Clone",

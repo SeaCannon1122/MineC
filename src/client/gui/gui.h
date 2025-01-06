@@ -5,7 +5,7 @@
 
 #include <stdint.h>
 
-#include "game/game_char.h"
+#include "game/game.h"
 
 #define GUI_INVALID_ITEM_HANDLE (void*)(uint32_t)(-1)
 
@@ -28,6 +28,8 @@ uint32_t gui_set_item_position(
 	uint16_t z
 );
 
+uint32_t gui_set_item_visibility(void* scene, void* item_handle, uint16_t visibility);
+
 void* gui_add_label(void* scene, uint16_t max_text_length);
 uint32_t gui_set_label(
 	void* scene,
@@ -44,6 +46,7 @@ uint32_t gui_enable_disable_button(void* scene, void* button_handle, uint32_t di
 uint32_t gui_is_button_clicked(void* scene, void* button_handle);
 
 void* gui_add_textfield(void* scene, uint16_t buffer_size, uint32_t** buffer_pointer);
+uint32_t gui_set_textfield_text(void* scene, void* textfield_handle, uint32_t* text, uint32_t text_length);
 
 struct game_client;
 
