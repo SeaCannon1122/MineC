@@ -13,7 +13,9 @@ uint32_t game_client_run(struct game_client* game, uint8_t* resource_path) {
 	simulator_start(game);
 	networker_start(game);
 
-	while (get_key_state(KEY_MOUSE_LEFT) & 0b1 != 0);
+#ifdef UNIX
+	while (get_key_state(KEY_MOUSE_LEFT) & 0b1 != 0) sleep_for_ms(1);
+#endif // UNIX
 
 	while (application_handle_events(game) == 0) {
 

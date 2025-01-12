@@ -2,7 +2,7 @@
 
 
 uint32_t resources_create(struct game_client* game, uint8_t* resource_path) {
-	resource_manager_new(&game->resource_state.resource_manager, resource_path);
+	resource_manager_new(&game->resource_state.resource_manager, resource_path, printf);
 
 	sprintf(game->resource_state.resource_manager_root_path, resource_path);
 
@@ -53,6 +53,17 @@ uint32_t resources_create(struct game_client* game, uint8_t* resource_path) {
 
 	}
 
+	for (uint32_t i = 0; i < RESOURCES_SHADERS_COUNT; i++) {
+		
+		if (resource_manager_get_binary(&game->resource_state.resource_manager, resources_shader_tokens[i], &game->resource_state.shader_atlas[i])) {
+
+			printf("[GAME RESOURCES] Couldn't find shader matching token '%s'\n", resources_shader_tokens[i]);
+
+			game->resource_state.shader_atlas[i].data = NULL;
+			game->resource_state.shader_atlas[i].size = 0;
+		}
+	}
+
 	return 0;
 }
 
@@ -61,6 +72,9 @@ uint32_t resources_destroy(struct game_client* game) {
 
 	if (game->resource_state.fallback_pixelfont != NULL) free(game->resource_state.fallback_pixelfont);
 	
+	for (uint32_t i = 0; i < RESOURCES_PIXELFONTS_COUNT; i++) 
+		if (game->resource_state.pixelfont_atlas[i] != game->resource_state.fallback_pixelfont) free(game->resource_state.pixelfont_atlas[i]);
+
 	resource_manager_destroy(&game->resource_state.resource_manager);
 
 	return 0;

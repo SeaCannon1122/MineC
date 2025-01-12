@@ -8,16 +8,29 @@
 enum networker_status {
 	NETWORKER_STAUS_INACTIVE,
 	NETWORKER_STATUS_CONNECTING,
+	NETWORKER_STATUS_HANDSHAKE,
 	NETWORKER_STATUS_CONNECTED,
 	NETWORKER_STATUS_WAITING_ON_CLOSING,
 };
 
+enum networker_inactive_reason {
+	NETWORKER_REASON_NONE,
+	NETWORKER_REASON_CONNECTION_LOST,
+	NETWORKER_REASON_COULD_NOT_CONNECT,
+	NETWORKER_REASON_RECEIVED_INVALID_PACKETS,
+	NETWORKER_REASON_CLOSED_DURING_HANDSHAKE,
+	NETWORKER_REASON_CLODED_DURING_CONNECTION,
+};
+
 struct networker_state {
+
+	void* thread_handle;
 
 	uint32_t thread_active_flag;
 	uint8_t request_exit_flag;
 
 	uint32_t status;
+	uint32_t inactive_reason;
 
 	uint32_t tried_connecting;
 

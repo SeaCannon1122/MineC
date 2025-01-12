@@ -15,6 +15,8 @@ uint32_t key_value_file_count;
 uint32_t audio_file_count;
 uint32_t binary_file_count;
 
+int (*LOG)(const char* const Format, ...);
+
 uint8_t* _resource_manager_load_file(uint8_t* src, uint32_t* size) {
 
 	FILE* file = fopen(src, "rb");
@@ -49,8 +51,8 @@ uint32_t _load_resource_layout(uint8_t* file_path) {
 
 	if (load_return_type & KEY_VALUE_ERROR_MASK) { 
 	
-		if (load_return_type == KEY_VALUE_ERROR_COULDNT_OPEN_FILE) printf("[RESOURCE MANAGER] Couldn't open resource layout file ");
-		else if (load_return_type == KEY_VALUE_ERROR_FILE_INVALID_SYNTAX) printf("[RESOURCE MANAGER] Invalid syntax in resource layout file ");
+		if (load_return_type == KEY_VALUE_ERROR_COULDNT_OPEN_FILE) LOG("[RESOURCE MANAGER] Couldn't open resource layout file ");
+		else if (load_return_type == KEY_VALUE_ERROR_FILE_INVALID_SYNTAX) LOG("[RESOURCE MANAGER] Invalid syntax in resource layout file ");
 
 		printf("%s\n", file_path);
 
@@ -133,7 +135,9 @@ uint32_t _load_resource_layout(uint8_t* file_path) {
 	return 0;
 }
 
-uint32_t resource_manager_new(struct resource_manager* rm, uint8_t* file_path) {
+uint32_t resource_manager_new(struct resource_manager* rm, uint8_t* file_path, int (*log_function)(const char* const, ...)) {
+
+	LOG = log_function;
 
 	layout_maps_length = 0;
 
@@ -201,7 +205,7 @@ uint32_t resource_manager_new(struct resource_manager* rm, uint8_t* file_path) {
 
 				rm->images[rm->image_count].data = stbi_load(sub_path, &rm->images[rm->image_count].width, &rm->images[rm->image_count].height, &comp, 4);
 
-				if (rm->images[rm->image_count].data == NULL) printf("[RESOURCE MANAGER] Couldn't load %s from %s\n", sub_path, &layout_maps_paths[i][0]);
+				if (rm->images[rm->image_count].data == NULL) LOG("[RESOURCE MANAGER] Couldn't load %s from %s\n", sub_path, &layout_maps_paths[i][0]);
 
 				else {
 					key_value_set_integer(&rm->images_name_map, pair.key, rm->image_count);
@@ -238,8 +242,8 @@ uint32_t resource_manager_new(struct resource_manager* rm, uint8_t* file_path) {
 
 					free(rm->key_value_maps[rm->key_value_count]);
 
-					if (load_return_type == KEY_VALUE_ERROR_COULDNT_OPEN_FILE) printf("[RESOURCE MANAGER] Couldn't open %s from %s\n", sub_path, &layout_maps_paths[i][0]);
-					else if (load_return_type == KEY_VALUE_ERROR_FILE_INVALID_SYNTAX) printf("[RESOURCE MANAGER] Invalid syntax in %s from %s\n", sub_path, &layout_maps_paths[i][0]);
+					if (load_return_type == KEY_VALUE_ERROR_COULDNT_OPEN_FILE) LOG("[RESOURCE MANAGER] Couldn't open %s from %s\n", sub_path, &layout_maps_paths[i][0]);
+					else if (load_return_type == KEY_VALUE_ERROR_FILE_INVALID_SYNTAX) LOG("[RESOURCE MANAGER] Invalid syntax in %s from %s\n", sub_path, &layout_maps_paths[i][0]);
 
 				}
 
@@ -259,7 +263,7 @@ uint32_t resource_manager_new(struct resource_manager* rm, uint8_t* file_path) {
 
 				rm->binaries[rm->binaries_count].data = _resource_manager_load_file(sub_path, &rm->binaries[rm->binaries_count].size);
 
-				if (rm->binaries[rm->binaries_count].data == NULL) printf("[RESOURCE MANAGER] Couldn't load %s from %s\n", sub_path, &layout_maps_paths[i][0]);
+				if (rm->binaries[rm->binaries_count].data == NULL) LOG("[RESOURCE MANAGER] Couldn't load %s from %s\n", sub_path, &layout_maps_paths[i][0]);
 
 				else {
 					key_value_set_integer(&rm->binaries_names_map, pair.key, rm->binaries_count);

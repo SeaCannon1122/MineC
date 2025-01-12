@@ -11,17 +11,16 @@ struct window_state {
 	uint8_t registered_active;
 	int32_t window_width;
 	int32_t window_height;
-	int32_t x_position;
-	int32_t y_position;
+	int32_t position_x;
+	int32_t position_y;
 };
 
-uint32_t screen_width;
-uint32_t screen_height;
+uint32_t initialized = 0;
+
+HWND console;
 
 struct window_state window_states[MAX_WINDOW_COUNT];
 WNDCLASSW wc;
-uint8_t keyStates[256] = { 0 };
-static uint8_t running = 1;
 
 struct window_event* we = NULL;
 uint32_t is_trackable_window_event = 0;
@@ -53,20 +52,6 @@ void dynamic_library_unload(void* library_handle) {
 	FreeLibrary(library_handle);
 }
 
-void show_console_window() {
-	HWND hwndConsole = GetConsoleWindow();
-	if (hwndConsole != NULL) {
-		ShowWindow(hwndConsole, SW_SHOW);
-	}
-}
-
-void hide_console_window() {
-	HWND hwndConsole = GetConsoleWindow();
-	if (hwndConsole != NULL) {
-		ShowWindow(hwndConsole, SW_HIDE);
-	}
-}
-
 void set_console_cursor_position(int32_t x, int32_t y) {
 	SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), (COORD) { (SHORT)x, (SHORT)y });
 }
@@ -92,37 +77,29 @@ void join_thread(void* thread_handle) {
 	CloseHandle(thread_handle);
 }
 
-char get_key_state(int32_t key) {
-
-	int8_t keyState = 0;
-
-	SHORT currentKeyState = GetKeyState(key);
-
-	if (currentKeyState & 0x8000) keyState |= 0b0001;
-	if ((currentKeyState & 0x8000 ? 0x1 : 0x0) != keyStates[key]) keyState |= 0b0010;
-
-	keyStates[key] = (currentKeyState & 0x8000 ? 0x1 : 0x0);
-
-	return keyState;
-}
-
 uint32_t get_screen_width() {
-	return screen_width;
+	return GetSystemMetrics(SM_CXSCREEN);
 }
 
 uint32_t get_screen_height() {
-	return screen_width;
+	return GetSystemMetrics(SM_CYSCREEN);
 }
 
 //window functions
+
+void show_console_window() {
+	if (initialized) ShowWindow(console, SW_SHOW);;
+}
+
+void hide_console_window() {
+	if (initialized) ShowWindow(console, SW_HIDE);
+}
 
 uint32_t window_create(uint32_t posx, uint32_t posy, uint32_t width, uint32_t height, uint8_t* name, uint32_t visible) {
 
 	uint32_t next_free_window_index = 0;
 	for (; next_free_window_index < MAX_WINDOW_COUNT; next_free_window_index++) if (window_states[next_free_window_index].hwnd == NULL) break;
 	if (next_free_window_index == MAX_WINDOW_COUNT) return WINDOW_CREATION_FAILED;
-
-	window_check = next_free_window_index;
 
 	int32_t name_length = 1;
 	for (; name[name_length - 1] != '\0'; name_length++);
@@ -148,10 +125,12 @@ uint32_t window_create(uint32_t posx, uint32_t posy, uint32_t width, uint32_t he
 
 	if(window_states[next_free_window_index].hwnd == NULL) return WINDOW_CREATION_FAILED;
 
-	SendMessageA(window_states[next_free_window_index].hwnd, WM_SIZE, 0, 0);
+	SendMessageW(window_states[next_free_window_index].hwnd, WM_SIZE, 0, 0);
 
 	window_states[next_free_window_index].window_width = width;
 	window_states[next_free_window_index].window_height = height;
+	window_states[next_free_window_index].position_x = posx;
+	window_states[next_free_window_index].position_y = posy;
 	window_states[next_free_window_index].active = 1;
 	window_states[next_free_window_index].registered_active = 1;
 
@@ -218,17 +197,95 @@ VkResult destroy_vulkan_surface(VkInstance instance, VkSurfaceKHR surface) {
 	return VK_SUCCESS;
 }
 
-uint32_t event_type;
+int32_t _map_key(int32_t key) {
+
+	switch (key) {
+
+	case '1': return KEY_1;
+	case '2': return KEY_2;
+	case '3': return KEY_3;
+	case '4': return KEY_4;
+	case '5': return KEY_5;
+	case '6': return KEY_6;
+	case '7': return KEY_7;
+	case '8': return KEY_8;
+	case '9': return KEY_9;
+	case '0': return KEY_0;
+
+	case 'A': return KEY_A;
+	case 'B': return KEY_B;
+	case 'C': return KEY_C;
+	case 'D': return KEY_D;
+	case 'E': return KEY_E;
+	case 'F': return KEY_F;
+	case 'G': return KEY_G;
+	case 'H': return KEY_H;
+	case 'I': return KEY_I;
+	case 'J': return KEY_J;
+	case 'K': return KEY_K;
+	case 'L': return KEY_L;
+	case 'M': return KEY_M;
+	case 'N': return KEY_N;
+	case 'O': return KEY_O;
+	case 'P': return KEY_P;
+	case 'Q': return KEY_Q;
+	case 'R': return KEY_R;
+	case 'S': return KEY_S;
+	case 'T': return KEY_T;
+	case 'U': return KEY_U;
+	case 'V': return KEY_V;
+	case 'W': return KEY_W;
+	case 'X': return KEY_X;
+	case 'Y': return KEY_Y;
+	case 'Z': return KEY_Z;
+
+	case VK_ADD: return KEY_PLUS;
+	case VK_SUBTRACT: return KEY_MINUS;
+
+	case VK_F1: return KEY_F1;
+	case VK_F2: return KEY_F2;
+	case VK_F3: return KEY_F3;
+	case VK_F4: return KEY_F4;
+	case VK_F5: return KEY_F5;
+	case VK_F6: return KEY_F6;
+	case VK_F7: return KEY_F7;
+	case VK_F8: return KEY_F8;
+	case VK_F9: return KEY_F9;
+	case VK_F10: return KEY_F10;
+	case VK_F11: return KEY_F11;
+	case VK_F12: return KEY_F12
+		;
+	
+	case VK_LSHIFT: return KEY_SHIFT_L;
+	case VK_RSHIFT: return KEY_SHIFT_R;
+	case VK_LCONTROL: return KEY_CTRL_L;
+	case VK_RCONTROL: return KEY_CTRL_R;
+	case VK_LMENU: return KEY_ALT_L;
+	case VK_RMENU: return KEY_ALT_R;
+	
+	case VK_SPACE: return KEY_SPACE;
+	case VK_BACK: return KEY_BACKSPACE;
+	case VK_TAB: return KEY_TAB;
+	case VK_RETURN: return KEY_ENTER;
+	case VK_ESCAPE: return KEY_ESCAPE;
+
+	case VK_UP: return KEY_ARROW_UP;
+	case VK_DOWN: return KEY_ARROW_DOWN;
+	case VK_LEFT: return KEY_ARROW_LEFT;
+	case VK_RIGHT: return KEY_ARROW_RIGHT;
+
+	default: return -1;
+	}
+
+}
 
 LRESULT CALLBACK WinProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 
-	if (uMsg == WM_CLOSE) {
-		DestroyWindow(hwnd); 
-
-		return DefWindowProcW(hwnd, uMsg, wParam, lParam);
-	}
-
 	switch (uMsg) {
+
+	case WM_CLOSE: {
+		DestroyWindow(hwnd);
+	} break;
 
 	case WM_DESTROY: {
 		is_trackable_window_event = 1;
@@ -236,7 +293,7 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 		PostQuitMessage(0);
 		window_states[window_check].active = 0;
 
-		event_type = WINDOW_EVENT_DESTROY;
+		if (we != NULL) we->type = WINDOW_EVENT_DESTROY;
 	} break;
 
 	case WM_SIZE: {
@@ -247,12 +304,14 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 		GetClientRect(hwnd, &rect);
 		window_states[window_check].window_width = rect.right - rect.left;
 		window_states[window_check].window_height = rect.bottom - rect.top;
-	
-		event_type = WINDOW_EVENT_SIZE;
 
 		if (we != NULL) { 
-			we->info.window_event_size.width = rect.right - rect.left;
-			we->info.window_event_size.height = rect.bottom - rect.top;
+			we->type = WINDOW_EVENT_MOVE_SIZE;
+
+			we->info.event_move_size.position_x = window_states[window_check].position_x;
+			we->info.event_move_size.position_y = window_states[window_check].position_y;
+			we->info.event_move_size.width = window_states[window_check].window_width;
+			we->info.event_move_size.height = window_states[window_check].window_height;
 		}
 	} break;
 
@@ -261,36 +320,36 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 		RECT rect;
 		GetWindowRect(hwnd, &rect);
 
-		window_states[window_check].x_position = rect.left;
-		window_states[window_check].y_position = rect.top;
-
-		event_type = WINDOW_EVENT_MOVE;
+		window_states[window_check].position_x = rect.left;
+		window_states[window_check].position_y = rect.top;
 
 		if (we != NULL) {
-			we->info.window_event_move.x_position = rect.left;
-			we->info.window_event_move.y_position = rect.top;
+			we->type = WINDOW_EVENT_MOVE_SIZE;
+
+			we->info.event_move_size.position_x = window_states[window_check].position_x;
+			we->info.event_move_size.position_y = window_states[window_check].position_y;
+			we->info.event_move_size.width = window_states[window_check].window_width;
+			we->info.event_move_size.height = window_states[window_check].window_height;
 		}
 	} break;
 
 	case WM_SETFOCUS: {
 		is_trackable_window_event = 1;
-
-		event_type = WINDOW_EVENT_FOCUS;
+		if (we != NULL) we->type = WINDOW_EVENT_FOCUS;
 	} break;
 
 	case WM_KILLFOCUS: {
 		is_trackable_window_event = 1;
-
-		event_type = WINDOW_EVENT_UNFOCUS;
+		if (we != NULL) we->type = WINDOW_EVENT_UNFOCUS;
 	} break;
 
 
 	case WM_MOUSEWHEEL: {
 		is_trackable_window_event = 1;
 
-		event_type = WINDOW_EVENT_MOUSE_SCROLL;
 		if (we != NULL) {
-			we->info.window_event_mouse_scroll.scroll_steps = GET_WHEEL_DELTA_WPARAM(wParam) / 120;
+			we->type = WINDOW_EVENT_MOUSE_SCROLL;
+			we->info.event_mouse_scroll.scroll_steps = GET_WHEEL_DELTA_WPARAM(wParam) / 120;
 		}
 			
 	} break;
@@ -302,9 +361,88 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 		uint32_t utf8_char = 0;
 		uint32_t bytes_written = WideCharToMultiByte(CP_UTF8, 0, &utf16_char, 1, &utf8_char, sizeof(utf8_char), NULL, NULL);
 
-		event_type = WINDOW_EVENT_CHAR;
 		if (we != NULL) { 
-			we->info.window_event_char.unicode = utf16_char;
+			we->type = WINDOW_EVENT_CHAR;
+			we->info.event_char.unicode = utf16_char;
+		}
+	} break;
+
+	case WM_KEYDOWN: {
+		int32_t key = _map_key(wParam);
+		if (key == -1) break;
+
+		is_trackable_window_event = 1;
+
+		if (we != NULL) {
+			we->type = WINDOW_EVENT_KEY_DOWN;
+			we->info.event_key_down.key = key;
+		}
+	} break;
+
+	case WM_KEYUP: {
+		int32_t key = _map_key(wParam);
+		if (key == -1) break;
+
+		is_trackable_window_event = 1;
+
+		if (we != NULL) {
+			we->type = WINDOW_EVENT_KEY_UP;
+			we->info.event_key_up.key = key;
+		}
+	} break;
+
+	//mouse buttons
+	case WM_LBUTTONDOWN: {
+		is_trackable_window_event = 1;
+
+		if (we != NULL) {
+			we->type = WINDOW_EVENT_KEY_DOWN;
+			we->info.event_key_down.key = KEY_MOUSE_LEFT;
+		}
+	} break;
+
+	case WM_LBUTTONUP: {
+		is_trackable_window_event = 1;
+
+		if (we != NULL) {
+			we->type = WINDOW_EVENT_KEY_UP;
+			we->info.event_key_up.key = KEY_MOUSE_LEFT;
+		}
+	} break;
+
+	case WM_MBUTTONDOWN: {
+		is_trackable_window_event = 1;
+
+		if (we != NULL) {
+			we->type = WINDOW_EVENT_KEY_DOWN;
+			we->info.event_key_down.key = KEY_MOUSE_MIDDLE;
+		}
+	} break;
+
+	case WM_MBUTTONUP: {
+		is_trackable_window_event = 1;
+
+		if (we != NULL) {
+			we->type = WINDOW_EVENT_KEY_UP;
+			we->info.event_key_up.key = KEY_MOUSE_MIDDLE;
+		}
+	} break;
+
+	case WM_RBUTTONDOWN: {
+		is_trackable_window_event = 1;
+
+		if (we != NULL) {
+			we->type = WINDOW_EVENT_KEY_DOWN;
+			we->info.event_key_down.key = KEY_MOUSE_RIGHT;
+		}
+	} break;
+
+	case WM_RBUTTONUP: {
+		is_trackable_window_event = 1;
+
+		if (we != NULL) {
+			we->type = WINDOW_EVENT_KEY_UP;
+			we->info.event_key_up.key = KEY_MOUSE_RIGHT;
 		}
 	} break;
 
@@ -313,64 +451,51 @@ LRESULT CALLBACK WinProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 }
 
-uint32_t window_process_next_event(struct window_event* event) {
+uint32_t window_process_next_event(uint32_t window, struct window_event* event) {
+	
 	MSG message;
 	we = event;
+	window_check = window;
 
-	uint32_t first_window_checked = window_check;
+	while (window_states[window].registered_active) {
 
-	for (; window_check != (first_window_checked - 1 + MAX_WINDOW_COUNT) % MAX_WINDOW_COUNT; window_check = (window_check + 1) % MAX_WINDOW_COUNT) {
+		if (window_states[window].active == 0) {
 
+			window_states[window].registered_active = 0;
+			if (we) we->type = WINDOW_EVENT_DESTROY;
 
-		while (window_states[window_check].registered_active) {
+			we = NULL;
+			return 1;
+		}
 
-			if (window_states[window_check].active == 0) {
-				window_states[window_check].registered_active = 0;
-				if (we) {
-					we->window = window_check;
-					we->type = WINDOW_EVENT_DESTROY;
-				}
+		is_trackable_window_event = 0;
+
+		if (PeekMessageW(&message, window_states[window].hwnd, 0, 0, PM_REMOVE)) {
+			TranslateMessage(&message);
+			DispatchMessageW(&message);
+
+			if (is_trackable_window_event) {
+
+				if (window_states[window].active == 0) window_states[window].registered_active = 0;
+
 				we = NULL;
 				return 1;
 			}
-
-			is_trackable_window_event = 0;
-
-			if (PeekMessageA(&message, window_states[window_check].hwnd, 0, 0, PM_REMOVE)) {
-				TranslateMessage(&message);
-				DispatchMessageW(&message);
-
-				if (is_trackable_window_event) {
-
-					if (event_type == WINDOW_EVENT_DESTROY) window_states[window_check].registered_active = 0;
-
-					if (we) {
-						we->window = window_check;
-						we->type = event_type;
-					}
-					we = NULL;
-					return 1;
-				}
-			}
-
-			else break;
 		}
+
+		else break;
 	}
 	
+	we = NULL;
 	return 0;
 }
 
 void platform_init() {
+	initialized = 1;
 
-	if (!AllocConsole()) {
-		MessageBox(NULL, "Failed to allocate console.", "Error", MB_OK | MB_ICONERROR);
-		return;
-	}
-
-	hide_console_window();
-
-	screen_width = GetSystemMetrics(SM_CXSCREEN);
-	screen_height = GetSystemMetrics(SM_CYSCREEN);
+	AllocConsole();
+	console = GetConsoleWindow();
+	ShowWindow(console, SW_HIDE);
 
 	FILE* fstdout;
 	freopen_s(&fstdout, "CONOUT$", "w", stdout);
@@ -379,20 +504,16 @@ void platform_init() {
 	FILE* fstdin;
 	freopen_s(&fstdin, "CONIN$", "r", stdin);
 
-	// Set console to UTF-8
 	SetConsoleCP(CP_UTF8);
 	SetConsoleOutputCP(CP_UTF8);
 
-	// Optional: Set no buffering for immediate output
 	setvbuf(stdout, NULL, _IONBF, 0);
 	setvbuf(stderr, NULL, _IONBF, 0);
 
 	DWORD dwMode = 0;
 	HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
 
-	// Get current console mode
 	if (GetConsoleMode(hStdOut, &dwMode)) {
-		// Enable virtual terminal processing
 		dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
 		SetConsoleMode(hStdOut, dwMode);
 	}
@@ -402,7 +523,7 @@ void platform_init() {
 		WinProc,
 		0,
 		0,
-		GetModuleHandleA(NULL),
+		GetModuleHandleW(NULL),
 		NULL,
 		LoadCursorW(NULL, IDC_ARROW),
 		NULL,
@@ -416,6 +537,8 @@ void platform_init() {
 }
 
 void platform_exit() {
+	initialized = 0;
+
 	for (int32_t i = 0; i < MAX_WINDOW_COUNT; i++) if (window_states[i].active) window_destroy(i);
 
 	UnregisterClassA(L"BasicWindowClass", GetModuleHandleA(NULL));

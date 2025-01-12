@@ -144,6 +144,7 @@ uint32_t gui_menus_create(struct game_client* game) {
 	gui_set_item_position(game->gui_menus_state.join_game.menu_handle, game->gui_menus_state.join_game.join_button, 0.5, 0.5, 51, 70, 0.5, 0.5, 0);
 
 	//server intermediate menu
+	struct game_char empty_char = { {255, 255, 255, 255}, {0, 0, 0, 0}, ' ', PIXEL_CHAR_SHADOW_MASK };
 
 	game->gui_menus_state.server_intermediate.menu_handle = gui_scene_new(4, sizeof(back_text) - 1 + 64 + MAX_CONNECTION_STATE_MESSAGE_LENGTH, 0);
 
@@ -156,8 +157,8 @@ uint32_t gui_menus_create(struct game_client* game) {
 	gui_set_item_position(game->gui_menus_state.server_intermediate.menu_handle, game->gui_menus_state.server_intermediate.message_label, 0.5, 0.5, 0, -20, 0.5, 0.5, 0);
 
 	gui_set_label(game->gui_menus_state.server_intermediate.menu_handle, game->gui_menus_state.server_intermediate.back_label, game_char_back_text, sizeof(back_text) - 1, 1, 4, 0.5);
-	gui_set_label(game->gui_menus_state.server_intermediate.menu_handle, game->gui_menus_state.server_intermediate.status_label, game_char_back_text, sizeof(back_text) - 1, 1, 4, 0.5);
-	gui_set_label(game->gui_menus_state.server_intermediate.menu_handle, game->gui_menus_state.server_intermediate.message_label, game_char_back_text, sizeof(back_text) - 1, 1, 4, 0.5);
+	gui_set_label(game->gui_menus_state.server_intermediate.menu_handle, game->gui_menus_state.server_intermediate.status_label, &empty_char, 1, 1, 4, 0.5);
+	gui_set_label(game->gui_menus_state.server_intermediate.menu_handle, game->gui_menus_state.server_intermediate.message_label, &empty_char, 1, 1, 4, 0.5);
 
 	game->gui_menus_state.server_intermediate.back_button = gui_add_button(game->gui_menus_state.server_intermediate.menu_handle, GUI_SIZE_NORMAL);
 	gui_set_item_position(game->gui_menus_state.server_intermediate.menu_handle, game->gui_menus_state.server_intermediate.back_button, 0.5, 0.5, 0, 50, 0.5, 0.5, 0);
@@ -264,16 +265,35 @@ uint32_t gui_menus_simulation_frame(struct game_client* game) {
 
 	case MENU_SERVER_INTERMEDIATE: {
 
-		if (game->gui_menus_state.server_intermediate.status != game->networker_state.status) {
+		if (game->gui_menus_state.server_intermediate.status != game->networker_state.status || game->networker_state.inactive_reason != game->gui_menus_state.server_intermediate.inactive_reason) {
 			game->gui_menus_state.server_intermediate.status = game->networker_state.status;
+			game->gui_menus_state.server_intermediate.inactive_reason = game->networker_state.inactive_reason;
 
 			uint8_t* status_text;
 
 			switch (game->gui_menus_state.server_intermediate.status) {
 			
-			case NETWORKER_STAUS_INACTIVE:
-				status_text = "Couldn't connect to the server";
-				break;
+			case NETWORKER_STAUS_INACTIVE: {
+				switch (game->gui_menus_state.server_intermediate.inactive_reason) {
+
+				case NETWORKER_REASON_CONNECTION_LOST:
+					status_text = "Connection lost";
+					break;
+
+				case NETWORKER_REASON_COULD_NOT_CONNECT:
+					status_text = "Couldn't find server in time";
+					break;
+
+				case NETWORKER_REASON_RECEIVED_INVALID_PACKETS:
+					status_text = "Received invalid packets from server";
+					break;
+
+				default:
+					status_text = " ";
+					break;
+
+				}
+			} break;
 
 			case NETWORKER_STATUS_CONNECTING:
 				status_text = "Connecting ...";
@@ -281,6 +301,10 @@ uint32_t gui_menus_simulation_frame(struct game_client* game) {
 
 			case NETWORKER_STATUS_CONNECTED:
 				status_text = "Connected";
+				break;
+
+			case NETWORKER_STATUS_HANDSHAKE:
+				status_text = "Handshake";
 				break;
 
 			default:

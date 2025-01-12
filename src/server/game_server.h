@@ -15,16 +15,21 @@
 #include "general/platformlib/networking/networking.h"
 
 #include "resources/resources.h"
+#include "networker/networker.h"
+#include "settings/settings.h"
 
 #include "game/game.h"
 
 struct game_server {
 	
 	struct resource_state resource_state;
+	struct networker_state networker_state;
+	struct settings_state settings_state;
+
 
 };
 
-uint32_t game_server_run(struct game_server* game, uint8_t resource_path);
+uint32_t game_server_run(struct game_server* game, uint8_t* resource_path);
 
 #endif // !GAME_SERVER_H
 

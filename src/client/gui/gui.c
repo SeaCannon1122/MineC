@@ -285,11 +285,6 @@ uint32_t gui_scene_simulate(struct game_client* game, void* scene, uint32_t scal
 
 	struct _gui_item* items = (size_t)scene + sizeof(struct _gui_scene_header);
 
-	uint8_t left_click = get_key_state(KEY_MOUSE_LEFT);
-
-	uint8_t arrow_left = get_key_state(KEY_ARROW_LEFT);
-	uint8_t arrow_right = get_key_state(KEY_ARROW_RIGHT);
-
 	for (uint32_t i = 0; i < header->item_index; i++) {
 
 		if (items[i].visibility == 0) continue;
@@ -303,7 +298,7 @@ uint32_t gui_scene_simulate(struct game_client* game, void* scene, uint32_t scal
 
 			items[i].item_info.button.clicked = 0;
 
-			if (items[i].item_info.button.disabled || left_click != 0b11) continue;
+			if (items[i].item_info.button.disabled || game->application_state.input_state.keyboard[KEY_MOUSE_LEFT] != 0b11) continue;
 
 			uint32_t button_width = game->resource_state.image_atlas[items[i].item_info.button.size == GUI_SIZE_NORMAL ? IMAGE_MENU_BUTTON : IMAGE_MENU_BUTTON_SHORT].width;
 			uint32_t button_height = game->resource_state.image_atlas[items[i].item_info.button.size == GUI_SIZE_NORMAL ? IMAGE_MENU_BUTTON : IMAGE_MENU_BUTTON_SHORT].height;
@@ -336,7 +331,7 @@ uint32_t gui_scene_simulate(struct game_client* game, void* scene, uint32_t scal
 				game->application_state.input_state.mouse_coords.x < x1 &&
 				game->application_state.input_state.mouse_coords.y >= y0 &&
 				game->application_state.input_state.mouse_coords.y < y1 &&
-				left_click == 0b11
+				game->application_state.input_state.keyboard[KEY_MOUSE_LEFT] == 0b11
 			) {
 				if (header->item_selected_index != i) items[i].item_info.text_field.cursor_blinking_time_start = game->application_state.time;
 				header->item_selected_index = i;
@@ -344,11 +339,11 @@ uint32_t gui_scene_simulate(struct game_client* game, void* scene, uint32_t scal
 
 			else if (header->item_selected_index == i) {
 
-				if (items[i].item_info.text_field.size > items[i].item_info.text_field.cursor_index && arrow_right == 0b11) {
+				if (items[i].item_info.text_field.size > items[i].item_info.text_field.cursor_index && game->application_state.input_state.keyboard[KEY_ARROW_RIGHT] == 0b11) {
 					items[i].item_info.text_field.cursor_index++;
 					items[i].item_info.text_field.cursor_blinking_time_start = game->application_state.time;
 				}
-				if (0 < items[i].item_info.text_field.cursor_index && arrow_left == 0b11) {
+				if (0 < items[i].item_info.text_field.cursor_index && game->application_state.input_state.keyboard[KEY_ARROW_LEFT] == 0b11) {
 					items[i].item_info.text_field.cursor_index--;
 					items[i].item_info.text_field.cursor_blinking_time_start = game->application_state.time;
 				}

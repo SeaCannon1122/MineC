@@ -85,6 +85,25 @@ static const uint8_t* const resources_key_value_map_tokens[] = {
 
 #define RESOURCES_KVM_COUNT sizeof(resources_key_value_map_tokens) / sizeof(resources_key_value_map_tokens[0])
 
+enum resources_shaders {
+	//vulkan shaders
+	SHADER_VULKAN_PIXELCHAR_VERTEX,
+	SHADER_VULKAN_PIXELCHAR_FRAGMENT,
+	SHADER_VULKAN_RECTANGLES_VERTEX,
+	SHADER_VULKAN_RECTANGLES_FRAGMENT,
+
+	//opengl shaders
+};
+
+static const uint8_t* const resources_shader_tokens[] = {
+	"vulkan_pixelchar_vertex",
+	"vulkan_pixelchar_fragment",
+	"vulkan_rectangles_vertex",
+	"vulkan_rectangles_fragment",
+};
+
+#define RESOURCES_SHADERS_COUNT sizeof(resources_shader_tokens) / sizeof(resources_shader_tokens[0])
+
 struct resource_state {
 
 	uint8_t resource_manager_root_path[256];
@@ -99,6 +118,9 @@ struct resource_state {
 	//pixelfonts
 	struct pixel_font* pixelfont_atlas[RESOURCES_PIXELFONTS_COUNT];
 	struct pixel_font* fallback_pixelfont;
+
+	//shaders
+	struct resource_manager_binary shader_atlas[RESOURCES_SHADERS_COUNT];
 
 };
 

@@ -39,8 +39,7 @@ struct game_client {
 	struct gui_menus_state gui_menus_state;
 	struct simulator_state simulator_state;
 	struct networker_state networker_state;
-	void* simulator_thread_handle;
-	void* networker_thread_handle;
+
 };
 
 

@@ -65,39 +65,25 @@ uint32_t vulkan_device_resources_rectangles_create(struct game_client* game) {
 
 	VKCall(vkCreatePipelineLayout(game->renderer_state.backend.device, &pipeline_layout_info, 0, &game->renderer_state.backend.rectangles_pipeline_layout));
 
-	struct resource_manager_binary vertex_source;
-	uint32_t get_vertex_shader_return_value  = resource_manager_get_binary(&game->resource_state.resource_manager, "vk_basic_vertex", &vertex_source);
-	if (get_vertex_shader_return_value) {
-		printf("[RENDERER BACKEND] Couldn't find shader matching token 'vk_basic_vertex'\n");
-
-		return 1;
-	}
-
-	struct resource_manager_binary fragment_source;
-	uint32_t get_fragment_shader_return_value = resource_manager_get_binary(&game->resource_state.resource_manager, "vk_basic_fragment", &fragment_source);
-	if (get_fragment_shader_return_value) {
-		printf("[RENDERER BACKEND] Couldn't find shader matching token 'vk_basic_fragment'\n");
-
-		return 1;
-	}
+	if (game->resource_state.shader_atlas[SHADER_VULKAN_RECTANGLES_VERTEX].data == NULL || game->resource_state.shader_atlas[SHADER_VULKAN_RECTANGLES_FRAGMENT].data == NULL) return 1;
 
 	VkShaderModule vertex_shader, fragment_shader;
 
 	VkShaderModuleCreateInfo shader_info = { 0 };
 	shader_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 
-	shader_info.pCode = (uint32_t*)vertex_source.data;
-	shader_info.codeSize = vertex_source.size;
+	shader_info.pCode = (uint32_t*)game->resource_state.shader_atlas[SHADER_VULKAN_RECTANGLES_VERTEX].data;
+	shader_info.codeSize = game->resource_state.shader_atlas[SHADER_VULKAN_RECTANGLES_VERTEX].size;
 	if (vkCreateShaderModule(game->renderer_state.backend.device, &shader_info, 0, &vertex_shader) != VK_SUCCESS) {
-		printf("[RENDERER BACKEND] Couldn't create ShaderModule from token 'vk_basic_vertex'\n");
+		printf("[RENDERER BACKEND] Couldn't create ShaderModule from token '%s'\n", resources_shader_tokens[SHADER_VULKAN_RECTANGLES_VERTEX]);
 
 		return 1;
 	}
 
-	shader_info.pCode = (uint32_t*)fragment_source.data;
-	shader_info.codeSize = fragment_source.size;
+	shader_info.pCode = (uint32_t*)game->resource_state.shader_atlas[SHADER_VULKAN_RECTANGLES_FRAGMENT].data;
+	shader_info.codeSize = game->resource_state.shader_atlas[SHADER_VULKAN_RECTANGLES_FRAGMENT].size;
 	if (vkCreateShaderModule(game->renderer_state.backend.device, &shader_info, 0, &fragment_shader) != VK_SUCCESS) {
-		printf("[RENDERER BACKEND] Couldn't create ShaderModule from token 'vk_basic_fragment'\n");
+		printf("[RENDERER BACKEND] Couldn't create ShaderModule from token '%s'\n", resources_shader_tokens[SHADER_VULKAN_RECTANGLES_FRAGMENT]);
 
 		vkDestroyShaderModule(game->renderer_state.backend.device, vertex_shader, 0);
 

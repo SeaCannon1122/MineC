@@ -1,6 +1,6 @@
 #pragma once
 
-#include <stddef.h>
+#include <stdint.h>
 
 	int is_hardware_rng_available();
 

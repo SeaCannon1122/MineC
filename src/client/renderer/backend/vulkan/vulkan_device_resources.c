@@ -2,9 +2,7 @@
 
 uint32_t floor_log2(uint32_t n) {
 	uint32_t log = 0;
-	while (n >>= 1) { // Right shift until n becomes 0
-		log++;
-	}
+	while (n >>= 1) log++;
 	return log;
 }
 
@@ -15,36 +13,17 @@ uint32_t vulkan_device_resources_rectangles_destroy(struct game_client* game);
 
 uint32_t vulkan_device_resources_create(struct game_client* game) {
 
-	struct resource_manager_binary vertex_source;
-	uint32_t get_vertex_shader_return_value = resource_manager_get_binary(&game->resource_state.resource_manager, "vk_pixel_char_vertex", &vertex_source);
-	if (get_vertex_shader_return_value) {
-		printf("[RENDERER BACKEND] Couldn't find shader matching token 'vk_pixel_char_vertex'\n");
-	}
-
-	struct resource_manager_binary fragment_source;
-	uint32_t get_fragment_shader_return_value = resource_manager_get_binary(&game->resource_state.resource_manager, "vk_pixel_char_fragment", &fragment_source);
-	if (get_fragment_shader_return_value) {
-		printf("[RENDERER BACKEND] Couldn't find shader matching token 'vk_pixel_char_fragment'\n");
-	}
-
-	if (get_vertex_shader_return_value || get_fragment_shader_return_value) {
-		vertex_source.data = 0;
-		vertex_source.size = 0;
-
-		fragment_source.data = 0;
-		fragment_source.size = 0;
-	}
-
 	pixel_char_renderer_new(
 		&game->renderer_state.backend.pcr,
 		game->renderer_state.backend.device,
 		game->renderer_state.backend.gpu,
 		game->renderer_state.backend.window_render_pass,
 		4096,
-		vertex_source.data,
-		vertex_source.size,
-		fragment_source.data,
-		fragment_source.size
+		game->resource_state.shader_atlas[SHADER_VULKAN_PIXELCHAR_VERTEX].data,
+		game->resource_state.shader_atlas[SHADER_VULKAN_PIXELCHAR_VERTEX].size,
+		game->resource_state.shader_atlas[SHADER_VULKAN_PIXELCHAR_FRAGMENT].data,
+		game->resource_state.shader_atlas[SHADER_VULKAN_PIXELCHAR_FRAGMENT].size,
+		printf
 	);
 
 	size_t max_image_memory_size = 0;

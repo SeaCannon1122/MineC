@@ -63,7 +63,8 @@ uint32_t pixel_char_renderer_new(
 	uint8_t* vertex_shader_custom,
 	uint32_t vertex_shader_custom_length, 
 	uint8_t* fragment_shader_custom, 
-	uint32_t fragment_shader_custom_length
+	uint32_t fragment_shader_custom_length,
+	int (*log_function)(const char* const, ...)
 ) {
 
 	pcr->buffer_length = buffer_length;
@@ -71,30 +72,25 @@ uint32_t pixel_char_renderer_new(
 	pcr->device = device;
 	pcr->gpu = gpu;
 
-
-	uint8_t* vertex_source = (vertex_shader_custom == 0 ? vertex_shader_default : vertex_shader_custom);
-	uint32_t vertex_source_length = (vertex_shader_custom == 0 ? vertex_shader_default_length : vertex_shader_custom_length);
-
-	uint8_t* fragment_source = (fragment_shader_custom == 0 ? fragment_shader_default : fragment_shader_custom);
-	uint32_t fragment_source_length = (fragment_shader_custom == 0 ? fragment_shader_default_length : fragment_shader_custom_length);
+	pcr->log_function = log_function;
 
 	VkShaderModule vertex_shader, fragment_shader;
 
 	VkShaderModuleCreateInfo shader_info = { 0 };
 	shader_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 
-	shader_info.pCode = vertex_source;
-	shader_info.codeSize = vertex_source_length;
+	shader_info.pCode = (vertex_shader_custom == 0 ? vertex_shader_default : vertex_shader_custom);
+	shader_info.codeSize = (vertex_shader_custom == 0 ? vertex_shader_default_length : vertex_shader_custom_length);
 	if (vkCreateShaderModule(pcr->device, &shader_info, 0, &vertex_shader) != VK_SUCCESS) {
-		printf("[PIXELCHAR RENDERER] Couldn't create Vertex-ShaderModule\n");
+		pcr->log_function("[VULKAN PIXELCHAR RENDERER] Couldn't create Vertex-ShaderModule\n");
 
 		return 1;
 	}
 
-	shader_info.pCode = fragment_source;
-	shader_info.codeSize = fragment_source_length;
+	shader_info.pCode = (fragment_shader_custom == 0 ? fragment_shader_default : fragment_shader_custom);
+	shader_info.codeSize = (fragment_shader_custom == 0 ? fragment_shader_default_length : fragment_shader_custom_length);
 	if (vkCreateShaderModule(pcr->device, &shader_info, 0, &fragment_shader) != VK_SUCCESS) {
-		printf("[PIXELCHAR RENDERER] Couldn't create Fragment-ShaderModule\n");
+		pcr->log_function("[VULKAN PIXELCHAR RENDERER] Couldn't create Fragment-ShaderModule\n");
 
 		vkDestroyShaderModule(pcr->device, vertex_shader, 0);
 		return 1;
@@ -291,7 +287,7 @@ uint32_t pixel_char_renderer_new(
 	vkDestroyShaderModule(pcr->device, fragment_shader, 0);
 
 	if (pipeline_result != VK_SUCCESS) {
-		printf("[PIXELCHAR RENDERER] Couldn't create pixelchar graphics pipeline\n");
+		pcr->log_function("[VULKAN PIXELCHAR RENDERER] Couldn't create pixelchar graphics pipeline\n");
 
 		vkDestroyPipelineLayout(pcr->device, pcr->pipe_layout, 0);
 		vkDestroyDescriptorSetLayout(pcr->device, pcr->set_layout, 0);

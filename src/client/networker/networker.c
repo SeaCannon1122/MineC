@@ -3,7 +3,7 @@
 void networker_thread_function(struct game_client* game) {
 
 	game->networker_state.thread_active_flag = 2;
-	while (game->networker_state.thread_active_flag != 1);
+	while (game->networker_state.thread_active_flag != 1) sleep_for_ms(1);
 
 	while (game->networker_state.request_exit_flag == 0) {
 
@@ -65,11 +65,30 @@ void networker_thread_function(struct game_client* game) {
 				networking_close_connection(game->networker_state.socket);
 
 				game->networker_state.status = NETWORKER_STAUS_INACTIVE;
+				game->networker_state.inactive_reason = NETWORKER_REASON_COULD_NOT_CONNECT;
 				if ((r == NETWORKING_ERROR_COULD_NOT_CONNECT)) printf("couldnt connect\n");
 				else printf("Error retriving connection status\n");
+
+				sleep_for_ms(500);
 			}
 
 			sleep_for_ms(50);
+
+		} break;
+
+		case NETWORKER_STATUS_HANDSHAKE: {
+
+			if (game->networker_state.request_flag_abort_connection == 1) {
+				printf("request_flag_abort_connection\n");
+				networking_signal_shutdown(game->networker_state.socket);
+				printf("NETWORKER_STATUS_WAITING_ON_CLOSING\n");
+				game->networker_state.status = NETWORKER_STATUS_WAITING_ON_CLOSING;
+
+				continue;
+			}
+
+
+			
 
 		} break;
 
@@ -91,14 +110,14 @@ void networker_thread_function(struct game_client* game) {
 						networking_close_connection(game->networker_state.socket);
 						printf("softclosing connection\n");
 						game->networker_state.status = NETWORKER_STAUS_INACTIVE;
+						game->networker_state.inactive_reason = NETWORKER_REASON_NONE;
 						break;
 					}
-					
 
 				}
 			}
 
-			sleep_for_ms(5);
+			sleep_for_ms(20);
 
 		} break;
 
@@ -140,9 +159,9 @@ uint32_t networker_start(struct game_client* game) {
 
 	game->networker_state.thread_active_flag = 0;
 
-	game->networker_thread_handle = create_thread(networker_thread_function, game);
+	game->networker_state.thread_handle = create_thread(networker_thread_function, game);
 
-	while (game->networker_state.thread_active_flag != 2);
+	while (game->networker_state.thread_active_flag != 2) sleep_for_ms(1);
 	game->networker_state.thread_active_flag = 1;
 
 	return 0;
@@ -153,7 +172,7 @@ uint32_t networker_stop(struct game_client* game) {
 
 	game->networker_state.request_exit_flag = 1;
 
-	join_thread(game->networker_thread_handle);
+	join_thread(game->networker_state.thread_handle);
 
 	return 0;
 }

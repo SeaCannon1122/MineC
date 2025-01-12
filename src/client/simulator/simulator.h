@@ -3,15 +3,12 @@
 #ifndef SIMULATOR_H
 #define SIMULATOR_H
 
-enum game_not_active_status {
-	NOT_CONNECTED,
-	KICKED,
-};
-
 struct simulator_state {
 
+	void* thread_handle;
+
 	uint32_t thread_active_flag;
-	uint32_t in_game_bool;
+	uint32_t simulator_active_bool;
 
 	uint8_t request_exit_flag;
 };

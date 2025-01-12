@@ -66,7 +66,8 @@ struct gui_menus_state {
 		void* menu_handle;
 
 		void* status_label;
-		uint32_t status;
+		uint8_t status;
+		uint8_t inactive_reason;
 
 		void* message_label;
 

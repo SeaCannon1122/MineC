@@ -29,8 +29,10 @@ uint32_t application_handle_events(struct game_client* game) {
 	game->application_state.frame_flags = 0;
 	game->application_state.input_state.character_count = 0;
 
+	for (uint32_t i = 0; i < KEY_TOTAL_COUNT; i++) game->application_state.input_state.keyboard[i] &= ~KEY_CHANG_MASK;
+
 	struct window_event event;
-	while (window_process_next_event(&event)) {
+	while (window_process_next_event(game->application_state.window, &event)) {
 
 		switch (event.type) {
 
@@ -40,9 +42,17 @@ uint32_t application_handle_events(struct game_client* game) {
 
 		case WINDOW_EVENT_CHAR: {
 			if (game->application_state.input_state.character_count < MAX_FRAME_CHAR_INPUTS) {
-				game->application_state.input_state.characters[game->application_state.input_state.character_count] = event.info.window_event_char.unicode;
+				game->application_state.input_state.characters[game->application_state.input_state.character_count] = event.info.event_char.unicode;
 			}
 			game->application_state.input_state.character_count++;
+		} break;
+
+		case WINDOW_EVENT_KEY_DOWN: {
+			game->application_state.input_state.keyboard[event.info.event_key_down.key] = KEY_CHANG_MASK | KEY_DOWN_MASK;
+		} break;
+
+		case WINDOW_EVENT_KEY_UP: {
+			game->application_state.input_state.keyboard[event.info.event_key_up.key] = KEY_CHANG_MASK;
 		} break;
 
 		default:
@@ -50,7 +60,7 @@ uint32_t application_handle_events(struct game_client* game) {
 		}
 
 	}
-
+	
 	uint32_t new_width = window_get_width(game->application_state.window);
 	uint32_t new_height = window_get_height(game->application_state.window);
 

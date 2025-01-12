@@ -5,18 +5,131 @@
 
 #include <stdint.h>
 
+enum platform_keys {
+
+	KEY_1,
+	KEY_2,
+	KEY_3,
+	KEY_4,
+	KEY_5,
+	KEY_6,
+	KEY_7,
+	KEY_8,
+	KEY_9,
+	KEY_0,
+
+	KEY_A,
+	KEY_B,
+	KEY_C,
+	KEY_D,
+	KEY_E,
+	KEY_F,
+	KEY_G,
+	KEY_H,
+	KEY_I,
+	KEY_J,
+	KEY_K,
+	KEY_L,
+	KEY_M,
+	KEY_N,
+	KEY_O,
+	KEY_P,
+	KEY_Q,
+	KEY_R,
+	KEY_S,
+	KEY_T,
+	KEY_U,
+	KEY_V,
+	KEY_W,
+	KEY_X,
+	KEY_Y,
+	KEY_Z,
+
+	KEY_PLUS,
+	KEY_MINUS,
+
+	KEY_F1,
+	KEY_F2,
+	KEY_F3,
+	KEY_F4,
+	KEY_F5,
+	KEY_F6,
+	KEY_F7,
+	KEY_F8,
+	KEY_F9,
+	KEY_F10,
+	KEY_F11,
+	KEY_F12,
+
+	KEY_SHIFT_L,
+	KEY_SHIFT_R,
+	KEY_CTRL_L,
+	KEY_CTRL_R,
+	KEY_ALT_L,
+	KEY_ALT_R,
+
+	KEY_SPACE,
+	KEY_BACKSPACE,
+	KEY_TAB,
+	KEY_ENTER,
+	KEY_ESCAPE,
+
+	KEY_ARROW_UP,
+	KEY_ARROW_DOWN,
+	KEY_ARROW_LEFT,
+	KEY_ARROW_RIGHT,
+
+	KEY_MOUSE_LEFT,
+	KEY_MOUSE_MIDDLE,
+	KEY_MOUSE_RIGHT,
+
+	KEY_TOTAL_COUNT,
+};
+
 enum window_event_type {
 	WINDOW_EVENT_NULL,
 	WINDOW_EVENT_DESTROY,
-	WINDOW_EVENT_MOVE,
 	WINDOW_EVENT_FOCUS,
 	WINDOW_EVENT_UNFOCUS,
 	WINDOW_EVENT_MOUSE_SCROLL,
 	WINDOW_EVENT_CHAR,
 	WINDOW_EVENT_KEY_UP,
 	WINDOW_EVENT_KEY_DOWN,
-	WINDOW_EVENT_SIZE,
+	WINDOW_EVENT_MOVE_SIZE,
 };
+
+struct point2d_int {
+	int32_t x;
+	int32_t y;
+};
+
+struct window_event {
+	uint32_t type;
+	union {
+		struct {
+			uint32_t scroll_steps;
+		} event_mouse_scroll;
+		struct {
+			uint32_t unicode;
+		} event_char;
+		struct {
+			uint32_t key;
+		} event_key_down;
+		struct {
+			uint32_t key;
+		} event_key_up;
+		struct {
+			uint32_t width;
+			uint32_t height;
+			uint32_t position_x;
+			uint32_t position_y;
+		} event_move_size;
+	} info;
+};
+
+#define MAX_WINDOW_COUNT 4
+
+#define WINDOW_CREATION_FAILED -1
 
 #if defined(_WIN32)
 
@@ -44,51 +157,6 @@ enum window_event_type {
 #define RESTRICT restrict
 
 #endif
-
-
-
-#ifndef MAX_WINDOW_COUNT
-#define MAX_WINDOW_COUNT 4
-#endif // !MAX_WINDOW_COUNT
-
-#ifndef MAX_CHAR_CALLBACK_FUNCTIONS
-#define MAX_CHAR_CALLBACK_FUNCTIONS 8
-#endif // !1
-
-#define WINDOW_CREATION_FAILED -1
-#define KEYBOARD_BUFFER_PARSER_CREATION_FAILED -1
-
-struct point2d_int {
-	int32_t x;
-	int32_t y;
-};
-
-struct window_event {
-	uint32_t type;
-	uint32_t window;
-	union {
-		struct {
-			uint32_t scroll_steps;
-		} window_event_mouse_scroll;
-		struct {
-			uint32_t unicode;
-		} window_event_char;
-		struct {
-			uint32_t key;
-		} window_event_key_down;
-		struct {
-			uint32_t key;
-		} window_event_key_up;
-		struct {
-			uint32_t width;
-			uint32_t height;
-		} window_event_size;
-		struct {
-			uint32_t x_position;
-			uint32_t y_position;
-		} window_event_move;
-	} info;
-};
 
 void* dynamic_library_load(uint8_t* src);
 void (*dynamic_library_get_function(void* library_handle, uint8_t* function_name)) (void);
@@ -136,68 +204,11 @@ struct point2d_int window_get_mouse_cursor_position(uint32_t window);
 
 void window_set_mouse_cursor_position(uint32_t window, int32_t x, int32_t y);
 
-uint32_t window_process_next_event(struct window_event* event);
+uint32_t window_process_next_event(uint32_t window, struct window_event* event);
 
 VkResult create_vulkan_surface(VkInstance instance, uint32_t window, VkSurfaceKHR* surface);
 
 VkResult destroy_vulkan_surface(VkInstance instance, VkSurfaceKHR surface);
 
-//keysymbol Mapping
-
-#if defined(_WIN32)
-
-#include <windows.h>
-
-#define KEY_SPACE VK_SPACE
-#define KEY_SHIFT_L VK_SHIFT
-#define KEY_SHIFT_R VK_RSHIFT
-#define KEY_CONTROL_L VK_CONTROL
-#define KEY_CONTROL_R VK_RCONTROL
-#define KEY_ALT_L VK_LMENU
-#define KEY_ALT_R VK_RMENU
-#define KEY_ESCAPE VK_ESCAPE
-#define KEY_BACKSPACE VK_BACK
-#define KEY_TAB VK_TAB
-#define KEY_ENTER VK_RETURN
-#define KEY_CAPS_LOCK VK_CAPITAL
-#define KEY_MINUS VK_OEM_MINUS
-#define KEY_PLUS VK_OEM_PLUS
-#define KEY_ARROW_LEFT VK_LEFT
-#define KEY_ARROW_RIGHT VK_RIGHT
-#define KEY_ARROW_UP VK_UP
-#define KEY_ARROW_DOWN VK_DOWN
-#define KEY_MOUSE_LEFT VK_LBUTTON
-#define KEY_MOUSE_MIDDLE VK_MBUTTON
-#define KEY_MOUSE_RIGHT VK_RBUTTON
-
-#elif defined(__linux__)
-
-#include <X11/Xlib.h>
-#include <X11/Xutil.h>
-#include <X11/XKBlib.h>
-
-#define KEY_SPACE XK_space
-#define KEY_SHIFT_L XK_Shift_L
-#define KEY_SHIFT_R XK_Shift_R
-#define KEY_CONTROL_L XK_Control_L
-#define KEY_CONTROL_R XK_Control_R
-#define KEY_ESCAPE XK_Escape
-#define KEY_BACKSPACE XK_BackSpace
-#define KEY_ALT_L XK_Alt_L
-#define KEY_ALT_R XK_Alt_R
-#define KEY_TAB XK_Tab
-#define KEY_ENTER XK_Return
-#define KEY_CAPS_LOCK XK_Caps_Lock
-#define KEY_MINUS XK_minus
-#define KEY_PLUS XK_plus
-#define KEY_ARROW_LEFT XK_Left
-#define KEY_ARROW_RIGHT XK_Right
-#define KEY_ARROW_UP XK_Up
-#define KEY_ARROW_DOWN XK_Down
-#define KEY_MOUSE_LEFT 0x1234
-#define KEY_MOUSE_MIDDLE 0x1235
-#define KEY_MOUSE_RIGHT 0x1236
 
 #endif
-
-#endif // PLATFORM_H

@@ -33,7 +33,7 @@ struct resource_manager {
 	uint32_t audio_count;
 };
 
-uint32_t resource_manager_new(struct resource_manager* rm, uint8_t* file_path);
+uint32_t resource_manager_new(struct resource_manager* rm, uint8_t* file_path, int (*log_function)(const char* const, ...));
 
 uint32_t resource_manager_destroy(struct resource_manager* rm);
 

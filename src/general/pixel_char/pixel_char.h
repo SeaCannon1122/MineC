@@ -37,6 +37,8 @@ struct pixel_char_renderer {
 	uint32_t buffer_length;
 
 	uint32_t chars_to_draw;
+
+	int (*log_function)(const char* const, ...);
 };
 
 struct pixel_char {
@@ -59,7 +61,8 @@ uint32_t pixel_char_renderer_new(
 	uint8_t* vertex_shader_custom,
 	uint32_t vertex_shader_custom_length,
 	uint8_t* fragment_shader_custom,
-	uint32_t fragment_shader__custom_length
+	uint32_t fragment_shader__custom_length,
+	int (*log_function)(const char* const, ...)
 );
 uint32_t pixel_char_renderer_destroy(struct pixel_char_renderer* pcr);
 
