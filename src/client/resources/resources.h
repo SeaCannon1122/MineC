@@ -27,7 +27,7 @@ static const uint32_t default_image[] = {
 static const uint32_t default_image_width = 16;
 static const uint32_t default_image_height = 16;
 
-enum resources_images {
+enum resources_image {
 	IMAGE_MENU_BACKGROUND,
 	IMAGE_MENU_BUTTON,
 	IMAGE_MENU_BUTTON_HOVER,
@@ -59,7 +59,7 @@ static const uint8_t* const resources_image_tokens[] = {
 
 #define RESOURCES_IMAGES_COUNT sizeof(resources_image_tokens) / sizeof(resources_image_tokens[0])
 
-enum resources_pixelfonts {
+enum resources_pixelfont {
 	PIXELFONT_DEFAULT,
 	PIXELFONT_WIDE,
 	PIXELFONT_SMOOTH
@@ -73,12 +73,16 @@ static const uint8_t* const resources_pixelfont_tokens[] = {
 
 #define RESOURCES_PIXELFONTS_COUNT sizeof(resources_pixelfont_tokens) / sizeof(resources_pixelfont_tokens[0])
 
-enum resources_key_value_maps {
-	RESOURCES_KVM_SAMPLER_DEFAULT,
-	RESOURCES_KVM_SAMPLER_SMOOTH,
+enum resources_key_value_map {
+	KVM_SETTINGS,
+	KVM_CONSTANTS,
+	KVM_SAMPLER_DEFAULT,
+	KVM_SAMPLER_SMOOTH,
 };
 
 static const uint8_t* const resources_key_value_map_tokens[] = {
+	"game_settings",
+	"game_constants",
 	"sampler_default",
 	"sampler_smooth"
 };
@@ -116,8 +120,8 @@ struct resource_state {
 	void* key_value_map_atlas[RESOURCES_KVM_COUNT];
 
 	//pixelfonts
-	struct pixel_font* pixelfont_atlas[RESOURCES_PIXELFONTS_COUNT];
-	struct pixel_font* fallback_pixelfont;
+	struct pixelfont* pixelfont_atlas[RESOURCES_PIXELFONTS_COUNT];
+	struct pixelfont* fallback_pixelfont;
 
 	//shaders
 	struct resource_manager_binary shader_atlas[RESOURCES_SHADERS_COUNT];

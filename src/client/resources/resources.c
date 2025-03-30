@@ -27,14 +27,14 @@ uint32_t resources_create(struct game_client* game, uint8_t* resource_path) {
 
 			printf("[GAME RESOURCES] Couldn't find pixelfont matching token '%s'\n", resources_pixelfont_tokens[i]);
 
-			if (game->resource_state.fallback_pixelfont == NULL) game->resource_state.fallback_pixelfont = calloc(1, sizeof(struct pixel_font));
+			if (game->resource_state.fallback_pixelfont == NULL) game->resource_state.fallback_pixelfont = calloc(1, sizeof(struct pixelfont));
 
 			game->resource_state.pixelfont_atlas[i] = game->resource_state.fallback_pixelfont;
 
 		}
 
 		else {
-			game->resource_state.pixelfont_atlas[i] = calloc(1, sizeof(struct pixel_font));
+			game->resource_state.pixelfont_atlas[i] = calloc(1, sizeof(struct pixelfont));
 
 			memcpy(game->resource_state.pixelfont_atlas[i], binary.data, binary.size);
 
@@ -63,6 +63,8 @@ uint32_t resources_create(struct game_client* game, uint8_t* resource_path) {
 			game->resource_state.shader_atlas[i].size = 0;
 		}
 	}
+
+
 
 	return 0;
 }

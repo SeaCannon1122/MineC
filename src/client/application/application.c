@@ -40,6 +40,24 @@ uint32_t application_handle_events(struct game_client* game) {
 			return 1;
 		} break;
 
+		case WINDOW_EVENT_MOVE_SIZE: {
+
+			game->application_state.window_extent.width = event.info.event_move_size.width;
+			game->application_state.window_extent.height = event.info.event_move_size.height;
+
+			if (game->application_state.window_extent.width != 0 && game->application_state.window_extent.height != 0) {
+
+				if (
+					game->application_state.last_render_window_extent.width != event.info.event_move_size.width ||
+					game->application_state.last_render_window_extent.height != event.info.event_move_size.height
+				) game->application_state.frame_flags |= FRAME_FLAG_SIZE_CHANGE;
+
+				game->application_state.last_render_window_extent.width = event.info.event_move_size.width;
+				game->application_state.last_render_window_extent.height = event.info.event_move_size.height;
+			}
+
+		} break;
+
 		case WINDOW_EVENT_CHAR: {
 			if (game->application_state.input_state.character_count < MAX_FRAME_CHAR_INPUTS) {
 				game->application_state.input_state.characters[game->application_state.input_state.character_count] = event.info.event_char.unicode;
@@ -60,25 +78,8 @@ uint32_t application_handle_events(struct game_client* game) {
 		}
 
 	}
-	
-	uint32_t new_width = window_get_width(game->application_state.window);
-	uint32_t new_height = window_get_height(game->application_state.window);
 
-	if (new_width != 0 && new_height != 0) {
-
-		game->application_state.frame_flags |= FRAME_FLAG_SHOULD_RENDER;
-
-		if (game->application_state.window_extent.width != new_width ||
-			game->application_state.window_extent.height != new_height) {
-
-			game->application_state.window_extent.width = new_width;
-			game->application_state.window_extent.height = new_height;
-
-			game->application_state.frame_flags |= FRAME_FLAG_SIZE_CHANGE;
-		}
-
-		
-	}
+	if (game->application_state.window_extent.width != 0 && game->application_state.window_extent.height != 0) game->application_state.frame_flags |= FRAME_FLAG_SHOULD_RENDER;
 
 	struct point2d_int mouse_position = window_get_mouse_cursor_position(game->application_state.window);
 

@@ -15,9 +15,10 @@ set(CLIENT_SOURCE_FILES
     src/client/gui/gui.c
     src/client/gui/gui_menus.c
 
-    src/general/pixel_char/pixel_char.c
+    src/general/pixelchar/pixelchar.c
     src/general/key_value.c
     src/general/resource_manager.c
+    src/general/string_allocator.c
     src/general/platformlib/platform/platform.c
     src/general/platformlib/networking/networking.c
 
@@ -39,8 +40,7 @@ set(SERVER_SOURCE_FILES
 set(TEST_SOURCE_FILES
     src/test/main.c
 
-    src/general/platformlib/platform/platform.c
-    src/general/platformlib/networking/networking.c
+    src/general/string_allocator.c
 )
 
 set(TEST_2_SOURCE_FILES

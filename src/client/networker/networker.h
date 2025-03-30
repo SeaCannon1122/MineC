@@ -31,6 +31,7 @@ struct networker_state {
 
 	uint32_t status;
 	uint32_t inactive_reason;
+	uint32_t handshake_status;
 
 	uint32_t tried_connecting;
 

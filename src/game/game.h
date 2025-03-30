@@ -8,6 +8,30 @@
 #define GAME_MAX_USERNAME_LENGTH 64
 #define GAME_MAX_PASSWORD_LENGTH 64
 
+enum block_type_ {
+	BLOCK_AIR = 1,
+	BLOCK_DIRT,
+	BLOCK_GRASS,
+	BLOCK_STONE,
+	BLOCK_MAX,
+};
+
+struct entity {
+	float x;
+	float y;
+	float z;
+
+	float pitch;
+	float roll;
+	float yaw;
+
+	uint16_t type;
+
+	struct entity_data {
+		uint8_t gravity;
+	};
+};
+
 struct game_char {
 	uint8_t color[4];
 	uint8_t background_color[4];

@@ -1,7 +1,17 @@
 #include "server/game_server.h"
 
-void* handshake_thread_function() {
+void handshake_thread_function(struct game_server* game) {
 
+	uint32_t thread_i = game->networker_state.next_handshake_thread_i;
+
+	game->networker_state.handshake_threads[thread_i].status = 1;
+
+
+	game->networker_state.handshake_threads[thread_i].return_status = 0;
+
+	game->networker_state.handshake_threads[thread_i].status = 99;
+
+	return;
 }
 
 void networker_thread_function(struct game_server* game) {
@@ -26,7 +36,12 @@ void networker_thread_function(struct game_server* game) {
 			if (accept_return_value != NETWORKING_SUCCESS) sleep_for_ms(20);
 			else {
 
-				//game->networker_state.handshake_threads[threads_i].s
+				game->networker_state.handshake_threads[threads_i].socket = client_handle;
+				game->networker_state.handshake_threads[threads_i].status = 2;
+
+				create_thread(handshake_thread_function, game);
+				while (game->networker_state.handshake_threads[threads_i].status != 1) sleep_for_ms(1);
+				
 
 
 			}

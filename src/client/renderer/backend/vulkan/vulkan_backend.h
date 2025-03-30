@@ -7,7 +7,7 @@
 #include "client/resources/resources.h"
 #include "client/renderer/renderer_samplers.h"
 
-#include "general/pixel_char/pixel_char.h"
+#include "general/pixelchar/pixelchar.h"
 
 #include <stdio.h>
 
@@ -83,7 +83,7 @@ struct renderer_backend {
 	VkDescriptorSet images_descriptor_set;
 
 	uint32_t pixel_char_renderer_usable;
-	struct pixel_char_renderer pcr;
+	struct pixelchar_renderer_vk pcr;
 	VkDeviceMemory pixelfonts_memory;
 	VkBuffer pixelfont_buffer;
 

@@ -261,6 +261,18 @@ void key_value_combind(void** key_value_map_main, void** key_value_map_additum) 
 
 }
 
+void* key_value_copy(void* key_value_map) {
+
+    struct key_value_meta_data* meta_data = key_value_map;
+
+    uint32_t size = sizeof(struct key_value_meta_data) + meta_data->maps_block_length * sizeof(struct key_value_entry) + meta_data->strings_block_size;
+
+    void* copy = malloc(size);
+    memcpy(copy, key_value_map, size);
+
+    return copy;
+}
+
 enum key_value_return_type key_value_load_yaml(void** key_value_map, uint8_t* file_path) {
     FILE* file = fopen(file_path, "rb");
     if (file == NULL) return KEY_VALUE_ERROR_COULDNT_OPEN_FILE;

@@ -3,6 +3,21 @@
 #ifndef SIMULATOR_H
 #define SIMULATOR_H
 
+struct stored_entity {
+
+	float x;
+	float y;
+	float z;
+
+	float pitch;
+	float roll;
+	float yaw;
+
+	uint16_t type;
+
+	uint16_t entity_data_index;
+};
+
 struct simulator_state {
 
 	void* thread_handle;
@@ -11,6 +26,9 @@ struct simulator_state {
 	uint32_t simulator_active_bool;
 
 	uint8_t request_exit_flag;
+
+
+
 };
 
 struct game_client;

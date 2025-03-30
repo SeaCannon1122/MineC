@@ -15,6 +15,7 @@ struct networker_state {
 
 	void* socket;
 
+	uint32_t next_handshake_thread_i;
 	struct handshake_thread {
 		void* thread;
 		void* socket;

@@ -15,16 +15,16 @@ uint32_t gui_menus_create(struct game_client* game) {
 	struct game_char game_char_quit_game_text[sizeof(quit_game_text) - 1];
 
 	for (uint32_t i = 0; i < sizeof(title_text) - 1; i++)
-		game_char_title_text[i] = (struct game_char){ {255, 255, 255, 255}, {0, 0, 0, 0}, title_text[i], PIXEL_CHAR_SHADOW_MASK };
+		game_char_title_text[i] = (struct game_char){ {255, 255, 255, 255}, {0, 0, 0, 0}, title_text[i], PIXELCHAR_MASK_SHADOW };
 
 	for (uint32_t i = 0; i < sizeof(join_game_text) - 1; i++)
-		game_char_join_game_text[i] = (struct game_char){ {255, 255, 255, 255}, {0, 0, 0, 0}, join_game_text[i], PIXEL_CHAR_SHADOW_MASK };
+		game_char_join_game_text[i] = (struct game_char){ {255, 255, 255, 255}, {0, 0, 0, 0}, join_game_text[i], PIXELCHAR_MASK_SHADOW };
 
 	for (uint32_t i = 0; i < sizeof(options_text) - 1; i++)
-		game_char_options_text[i] = (struct game_char){ {255, 255, 255, 255}, {0, 0, 0, 0}, options_text[i], PIXEL_CHAR_SHADOW_MASK };
+		game_char_options_text[i] = (struct game_char){ {255, 255, 255, 255}, {0, 0, 0, 0}, options_text[i], PIXELCHAR_MASK_SHADOW };
 
 	for (uint32_t i = 0; i < sizeof(quit_game_text) - 1; i++)
-		game_char_quit_game_text[i] = (struct game_char){ {255, 255, 255, 255}, {0, 0, 0, 0}, quit_game_text[i], PIXEL_CHAR_SHADOW_MASK };
+		game_char_quit_game_text[i] = (struct game_char){ {255, 255, 255, 255}, {0, 0, 0, 0}, quit_game_text[i], PIXELCHAR_MASK_SHADOW };
 
 	game->gui_menus_state.main.menu_handle = gui_scene_new(7, sizeof(title_text) + sizeof(join_game_text) + sizeof(options_text) + sizeof(quit_game_text) - 4, 0);
 
@@ -72,25 +72,25 @@ uint32_t gui_menus_create(struct game_client* game) {
 	struct game_char game_char_join_text[sizeof(join_text) - 1];
 
 	for (uint32_t i = 0; i < sizeof(join_a_server_text) - 1; i++)
-		game_char_join_a_server_text[i] = (struct game_char){ {255, 255, 255, 255}, {0, 0, 0, 0}, join_a_server_text[i], PIXEL_CHAR_SHADOW_MASK };
+		game_char_join_a_server_text[i] = (struct game_char){ {255, 255, 255, 255}, {0, 0, 0, 0}, join_a_server_text[i], PIXELCHAR_MASK_SHADOW };
 
 	for (uint32_t i = 0; i < sizeof(ip_text) - 1; i++)
-		game_char_ip_text[i] = (struct game_char){ {200, 200, 200, 255}, {0, 0, 0, 0}, ip_text[i], PIXEL_CHAR_SHADOW_MASK };
+		game_char_ip_text[i] = (struct game_char){ {200, 200, 200, 255}, {0, 0, 0, 0}, ip_text[i], PIXELCHAR_MASK_SHADOW };
 
 	for (uint32_t i = 0; i < sizeof(invalid_syntax_text) - 1; i++)
-		game_char_invalid_syntax_text[i] = (struct game_char){ {200, 0, 0, 255}, {0, 0, 0, 0}, invalid_syntax_text[i], PIXEL_CHAR_SHADOW_MASK };
+		game_char_invalid_syntax_text[i] = (struct game_char){ {200, 0, 0, 255}, {0, 0, 0, 0}, invalid_syntax_text[i], PIXELCHAR_MASK_SHADOW };
 
 	for (uint32_t i = 0; i < sizeof(username_text) - 1; i++)
-		game_char_username_text[i] = (struct game_char){ {200, 200, 200, 255}, {0, 0, 0, 0}, username_text[i], PIXEL_CHAR_SHADOW_MASK };
+		game_char_username_text[i] = (struct game_char){ {200, 200, 200, 255}, {0, 0, 0, 0}, username_text[i], PIXELCHAR_MASK_SHADOW };
 
 	for (uint32_t i = 0; i < sizeof(password_text) - 1; i++)
-		game_char_password_text[i] = (struct game_char){ {200, 200, 200, 255}, {0, 0, 0, 0}, password_text[i], PIXEL_CHAR_SHADOW_MASK };
+		game_char_password_text[i] = (struct game_char){ {200, 200, 200, 255}, {0, 0, 0, 0}, password_text[i], PIXELCHAR_MASK_SHADOW };
 
 	for (uint32_t i = 0; i < sizeof(back_text) - 1; i++)
-		game_char_back_text[i] = (struct game_char){ {255, 255, 255, 255}, {0, 0, 0, 0}, back_text[i], PIXEL_CHAR_SHADOW_MASK };
+		game_char_back_text[i] = (struct game_char){ {255, 255, 255, 255}, {0, 0, 0, 0}, back_text[i], PIXELCHAR_MASK_SHADOW };
 
 	for (uint32_t i = 0; i < sizeof(join_text) - 1; i++)
-		game_char_join_text[i] = (struct game_char){ {255, 255, 255, 255}, {0, 0, 0, 0}, join_text[i], PIXEL_CHAR_SHADOW_MASK };
+		game_char_join_text[i] = (struct game_char){ {255, 255, 255, 255}, {0, 0, 0, 0}, join_text[i], PIXELCHAR_MASK_SHADOW };
 
 	game->gui_menus_state.join_game.menu_handle = gui_scene_new(12, sizeof(join_a_server_text) + sizeof(ip_text) + + sizeof(invalid_syntax_text) + sizeof(username_text) + sizeof(password_text) + sizeof(back_text) + sizeof(join_text) - 7, 15 + 1 + 5 + GAME_MAX_USERNAME_LENGTH + GAME_MAX_PASSWORD_LENGTH);
 
@@ -144,7 +144,7 @@ uint32_t gui_menus_create(struct game_client* game) {
 	gui_set_item_position(game->gui_menus_state.join_game.menu_handle, game->gui_menus_state.join_game.join_button, 0.5, 0.5, 51, 70, 0.5, 0.5, 0);
 
 	//server intermediate menu
-	struct game_char empty_char = { {255, 255, 255, 255}, {0, 0, 0, 0}, ' ', PIXEL_CHAR_SHADOW_MASK };
+	struct game_char empty_char = { {255, 255, 255, 255}, {0, 0, 0, 0}, ' ', PIXELCHAR_MASK_SHADOW };
 
 	game->gui_menus_state.server_intermediate.menu_handle = gui_scene_new(4, sizeof(back_text) - 1 + 64 + MAX_CONNECTION_STATE_MESSAGE_LENGTH, 0);
 
@@ -238,7 +238,7 @@ uint32_t gui_menus_simulation_frame(struct game_client* game) {
 		if (synax_correct) gui_set_item_visibility(game->gui_menus_state.join_game.menu_handle, game->gui_menus_state.join_game.invalid_syntax_label, 0);
 		else gui_set_item_visibility(game->gui_menus_state.join_game.menu_handle, game->gui_menus_state.join_game.invalid_syntax_label, 1);
 
-		if (synax_correct && game_strlen(game->gui_menus_state.join_game.username_textfield_ptr) && game_strlen(game->gui_menus_state.join_game.password_textfield_ptr)) gui_enable_disable_button(game->gui_menus_state.join_game.menu_handle, game->gui_menus_state.join_game.join_button, 0);
+		if (synax_correct && game_strlen(game->gui_menus_state.join_game.username_textfield_ptr)) gui_enable_disable_button(game->gui_menus_state.join_game.menu_handle, game->gui_menus_state.join_game.join_button, 0);
 		else gui_enable_disable_button(game->gui_menus_state.join_game.menu_handle, game->gui_menus_state.join_game.join_button, 1);
 
 		if (gui_is_button_clicked(game->gui_menus_state.join_game.menu_handle, game->gui_menus_state.join_game.back_button)) game->gui_menus_state.active_menu = MENU_MAIN;
@@ -316,7 +316,7 @@ uint32_t gui_menus_simulation_frame(struct game_client* game) {
 
 			struct game_char game_char_status_text[64];
 			for (uint32_t i = 0; i < status_text_length; i++)
-				game_char_status_text[i] = (struct game_char){ {255, 255, 255, 255}, {0, 0, 0, 0}, status_text[i], PIXEL_CHAR_SHADOW_MASK };
+				game_char_status_text[i] = (struct game_char){ {255, 255, 255, 255}, {0, 0, 0, 0}, status_text[i], PIXELCHAR_MASK_SHADOW };
 			
 			gui_set_label(game->gui_menus_state.server_intermediate.menu_handle, game->gui_menus_state.server_intermediate.status_label, game_char_status_text, status_text_length, 1, 4, 0.5);
 

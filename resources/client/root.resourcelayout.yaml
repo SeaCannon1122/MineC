@@ -3,4 +3,5 @@ textures: assets/textures.resourcelayout.yaml
 sounds: assets/sounds.resourcelayout.yaml
 shaders: assets/shaders.resourcelayout.yaml
 samplers: assets/samplers.resourcelayout.yaml
-client_paths: client.yaml
+game_constants: dynamic/game_constants.yaml
+game_settings: dynamic/game_settings.mod.yaml

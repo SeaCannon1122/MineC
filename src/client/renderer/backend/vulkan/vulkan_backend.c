@@ -180,7 +180,7 @@ uint32_t renderer_backend_render(struct game_client* game) {
 	game->renderer_state.backend.rectangles_count = 0;
 
 	//pixel_chars
-	pixel_char_renderer_render(&game->renderer_state.backend.pcr, game->renderer_state.backend.cmd, screen_size);
+	pixelchar_renderer_vk_cmd_render(&game->renderer_state.backend.pcr, game->renderer_state.backend.cmd, screen_size);
 
 	vkCmdEndRenderPass(game->renderer_state.backend.cmd);
 
@@ -219,7 +219,7 @@ uint32_t renderer_backend_render(struct game_client* game) {
 
 uint32_t renderer_backend_add_pixel_chars(struct game_client* game, struct pixel_char* chars, uint32_t chars_count) {
 
-	pixel_char_renderer_add_chars(&game->renderer_state.backend.pcr, chars, chars_count);
+	pixelchar_renderer_vk_add_chars(&game->renderer_state.backend.pcr, chars, chars_count);
 
 	return 0;
 };

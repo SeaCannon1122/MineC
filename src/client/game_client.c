@@ -34,6 +34,7 @@ uint32_t game_client_run(struct game_client* game, uint8_t* resource_path) {
 	renderer_destroy(game);
 	gui_menus_destroy(game);
 
+	settings_save(game);
 	resources_destroy(game);
 
 	application_destroy(game);

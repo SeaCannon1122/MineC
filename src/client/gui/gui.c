@@ -422,7 +422,7 @@ uint32_t gui_scene_render(struct game_client* game, void* scene, uint32_t scale)
 					line_i++;
 					line_widths[line_i] = 0;
 				}
-				else line_widths[line_i] += ((game->resource_state.pixelfont_atlas[text[char_i].masks & PIXEL_CHAR_FONT_MASK]->char_font_entries[text[char_i].value].width + 1) / 2 + 1) * text_size;
+				else line_widths[line_i] += ((game->resource_state.pixelfont_atlas[text[char_i].masks & PIXELCHAR_MASK_FONT]->bitmaps[text[char_i].value].width + 1) / 2 + 1) * text_size;
 
 			}
 
@@ -450,7 +450,7 @@ uint32_t gui_scene_render(struct game_client* game, void* scene, uint32_t scale)
 						break;
 					}
 
-					struct pixel_char pc;
+					struct pixelchar pc;
 
 					pc.background_color[0] = text[char_i].background_color[0];
 					pc.background_color[1] = text[char_i].background_color[1];
@@ -473,7 +473,7 @@ uint32_t gui_scene_render(struct game_client* game, void* scene, uint32_t scale)
 
 					renderer_backend_add_pixel_chars(game, &pc, 1);
 
-					x += ((game->resource_state.pixelfont_atlas[text[char_i].masks & PIXEL_CHAR_FONT_MASK]->char_font_entries[text[char_i].value].width + 1) / 2 + 1) * text_size;
+					x += ((game->resource_state.pixelfont_atlas[text[char_i].masks & PIXELCHAR_MASK_FONT]->bitmaps[text[char_i].value].width + 1) / 2 + 1) * text_size;
 
 				}
 			
@@ -558,14 +558,14 @@ uint32_t gui_scene_render(struct game_client* game, void* scene, uint32_t scale)
 
 			renderer_backend_add_rectangles(game, &rect, 1);
 
-			struct pixel_char pc;
+			struct pixelchar pc;
 
 			pc.color[0] = 255;
 			pc.color[1] = 255;
 			pc.color[2] = 255;
 			pc.color[3] = 255;
 
-			pc.masks = PIXEL_CHAR_SHADOW_MASK;
+			pc.masks = PIXELCHAR_MASK_SHADOW;
 
 			pc.size = scale;
 
@@ -597,7 +597,7 @@ uint32_t gui_scene_render(struct game_client* game, void* scene, uint32_t scale)
 
 				renderer_backend_add_pixel_chars(game, &pc, 1);
 
-				pc.position[0] += ((game->resource_state.pixelfont_atlas[PIXELFONT_DEFAULT]->char_font_entries[buffer_ptr[j]].width + 1) / 2 + 1) * scale;
+				pc.position[0] += ((game->resource_state.pixelfont_atlas[PIXELFONT_DEFAULT]->bitmaps[buffer_ptr[j]].width + 1) / 2 + 1) * scale;
 			}
 
 			if (items[i].item_info.text_field.size == items[i].item_info.text_field.cursor_index && header->item_selected_index == i && fmod(game->application_state.time - items[i].item_info.text_field.cursor_blinking_time_start, 1400.0) < 900.0) {

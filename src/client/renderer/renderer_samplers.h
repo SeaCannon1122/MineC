@@ -41,8 +41,8 @@ enum sampler_configurations {
 };
 
 static const uint32_t sampler_configurations_key_value_maps[] = {
-	RESOURCES_KVM_SAMPLER_DEFAULT,
-	RESOURCES_KVM_SAMPLER_SMOOTH,
+	KVM_SAMPLER_DEFAULT,
+	KVM_SAMPLER_SMOOTH,
 };
 
 #define SAMPLERS_COUNT sizeof(sampler_configurations_key_value_maps) / sizeof(sampler_configurations_key_value_maps[0])

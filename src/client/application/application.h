@@ -31,10 +31,10 @@ struct application_state {
 		uint32_t height;
 	} window_extent;
 
-	struct window_position {
-		uint32_t x;
-		uint32_t y;
-	} window_position;
+	struct last_render_window_extent {
+		uint32_t width;
+		uint32_t height;
+	} last_render_window_extent;
 
 	struct machine_info {
 		struct gpus {

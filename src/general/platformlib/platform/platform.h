@@ -179,8 +179,6 @@ void* create_thread(void (address) (void*), void* args);
 
 void join_thread(void* thread_handle);
 
-int8_t get_key_state(int32_t key);
-
 uint32_t get_screen_width();
 uint32_t get_screen_height();
 
@@ -195,8 +193,6 @@ uint32_t window_get_x_position(uint32_t window);
 uint32_t window_get_y_position(uint32_t window);
 
 int32_t window_is_selected(uint32_t window);
-
-int32_t window_is_active(uint32_t window);
 
 void window_destroy(uint32_t window);
 

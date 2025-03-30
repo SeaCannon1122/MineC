@@ -1,4 +1,0 @@
-chat_dump: dynamic/dump/chat/
-debug_dump: dynamic/dump/error_and_log/
-game_constants: dynamic/game_constants.settings.yaml
-game_settings: dynamic/game_settings.settings.yaml

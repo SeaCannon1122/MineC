@@ -7,24 +7,39 @@
 
 struct window_state {
 	HWND hwnd;
-	uint8_t active;
-	uint8_t registered_active;
+
 	int32_t window_width;
 	int32_t window_height;
 	int32_t position_x;
 	int32_t position_y;
 };
 
-uint32_t initialized = 0;
+struct window_event_queue {
 
+	uint32_t event_destroy;
+
+	uint32_t event_focus;
+
+	uint32_t event_unfocus;
+
+	uint32_t event_mouse_scroll;
+	uint32_t scroll_steps;
+
+	uint32_t event_char;
+	uint32_t unicode;
+
+	uint32_t event_key_down;
+	uint32_t event_key_up;
+	uint32_t key;
+
+	uint32_t event_move_size;
+};
+
+WNDCLASSW wc;
 HWND console;
 
-struct window_state window_states[MAX_WINDOW_COUNT];
-WNDCLASSW wc;
-
-struct window_event* we = NULL;
-uint32_t is_trackable_window_event = 0;
-uint32_t window_check = 0;
+struct window_state window_states[MAX_WINDOW_COUNT] = { 0 };
+struct window_event_queue window_event_queues[MAX_WINDOW_COUNT] = { 0 };
 
 void* dynamic_library_load(uint8_t* src) {
 
@@ -88,11 +103,11 @@ uint32_t get_screen_height() {
 //window functions
 
 void show_console_window() {
-	if (initialized) ShowWindow(console, SW_SHOW);;
+	ShowWindow(console, SW_SHOW);;
 }
 
 void hide_console_window() {
-	if (initialized) ShowWindow(console, SW_HIDE);
+	ShowWindow(console, SW_HIDE);
 }
 
 uint32_t window_create(uint32_t posx, uint32_t posy, uint32_t width, uint32_t height, uint8_t* name, uint32_t visible) {
@@ -104,7 +119,7 @@ uint32_t window_create(uint32_t posx, uint32_t posy, uint32_t width, uint32_t he
 	int32_t name_length = 1;
 	for (; name[name_length - 1] != '\0'; name_length++);
 
-	USHORT* wide_name = alloca(name_length * sizeof(USHORT));
+	USHORT* wide_name = _malloca(name_length * sizeof(USHORT));
 
 	for (int32_t i = 0; i < name_length; i++) wide_name[i] = (*(USHORT*)&name[i] & 255);
 
@@ -125,14 +140,10 @@ uint32_t window_create(uint32_t posx, uint32_t posy, uint32_t width, uint32_t he
 
 	if(window_states[next_free_window_index].hwnd == NULL) return WINDOW_CREATION_FAILED;
 
-	SendMessageW(window_states[next_free_window_index].hwnd, WM_SIZE, 0, 0);
-
 	window_states[next_free_window_index].window_width = width;
 	window_states[next_free_window_index].window_height = height;
 	window_states[next_free_window_index].position_x = posx;
 	window_states[next_free_window_index].position_y = posy;
-	window_states[next_free_window_index].active = 1;
-	window_states[next_free_window_index].registered_active = 1;
 
 	return next_free_window_index;
 }
@@ -149,20 +160,13 @@ int32_t window_is_selected(uint32_t window) {
 	return window_states[window].hwnd == GetForegroundWindow();
 }
 
-int32_t window_is_active(uint32_t window) {
-	return window_states[window].active;
-}
-
 void window_destroy(uint32_t window) {
-	if (window_states[window].active) SendMessage(window_states[window].hwnd, WM_CLOSE, 0, 0);
-	window_states[window].active = 0;
-	window_states[window].registered_active = 0;
+	DestroyWindow(window_states[window].hwnd);
 	window_states[window].hwnd = NULL;
 }
 
 struct point2d_int window_get_mouse_cursor_position(uint32_t window) {
-	if (!window_states[window].active) return (struct point2d_int) { -1, -1 };
-
+	
 	POINT position;
 	GetCursorPos(&position);
 	RECT window_rect;
@@ -253,8 +257,7 @@ int32_t _map_key(int32_t key) {
 	case VK_F9: return KEY_F9;
 	case VK_F10: return KEY_F10;
 	case VK_F11: return KEY_F11;
-	case VK_F12: return KEY_F12
-		;
+	case VK_F12: return KEY_F12;
 	
 	case VK_LSHIFT: return KEY_SHIFT_L;
 	case VK_RSHIFT: return KEY_SHIFT_R;
@@ -274,6 +277,10 @@ int32_t _map_key(int32_t key) {
 	case VK_LEFT: return KEY_ARROW_LEFT;
 	case VK_RIGHT: return KEY_ARROW_RIGHT;
 
+	case VK_LBUTTON: return KEY_MOUSE_LEFT;
+	case VK_MBUTTON: return KEY_MOUSE_MIDDLE;
+	case VK_RBUTTON: return KEY_MOUSE_RIGHT;
+
 	default: return -1;
 	}
 
@@ -281,217 +288,148 @@ int32_t _map_key(int32_t key) {
 
 LRESULT CALLBACK WinProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 
-	switch (uMsg) {
+	for (uint32_t i = 0; i < MAX_WINDOW_COUNT; i++) if (window_states[i].hwnd == hwnd) {
 
-	case WM_CLOSE: {
-		DestroyWindow(hwnd);
-	} break;
-
-	case WM_DESTROY: {
-		is_trackable_window_event = 1;
-
-		PostQuitMessage(0);
-		window_states[window_check].active = 0;
-
-		if (we != NULL) we->type = WINDOW_EVENT_DESTROY;
-	} break;
-
-	case WM_SIZE: {
-
-		is_trackable_window_event = 1;
-
-		RECT rect;
-		GetClientRect(hwnd, &rect);
-		window_states[window_check].window_width = rect.right - rect.left;
-		window_states[window_check].window_height = rect.bottom - rect.top;
-
-		if (we != NULL) { 
-			we->type = WINDOW_EVENT_MOVE_SIZE;
-
-			we->info.event_move_size.position_x = window_states[window_check].position_x;
-			we->info.event_move_size.position_y = window_states[window_check].position_y;
-			we->info.event_move_size.width = window_states[window_check].window_width;
-			we->info.event_move_size.height = window_states[window_check].window_height;
+		if (uMsg == WM_CLOSE) {
+			window_event_queues[i].event_destroy = 1;
 		}
-	} break;
 
-	case WM_MOVE: {
-		is_trackable_window_event = 1;
-		RECT rect;
-		GetWindowRect(hwnd, &rect);
+		else if (uMsg == WM_SIZE || uMsg == WM_MOVE) {
+			window_event_queues[i].event_move_size = 1;
 
-		window_states[window_check].position_x = rect.left;
-		window_states[window_check].position_y = rect.top;
+			RECT rect;
+			GetClientRect(hwnd, &rect);
 
-		if (we != NULL) {
-			we->type = WINDOW_EVENT_MOVE_SIZE;
-
-			we->info.event_move_size.position_x = window_states[window_check].position_x;
-			we->info.event_move_size.position_y = window_states[window_check].position_y;
-			we->info.event_move_size.width = window_states[window_check].window_width;
-			we->info.event_move_size.height = window_states[window_check].window_height;
+			window_states[i].window_width = rect.right - rect.left;
+			window_states[i].window_height = rect.bottom - rect.top;
+			window_states[i].position_x = rect.left;
+			window_states[i].position_y = rect.top;
 		}
-	} break;
 
-	case WM_SETFOCUS: {
-		is_trackable_window_event = 1;
-		if (we != NULL) we->type = WINDOW_EVENT_FOCUS;
-	} break;
+		else if (uMsg == WM_SETFOCUS) window_event_queues[i].event_focus = 1;
 
-	case WM_KILLFOCUS: {
-		is_trackable_window_event = 1;
-		if (we != NULL) we->type = WINDOW_EVENT_UNFOCUS;
-	} break;
+		else if (uMsg == WM_KILLFOCUS) window_event_queues[i].event_unfocus = 1;
 
-
-	case WM_MOUSEWHEEL: {
-		is_trackable_window_event = 1;
-
-		if (we != NULL) {
-			we->type = WINDOW_EVENT_MOUSE_SCROLL;
-			we->info.event_mouse_scroll.scroll_steps = GET_WHEEL_DELTA_WPARAM(wParam) / 120;
+		else if (uMsg == WM_MOUSEWHEEL) {
+			window_event_queues[i].event_mouse_scroll = 1;
+			window_event_queues[i].scroll_steps = GET_WHEEL_DELTA_WPARAM(wParam) / 120;
 		}
-			
-	} break;
 
-	case WM_CHAR: {
-		is_trackable_window_event = 1;
+		else if (uMsg == WM_KEYDOWN || uMsg == WM_LBUTTONDOWN || uMsg == WM_MBUTTONDOWN || uMsg == WM_RBUTTONDOWN) {
 
-		WCHAR utf16_char = (WCHAR)wParam;
-		uint32_t utf8_char = 0;
-		uint32_t bytes_written = WideCharToMultiByte(CP_UTF8, 0, &utf16_char, 1, &utf8_char, sizeof(utf8_char), NULL, NULL);
+			uint32_t key_code;
 
-		if (we != NULL) { 
-			we->type = WINDOW_EVENT_CHAR;
-			we->info.event_char.unicode = utf16_char;
+			if (uMsg == WM_KEYDOWN) key_code = wParam;
+			else if (uMsg == WM_LBUTTONDOWN) key_code = VK_LBUTTON;
+			else if (uMsg == WM_MBUTTONDOWN) key_code = VK_MBUTTON;
+			else if (uMsg == WM_RBUTTONDOWN) key_code = VK_RBUTTON;
+
+			uint32_t key = _map_key(key_code);
+			if (key == -1) break;
+
+			window_event_queues[i].event_key_down = 1;
+			window_event_queues[i].key = key;
 		}
-	} break;
 
-	case WM_KEYDOWN: {
-		int32_t key = _map_key(wParam);
-		if (key == -1) break;
+		else if (uMsg == WM_KEYUP || uMsg == WM_LBUTTONUP || uMsg == WM_MBUTTONUP || uMsg == WM_RBUTTONUP) {
 
-		is_trackable_window_event = 1;
+			uint32_t key_code;
 
-		if (we != NULL) {
-			we->type = WINDOW_EVENT_KEY_DOWN;
-			we->info.event_key_down.key = key;
+			if (uMsg == WM_KEYUP) key_code = wParam;
+			else if (uMsg == WM_LBUTTONUP) key_code = VK_LBUTTON;
+			else if (uMsg == WM_MBUTTONUP) key_code = VK_MBUTTON;
+			else if (uMsg == WM_RBUTTONUP) key_code = VK_RBUTTON;
+
+			uint32_t key = _map_key(key_code);
+			if (key == -1) break;
+
+			window_event_queues[i].event_key_up = 1;
+			window_event_queues[i].key = key;
 		}
-	} break;
 
-	case WM_KEYUP: {
-		int32_t key = _map_key(wParam);
-		if (key == -1) break;
-
-		is_trackable_window_event = 1;
-
-		if (we != NULL) {
-			we->type = WINDOW_EVENT_KEY_UP;
-			we->info.event_key_up.key = key;
+		else if (uMsg == WM_CHAR) {
+			window_event_queues[i].event_char = 1;
+			window_event_queues[i].unicode = wParam;
 		}
-	} break;
 
-	//mouse buttons
-	case WM_LBUTTONDOWN: {
-		is_trackable_window_event = 1;
+		else return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 
-		if (we != NULL) {
-			we->type = WINDOW_EVENT_KEY_DOWN;
-			we->info.event_key_down.key = KEY_MOUSE_LEFT;
-		}
-	} break;
-
-	case WM_LBUTTONUP: {
-		is_trackable_window_event = 1;
-
-		if (we != NULL) {
-			we->type = WINDOW_EVENT_KEY_UP;
-			we->info.event_key_up.key = KEY_MOUSE_LEFT;
-		}
-	} break;
-
-	case WM_MBUTTONDOWN: {
-		is_trackable_window_event = 1;
-
-		if (we != NULL) {
-			we->type = WINDOW_EVENT_KEY_DOWN;
-			we->info.event_key_down.key = KEY_MOUSE_MIDDLE;
-		}
-	} break;
-
-	case WM_MBUTTONUP: {
-		is_trackable_window_event = 1;
-
-		if (we != NULL) {
-			we->type = WINDOW_EVENT_KEY_UP;
-			we->info.event_key_up.key = KEY_MOUSE_MIDDLE;
-		}
-	} break;
-
-	case WM_RBUTTONDOWN: {
-		is_trackable_window_event = 1;
-
-		if (we != NULL) {
-			we->type = WINDOW_EVENT_KEY_DOWN;
-			we->info.event_key_down.key = KEY_MOUSE_RIGHT;
-		}
-	} break;
-
-	case WM_RBUTTONUP: {
-		is_trackable_window_event = 1;
-
-		if (we != NULL) {
-			we->type = WINDOW_EVENT_KEY_UP;
-			we->info.event_key_up.key = KEY_MOUSE_RIGHT;
-		}
-	} break;
-
+		return 0;
 	}
 
 	return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 }
 
+uint32_t _get_event(uint32_t window, struct window_event* event) {
+	
+	if (window_event_queues[window].event_destroy) {
+		window_event_queues[window].event_destroy = 0;
+		event->type = WINDOW_EVENT_DESTROY;
+	}
+	else if (window_event_queues[window].event_unfocus) {
+		window_event_queues[window].event_unfocus = 0;
+		event->type = WINDOW_EVENT_UNFOCUS;
+	}
+	else if (window_event_queues[window].event_move_size) {
+		window_event_queues[window].event_move_size = 0;
+		event->type = WINDOW_EVENT_MOVE_SIZE;
+		event->info.event_move_size.width = window_states[window].window_width;
+		event->info.event_move_size.height = window_states[window].window_height;
+		event->info.event_move_size.position_x = window_states[window].position_x;
+		event->info.event_move_size.position_y = window_states[window].position_y;
+	}
+	else if (window_event_queues[window].event_focus) {
+		window_event_queues[window].event_focus = 0;
+		event->type = WINDOW_EVENT_FOCUS;
+	}
+	else if (window_event_queues[window].event_mouse_scroll) {
+		window_event_queues[window].event_mouse_scroll = 0;
+		event->type = WINDOW_EVENT_MOUSE_SCROLL;
+		event->info.event_mouse_scroll.scroll_steps = window_event_queues[window].scroll_steps;
+	}
+	else if (window_event_queues[window].event_char) {
+		window_event_queues[window].event_char = 0;
+		event->type = WINDOW_EVENT_CHAR;
+		event->info.event_char.unicode = window_event_queues[window].unicode;
+	}
+	else if (window_event_queues[window].event_key_down) {
+		window_event_queues[window].event_key_down = 0;
+		event->type = WINDOW_EVENT_KEY_DOWN;
+		event->info.event_key_down.key = window_event_queues[window].key;
+	}
+	else if (window_event_queues[window].event_key_up) {
+		window_event_queues[window].event_key_up = 0;
+		event->type = WINDOW_EVENT_KEY_UP;
+		event->info.event_key_up.key = window_event_queues[window].key;
+	}
+	else return 0;
+
+	return 1;
+}
+
 uint32_t window_process_next_event(uint32_t window, struct window_event* event) {
 	
+	struct window_event e;
 	MSG message;
-	we = event;
-	window_check = window;
+	uint32_t _get_event_return_status = 0;
 
-	while (window_states[window].registered_active) {
-
-		if (window_states[window].active == 0) {
-
-			window_states[window].registered_active = 0;
-			if (we) we->type = WINDOW_EVENT_DESTROY;
-
-			we = NULL;
-			return 1;
-		}
-
-		is_trackable_window_event = 0;
+	while ((_get_event_return_status = _get_event(window, &e)) == 0) {
 
 		if (PeekMessageW(&message, window_states[window].hwnd, 0, 0, PM_REMOVE)) {
 			TranslateMessage(&message);
 			DispatchMessageW(&message);
-
-			if (is_trackable_window_event) {
-
-				if (window_states[window].active == 0) window_states[window].registered_active = 0;
-
-				we = NULL;
-				return 1;
-			}
 		}
-
 		else break;
 	}
-	
-	we = NULL;
-	return 0;
+
+	if (_get_event_return_status) {
+		if (event) *event = e;
+		return 1;
+	}
+	else return 0;
 }
 
 void platform_init() {
-	initialized = 1;
 
 	AllocConsole();
 	console = GetConsoleWindow();
@@ -499,16 +437,11 @@ void platform_init() {
 
 	FILE* fstdout;
 	freopen_s(&fstdout, "CONOUT$", "w", stdout);
-	FILE* fstderr;
-	freopen_s(&fstderr, "CONOUT$", "w", stderr);
-	FILE* fstdin;
-	freopen_s(&fstdin, "CONIN$", "r", stdin);
 
 	SetConsoleCP(CP_UTF8);
 	SetConsoleOutputCP(CP_UTF8);
 
 	setvbuf(stdout, NULL, _IONBF, 0);
-	setvbuf(stderr, NULL, _IONBF, 0);
 
 	DWORD dwMode = 0;
 	HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -537,10 +470,8 @@ void platform_init() {
 }
 
 void platform_exit() {
-	initialized = 0;
+	for (int32_t i = 0; i < MAX_WINDOW_COUNT; i++) window_destroy(i);
 
-	for (int32_t i = 0; i < MAX_WINDOW_COUNT; i++) if (window_states[i].active) window_destroy(i);
-
-	UnregisterClassA(L"BasicWindowClass", GetModuleHandleA(NULL));
+	UnregisterClassW(L"BasicWindowClass", GetModuleHandleA(NULL));
 	FreeConsole();
 }

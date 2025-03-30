@@ -1,9 +1,8 @@
-#include "client/game_client.h"
+ #include "client/game_client.h"
 
 void networker_thread_function(struct game_client* game) {
 
-	game->networker_state.thread_active_flag = 2;
-	while (game->networker_state.thread_active_flag != 1) sleep_for_ms(1);
+	game->networker_state.thread_active_flag = 1;
 
 	while (game->networker_state.request_exit_flag == 0) {
 
@@ -59,7 +58,8 @@ void networker_thread_function(struct game_client* game) {
 			uint32_t r = networking_client_connection_status(game->networker_state.socket);
 
 			if (r == NETWORKING_SUCCESS) {
-				game->networker_state.status = NETWORKER_STATUS_CONNECTED;
+				game->networker_state.status = NETWORKER_STATUS_HANDSHAKE;
+				continue;
 			}
 			else if (r != NETWORKING_ERROR_CONNECTING) {
 				networking_close_connection(game->networker_state.socket);
@@ -87,7 +87,7 @@ void networker_thread_function(struct game_client* game) {
 				continue;
 			}
 
-
+			game->networker_state.status = NETWORKER_STATUS_CONNECTED;
 			
 
 		} break;
@@ -129,7 +129,9 @@ void networker_thread_function(struct game_client* game) {
 				game->networker_state.status = NETWORKER_STATUS_WAITING_ON_CLOSING;
 			}
 
-			sleep_for_ms(50);
+
+
+			sleep_for_ms(5);
 
 		} break;
 
@@ -161,8 +163,9 @@ uint32_t networker_start(struct game_client* game) {
 
 	game->networker_state.thread_handle = create_thread(networker_thread_function, game);
 
-	while (game->networker_state.thread_active_flag != 2) sleep_for_ms(1);
-	game->networker_state.thread_active_flag = 1;
+	game->networker_state.thread_active_flag = 2;
+	while (game->networker_state.thread_active_flag != 1) sleep_for_ms(1);
+
 
 	return 0;
 }

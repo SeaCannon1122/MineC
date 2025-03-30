@@ -27,8 +27,9 @@ struct resource_manager {
 	void* binaries_names_map;
 
 	uint32_t key_value_count;
-	void** key_value_maps;
+	void* key_value_maps;
 	void* key_value_maps_names_map;
+	void* key_value_maps_paths_map;
 
 	uint32_t audio_count;
 };
@@ -40,6 +41,7 @@ uint32_t resource_manager_destroy(struct resource_manager* rm);
 uint32_t resource_manager_get_image(struct resource_manager* rm, uint8_t* name, struct resource_manager_image* image);
 uint32_t resource_manager_get_binary(struct resource_manager* rm, uint8_t* name, struct resource_manager_binary* binary);
 uint32_t resource_manager_get_key_value_map(struct resource_manager* rm, uint8_t* name, void** key_value_map);
+uint32_t resource_manager_save_key_value_map(struct resource_manager* rm, uint8_t* name, void* key_value_map);
 
 #endif // !RESOURCE_MANAGER_H
 

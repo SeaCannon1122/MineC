@@ -45,6 +45,7 @@ void* key_value_new(size_t maps_block_length, size_t strings_block_size);
 uint32_t key_value_get_size(void* key_value_map);
 uint32_t key_value_get_pair(void* key_value_map, struct key_value_pair* pair, uint32_t index);
 void key_value_combind(void** key_value_map_main, void** key_value_map_additum);
+void* key_value_copy(void* key_value_map);
 
 enum key_value_return_type key_value_load_yaml(void** key_value_map, uint8_t* file_path);
 enum key_value_return_type key_value_write_yaml(void** key_value_map, uint8_t* file_path);
