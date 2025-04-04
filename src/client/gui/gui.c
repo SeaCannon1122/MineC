@@ -289,8 +289,8 @@ uint32_t gui_scene_simulate(struct game_client* game, void* scene, uint32_t scal
 
 		if (items[i].visibility == 0) continue;
 
-		float anchor_x = items[i].x * (float)game->application_state.window_extent.width + (float)(items[i].offset_x * (int32_t)scale);
-		float anchor_y = items[i].y * (float)game->application_state.window_extent.height + (float)(items[i].offset_y * (int32_t)scale);
+		float anchor_x = items[i].x * (float)game->application_state.main_window.width + (float)(items[i].offset_x * (int32_t)scale);
+		float anchor_y = items[i].y * (float)game->application_state.main_window.height + (float)(items[i].offset_y * (int32_t)scale);
 
 		switch (items[i].gui_item_type) {
 		
@@ -298,7 +298,7 @@ uint32_t gui_scene_simulate(struct game_client* game, void* scene, uint32_t scal
 
 			items[i].item_info.button.clicked = 0;
 
-			if (items[i].item_info.button.disabled || game->application_state.input_state.keyboard[KEY_MOUSE_LEFT] != 0b11) continue;
+			if (items[i].item_info.button.disabled || game->application_state.main_window.input.keyboard[KEY_MOUSE_LEFT] != 0b11) continue;
 
 			uint32_t button_width = game->resource_state.image_atlas[items[i].item_info.button.size == GUI_SIZE_NORMAL ? IMAGE_MENU_BUTTON : IMAGE_MENU_BUTTON_SHORT].width;
 			uint32_t button_height = game->resource_state.image_atlas[items[i].item_info.button.size == GUI_SIZE_NORMAL ? IMAGE_MENU_BUTTON : IMAGE_MENU_BUTTON_SHORT].height;
@@ -310,10 +310,10 @@ uint32_t gui_scene_simulate(struct game_client* game, void* scene, uint32_t scal
 			int32_t y1 = y0 + button_height * scale;
 
 			if (
-				game->application_state.input_state.mouse_coords.x >= x0 &&
-				game->application_state.input_state.mouse_coords.x < x1 &&
-				game->application_state.input_state.mouse_coords.y >= y0 &&
-				game->application_state.input_state.mouse_coords.y < y1
+				game->application_state.main_window.input.mouse_x >= x0 &&
+				game->application_state.main_window.input.mouse_x < x1 &&
+				game->application_state.main_window.input.mouse_y >= y0 &&
+				game->application_state.main_window.input.mouse_y < y1
 			) items[i].item_info.button.clicked = 1;
 
 		} break;
@@ -327,11 +327,11 @@ uint32_t gui_scene_simulate(struct game_client* game, void* scene, uint32_t scal
 			int32_t y1 = y0 + game->resource_state.image_atlas[IMAGE_MENU_TEXTFIELD].height * scale;
 
 			if (
-				game->application_state.input_state.mouse_coords.x >= x0 &&
-				game->application_state.input_state.mouse_coords.x < x1 &&
-				game->application_state.input_state.mouse_coords.y >= y0 &&
-				game->application_state.input_state.mouse_coords.y < y1 &&
-				game->application_state.input_state.keyboard[KEY_MOUSE_LEFT] == 0b11
+				game->application_state.main_window.input.mouse_x>= x0 &&
+				game->application_state.main_window.input.mouse_x < x1 &&
+				game->application_state.main_window.input.mouse_y >= y0 &&
+				game->application_state.main_window.input.mouse_y < y1 &&
+				game->application_state.main_window.input.keyboard[KEY_MOUSE_LEFT] == 0b11
 			) {
 				if (header->item_selected_index != i) items[i].item_info.text_field.cursor_blinking_time_start = game->application_state.time;
 				header->item_selected_index = i;
@@ -339,20 +339,20 @@ uint32_t gui_scene_simulate(struct game_client* game, void* scene, uint32_t scal
 
 			else if (header->item_selected_index == i) {
 
-				if (items[i].item_info.text_field.size > items[i].item_info.text_field.cursor_index && game->application_state.input_state.keyboard[KEY_ARROW_RIGHT] == 0b11) {
+				if (items[i].item_info.text_field.size > items[i].item_info.text_field.cursor_index && game->application_state.main_window.input.keyboard[KEY_ARROW_RIGHT] == 0b11) {
 					items[i].item_info.text_field.cursor_index++;
 					items[i].item_info.text_field.cursor_blinking_time_start = game->application_state.time;
 				}
-				if (0 < items[i].item_info.text_field.cursor_index && game->application_state.input_state.keyboard[KEY_ARROW_LEFT] == 0b11) {
+				if (0 < items[i].item_info.text_field.cursor_index && game->application_state.main_window.input.keyboard[KEY_ARROW_LEFT] == 0b11) {
 					items[i].item_info.text_field.cursor_index--;
 					items[i].item_info.text_field.cursor_blinking_time_start = game->application_state.time;
 				}
 
 				uint32_t* buffer_ptr = (size_t)scene + sizeof(struct _gui_scene_header) + (size_t)header->item_count * sizeof(struct _gui_item) + (size_t)header->labeltext_buffer_length * sizeof(struct game_char) + (size_t)items[i].item_info.text_field.index * sizeof(uint32_t);
 
-				for (uint32_t j = 0; j < game->application_state.input_state.character_count; j++) {
+				for (uint32_t j = 0; j < game->application_state.main_window.input.character_count; j++) {
 
-					if (game->application_state.input_state.characters[j] == (uint32_t)'\b') {
+					if (game->application_state.main_window.input.characters[j] == (uint32_t)'\b') {
 
 						if (items[i].item_info.text_field.cursor_index > 0) {
 
@@ -366,7 +366,7 @@ uint32_t gui_scene_simulate(struct game_client* game, void* scene, uint32_t scal
 					else if(items[i].item_info.text_field.size < items[i].item_info.text_field.max_size) {
 
 						memmove(&buffer_ptr[items[i].item_info.text_field.cursor_index + 1], &buffer_ptr[items[i].item_info.text_field.cursor_index], (items[i].item_info.text_field.size - items[i].item_info.text_field.cursor_index + 1) * sizeof(uint32_t));
-						buffer_ptr[items[i].item_info.text_field.cursor_index] = game->application_state.input_state.characters[j];
+						buffer_ptr[items[i].item_info.text_field.cursor_index] = game->application_state.main_window.input.characters[j];
 						items[i].item_info.text_field.cursor_index++;
 						items[i].item_info.text_field.size++;
 						items[i].item_info.text_field.cursor_blinking_time_start = game->application_state.time;
@@ -395,8 +395,8 @@ uint32_t gui_scene_render(struct game_client* game, void* scene, uint32_t scale)
 
 		if (items[i].visibility == 0) continue;
 
-		float anchor_x = items[i].x * (float)game->application_state.window_extent.width  + (float)(items[i].offset_x * (int32_t)scale);
-		float anchor_y = items[i].y * (float)game->application_state.window_extent.height + (float)(items[i].offset_y * (int32_t)scale);
+		float anchor_x = items[i].x * (float)game->application_state.main_window.width  + (float)(items[i].offset_x * (int32_t)scale);
+		float anchor_y = items[i].y * (float)game->application_state.main_window.height + (float)(items[i].offset_y * (int32_t)scale);
 
 		switch (items[i].gui_item_type) {
 		
@@ -516,10 +516,10 @@ uint32_t gui_scene_render(struct game_client* game, void* scene, uint32_t scale)
 			if (items[i].item_info.button.disabled) rect.image_index = (button_size == GUI_SIZE_NORMAL ? IMAGE_MENU_BUTTON_DISABLED : IMAGE_MENU_BUTTON_DISABLED_SHORT);
 
 			else if (
-				game->application_state.input_state.mouse_coords.x >= rect.x[0] &&
-				game->application_state.input_state.mouse_coords.x < rect.x[2] &&
-				game->application_state.input_state.mouse_coords.y >= rect.y[0] &&
-				game->application_state.input_state.mouse_coords.y < rect.y[1]
+				game->application_state.main_window.input.mouse_x >= rect.x[0] &&
+				game->application_state.main_window.input.mouse_x < rect.x[2] &&
+				game->application_state.main_window.input.mouse_y >= rect.y[0] &&
+				game->application_state.main_window.input.mouse_y < rect.y[1]
 			) rect.image_index = (button_size == GUI_SIZE_NORMAL ? IMAGE_MENU_BUTTON_HOVER : IMAGE_MENU_BUTTON_HOVER_SHORT);
 
 			else rect.image_index = (button_size == GUI_SIZE_NORMAL ? IMAGE_MENU_BUTTON : IMAGE_MENU_BUTTON_SHORT);

@@ -6,6 +6,7 @@ set(CLIENT_SOURCE_FILES
     src/client/main.c
     src/client/game_client.c
     src/client/application/application.c
+    src/client/application/application_window.c
     src/client/resources/resources.c
     src/client/settings/settings.c
     src/client/simulator/simulator.c
@@ -22,6 +23,10 @@ set(CLIENT_SOURCE_FILES
     src/general/platformlib/platform/platform.c
     src/general/platformlib/networking/networking.c
 
+)
+
+set(CLIENT_VULKAN_BACKEND_SOURCE_FILES
+    src/client/renderer/backend/vulkan/vulkan_backend.c
 )
 
 set(SERVER_SOURCE_FILES
@@ -41,6 +46,7 @@ set(TEST_SOURCE_FILES
     src/test/main.c
 
     src/general/string_allocator.c
+    src/general/resource_loader/resource_loader.c
 )
 
 set(TEST_2_SOURCE_FILES
@@ -60,12 +66,18 @@ include_directories(
 
 link_libraries(${Vulkan_LIBRARIES})
 
+add_compile_definitions(CLIENT_GRAPHICS_API_VULKAN=1)
+add_compile_definitions(CLIENT_GRAPHICS_API_OPENGL=1)
+add_compile_definitions(CLIENT_GRAPHICS_API_DIRECT=1)
+
 add_executable(blocks_client ${CLIENT_SOURCE_FILES})
+add_library(blocks_client_vulkan_backend ${CLIENT_VULKAN_BACKEND_SOURCE_FILES})
+
 add_executable(blocks_server ${SERVER_SOURCE_FILES})
 add_executable(blocks_test ${TEST_SOURCE_FILES})
 add_executable(blocks_test2 ${TEST_2_SOURCE_FILES})
 
-add_compile_definitions(CLIENT_GRAPHICS_API_VULKAN=1)
+target_link_libraries(blocks_client PRIVATE blocks_client_vulkan_backend)
 
 if(WIN32)
 

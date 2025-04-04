@@ -3,15 +3,24 @@
 #ifndef RENDERER_BACKEND_H
 #define RENDERER_BACKEND_H
 
+enum renderer_backend_type
+{
 #ifdef CLIENT_GRAPHICS_API_VULKAN
+	RENDERER_BACKEND_VULKAN,
+#endif
+
+#ifdef CLIENT_GRAPHICS_API_OPENGL
+	RENDERER_BACKEND_OPENGL,
+#endif
+
+#ifdef CLIENT_GRAPHICS_API_DIRECT
+	RENDERER_BACKEND_DIRECT,
+#endif
+
+	RENDERER_BACKEND_MAX_ENUM,
+};
 
 #include "vulkan/vulkan_backend.h"
-
-#elif CLIENT_GRAPHICS_API_OPENGL
-
-//opengl in the future???
-
-#endif // CLIENT_GRAPHICS_API_VULKAN
 
 struct game_client;
 struct renderer_rectangle;

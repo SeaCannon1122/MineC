@@ -40,8 +40,8 @@ uint32_t vulkan_device_swapchain_and_framebuffers_create(struct game_client* gam
 
 	VkFramebufferCreateInfo framebuffer_info = { 0 };
 	framebuffer_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-	framebuffer_info.width = game->application_state.window_extent.width;
-	framebuffer_info.height = game->application_state.window_extent.height;
+	framebuffer_info.width = game->application_state.main_window.width;
+	framebuffer_info.height = game->application_state.main_window.height;
 	framebuffer_info.renderPass = game->renderer_state.backend.window_render_pass;
 	framebuffer_info.layers = 1;
 	framebuffer_info.attachmentCount = 1;

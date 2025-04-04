@@ -6,9 +6,7 @@
 #define RESOURCE_LOADER_MAX_GROUPS_PER_ITEM 8
 
 #include <stdint.h>
+#include <stdbool.h>
 
-void* resource_loader_create();
-
-void resource_loader_destroy(void* rl);
 
 #endif // !RESOURCE_LOADER_H

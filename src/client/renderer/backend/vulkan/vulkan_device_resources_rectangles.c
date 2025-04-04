@@ -256,7 +256,7 @@ uint32_t vulkan_device_resources_rectangles_destroy(struct game_client* game) {
 	return 0;
 }
 
-uint32_t renderer_backend_add_rectangles(struct game_client* game, struct renderer_rectangle* rectangles, uint32_t rectangles_count) {
+uint32_t vulkan_backend_add_rectangles(struct game_client* game, struct renderer_rectangle* rectangles, uint32_t rectangles_count) {
 
 	struct render_rectangle_vertex* vertex_buffer = (size_t)game->renderer_state.backend.rectangles_buffer_memory_host_handle + (size_t)game->renderer_state.backend.rectangles_count * sizeof(struct render_rectangle_vertex) * 6;
 

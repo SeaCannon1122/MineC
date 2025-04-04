@@ -120,7 +120,7 @@ uint32_t vulkan_instance_create(struct game_client* game) {
 		vkCreateDebugUtilsMessengerEXT(game->renderer_state.backend.instance, &debug_info, 0, &game->renderer_state.backend.debug_messenger);
 	}
 
-	VKCall(create_vulkan_surface(game->renderer_state.backend.instance, game->application_state.window, &game->renderer_state.backend.surface));
+	VKCall(create_vulkan_surface(game->renderer_state.backend.instance, game->application_state.main_window.window_handle, &game->renderer_state.backend.surface));
 
 	vulkan_list_gpus(game);
 

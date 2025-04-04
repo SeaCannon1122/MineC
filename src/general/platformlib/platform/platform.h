@@ -107,7 +107,7 @@ struct window_event {
 	uint32_t type;
 	union {
 		struct {
-			uint32_t scroll_steps;
+			int32_t scroll_steps;
 		} event_mouse_scroll;
 		struct {
 			uint32_t unicode;
@@ -161,6 +161,10 @@ struct window_event {
 void* dynamic_library_load(uint8_t* src);
 void (*dynamic_library_get_function(void* library_handle, uint8_t* function_name)) (void);
 void dynamic_library_unload(void* library_handle);
+
+uint32_t directory_exists(uint8_t* path);
+uint32_t create_directory(uint8_t* path);
+uint32_t get_cwd(uint8_t* buffer, size_t buffer_size);
 
 void platform_init();
 void platform_exit();

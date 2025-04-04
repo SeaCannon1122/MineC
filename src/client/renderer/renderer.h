@@ -20,6 +20,8 @@ struct renderer_rectangle {
 
 struct renderer_state {
 
+	uint32_t backend_selected;
+
 	struct renderer_backend backend;
 
 	struct sampler_configuration sampler_configurations[SAMPLERS_COUNT];

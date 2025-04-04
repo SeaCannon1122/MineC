@@ -9,7 +9,7 @@
 #include "vulkan_device_resources.c"
 #include "vulkan_device_resources_rectangles.c"
 
-uint32_t renderer_backend_create(struct game_client* game) {
+uint32_t vulkan_backend_create(struct game_client* game) {
 
 	vulkan_instance_create(game);
 
@@ -35,7 +35,7 @@ uint32_t renderer_backend_create(struct game_client* game) {
 }
 
 
-uint32_t renderer_backend_destroy(struct game_client* game) {
+uint32_t vulkan_backend_destroy(struct game_client* game) {
 
 	vulkan_device_swapchain_and_framebuffers_destroy(game);
 
@@ -48,7 +48,7 @@ uint32_t renderer_backend_destroy(struct game_client* game) {
 	return 0;
 }
 
-uint32_t renderer_backend_load_resources(struct game_client* game) {
+uint32_t vulkan_backend_load_resources(struct game_client* game) {
 
 	game->renderer_state.backend.resources_created = 1;
 
@@ -57,7 +57,7 @@ uint32_t renderer_backend_load_resources(struct game_client* game) {
 	return 0;
 }
 
-uint32_t renderer_backend_unload_resources(struct game_client* game) {
+uint32_t vulkan_backend_unload_resources(struct game_client* game) {
 
 	game->renderer_state.backend.resources_created = 0;
 
@@ -66,7 +66,7 @@ uint32_t renderer_backend_unload_resources(struct game_client* game) {
 	return 0;
 }
 
-uint32_t renderer_backend_use_gpu(struct game_client* game, uint32_t gpu_index) {
+uint32_t vulkan_backend_use_gpu(struct game_client* game, uint32_t gpu_index) {
 	if (gpu_index >= game->application_state.machine_info.gpu_count) return 1;
 	if (game->application_state.machine_info.gpus[gpu_index].usable == 0) return 2;
 
@@ -90,7 +90,7 @@ uint32_t renderer_backend_use_gpu(struct game_client* game, uint32_t gpu_index) 
 	return 0;
 }
 
-uint32_t renderer_backend_resize(struct game_client* game) {
+uint32_t vulkan_backend_resize(struct game_client* game) {
 
 	vulkan_device_swapchain_and_framebuffers_destroy(game);
 	vulkan_device_swapchain_and_framebuffers_create(game);
@@ -98,7 +98,7 @@ uint32_t renderer_backend_resize(struct game_client* game) {
 	return 0;
 }
 
-uint32_t renderer_backend_render(struct game_client* game) {
+uint32_t vulkan_backend_render(struct game_client* game) {
 
 	if (game->renderer_state.backend.queue_used) VKCall(vkWaitForFences(game->renderer_state.backend.device, 1, &game->renderer_state.backend.queue_fence, VK_TRUE, UINT64_MAX));
 
@@ -122,8 +122,8 @@ uint32_t renderer_backend_render(struct game_client* game) {
 	VKCall(vkBeginCommandBuffer(game->renderer_state.backend.cmd, &begin_info));
 
 	VkExtent2D screen_size;
-	screen_size.width = game->application_state.window_extent.width;
-	screen_size.height = game->application_state.window_extent.height;
+	screen_size.width = game->application_state.main_window.width;
+	screen_size.height = game->application_state.main_window.height;
 
 	VkRenderPassBeginInfo renderpass_begin_info = { 0 };
 	renderpass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -217,7 +217,7 @@ uint32_t renderer_backend_render(struct game_client* game) {
 	return 0;
 }
 
-uint32_t renderer_backend_add_pixel_chars(struct game_client* game, struct pixel_char* chars, uint32_t chars_count) {
+uint32_t vulkan_backend_add_pixel_chars(struct game_client* game, struct pixel_char* chars, uint32_t chars_count) {
 
 	pixelchar_renderer_vk_add_chars(&game->renderer_state.backend.pcr, chars, chars_count);
 

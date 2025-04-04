@@ -11,7 +11,8 @@
 #include <stdio.h>
 #include <dlfcn.h>
 
-struct window_state {
+struct window_state 
+{
 	Window window;
 	XIC ic;
 	unsigned int* pixels;
@@ -24,7 +25,6 @@ struct window_state {
 
 struct window_state window_states[MAX_WINDOW_COUNT];
 
-
 int32_t display_width;
 int32_t display_height;
 
@@ -33,17 +33,13 @@ int32_t screen;
 Atom wm_delete_window;
 XIM xim;
 
-int32_t running = 1;
-
-char keyStates[256 * 256] = { 0 };
-char mouseButtons[3] = { 0, 0, 0 };
-
 int32_t move_event = 0;
 int32_t move_window;
 int32_t move_x;
 int32_t move_y;
 
-void* dynamic_library_load(uint8_t* src) {
+void* dynamic_library_load(uint8_t* src) 
+{
 
 	int32_t src_length = 0;
 	for (; src[src_length] != 0; src_length++);
@@ -68,89 +64,81 @@ void* dynamic_library_load(uint8_t* src) {
 	return handle;
 }
 
-void (*dynamic_library_get_function(void* library_handle, uint8_t* function_name)) (void) {
+void (*dynamic_library_get_function(void* library_handle, uint8_t* function_name)) (void) 
+{
 	return dlsym(library_handle, function_name);
 }
 
-void dynamic_library_unload(void* library_handle) {
+void dynamic_library_unload(void* library_handle) 
+{
 	dlclose(library_handle);
 }
 
-void show_console_window() { return; }
+uint32_t directory_exists(uint8_t* path)
+{
 
-void hide_console_window() { return; }
+}
 
-void set_console_cursor_position(int32_t x, int32_t y) {
+uint32_t create_directory(uint8_t* path)
+{
+
+}
+
+uint32_t get_cwd(uint8_t* buffer, size_t buffer_size)
+{
+
+}
+
+void show_console_window() { 
+	return; 
+}
+
+void hide_console_window() { 
+	return; 
+}
+
+void set_console_cursor_position(int32_t x, int32_t y) 
+{
 	printf("\033[%d;%dH", y, x);
 }
 
-void sleep_for_ms(uint32_t time_in_milliseconds) {
+void sleep_for_ms(uint32_t time_in_milliseconds) 
+{
 	usleep(time_in_milliseconds * 1000);
 }
 
-double get_time() {
+double get_time() 
+{
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
 	return (double)tv.tv_sec * 1000. + (double)tv.tv_usec / 1000.;
 }
 
-void* create_thread(void (address)(void*), void* args) {
+void* create_thread(void (address)(void*), void* args) 
+{
 	pthread_t* thread = malloc(sizeof(pthread_t));
 	pthread_create(thread, NULL, (void* (*)(void*))address, args);
 	return thread;
 }
 
-void join_thread(void* thread_handle) {
+void join_thread(void* thread_handle) 
+{
 	pthread_join(*(pthread_t*)thread_handle, NULL);
 	free(thread_handle);
 }
 
-int8_t get_key_state(int32_t key) {
-
-	char key_state = 0;
-
-	if (key == KEY_MOUSE_LEFT || key == KEY_MOUSE_MIDDLE || key == KEY_MOUSE_RIGHT) {
-
-		Window root = DefaultRootWindow(display);
-		Window root_return, child_return;
-		int32_t root_x, root_y, win_x, win_y;
-		uint32_t mask_return;
-		XQueryPointer(display, root, &root_return, &child_return, &root_x, &root_y, &win_x, &win_y, &mask_return);
-
-		if (mask_return & (key == KEY_MOUSE_LEFT ? Button1Mask : (key == KEY_MOUSE_MIDDLE ? Button2Mask : Button3Mask))) key_state = 0b1;
-
-		if (key_state != mouseButtons[(key == KEY_MOUSE_LEFT ? 0 : (key == KEY_MOUSE_MIDDLE ? 1 : 2))]) key_state |= 0b10;
-
-		mouseButtons[(key == KEY_MOUSE_LEFT ? 0 : (key == KEY_MOUSE_MIDDLE ? 1 : 2))] = key_state & 0b1;
-
-		return key_state;
-	}
-
-	char keys[32];
-	XQueryKeymap(display, keys);
-
-	KeySym keysym = (KeySym)key;
-	KeyCode keycode = XKeysymToKeycode(display, keysym);
-
-	int32_t byteIndex = keycode / 8;
-	int32_t bitIndex = keycode % 8;
-
-	if (keys[byteIndex] & (1 << bitIndex)) key_state = 0b1;
-	if (key_state != keyStates[key]) key_state |= 0b10;
-	keyStates[key] = key_state & 0b1;
-
-	return key_state;
-}
-
-uint32_t get_screen_width() {
+uint32_t get_screen_width() 
+{
 	return display_width;
 }
 
-uint32_t get_screen_height() {
+uint32_t get_screen_height() 
+{
 	return display_height;
 }
 
-uint32_t window_create(uint32_t posx, uint32_t posy, uint32_t width, uint32_t height, uint8_t* name, uint32_t visible) {
+uint32_t window_create(uint32_t posx, uint32_t posy, uint32_t width, uint32_t height, uint8_t* name, uint32_t visible) 
+{
 
 	uint32_t next_free_window_index = 0;
 	for (; next_free_window_index < MAX_WINDOW_COUNT; next_free_window_index++) if (window_states[next_free_window_index].window == 0) break;
@@ -179,23 +167,28 @@ uint32_t window_create(uint32_t posx, uint32_t posy, uint32_t width, uint32_t he
 	return next_free_window_index;
 }
 
-uint32_t window_get_width(uint32_t window) {
+uint32_t window_get_width(uint32_t window) 
+{
 	return window_states[window].window_width;
 }
 
-uint32_t window_get_height(uint32_t window) {
+uint32_t window_get_height(uint32_t window) 
+{
 	return window_states[window].window_height;
 }
 
-uint32_t window_get_x_position(uint32_t window) {
+uint32_t window_get_x_position(uint32_t window) 
+{
 	return window_states[window].window_x_pos;
 }
 
-uint32_t window_get_y_position(uint32_t window) {
+uint32_t window_get_y_position(uint32_t window) 
+{
 	return window_states[window].window_y_pos;
 }
 
-int32_t window_is_selected(uint32_t window) {
+int32_t window_is_selected(uint32_t window) 
+{
 	Window focused_window;
 	int32_t revert_to;
 
@@ -204,11 +197,13 @@ int32_t window_is_selected(uint32_t window) {
 	return focused_window == window_states[window].window;
 }
 
-int32_t window_is_active(uint32_t window) {
+int32_t window_is_active(uint32_t window) 
+{
 	return window_states[window].active;
 }
 
-void window_destroy(uint32_t window) {
+void window_destroy(uint32_t window) 
+{
 
 	if (window_states[window].active) XDestroyWindow(display, window_states[window].window);
 	window_states[window].window = 0;
@@ -216,7 +211,8 @@ void window_destroy(uint32_t window) {
 	
 }
 
-struct point2d_int window_get_mouse_cursor_position(uint32_t window) {
+struct point2d_int window_get_mouse_cursor_position(uint32_t window) 
+{
 	if (!window_states[window].active) return (struct point2d_int) { -1, -1 };
 	Window root, child;
 	int32_t root_x, root_y;
@@ -230,20 +226,13 @@ struct point2d_int window_get_mouse_cursor_position(uint32_t window) {
 	return pos;
 }
 
-void window_set_mouse_cursor_position(uint32_t window, int32_t x, int32_t y) {
-	/*if (!window_resources[window]->active) return;
-	Window root, child;
-	int32_t root_x, root_y;
-	int32_t win_x, win_y;
-	uint32_t mask;
-
-	XQueryPointer(display, window_resources[window]->window, &root, &child, &root_x, &root_y, &win_x, &win_y, &mask);
-	XWarpPointer(display, None, DefaultRootWindow(display), 0, 0, 0, 0, root_x - win_x + x + 2, root_y - win_y + window_resources[window]->window_height - y + 1);
-	XFlush(display);*/
+void window_set_mouse_cursor_position(uint32_t window, int32_t x, int32_t y) 
+{
 	return;
 }
 
-VkResult create_vulkan_surface(VkInstance instance, uint32_t window, VkSurfaceKHR* surface) {
+VkResult create_vulkan_surface(VkInstance instance, uint32_t window, VkSurfaceKHR* surface) 
+{
 	VkXlibSurfaceCreateInfoKHR create_info = { 0 };
 	create_info.sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
 	create_info.window = window_states[window].window;
@@ -252,13 +241,15 @@ VkResult create_vulkan_surface(VkInstance instance, uint32_t window, VkSurfaceKH
 	return vkCreateXlibSurfaceKHR(instance, &create_info, ((void*)0), surface);
 }
 
-VkResult destroy_vulkan_surface(VkInstance instance, VkSurfaceKHR surface) {
+VkResult destroy_vulkan_surface(VkInstance instance, VkSurfaceKHR surface) 
+{
 	vkDestroySurfaceKHR(instance, surface, 0);
 
 	return VK_SUCCESS;
 }
 
-uint32_t window_process_next_event(struct window_event* event) {
+uint32_t window_process_next_event(struct window_event* event) 
+{
 	XEvent xevent;
 
 	if (move_event) {
@@ -386,7 +377,8 @@ uint32_t window_process_next_event(struct window_event* event) {
 }
 
 
-void platform_init() {
+void platform_init() 
+{
 	XInitThreads();
 
 	display = XOpenDisplay(NULL);
@@ -406,7 +398,8 @@ void platform_init() {
 	return;
 }
 
-void platform_exit() {
+void platform_exit() 
+{
 	running = 0;
 	XCloseIM(xim);
 	XCloseDisplay(display);

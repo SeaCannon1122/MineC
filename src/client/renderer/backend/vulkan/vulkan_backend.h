@@ -99,4 +99,19 @@ struct renderer_backend {
 
 };
 
+uint32_t vulkan_backend_use_gpu(struct game_client* game, uint32_t gpu_index);
+
+uint32_t vulkan_backend_create(struct game_client* game);
+uint32_t vulkan_backend_destroy(struct game_client* game);
+
+uint32_t vulkan_backend_resize(struct game_client* game);
+
+uint32_t vulkan_backend_load_resources(struct game_client* game);
+uint32_t vulkan_backend_unload_resources(struct game_client* game);
+
+uint32_t vulkan_backend_add_pixel_chars(struct game_client* game, struct pixel_char* chars, uint32_t chars_count);
+uint32_t vulkan_backend_add_rectangles(struct game_client* game, struct renderer_rectangle* rectangles, uint32_t rectangles_count);
+
+uint32_t vulkan_backend_render(struct game_client* game);
+
 #endif // !RENDERER_VULKAN_H

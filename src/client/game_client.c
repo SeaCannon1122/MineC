@@ -2,7 +2,7 @@
 
 uint32_t game_client_run(struct game_client* game, uint8_t* resource_path) {
 
-	application_create(game);
+	application_create(&game->application_state);
 
 	resources_create(game, resource_path);
 	settings_load(game);
@@ -17,7 +17,7 @@ uint32_t game_client_run(struct game_client* game, uint8_t* resource_path) {
 	while (get_key_state(KEY_MOUSE_LEFT) & 0b1 != 0) sleep_for_ms(1);
 #endif // UNIX
 
-	while (application_handle_events(game) == 0) {
+	while (application_handle_events(&game->application_state) == 0) {
 
 		gui_menus_simulation_frame(game);
 
@@ -37,7 +37,7 @@ uint32_t game_client_run(struct game_client* game, uint8_t* resource_path) {
 	settings_save(game);
 	resources_destroy(game);
 
-	application_destroy(game);
+	application_destroy(&game->application_state);
 
 	return 0;
 }
