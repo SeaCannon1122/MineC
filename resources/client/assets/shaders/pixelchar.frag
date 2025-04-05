@@ -2,9 +2,6 @@
 
 #define PIXEL_CHAR_IF_BIT(ptr, x, y) (ptr[(x + y * 16) / 32] & (1 << ((x + y * 16) % 32)) )
 
-#define PIXEL_CHAR_SHADOW_COLOR_DIVISOR 5.0
-#define PIXEL_CHAR_SHADOW_ALPHA_DIVISOR 1.4
-
 #define PIXEL_CHAR_UNDERLINE_MASK  0x8000
 #define PIXEL_CHAR_CURSIVE_MASK    0x4000
 #define PIXEL_CHAR_SHADOW_MASK     0x2000
@@ -24,9 +21,11 @@ layout(set = 0, binding = 2) readonly buffer font2 { char_font_entry char_font_e
 layout(set = 0, binding = 3) readonly buffer font3 { char_font_entry char_font_entries_3[]; };
 
 layout(push_constant) uniform PushConstants {
-	int screen_width;
-	int screen_height;
-	uint draw_mode;
+    int screen_width;
+    int screen_height;
+    float shadow_color_devisor;
+    float shadow_alpha_devisor;
+    uint draw_mode;
 };
 
 layout(location = 0) in vec4 color;
@@ -90,16 +89,16 @@ void main() {
         
                 if (PIXEL_CHAR_IF_BIT(font_entry.pixel_layout, check_coords.x, check_coords.y) != 0)
                     fragmentColor = vec4(
-                        color.xyz / PIXEL_CHAR_SHADOW_COLOR_DIVISOR,
-                        color.w / PIXEL_CHAR_SHADOW_ALPHA_DIVISOR
+                        color.xyz / shadow_color_devisor,
+                        color.w / shadow_alpha_devisor
                     );
             }
             if (fragment_position.y / size > 7 && fragment_position.y / size < 9)
             {
                 if ((masks & PIXEL_CHAR_UNDERLINE_MASK) != 0)
                     fragmentColor = vec4(
-                        color.xyz / PIXEL_CHAR_SHADOW_COLOR_DIVISOR,
-                        color.w / PIXEL_CHAR_SHADOW_ALPHA_DIVISOR
+                        color.xyz / shadow_color_devisor,
+                        color.w / shadow_alpha_devisor
                     );
             }
         }

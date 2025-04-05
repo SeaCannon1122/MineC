@@ -7,7 +7,7 @@
 #include "client/resources/resources.h"
 #include "client/renderer/renderer_samplers.h"
 
-#include "general/pixelchar/pixelchar.h"
+#include "general/pixelchar/src/pixelchar.h"
 
 #include <stdio.h>
 

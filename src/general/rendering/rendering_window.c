@@ -45,6 +45,16 @@ int32_t rendering_window_renderpass_begin_info(uint32_t window, VkRenderPassBegi
 
 	VKCall(vkAcquireNextImageKHR(rws[window].device, rws[window].swapchain, 0, aquire_semaphore, 0, &rws[window].sc_image_index));
 
+	VkClearColorValue clearColor = {0};
+	clearColor.float32[0] = 0.0f; // Red
+	clearColor.float32[1] = 0.0f; // Green
+	clearColor.float32[2] = 1.0f; // Blue
+	clearColor.float32[3] = 1.0f; // Alpha
+
+	// Set up the clear value for the color attachment
+	VkClearValue clearValues[1] = {0};
+	clearValues[0].color = clearColor;  // Assign clear color to the first attachment
+
 	VkExtent2D screen_size;
 	screen_size.width = rws[window].width;
 	screen_size.height = rws[window].height;

@@ -1,4 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
+
+add_subdirectory(src/general/pixelchar)
+
 project(blocks2)
 
 set(CLIENT_SOURCE_FILES
@@ -16,7 +19,6 @@ set(CLIENT_SOURCE_FILES
     src/client/gui/gui.c
     src/client/gui/gui_menus.c
 
-    src/general/pixelchar/pixelchar.c
     src/general/key_value.c
     src/general/resource_manager.c
     src/general/string_allocator.c
@@ -52,8 +54,12 @@ set(TEST_SOURCE_FILES
 set(TEST_2_SOURCE_FILES
     src/test2/main.c
 
+    src/client/application/application_window.c
+    src/general/rendering/rendering_memory_manager.c
+    src/general/rendering/rendering_window.c
+    src/general/rendering/vulkan_helpers.c
+
     src/general/platformlib/platform/platform.c
-    src/general/platformlib/networking/networking.c
 )
 
 find_package(Vulkan REQUIRED)
@@ -77,7 +83,8 @@ add_executable(blocks_server ${SERVER_SOURCE_FILES})
 add_executable(blocks_test ${TEST_SOURCE_FILES})
 add_executable(blocks_test2 ${TEST_2_SOURCE_FILES})
 
-target_link_libraries(blocks_client PRIVATE blocks_client_vulkan_backend)
+target_link_libraries(blocks_client PRIVATE blocks_client_vulkan_backend pixelchar)
+target_link_libraries(blocks_test2 PRIVATE blocks_client_vulkan_backend pixelchar)
 
 if(WIN32)
 

@@ -1,77 +1,32 @@
-#include "pixelchar.h"
+#include "pixelchar_internal.h"
 
-#include "pixelchar_vertex_shader.h"
-#include "pixelchar_fragment_shader.h"
+#include "pixelchar_vulkan_vertex_shader.h"
+#include "pixelchar_vulkan_fragment_shader.h"
 
-#include <stdio.h>
-#include <malloc.h>
-#include <string.h>
+#define CALL_FUNCTION(call, debug, instead) do {if (call != VK_SUCCESS) {debug; instead;}} while(0)
 
-#if defined(_WIN32)
-
-#define DEBUG_BREAK() __debugbreak()
-
-
-#elif defined(__linux__)
-#include <signal.h>
-#define DEBUG_BREAK() raise(SIGTRAP)
-
-#elif defined(__APPLE__)
-
-#define DEBUG_BREAK __builtin_trap()
-#define RESTRICT restrict
-
-#endif
-
-#define VKCall(call) \
-do { \
-    VkResult result = (call); \
-    if (result != VK_SUCCESS) { \
-        printf("Vulkan error in \n    %s \n at %s:%d: %d\n", #call, __FILE__, __LINE__, result); \
-		DEBUG_BREAK();\
-    } \
-} while(0)
-
-struct pixelfont* pixelchar_load_font(uint8_t* src) {
-
-	FILE* file = fopen(src, "rb");
-	if (file == NULL) return NULL;
-
-	fseek(file, 0, SEEK_END);
-	long fileSize = ftell(file);
-	rewind(file);
-
-	void* buffer = calloc(1, sizeof(struct pixelfont));
-	if (buffer == NULL) {
-		fclose(file);
-		return NULL;
-	}
-
-	size_t bytesRead = fread(buffer, 1, fileSize, file);
-
-	fclose(file);
-
-	return buffer;
-}
-
-uint32_t pixelchar_renderer_vk_new(
-	struct pixelchar_renderer_vk* pcr,
+uint32_t pixelchar_renderer_backend_vulkan_init(
+	struct pixelchar_renderer* pcr,
 	VkDevice device,
 	VkPhysicalDevice gpu,
 	VkRenderPass render_pass,
-	uint32_t buffer_length,
 	uint8_t* vertex_shader_custom,
 	uint32_t vertex_shader_custom_length,
 	uint8_t* fragment_shader_custom,
 	uint32_t fragment_shader_custom_length
-) {
+)
+{
+	if (pcr->backend_selected != PIXELCHAR_RENDERER_BACKEND_NONE)
+	{
+		_DEBUG_CALLBACK_WARNING("pixelchar_renderer_backend_vulkan_init: backend should be deinitialized by the user before initializing another backend");
+	}
 
-	pcr->buffer_length = buffer_length;
+	vkDeviceWaitIdle(device);
 
-	pcr->device = device;
-	pcr->gpu = gpu;
-
-	pcr->chars_to_draw = 0;
+	struct pixelchar_vulkan_backend backend;
+	backend.cmd_set = 0;
+	backend.device = device;
+	backend.gpu = gpu;
 
 	VkShaderModule vertex_shader, fragment_shader;
 
@@ -79,17 +34,22 @@ uint32_t pixelchar_renderer_vk_new(
 	shader_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 
 	shader_info.pCode = (vertex_shader_custom == 0 ? vertex_shader_default : vertex_shader_custom);
-	shader_info.codeSize = (vertex_shader_custom == 0 ? vertex_shader_default_length : vertex_shader_custom_length);
-	if (vkCreateShaderModule(pcr->device, &shader_info, 0, &vertex_shader) != VK_SUCCESS) return PIXELCHAR_ERROR_VK_VERTEX_SHADER;
+	shader_info.codeSize = (vertex_shader_custom == 0 ? vertex_shader_default_len : vertex_shader_custom_length);
+
+	CALL_FUNCTION(
+		vkCreateShaderModule(backend.device, &shader_info, 0, &vertex_shader),
+		_DEBUG_CALLBACK_CRITICAL_ERROR("pixelchar_renderer_backend_vulkan_init: vertex vkCreateShaderModule failed"),
+		goto vertex_vkCreateShaderModule_failed
+	);
 
 	shader_info.pCode = (fragment_shader_custom == 0 ? fragment_shader_default : fragment_shader_custom);
-	shader_info.codeSize = (fragment_shader_custom == 0 ? fragment_shader_default_length : fragment_shader_custom_length);
-	if (vkCreateShaderModule(pcr->device, &shader_info, 0, &fragment_shader) != VK_SUCCESS) {
+	shader_info.codeSize = (fragment_shader_custom == 0 ? fragment_shader_default_len : fragment_shader_custom_length);
 
-		vkDestroyShaderModule(pcr->device, vertex_shader, 0);
-		return PIXELCHAR_ERROR_VK_FRAGMENT_SHADER;
-	}
-
+	CALL_FUNCTION(
+		vkCreateShaderModule(backend.device, &shader_info, 0, &fragment_shader),
+		_DEBUG_CALLBACK_CRITICAL_ERROR("pixelchar_renderer_backend_vulkan_init: fragment vkCreateShaderModule failed"),
+		goto fragment_vkCreateShaderModule_failed
+	);
 
 	VkDescriptorSetLayoutBinding pixelfont_buffer_binding = { 0 };
 	pixelfont_buffer_binding.descriptorCount = 1;
@@ -107,21 +67,29 @@ uint32_t pixelchar_renderer_vk_new(
 	set_layout_info.bindingCount = PIXELCHAR_MAX_FONTS;
 	set_layout_info.pBindings = bindings;
 
-	VKCall(vkCreateDescriptorSetLayout(pcr->device, &set_layout_info, 0, &pcr->set_layout));
+	CALL_FUNCTION(
+		vkCreateDescriptorSetLayout(backend.device, &set_layout_info, 0, &backend.set_layout),
+		_DEBUG_CALLBACK_CRITICAL_ERROR("pixelchar_renderer_backend_vulkan_init: vkCreateDescriptorSetLayout failed"),
+		goto vkCreateDescriptorSetLayout_failed
+	);
 
 	VkPushConstantRange push_constant_range = { 0 };
 	push_constant_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 	push_constant_range.offset = 0;
-	push_constant_range.size = sizeof(uint32_t) * 3;
+	push_constant_range.size = sizeof(uint32_t) * 3 + sizeof(float) * 2;
 
 	VkPipelineLayoutCreateInfo pipeline_layout_info = { 0 };
 	pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	pipeline_layout_info.setLayoutCount = 1;
-	pipeline_layout_info.pSetLayouts = &pcr->set_layout;
+	pipeline_layout_info.pSetLayouts = &backend.set_layout;
 	pipeline_layout_info.pushConstantRangeCount = 1;
 	pipeline_layout_info.pPushConstantRanges = &push_constant_range;
 
-	VKCall(vkCreatePipelineLayout(pcr->device, &pipeline_layout_info, 0, &pcr->pipe_layout));
+	CALL_FUNCTION(
+		vkCreatePipelineLayout(backend.device, &pipeline_layout_info, 0, &backend.pipe_layout),
+		_DEBUG_CALLBACK_CRITICAL_ERROR("pixelchar_renderer_backend_vulkan_init: vkCreatePipelineLayout failed"),
+		goto vkCreatePipelineLayout_failed
+	);
 
 	VkVertexInputBindingDescription vertex_binding_description = { 0 };
 	vertex_binding_description.binding = 0;
@@ -130,7 +98,7 @@ uint32_t pixelchar_renderer_vk_new(
 
 
 	VkVertexInputAttributeDescription vertex_attribute_descriptions[] = {
-		
+
 		{
 			.binding = 0,
 			.location = 0,
@@ -172,7 +140,7 @@ uint32_t pixelchar_renderer_vk_new(
 			.format = VK_FORMAT_R16_SINT,
 			.offset = offsetof(struct pixelchar, size)
 		},
-		
+
 	};
 
 
@@ -265,7 +233,7 @@ uint32_t pixelchar_renderer_vk_new(
 	pipe_info.pVertexInputState = &vertex_input_stage;
 	pipe_info.pColorBlendState = &color_blend_state;
 	pipe_info.pStages = shader_stages;
-	pipe_info.layout = pcr->pipe_layout;
+	pipe_info.layout = backend.pipe_layout;
 	pipe_info.renderPass = render_pass;
 	pipe_info.stageCount = 2;
 	pipe_info.pRasterizationState = &rasterization_state;
@@ -274,20 +242,13 @@ uint32_t pixelchar_renderer_vk_new(
 	pipe_info.pMultisampleState = &multi_sample_state;
 	pipe_info.pInputAssemblyState = &input_assembly;
 
-	VkResult pipeline_result = vkCreateGraphicsPipelines(pcr->device, 0, 1, &pipe_info, 0, &pcr->pipeline);
+	CALL_FUNCTION(
+		vkCreateGraphicsPipelines(backend.device, 0, 1, &pipe_info, 0, &backend.pipeline),
+		_DEBUG_CALLBACK_CRITICAL_ERROR("pixelchar_renderer_backend_vulkan_init: vkCreateGraphicsPipelines failed"),
+		goto vkCreateGraphicsPipelines_failed
+	);
 
-	vkDestroyShaderModule(pcr->device, vertex_shader, 0);
-	vkDestroyShaderModule(pcr->device, fragment_shader, 0);
-
-	if (pipeline_result != VK_SUCCESS) {
-
-		vkDestroyPipelineLayout(pcr->device, pcr->pipe_layout, 0);
-		vkDestroyDescriptorSetLayout(pcr->device, pcr->set_layout, 0);
-
-		return PIXELCHAR_ERROR_VK_PIPELINE;
-	}
-
-	uint32_t pixel_char_buffer_size = pcr->buffer_length * sizeof(struct pixelchar);
+	uint32_t pixel_char_buffer_size = pcr->char_buffer_length * sizeof(struct pixelchar);
 
 	VkBufferCreateInfo buffer_info = { 0 };
 	buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -295,30 +256,56 @@ uint32_t pixelchar_renderer_vk_new(
 	buffer_info.size = pixel_char_buffer_size;
 	buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-	VKCall(vkCreateBuffer(pcr->device, &buffer_info, 0, &pcr->pixel_char_buffer));
+	CALL_FUNCTION(
+		vkCreateBuffer(backend.device, &buffer_info, 0, &backend.pixel_char_buffer),
+		_DEBUG_CALLBACK_CRITICAL_ERROR("pixelchar_renderer_backend_vulkan_init: vertex vkCreateBuffer failed"),
+		goto vertex_vkCreateBuffer_failed
+	);
 
 	VkMemoryRequirements memory_requirements;
 
-	vkGetBufferMemoryRequirements(pcr->device, pcr->pixel_char_buffer, &memory_requirements);
+	vkGetBufferMemoryRequirements(backend.device, backend.pixel_char_buffer, &memory_requirements);
 
 	VkPhysicalDeviceMemoryProperties memory_properties;
-	vkGetPhysicalDeviceMemoryProperties(pcr->gpu, &memory_properties);
+	vkGetPhysicalDeviceMemoryProperties(backend.gpu, &memory_properties);
 
 	VkMemoryAllocateInfo alloc_info = { 0 };
+	uint32_t found_memory_type = 0;
 	for (uint32_t i = 0; i < memory_properties.memoryTypeCount; i++) {
 
 		if ((memory_requirements.memoryTypeBits & (1 << i)) && (memory_properties.memoryTypes[i].propertyFlags & (VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)) == (VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)) {
 			alloc_info.memoryTypeIndex = i;
+			found_memory_type = 1;
 			break;
 		}
 	}
 
+	if (found_memory_type == 0) {
+		_DEBUG_CALLBACK_CRITICAL_ERROR("pixelchar_renderer_backend_vulkan_init: did not find VkMemoryType with VK_MEMORY_PROPERTY_HOST_COHERENT_BIT and VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT set");
+		goto vkAllocateMemory_failed;
+	}
+
+
 	alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 	alloc_info.allocationSize = (pixel_char_buffer_size < memory_requirements.size ? memory_requirements.size : pixel_char_buffer_size);
 
-	VKCall(vkAllocateMemory(pcr->device, &alloc_info, 0, &pcr->pixel_char_buffer_memory));
-	VKCall(vkBindBufferMemory(pcr->device, pcr->pixel_char_buffer, pcr->pixel_char_buffer_memory, 0));
-	VKCall(vkMapMemory(pcr->device, pcr->pixel_char_buffer_memory, 0, pixel_char_buffer_size, 0, &pcr->pixel_char_buffer_host_handle));
+	CALL_FUNCTION(
+		vkAllocateMemory(backend.device, &alloc_info, 0, &backend.pixel_char_buffer_memory),
+		_DEBUG_CALLBACK_CRITICAL_ERROR("pixelchar_renderer_backend_vulkan_init: vertex vkAllocateMemory failed"),
+		goto vkAllocateMemory_failed
+	);
+
+	CALL_FUNCTION(
+		vkBindBufferMemory(backend.device, backend.pixel_char_buffer, backend.pixel_char_buffer_memory, 0),
+		_DEBUG_CALLBACK_CRITICAL_ERROR("pixelchar_renderer_backend_vulkan_init: vertex vkBindBufferMemory failed"),
+		goto vkBindBufferMemory_failed
+	);
+
+	CALL_FUNCTION(
+		vkMapMemory(backend.device, backend.pixel_char_buffer_memory, 0, pixel_char_buffer_size, 0, &backend.pixel_char_buffer_host_handle),
+		_DEBUG_CALLBACK_CRITICAL_ERROR("pixelchar_renderer_backend_vulkan_init: vertex vkMapMemory failed"),
+		goto vkMapMemory_failed
+	);
 
 	VkDescriptorPoolSize pool_size = { 0 };
 	pool_size.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
@@ -330,121 +317,152 @@ uint32_t pixelchar_renderer_vk_new(
 	descriptor_pool_info.poolSizeCount = 1;
 	descriptor_pool_info.pPoolSizes = &pool_size;
 
-	VKCall(vkCreateDescriptorPool(pcr->device, &descriptor_pool_info, 0, &pcr->descriptor_pool));
+	CALL_FUNCTION(
+		vkCreateDescriptorPool(backend.device, &descriptor_pool_info, 0, &backend.descriptor_pool),
+		_DEBUG_CALLBACK_CRITICAL_ERROR("pixelchar_renderer_backend_vulkan_init: vkCreateDescriptorPool failed"),
+		goto vkCreateDescriptorPool_failed
+	);
 
 	VkDescriptorSetAllocateInfo descriptor_set_info = { 0 };
 	descriptor_set_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	descriptor_set_info.pSetLayouts = &pcr->set_layout;
+	descriptor_set_info.pSetLayouts = &backend.set_layout;
 	descriptor_set_info.descriptorSetCount = 1;
-	descriptor_set_info.descriptorPool = pcr->descriptor_pool;
+	descriptor_set_info.descriptorPool = backend.descriptor_pool;
 
-	VKCall(vkAllocateDescriptorSets(pcr->device, &descriptor_set_info, &pcr->descriptor_set));
+	CALL_FUNCTION(
+		vkAllocateDescriptorSets(backend.device, &descriptor_set_info, &backend.descriptor_set),
+		_DEBUG_CALLBACK_CRITICAL_ERROR("pixelchar_renderer_backend_vulkan_init: vkAllocateDescriptorSets failed"),
+		goto vkAllocateDescriptorSets_failed
+	);
+
+	vkDestroyShaderModule(backend.device, vertex_shader, 0);
+	vkDestroyShaderModule(backend.device, fragment_shader, 0);
+
+	if (pcr->backend_selected != PIXELCHAR_RENDERER_BACKEND_NONE)
+	{
+		pixelchar_renderer_backend_deinit(pcr);
+	}
+
+	pcr->backend.vulkan = backend;
+	pcr->backend_selected = PIXELCHAR_RENDERER_BACKEND_VULKAN;
+
+	return PIXELCHAR_SUCCESS;
+
+vkAllocateDescriptorSets_failed:
+	vkDestroyDescriptorPool(pcr->backend.vulkan.device, pcr->backend.vulkan.descriptor_pool, 0);
+vkCreateDescriptorPool_failed:
+	vkUnmapMemory(pcr->backend.vulkan.device, pcr->backend.vulkan.pixel_char_buffer_memory);
+vkMapMemory_failed:
+vkBindBufferMemory_failed:
+	vkFreeMemory(pcr->backend.vulkan.device, pcr->backend.vulkan.pixel_char_buffer_memory, 0);
+vkAllocateMemory_failed:
+	vkDestroyBuffer(pcr->backend.vulkan.device, pcr->backend.vulkan.pixel_char_buffer, 0);
+vertex_vkCreateBuffer_failed:
+	vkDestroyPipeline(pcr->backend.vulkan.device, pcr->backend.vulkan.pipeline, 0);
+vkCreateGraphicsPipelines_failed:
+	vkDestroyPipelineLayout(pcr->backend.vulkan.device, pcr->backend.vulkan.pipe_layout, 0);
+vkCreatePipelineLayout_failed:
+	vkDestroyDescriptorSetLayout(pcr->backend.vulkan.device, pcr->backend.vulkan.set_layout, 0);
+vkCreateDescriptorSetLayout_failed:
+	vkDestroyShaderModule(pcr->backend.vulkan.device, fragment_shader, 0);
+fragment_vkCreateShaderModule_failed:
+	vkDestroyShaderModule(pcr->backend.vulkan.device, vertex_shader, 0);
+vertex_vkCreateShaderModule_failed:
+
+	return PIXELCHAR_FAILED;
+}
+
+void pixelchar_renderer_backend_vulkan_set_command_buffer(struct pixelchar_renderer* pcr, VkCommandBuffer cmd)
+{
+	if (pcr->backend_selected != PIXELCHAR_RENDERER_BACKEND_VULKAN)
+	{
+		_DEBUG_CALLBACK_ERROR("pixelchar_renderer_backend_vulkan_set_command_buffer: backend is not PIXELCHAR_RENDERER_BACKEND_VULKAN");
+	}
+	else
+	{
+		pcr->backend.vulkan.cmd = cmd;
+		pcr->backend.vulkan.cmd_set = 1;
+	}
+}
+
+void _pixelchar_renderer_backend_vulkan_deinit(struct pixelchar_renderer* pcr)
+{
+	vkDeviceWaitIdle(pcr->backend.vulkan.device);
+
+	vkDestroyDescriptorPool(pcr->backend.vulkan.device, pcr->backend.vulkan.descriptor_pool, 0);
+
+	vkDestroyPipeline(pcr->backend.vulkan.device, pcr->backend.vulkan.pipeline, 0);
+	vkDestroyPipelineLayout(pcr->backend.vulkan.device, pcr->backend.vulkan.pipe_layout, 0);
+	vkDestroyDescriptorSetLayout(pcr->backend.vulkan.device, pcr->backend.vulkan.set_layout, 0);
+
+	vkUnmapMemory(pcr->backend.vulkan.device, pcr->backend.vulkan.pixel_char_buffer_memory);
+	vkFreeMemory(pcr->backend.vulkan.device, pcr->backend.vulkan.pixel_char_buffer_memory, 0);
+	vkDestroyBuffer(pcr->backend.vulkan.device, pcr->backend.vulkan.pixel_char_buffer, 0);
 
 	return PIXELCHAR_SUCCESS;
 }
 
-uint32_t pixelchar_renderer_vk_destroy(struct pixelchar_renderer_vk* pcr) {
+uint32_t _pixelchar_renderer_backend_vulkan_add_font(struct pixelchar_renderer* pcr, struct pixelfont* font, uint32_t index)
+{
 
-	vkDeviceWaitIdle(pcr->device);
-
-	vkDestroyDescriptorPool(pcr->device, pcr->descriptor_pool, 0);
-
-	vkDestroyPipeline(pcr->device, pcr->pipeline, 0);
-	vkDestroyPipelineLayout(pcr->device, pcr->pipe_layout, 0);
-	vkDestroyDescriptorSetLayout(pcr->device, pcr->set_layout, 0);
-
-	vkUnmapMemory(pcr->device, pcr->pixel_char_buffer_memory);
-	vkFreeMemory(pcr->device, pcr->pixel_char_buffer_memory, 0);
-	vkDestroyBuffer(pcr->device, pcr->pixel_char_buffer, 0);
-
-	return PIXELCHAR_SUCCESS;
 }
 
-uint32_t pixelchar_renderer_vk_add_font(struct pixelchar_renderer_vk* pcr, VkBuffer buffer, uint32_t offset, uint32_t font_index) {
+void _pixelchar_renderer_backend_vulkan_render(struct pixelchar_renderer* pcr, uint32_t width, uint32_t height)
+{
+	if (pcr->backend.vulkan.cmd_set != 1) _DEBUG_CALLBACK_ERROR_RETURN("pixelchar_renderer_render: command buffer of vulkan backend not set");
 
-	if (font_index >= PIXELCHAR_MAX_FONTS) return PIXELCHAR_ERROR_FONT_INDEX_OUT_OF_BOUNDS;
+	memcpy(pcr->backend.vulkan.pixel_char_buffer_host_handle, pcr->char_buffer, sizeof(struct pixelchar) * pcr->char_count);
 
-	VkDescriptorBufferInfo pixelfont_buffer_info = { 0 };
-	pixelfont_buffer_info.buffer = buffer;
-	pixelfont_buffer_info.range = sizeof(struct pixelfont);
-	pixelfont_buffer_info.offset = offset;
+	struct pixelchar_push_constants
+	{
+		uint32_t width;
+		uint32_t height;
+		float color_devisor;
+		float alpha_devisor;
+	} push_constants;
 
-	VkWriteDescriptorSet pixelfont_buffer_write = { 0 };
-	pixelfont_buffer_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	pixelfont_buffer_write.dstSet = pcr->descriptor_set;
-	pixelfont_buffer_write.pBufferInfo = &pixelfont_buffer_info;
-	pixelfont_buffer_write.dstBinding = font_index;
-	pixelfont_buffer_write.descriptorCount = 1;
-	pixelfont_buffer_write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-
-	vkUpdateDescriptorSets(pcr->device, 1, &pixelfont_buffer_write, 0, 0);
-
-	return PIXELCHAR_SUCCESS;
-}
-
-uint32_t pixelchar_renderer_vk_add_chars(struct pixelchar_renderer_vk* pcr, struct pixelchar* chars, uint32_t chars_count) {
-
-	if (pcr->chars_to_draw + chars_count > pcr->buffer_length) return PIXELCHAR_ERROR_TOO_MANY_CHARACTERS;
-
-	memcpy((size_t)pcr->pixel_char_buffer_host_handle + sizeof(struct pixelchar) * (size_t)pcr->chars_to_draw, chars, sizeof(struct pixelchar) * chars_count);
-
-	pcr->chars_to_draw += chars_count;
-
-	return PIXELCHAR_SUCCESS;
-}
-
-uint32_t pixelchar_renderer_vk_cmd_render(struct pixelchar_renderer_vk* pcr, VkCommandBuffer cmd, VkExtent2D screen_size) {
-
-	VkRect2D scissor = { 0 };
-	scissor.extent = screen_size;
-
-	VkViewport viewport = { 0 };
-	viewport.width = screen_size.width;
-	viewport.height = screen_size.height;
-	viewport.maxDepth = 1.0f;
-
-	vkCmdSetViewport(cmd, 0, 1, &viewport);
-	vkCmdSetScissor(cmd, 0, 1, &scissor);
+	push_constants.width = width;
+	push_constants.height = height;
+	push_constants.color_devisor = 5.f;
+	push_constants.alpha_devisor = 1.4f;
 
 	vkCmdBindDescriptorSets(
-		cmd,
+		pcr->backend.vulkan.cmd,
 		VK_PIPELINE_BIND_POINT_GRAPHICS,
-		pcr->pipe_layout,
+		pcr->backend.vulkan.pipe_layout,
 		0,
 		1,
-		&pcr->descriptor_set,
+		&pcr->backend.vulkan.descriptor_set,
 		0,
 		0
 	);
 
-	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pcr->pipeline);
+	vkCmdBindPipeline(pcr->backend.vulkan.cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pcr->backend.vulkan.pipeline);
 
 	VkDeviceSize device_size = 0;
-	vkCmdBindVertexBuffers(cmd, 0, 1, &pcr->pixel_char_buffer, &device_size);
+	vkCmdBindVertexBuffers(pcr->backend.vulkan.cmd, 0, 1, &pcr->backend.vulkan.pixel_char_buffer, &device_size);
 
 	vkCmdPushConstants(
-		cmd,
-		pcr->pipe_layout,
+		pcr->backend.vulkan.cmd,
+		pcr->backend.vulkan.pipe_layout,
 		VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
 		0,
-		sizeof(uint32_t) * 2,
-		&screen_size
+		sizeof(struct pixelchar_push_constants),
+		&push_constants
 	);
+
 
 	for (uint32_t char_render_mode = 0; char_render_mode < 3; char_render_mode++) {
 		vkCmdPushConstants(
-			cmd,
-			pcr->pipe_layout,
+			pcr->backend.vulkan.cmd,
+			pcr->backend.vulkan.pipe_layout,
 			VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-			sizeof(uint32_t) * 2,
+			sizeof(struct pixelchar_push_constants),
 			sizeof(uint32_t),
 			&char_render_mode
 		);
 
-		vkCmdDraw(cmd, 6, pcr->chars_to_draw, 0, 0);
+		vkCmdDraw(pcr->backend.vulkan.cmd, 6, pcr->char_count, 0, 0);
 	}
 
-	pcr->chars_to_draw = 0;
-
-	return PIXELCHAR_SUCCESS;
 }

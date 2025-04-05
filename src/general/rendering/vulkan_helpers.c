@@ -55,6 +55,7 @@ VkResult new_VkInstance(uint8_t* app_name, uint8_t* engine_name, VkInstance* ins
 	app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 	app_info.pApplicationName = app_name;
 	app_info.pEngineName = engine_name;
+	app_info.apiVersion = VK_API_VERSION_1_3;
 
 	char* instance_extensions[] = {
 		PLATFORM_VK_SURFACE_EXTENSION,

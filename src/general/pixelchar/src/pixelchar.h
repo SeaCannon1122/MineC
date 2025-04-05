@@ -1,9 +1,9 @@
 #pragma once 
 
-#include <vulkan/vulkan.h>
-#include <stdint.h>
+#define _PIXELCHAR_INTERNAL_EXCLUDE
 
-#define PIXELCHAR_MAX_FONTS 4
+#include "pixelchar_renderer.h"
+#include "pixelfont.h"
 
 enum pixelchar_mask {
 	PIXELCHAR_MASK_UNDERLINE  = 0x8000,
@@ -14,21 +14,12 @@ enum pixelchar_mask {
 };
 
 enum pixelchar_return_status {
-	PIXELCHAR_SUCCESS                             =        0b0,
 	PIXELCHAR_ERROR_VK_VERTEX_SHADER              = 0b10000001,
 	PIXELCHAR_ERROR_VK_FRAGMENT_SHADER            = 0b10000010,
 	PIXELCHAR_ERROR_VK_PIPELINE                   = 0b10000011,
 	PIXELCHAR_ERROR_TOO_MANY_CHARACTERS           = 0b10100000,
 	PIXELCHAR_ERROR_FONT_INDEX_OUT_OF_BOUNDS      = 0b11000000,
 	PIXELCHAR_ERROR                               = 0b10000000,
-};
-
-
-struct pixelfont {
-	struct {
-		uint64_t width;
-		uint16_t layout[16];
-	} bitmaps[0x20000];
 };
 
 struct pixelchar_renderer_vk {
@@ -50,17 +41,8 @@ struct pixelchar_renderer_vk {
 
 	uint32_t chars_to_draw;
 };
-
-struct pixelchar {
-	uint8_t color[4];
-	uint8_t background_color[4];
-	uint32_t value;
-	uint16_t position[2];
-	uint16_t masks;
-	int16_t size;
-};
-
-struct pixelfont* pixelchar_load_font(uint8_t* src);
+ 
+uint32_t pixelchar_set_debug_callback(PIXELCHAR_DEBUG_CALLBACK_FUNCTION callback_function);
 
 uint32_t pixelchar_renderer_vk_new(
 	struct pixelchar_renderer_vk* pcr,

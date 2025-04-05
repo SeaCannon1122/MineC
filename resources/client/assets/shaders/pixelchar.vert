@@ -20,6 +20,8 @@ layout(set = 0, binding = 3) readonly buffer font3 { char_font_entry char_font_e
 layout(push_constant) uniform PushConstants {
 	int screen_width;
 	int screen_height;
+	float shadow_color_devisor;
+	float shadow_alpha_devisor;
 	uint draw_mode;
 };
 

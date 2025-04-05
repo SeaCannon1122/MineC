@@ -17,7 +17,7 @@ def convert_to_c_byte_array(input_file, output_file, array_name):
             out.write("\n};\n\n")
             
             # Write the length of the array
-            out.write(f"unsigned int {array_name}_len = {len(data)};\n")
+            out.write(f"unsigned int {array_name}_len = sizeof({array_name});\n")
         
         print(f"Successfully wrote C byte array to {output_file}")
 
