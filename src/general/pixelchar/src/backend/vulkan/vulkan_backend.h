@@ -4,6 +4,7 @@
 #define PIXELCHAR_VULKAN_BACKEND_H
 
 #include <vulkan/vulkan.h>
+#include "pixelchar_renderer_max_pixelfonts.h"
 
 struct pixelchar_vulkan_backend
 {
@@ -18,19 +19,33 @@ struct pixelchar_vulkan_backend
 
 	VkDescriptorPool descriptor_pool;
 
-	VkBuffer pixel_char_buffer;
-	VkDeviceMemory pixel_char_buffer_memory;
-	void* pixel_char_buffer_host_handle;
+	VkBuffer vertex_index_buffer;
+	VkBuffer staging_buffer;
+	VkDeviceMemory vertex_index_staging_buffer_memory;
+	void* vertex_index_staging_buffer_host_handle;
 
-	uint32_t cmd_set;
-	VkCommandBuffer cmd;
+	VkQueue queue;
+	uint32_t queue_index;
+	VkCommandPool transfer_command_pool;
+	VkCommandBuffer transfer_cmd;
+
+	struct
+	{
+		bool init;
+
+		VkBuffer bitmap_buffer;
+		VkDeviceMemory bitmap_buffer_memory;
+
+	} font_info[PIXELCHAR_RENDERER_MAX_FONTS];
 };
 struct pixelchar_renderer;
 
 uint32_t pixelchar_renderer_backend_vulkan_init(
-	struct pixelchar_renderer* pcr, 
+	struct pixelchar_renderer* pcr,
 	VkDevice device,
 	VkPhysicalDevice gpu,
+	VkQueue queue,
+	uint32_t queue_index,
 	VkRenderPass render_pass,
 	uint8_t* vertex_shader_custom,
 	uint32_t vertex_shader_custom_length,
@@ -38,13 +53,9 @@ uint32_t pixelchar_renderer_backend_vulkan_init(
 	uint32_t fragment_shader_custom_length
 );
 
-void pixelchar_renderer_backend_vulkan_set_command_buffer(struct pixelchar_renderer* pcr, VkCommandBuffer cmd);
+void pixelchar_renderer_backend_vulkan_render(struct pixelchar_renderer* pcr, VkCommandBuffer cmd, uint32_t width, uint32_t height);
 
 #ifndef _PIXELCHAR_INTERNAL_EXCLUDE
-
-uint32_t _pixelchar_renderer_backend_vulkan_add_font(struct pixelchar_renderer* pcr, struct pixelfont* font, uint32_t index);
-
-void _pixelchar_renderer_backend_vulkan_render(struct pixelchar_renderer* pcr, uint32_t width, uint32_t height);
 
 void _pixelchar_renderer_backend_vulkan_deinit(struct pixelchar_renderer* pcr);
 

@@ -86,7 +86,7 @@ uint32_t vulkan_device_resources_create(struct game_client* game) {
 
 	//staging buffer
 
-	size_t staging_buffer_size = (sizeof(struct pixelfont) > max_image_memory_size ? sizeof(struct pixelfont) : max_image_memory_size);
+	size_t staging_buffer_size = (sizeof(struct pixelfont_old) > max_image_memory_size ? sizeof(struct pixelfont_old) : max_image_memory_size);
 
 	VkBufferCreateInfo buffer_info = { 0 };
 	buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -439,7 +439,7 @@ uint32_t vulkan_device_resources_create(struct game_client* game) {
 	vkUpdateDescriptorSets(game->renderer_state.backend.device, 2, descriptor_update_writes, 0, NULL);
 
 	//pixelfonts
-	buffer_info.size = sizeof(struct pixelfont) * RESOURCES_PIXELFONTS_COUNT;
+	buffer_info.size = sizeof(struct pixelfont_old) * RESOURCES_PIXELFONTS_COUNT;
 	buffer_info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
 	VKCall(vkCreateBuffer(game->renderer_state.backend.device, &buffer_info, 0, &game->renderer_state.backend.pixelfont_buffer));
@@ -462,7 +462,7 @@ uint32_t vulkan_device_resources_create(struct game_client* game) {
 
 	for (uint32_t i = 0; i < RESOURCES_PIXELFONTS_COUNT; i++) {
 
-		memcpy(staging_buffer_host_handle, game->resource_state.pixelfont_atlas[i], sizeof(struct pixelfont));
+		memcpy(staging_buffer_host_handle, game->resource_state.pixelfont_atlas[i], sizeof(struct pixelfont_old));
 
 		VKCall(vkResetFences(game->renderer_state.backend.device, 1, &game->renderer_state.backend.queue_fence));
 
@@ -474,8 +474,8 @@ uint32_t vulkan_device_resources_create(struct game_client* game) {
 
 		VkBufferCopy copy_region = { 0 };
 		copy_region.srcOffset = 0;
-		copy_region.dstOffset = i * sizeof(struct pixelfont);
-		copy_region.size = sizeof(struct pixelfont);
+		copy_region.dstOffset = i * sizeof(struct pixelfont_old);
+		copy_region.size = sizeof(struct pixelfont_old);
 
 		vkCmdCopyBuffer(game->renderer_state.backend.cmd, staging_buffer, game->renderer_state.backend.pixelfont_buffer, 1, &copy_region);
 
@@ -490,7 +490,7 @@ uint32_t vulkan_device_resources_create(struct game_client* game) {
 
 		VKCall(vkWaitForFences(game->renderer_state.backend.device, 1, &game->renderer_state.backend.queue_fence, 1, UINT64_MAX));
 
-		pixelchar_renderer_vk_add_font(&game->renderer_state.backend.pcr, game->renderer_state.backend.pixelfont_buffer, i * sizeof(struct pixelfont), i);
+		pixelchar_renderer_vk_add_font(&game->renderer_state.backend.pcr, game->renderer_state.backend.pixelfont_buffer, i * sizeof(struct pixelfont_old), i);
 
 	}
 

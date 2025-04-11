@@ -2,147 +2,61 @@
 
 #define PIXEL_CHAR_IF_BIT(ptr, x, y) (ptr[(x + y * 16) / 32] & (1 << ((x + y * 16) % 32)) )
 
-#define PIXEL_CHAR_UNDERLINE_MASK  0x8000
-#define PIXEL_CHAR_CURSIVE_MASK    0x4000
-#define PIXEL_CHAR_SHADOW_MASK     0x2000
-#define PIXEL_CHAR_BACKGROUND_MASK 0x1000
-#define PIXEL_CHAR_FONT_MASK       0x00ff
+uint PIXELCHAR_MASK_UNDERLINE = 1;
+uint PIXELCHAR_MASK_CURSIVE = 2;
+uint PIXELCHAR_MASK_SHADOW = 4;
+uint PIXELCHAR_MASK_BACKGROUND = 8;
 
-struct char_font_entry
+layout(set = 0, binding = 0) readonly buffer font0 { uint font0_bitmaps[]; };
+layout(set = 0, binding = 1) readonly buffer font1 { uint font1_bitmaps[]; };
+layout(set = 0, binding = 2) readonly buffer font2 { uint font2_bitmaps[]; };
+layout(set = 0, binding = 3) readonly buffer font3 { uint font3_bitmaps[]; };
+
+layout(push_constant) uniform PushConstants 
 {
-    uint width;
-    uint space;
-    int pixel_layout[8];
-};
-
-layout(set = 0, binding = 0) readonly buffer font0 { char_font_entry char_font_entries_0[]; };
-layout(set = 0, binding = 1) readonly buffer font1 { char_font_entry char_font_entries_1[]; };
-layout(set = 0, binding = 2) readonly buffer font2 { char_font_entry char_font_entries_2[]; };
-layout(set = 0, binding = 3) readonly buffer font3 { char_font_entry char_font_entries_3[]; };
-
-layout(push_constant) uniform PushConstants {
-    int screen_width;
-    int screen_height;
-    float shadow_color_devisor;
-    float shadow_alpha_devisor;
+    ivec2 screen_size;
+    vec4 shadow_color_devisor;
     uint draw_mode;
 };
 
 layout(location = 0) in vec4 color;
 layout(location = 1) in vec4 background_color;
-layout(location = 2) flat in uint value;
-layout(location = 3) in vec2 f_fragment_position;
-layout(location = 4) flat in uint masks;
-layout(location = 5) flat in int size;
+layout(location = 2) flat in uvec4 font_resolution_index_width;
+layout(location = 3) flat in uint masks;
+layout(location = 4) in vec2 fragment_position;
+layout(location = 5) flat in ivec2 char_dims;
 
 layout (location = 0) out vec4 fragmentColor;
 
 
 void main() {
     
-    char_font_entry font_entry;
-	
-    if ((masks & PIXEL_CHAR_FONT_MASK) == 0) font_entry = char_font_entries_0[value];
-	else if ((masks & PIXEL_CHAR_FONT_MASK) == 1) font_entry = char_font_entries_1[value];
-	else if ((masks & PIXEL_CHAR_FONT_MASK) == 2) font_entry = char_font_entries_2[value];
-	else if ((masks & PIXEL_CHAR_FONT_MASK) == 3) font_entry = char_font_entries_3[value];
-    
-    ivec2 fragment_position = ivec2(f_fragment_position);
-    
-    fragmentColor = vec4(0.0, 0.0, 0.0, 0.0);
-    
-    if (draw_mode == 0)
-    { 
-        if ((masks & PIXEL_CHAR_BACKGROUND_MASK) != 0)
+    if ((draw_mode == 0 && (masks & PIXELCHAR_MASK_BACKGROUND) == 0) || (draw_mode == 1 && (masks & PIXELCHAR_MASK_SHADOW) == 0))
+        fragmentColor = vec4(0.0, 0.0, 0.0, 0.0);
+    else
+    {
+        if (draw_mode == 0)
             fragmentColor = background_color;
-
-    }
-    else if (draw_mode == 1)
-    {
-        if ((masks & PIXEL_CHAR_SHADOW_MASK) != 0)
+        else
         {
-            if (
-            f_fragment_position.x >= 0.0 &&
-            f_fragment_position.y >= 0.0 &&
-            f_fragment_position.x / float(size) < 8.0 &&
-            f_fragment_position.y / float(size) < 8.0
-            )
+            int bit_set = 0;
+            
+            if (font_resolution_index_width.x == 0)
             {
-        
-                fragment_position.x = fragment_position.x - 4 * size;
-                fragment_position.y = fragment_position.y - 4 * size;
-        
-                ivec2 check_coords = fragment_position;
-        
-                if (fragment_position.x < 0)
-                    check_coords.x += 1;
-                if (fragment_position.y < 0)
-                    check_coords.y += 1;
-        
-                check_coords.x = check_coords.x * 2 / size + 8;
-                check_coords.y = check_coords.y * 2 / size + 8;
-        
-                if (fragment_position.x < 0)
-                    check_coords.x -= 1;
-                if (fragment_position.y < 0)
-                    check_coords.y -= 1;
-        
-                if (PIXEL_CHAR_IF_BIT(font_entry.pixel_layout, check_coords.x, check_coords.y) != 0)
-                    fragmentColor = vec4(
-                        color.xyz / shadow_color_devisor,
-                        color.w / shadow_alpha_devisor
-                    );
+                
             }
-            if (fragment_position.y / size > 7 && fragment_position.y / size < 9)
+            
+            if (bit_set == 1)
             {
-                if ((masks & PIXEL_CHAR_UNDERLINE_MASK) != 0)
-                    fragmentColor = vec4(
-                        color.xyz / shadow_color_devisor,
-                        color.w / shadow_alpha_devisor
-                    );
+                if (draw_mode == 1)
+                    fragmentColor = color / shadow_color_devisor;
+                else
+                    fragmentColor = color;
             }
+            
+            else
+                fragmentColor = vec4(0.0, 0.0, 0.0, 0.0);
         }
-
     }
-    else 
-    {
-    
-        if (
-            f_fragment_position.x >= 0.0 &&
-            f_fragment_position.y >= 0.0 &&
-            f_fragment_position.x / float(size) < 8.0 &&
-            f_fragment_position.y / float(size) < 8.0
-        )
-        {
-        
-            fragment_position.x = fragment_position.x - 4 * size;
-            fragment_position.y = fragment_position.y - 4 * size;
-        
-            ivec2 check_coords = fragment_position;
-        
-            if (fragment_position.x < 0)
-                check_coords.x += 1;
-            if (fragment_position.y < 0)
-                check_coords.y += 1;
-        
-            check_coords.x = check_coords.x * 2 / size + 8;
-            check_coords.y = check_coords.y * 2 / size + 8;
-        
-            if (fragment_position.x < 0)
-                check_coords.x -= 1;
-            if (fragment_position.y < 0)
-                check_coords.y -= 1;
-        
-            if (PIXEL_CHAR_IF_BIT(font_entry.pixel_layout, check_coords.x, check_coords.y) != 0)
-                fragmentColor = color;
-        }
-        if (fragment_position.y / size > 7 && fragment_position.y / size < 9)
-        {
-            if ((masks & PIXEL_CHAR_UNDERLINE_MASK) != 0)
-                fragmentColor = color;
-        }
-        
-    }
-
 
 }

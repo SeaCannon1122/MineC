@@ -48,7 +48,6 @@ set(TEST_SOURCE_FILES
     src/test/main.c
 
     src/general/string_allocator.c
-    src/general/resource_loader/resource_loader.c
 )
 
 set(TEST_2_SOURCE_FILES
@@ -84,11 +83,15 @@ add_executable(blocks_test ${TEST_SOURCE_FILES})
 add_executable(blocks_test2 ${TEST_2_SOURCE_FILES})
 
 target_link_libraries(blocks_client PRIVATE blocks_client_vulkan_backend pixelchar)
-target_link_libraries(blocks_test2 PRIVATE blocks_client_vulkan_backend pixelchar)
+target_link_libraries(blocks_test2 PRIVATE pixelchar)
 
 if(WIN32)
 
     set_target_properties(blocks_client PROPERTIES
+        LINK_FLAGS "/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup"
+    )
+
+    set_target_properties(blocks_test2 PROPERTIES
         LINK_FLAGS "/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup"
     )
 

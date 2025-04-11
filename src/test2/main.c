@@ -8,6 +8,33 @@
 #include <malloc.h>
 #include <stdio.h>
 
+void* loadFile(uint8_t* src, size_t* size) {
+
+	FILE* file = fopen(src, "rb");
+	if (file == NULL) return NULL;
+
+	fseek(file, 0, SEEK_END);
+	long fileSize = ftell(file);
+	rewind(file);
+
+	void* buffer = calloc(1, fileSize);
+	if (buffer == NULL) {
+		fclose(file);
+		return NULL;
+	}
+
+	*size = fread(buffer, 1, fileSize, file);
+
+	fclose(file);
+
+	return buffer;
+}
+
+static void callback(uint32_t type, uint8_t* msg)
+{
+	printf("%s %s\n", (type == PIXELCHAR_DEBUG_MESSAGE_TYPE_WARNING ? "[WARNING]" : (type == PIXELCHAR_DEBUG_MESSAGE_TYPE_ERROR ? "[ERROR]" : "[CRITICAL ERROR]")), msg);
+}
+
 static VKAPI_ATTR VkBool32 VKAPI_CALL vulkan_debug_callbck(
 	VkDebugUtilsMessageSeverityFlagBitsEXT msg_severity,
 	VkDebugUtilsMessageTypeFlagsEXT msg_flags,
@@ -361,24 +388,52 @@ int main()
 	vulkan_device_renderpasses_create();
 	vulkan_device_swapchain_and_framebuffers_create();
 
-	struct pixelchar_renderer_vk pcr;
-	pixelchar_renderer_vk_new(&pcr, device, gpu, window_render_pass, 1000, NULL, 0, NULL, 0);
+	size_t vert_length;
+	void* vert_src = loadFile("../../../resources/client/assets/shaders/pixelchar.vert.spv", &vert_length);
+	size_t frag_length;
+	void* frag_src = loadFile("../../../resources/client/assets/shaders/pixelchar.frag.spv", &frag_length);
 
-	struct rendering_memory_manager rmm;
-	VKCall(rendering_memory_manager_new(device, gpu, queue, queue_index, 10000000, &rmm));
+	size_t pixelfont_size;
+	void* pixelfont = loadFile("test.pixelfont", &pixelfont_size);
 
-	struct rendering_buffer font_buffer;
+	pixelchar_set_debug_callback(callback);
 
-	struct pixelfont* font1 = pixelchar_load_font("resources/client/assets/fonts/default.pixelfont");
-	struct pixelfont* font2 = pixelchar_load_font("resources/client/assets/fonts/default.pixelfont");
+	struct pixelchar_renderer pcr;
+	pixelchar_renderer_create(&pcr, 1000);
+	pixelchar_renderer_backend_vulkan_init(&pcr, device, gpu, window_render_pass, vert_src, vert_length, frag_src, frag_length);
+	pixelchar_renderer_backend_vulkan_set_command_buffer(&pcr, cmd);
 
-	VkBuffer_new(&rmm, sizeof(struct pixelfont) * 2, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, &font_buffer);
+	struct pixelchar c[2];
 
-	VkBuffer_fill(&rmm, &font_buffer, font1, sizeof(struct pixelfont), 0);
-	VkBuffer_fill(&rmm, &font_buffer, font2, sizeof(struct pixelfont), sizeof(struct pixelfont));
+	c[0].color[0] = 0;
+	c[0].color[1] = 0;
+	c[0].color[2] = 255;
+	c[0].color[3] = 255;
+	c[0].background_color[0] = 255;
+	c[0].background_color[1] = 0;
+	c[0].background_color[2] = 0;
+	c[0].background_color[3] = 255;
+	c[0].masks = PIXELCHAR_MASK_CURSIVE | PIXELCHAR_MASK_SHADOW | PIXELCHAR_MASK_BACKGROUND;
+	c[0].position[0][0] = 100;
+	c[0].position[0][1] = 100;
+	c[0].position[1][0] = 300;
+	c[0].position[1][1] = 300;
 
-	pixelchar_renderer_vk_add_font(&pcr, font_buffer.buffer, 0, 0);
-	pixelchar_renderer_vk_add_font(&pcr, font_buffer.buffer, sizeof(struct pixelfont), 1);
+	c[1].color[0] = 0;
+	c[1].color[1] = 0;
+	c[1].color[2] = 255;
+	c[1].color[3] = 255;
+	c[1].masks = 0;
+	c[1].position[0][0] = 100;
+	c[1].position[0][1] = 100;
+	c[1].position[1][0] = 132;
+	c[1].position[1][1] = 132;
+
+	free(vert_src);
+	free(frag_src);
+
+	free(pixelfont);
+
 
 	while (application_window_handle_events(&window) == 0) {
 
@@ -398,10 +453,12 @@ if(i == 0) name[i] = (struct pixelchar){ { r, g, b, a }, { r_b, g_b, b_b, a_b },
 else name[i] = (struct pixelchar){ { r, g, b, a }, { r_b, g_b, b_b, a_b }, str[i], {name[i-1].position[0] + (size * ((font1->bitmaps[name[i-1].value].width + 3) / 2 )), y}, flags, size  };\
 }\
 
-			string_to_pixel_char(chars, pixel_str, 20, 100, 100, PIXELCHAR_MASK_BACKGROUND | PIXELCHAR_MASK_UNDERLINE, 255, 255, 0, 127, 127, 0, 255, 255)
+			//string_to_pixel_char(chars, pixel_str, 20, 100, 100, PIXELCHAR_MASK_BACKGROUND | PIXELCHAR_MASK_UNDERLINE, 255, 255, 0, 127, 127, 0, 255, 255)
 
-			chars[1].masks |= 1;
-			pixelchar_renderer_vk_add_chars(&pcr, chars, sizeof(chars) / sizeof(chars[0]));
+			//chars[1].masks |= 1;
+			//pixelchar_renderer_queue_pixelchars(&pcr, NULL, 0);
+
+			pixelchar_renderer_queue_pixelchars(&pcr, c, 1);
 
 			VKCall(vkWaitForFences(device, 1, &queue_fence, VK_TRUE, UINT64_MAX));
 
@@ -426,10 +483,21 @@ else name[i] = (struct pixelchar){ { r, g, b, a }, { r_b, g_b, b_b, a_b }, str[i
 			screen_size.width = window.width;
 			screen_size.height = window.height;
 
+			VkRect2D scissor = { 0 };
+			scissor.extent = screen_size;
+
+			VkViewport viewport = { 0 };
+			viewport.width = screen_size.width;
+			viewport.height = screen_size.height;
+			viewport.maxDepth = 1.0f;
+
+			vkCmdSetViewport(cmd, 0, 1, &viewport);
+			vkCmdSetScissor(cmd, 0, 1, &scissor);
+
 			VkClearColorValue clearColor = {0};
 			clearColor.float32[0] = 1.0f; // Red
 			clearColor.float32[1] = 1.0f; // Green
-			clearColor.float32[2] = 0.0f; // Blue
+			clearColor.float32[2] = 1.0f; // Blue
 			clearColor.float32[3] = 1.0f; // Alpha
 
 			// Set up the clear value for the color attachment
@@ -447,7 +515,7 @@ else name[i] = (struct pixelchar){ { r, g, b, a }, { r_b, g_b, b_b, a_b }, str[i
 			vkCmdBeginRenderPass(cmd, &renderpass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
 			//pixel_chars
-			pixelchar_renderer_vk_cmd_render(&pcr, cmd, screen_size);
+			pixelchar_renderer_render(&pcr, window.width, window.height);
 
 			vkCmdEndRenderPass(cmd);
 
@@ -483,16 +551,10 @@ else name[i] = (struct pixelchar){ { r, g, b, a }, { r_b, g_b, b_b, a_b }, str[i
 		sleep_for_ms(16);
 	}
 
-	free(font1);
-	free(font2);
-
 	vkDeviceWaitIdle(device);
 
-	VkBuffer_destroy(&rmm, &font_buffer);
-
-	VKCall(rendering_memory_manager_destroy(&rmm));
-
-	pixelchar_renderer_vk_destroy(&pcr);
+	pixelchar_renderer_backend_deinit(&pcr);
+	pixelchar_renderer_destroy(&pcr);
 
 	vulkan_device_swapchain_and_framebuffers_destroy();
 	vulkan_device_renderpasses_destroy();

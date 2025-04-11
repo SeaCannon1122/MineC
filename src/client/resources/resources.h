@@ -120,8 +120,8 @@ struct resource_state {
 	void* key_value_map_atlas[RESOURCES_KVM_COUNT];
 
 	//pixelfonts
-	struct pixelfont* pixelfont_atlas[RESOURCES_PIXELFONTS_COUNT];
-	struct pixelfont* fallback_pixelfont;
+	struct pixelfont_old* pixelfont_atlas[RESOURCES_PIXELFONTS_COUNT];
+	struct pixelfont_old* fallback_pixelfont;
 
 	//shaders
 	struct resource_manager_binary shader_atlas[RESOURCES_SHADERS_COUNT];
