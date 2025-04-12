@@ -2,7 +2,7 @@
 #include "general/platformlib/platform/platform.h"
 #include "client/application/application_window.h"
 
-#include "general/pixelchar/src/pixelchar.h"
+#include <pixelchar/pixelchar.h>
 #include "general/rendering/rendering_memory_manager.h"
 
 #include <malloc.h>
@@ -388,6 +388,8 @@ int main()
 	vulkan_device_renderpasses_create();
 	vulkan_device_swapchain_and_framebuffers_create();
 
+	pixelchar_set_debug_callback(callback);
+
 	size_t vert_length;
 	void* vert_src = loadFile("../../../resources/client/assets/shaders/pixelchar.vert.spv", &vert_length);
 	size_t frag_length;
@@ -396,12 +398,15 @@ int main()
 	size_t pixelfont_size;
 	void* pixelfont = loadFile("test.pixelfont", &pixelfont_size);
 
-	pixelchar_set_debug_callback(callback);
+	struct pixelchar_font font;
+	pixelchar_font_create(&font, pixelfont, pixelfont_size);
 
 	struct pixelchar_renderer pcr;
 	pixelchar_renderer_create(&pcr, 1000);
-	pixelchar_renderer_backend_vulkan_init(&pcr, device, gpu, window_render_pass, vert_src, vert_length, frag_src, frag_length);
-	pixelchar_renderer_backend_vulkan_set_command_buffer(&pcr, cmd);
+
+	pixelchar_renderer_set_font(&pcr, &font, 0);
+
+	pixelchar_renderer_backend_vulkan_init(&pcr, device, gpu, queue, queue_index, window_render_pass, vert_src, vert_length, frag_src, frag_length);
 
 	struct pixelchar c[2];
 
@@ -515,7 +520,8 @@ else name[i] = (struct pixelchar){ { r, g, b, a }, { r_b, g_b, b_b, a_b }, str[i
 			vkCmdBeginRenderPass(cmd, &renderpass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
 			//pixel_chars
-			pixelchar_renderer_render(&pcr, window.width, window.height);
+			
+			pixelchar_renderer_backend_vulkan_render(&pcr, cmd, window.width, window.height);
 
 			vkCmdEndRenderPass(cmd);
 
@@ -553,8 +559,10 @@ else name[i] = (struct pixelchar){ { r, g, b, a }, { r_b, g_b, b_b, a_b }, str[i
 
 	vkDeviceWaitIdle(device);
 
-	pixelchar_renderer_backend_deinit(&pcr);
+	//pixelchar_renderer_backend_vulkan_deinit(&pcr);
 	pixelchar_renderer_destroy(&pcr);
+
+	pixelchar_font_destroy(&font);
 
 	vulkan_device_swapchain_and_framebuffers_destroy();
 	vulkan_device_renderpasses_destroy();

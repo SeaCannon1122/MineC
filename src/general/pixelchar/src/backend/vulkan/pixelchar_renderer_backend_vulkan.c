@@ -26,96 +26,6 @@ struct vulkan_push_constants
 	uint32_t _padding_1[3];
 };
 
-#define PIXELCHAR_VULKAN_STAGING_SIZE 262144
-
-#define VK_CALL_FUNCTION(call, debug, instead) do {if (call != VK_SUCCESS) {debug; instead;}} while(0)
-
-uint32_t _pixelchar_renderer_font_init(struct pixelchar_renderer* pcr, uint32_t index)
-{
-	vkFreeMemory(pcr->backend.vulkan.device, pcr->backend.vulkan.font_info[index].bitmap_buffer_memory, 0);
-	vkDestroyBuffer(pcr->backend.vulkan.device, pcr->backend.vulkan.font_info[index].bitmap_buffer, 0);
-}
-
-uint32_t _pixelchar_renderer_font_deinit(struct pixelchar_renderer* pcr, uint32_t index, bool from_initial_init)
-{
-	VkBufferCreateInfo buffer_info = { 0 };
-	buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	buffer_info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-	buffer_info.size = pcr->font_info[index].mappings_count * pcr->font_info[index].resolution * pcr->font_info[index].resolution / 8;
-	buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-	if (vkCreateBuffer(pcr->backend.vulkan.device, &buffer_info, 0, &pcr->backend.vulkan.font_info[index].bitmap_buffer) != VK_SUCCESS)
-	{
-		if (from_initial_init)
-			_DEBUG_CALLBACK_CRITICAL_ERROR("pixelchar_renderer_backend_vulkan_init: font bitmap vkCreateBuffer failed");
-		else 
-			_DEBUG_CALLBACK_CRITICAL_ERROR("pixelchar_renderer_add_font: font bitmap vkCreateBuffer failed");
-		return PIXELCHAR_FAILED;
-	}
-
-	VkMemoryRequirements memory_requirements;
-	vkGetBufferMemoryRequirements(pcr->backend.vulkan.device, pcr->backend.vulkan.font_info[index].bitmap_buffer, &memory_requirements);
-	VkPhysicalDeviceMemoryProperties memory_properties;
-	vkGetPhysicalDeviceMemoryProperties(pcr->backend.vulkan.gpu, &memory_properties);
-
-	VkMemoryAllocateInfo alloc_info = { 0 };
-	alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-	alloc_info.allocationSize = memory_requirements.size;
-
-	uint32_t found_memory_type = 0;
-	for (uint32_t i = 0; i < memory_properties.memoryTypeCount; i++)
-	{
-		if ((memory_requirements.memoryTypeBits & (1 << i)) && (memory_properties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
-		{
-			alloc_info.memoryTypeIndex = i;
-			found_memory_type = 1;
-			break;
-		}
-	}
-
-	if (found_memory_type == 0)
-	{
-		if (from_initial_init)
-			_DEBUG_CALLBACK_CRITICAL_ERROR("pixelchar_renderer_backend_vulkan_init: did not find suitable VkMemoryType for font bitmap buffer");
-		else
-			_DEBUG_CALLBACK_CRITICAL_ERROR("pixelchar_renderer_add_font: did not find suitable VkMemoryType for font bitmap buffer");
-		goto vkAllocateMemory_failed;
-	}
-
-	VK_CALL_FUNCTION(
-		vkAllocateMemory(pcr->backend.vulkan.device, &alloc_info, 0, &pcr->backend.vulkan.font_info[index].bitmap_buffer_memory),
-		if (from_initial_init) { _DEBUG_CALLBACK_CRITICAL_ERROR("pixelchar_renderer_backend_vulkan_init: font bitmap vkAllocateMemory failed"); }
-		else { _DEBUG_CALLBACK_CRITICAL_ERROR("pixelchar_renderer_add_font: font bitmap vkAllocateMemory failed"); },
-		goto vkAllocateMemory_failed
-	);
-
-	VK_CALL_FUNCTION(
-		vkBindBufferMemory(pcr->backend.vulkan.device, pcr->backend.vulkan.font_info[index].bitmap_buffer, pcr->backend.vulkan.font_info[index].bitmap_buffer_memory, 0),
-		if (from_initial_init) { _DEBUG_CALLBACK_CRITICAL_ERROR("pixelchar_renderer_backend_vulkan_init: font bitmap vkBindBufferMemory failed"); }
-		else { _DEBUG_CALLBACK_CRITICAL_ERROR("pixelchar_renderer_add_font: font bitmap vkBindBufferMemory failed"); },
-		goto vkBindBufferMemory_failed
-	);
-
-	VkDeviceSize offset = 0;
-	VkDeviceSize total_size = pcr->font_info[index].widths_count * pcr->font_info[index].resolution * pcr->font_info[index].resolution / 8;
-
-	while (offset < total_size)
-	{
-		VkDeviceSize chunk_size = (PIXELCHAR_VULKAN_STAGING_SIZE < total_size - offset ? PIXELCHAR_VULKAN_STAGING_SIZE : total_size - offset);
-
-		offset += chunk_size;
-	}
-
-	return PIXELCHAR_SUCCESS;
-
-vkBindBufferMemory_failed:
-	vkFreeMemory(pcr->backend.vulkan.device, pcr->backend.vulkan.font_info[index].bitmap_buffer_memory, 0);
-vkAllocateMemory_failed:
-	vkDestroyBuffer(pcr->backend.vulkan.device, pcr->backend.vulkan.font_info[index].bitmap_buffer, 0);
-vkCreateBuffer_filed:
-	return PIXELCHAR_FAILED;
-}
-
 uint32_t pixelchar_renderer_backend_vulkan_init(
 	struct pixelchar_renderer* pcr,
 	VkDevice device,
@@ -129,15 +39,10 @@ uint32_t pixelchar_renderer_backend_vulkan_init(
 	uint32_t fragment_shader_custom_length
 )
 {
-	if (pcr->backend_selected != PIXELCHAR_RENDERER_BACKEND_NONE)
-	{
-		_DEBUG_CALLBACK_WARNING("pixelchar_renderer_backend_vulkan_init: backend should be deinitialized by the user before initializing another backend");
-	}
 
 	vkDeviceWaitIdle(device);
 
-	struct pixelchar_vulkan_backend backend;
-	backend.cmd_set = 0;
+	struct pixelchar_renderer_backend_vulkan backend;
 	backend.device = device;
 	backend.gpu = gpu;
 	backend.queue = queue;
@@ -385,7 +290,7 @@ uint32_t pixelchar_renderer_backend_vulkan_init(
 	pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
 	VK_CALL_FUNCTION(
-		vkCreateCommandPool(backend.device, &pool_info, 0, &backend.transfer_command_pool),
+		vkCreateCommandPool(backend.device, &pool_info, 0, &backend.cmd_pool),
 		_DEBUG_CALLBACK_CRITICAL_ERROR("pixelchar_renderer_backend_vulkan_init: vkCreateCommandPool failed"),
 		goto vkCreateCommandPool_failed
 	);
@@ -393,11 +298,11 @@ uint32_t pixelchar_renderer_backend_vulkan_init(
 	VkCommandBufferAllocateInfo cmd_alloc_info = { 0 };
 	cmd_alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 	cmd_alloc_info.commandBufferCount = 1;
-	cmd_alloc_info.commandPool = backend.transfer_command_pool;
+	cmd_alloc_info.commandPool = backend.cmd_pool;
 	cmd_alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 
 	VK_CALL_FUNCTION(
-		vkAllocateCommandBuffers(backend.device, &cmd_alloc_info, &backend.transfer_cmd),
+		vkAllocateCommandBuffers(backend.device, &cmd_alloc_info, &backend.cmd),
 		_DEBUG_CALLBACK_CRITICAL_ERROR("pixelchar_renderer_backend_vulkan_init: vkAllocateCommandBuffers failed"),
 		goto vkAllocateCommandBuffers_failed
 	);
@@ -525,13 +430,11 @@ uint32_t pixelchar_renderer_backend_vulkan_init(
 	vkDestroyShaderModule(backend.device, vertex_shader, 0);
 	vkDestroyShaderModule(backend.device, fragment_shader, 0);
 
-	if (pcr->backend_selected != PIXELCHAR_RENDERER_BACKEND_NONE)
-	{
-		pixelchar_renderer_backend_deinit(pcr);
-	}
+	pcr->backends.vulkan = backend;
+	pcr->backends_initialized |= PIXELCHAR_BACKEND_VULKAN_BIT;
 
-	pcr->backend.vulkan = backend;
-	pcr->backend_selected = PIXELCHAR_RENDERER_BACKEND_VULKAN;
+	for (uint32_t i = 0; i < PIXELCHAR_RENDERER_MAX_FONTS; i++) if (pcr->fonts[i] != NULL)
+		_pixelchar_font_backend_vulkan_reference_add(pcr->fonts[i], pcr, i);
 
 	return PIXELCHAR_SUCCESS;
 
@@ -548,9 +451,9 @@ vkAllocateMemory_failed:
 staging_vkAllocateMemory_failed:
 	vkDestroyBuffer(backend.device, backend.vertex_index_buffer, 0);
 vertex_index_vkCreateBuffer_failed:
-	vkFreeCommandBuffers(backend.device, backend.transfer_command_pool, 1, &backend.transfer_cmd);
+	vkFreeCommandBuffers(backend.device, backend.cmd_pool, 1, &backend.cmd);
 vkAllocateCommandBuffers_failed:
-	vkDestroyCommandPool(backend.device, backend.transfer_command_pool, 0);
+	vkDestroyCommandPool(backend.device, backend.cmd_pool, 0);
 vkCreateCommandPool_failed:
 	vkDestroyPipeline(backend.device, backend.pipeline, 0);
 vkCreateGraphicsPipelines_failed:
@@ -566,59 +469,59 @@ vertex_vkCreateShaderModule_failed:
 	return PIXELCHAR_FAILED;
 }
 
-void _pixelchar_renderer_backend_vulkan_deinit(struct pixelchar_renderer* pcr)
+void pixelchar_renderer_backend_vulkan_deinit(struct pixelchar_renderer* pcr)
 {
-	for (uint32_t i = 0; i < PIXELCHAR_RENDERER_MAX_FONTS; i++) if (pcr->backend.vulkan.font_info[i].init)
-	{
-		
-	}
+	if (pcr->backends_initialized & PIXELCHAR_BACKEND_VULKAN_BIT == 0) _DEBUG_CALLBACK_ERROR_RETURN("pixelchar_renderer_backend_vulkan_deinit: vulkan backend not initialized");
 
-	vkDeviceWaitIdle(pcr->backend.vulkan.device);
+	vkDeviceWaitIdle(pcr->backends.vulkan.device);
 
-	vkDestroyDescriptorPool(pcr->backend.vulkan.device, pcr->backend.vulkan.descriptor_pool, 0);
+	vkDestroyDescriptorPool(pcr->backends.vulkan.device, pcr->backends.vulkan.descriptor_pool, 0);
 
-	vkUnmapMemory(pcr->backend.vulkan.device, pcr->backend.vulkan.vertex_index_staging_buffer_memory);
-	vkFreeMemory(pcr->backend.vulkan.device, pcr->backend.vulkan.vertex_index_staging_buffer_memory, 0);
-	vkDestroyBuffer(pcr->backend.vulkan.device, pcr->backend.vulkan.vertex_index_buffer, 0);
-	vkDestroyBuffer(pcr->backend.vulkan.device, pcr->backend.vulkan.staging_buffer, 0);
+	vkUnmapMemory(pcr->backends.vulkan.device, pcr->backends.vulkan.vertex_index_staging_buffer_memory);
+	vkFreeMemory(pcr->backends.vulkan.device, pcr->backends.vulkan.vertex_index_staging_buffer_memory, 0);
+	vkDestroyBuffer(pcr->backends.vulkan.device, pcr->backends.vulkan.vertex_index_buffer, 0);
+	vkDestroyBuffer(pcr->backends.vulkan.device, pcr->backends.vulkan.staging_buffer, 0);
 
-	vkFreeCommandBuffers(pcr->backend.vulkan.device, pcr->backend.vulkan.transfer_command_pool, 1, &pcr->backend.vulkan.transfer_cmd);
-	vkDestroyCommandPool(pcr->backend.vulkan.device, pcr->backend.vulkan.transfer_command_pool, 0);
+	vkFreeCommandBuffers(pcr->backends.vulkan.device, pcr->backends.vulkan.cmd_pool, 1, &pcr->backends.vulkan.cmd);
+	vkDestroyCommandPool(pcr->backends.vulkan.device, pcr->backends.vulkan.cmd_pool, 0);
 
-	vkDestroyPipeline(pcr->backend.vulkan.device, pcr->backend.vulkan.pipeline, 0);
-	vkDestroyPipelineLayout(pcr->backend.vulkan.device, pcr->backend.vulkan.pipe_layout, 0);
-	vkDestroyDescriptorSetLayout(pcr->backend.vulkan.device, pcr->backend.vulkan.set_layout, 0);
+	vkDestroyPipeline(pcr->backends.vulkan.device, pcr->backends.vulkan.pipeline, 0);
+	vkDestroyPipelineLayout(pcr->backends.vulkan.device, pcr->backends.vulkan.pipe_layout, 0);
+	vkDestroyDescriptorSetLayout(pcr->backends.vulkan.device, pcr->backends.vulkan.set_layout, 0);
+
+	for (uint32_t i = 0; i < PIXELCHAR_RENDERER_MAX_FONTS; i++) if (pcr->fonts[i] != NULL)
+		_pixelchar_font_backend_vulkan_reference_subtract(pcr->fonts[i]);
+
+	pcr->backends_initialized &= (~PIXELCHAR_BACKEND_VULKAN_BIT);
 
 	return PIXELCHAR_SUCCESS;
 }
 
-uint32_t _pixelchar_renderer_backend_vulkan_add_font(struct pixelchar_renderer* pcr, void* font, uint32_t index)
-{
-
-}
 
 void pixelchar_renderer_backend_vulkan_render(struct pixelchar_renderer* pcr, VkCommandBuffer cmd, uint32_t width, uint32_t height)
 {
-	if (pcr->backend_selected != _PIXELCHAR_BACKEND_VULKAN) _DEBUG_CALLBACK_ERROR_RETURN("pixelchar_renderer_backend_vulkan_render: vulkan backend not initialized");
+	if (pcr->backends_initialized & PIXELCHAR_BACKEND_VULKAN_BIT == 0) _DEBUG_CALLBACK_ERROR_RETURN("pixelchar_renderer_backend_vulkan_render: vulkan backend not initialized");
 
-	memcpy(pcr->backend.vulkan.vertex_index_staging_buffer_host_handle, pcr->char_buffer, sizeof(struct internal_pixelchar) * pcr->char_count);
+	if (pcr->char_count == 0) return;
+
+	memcpy(pcr->backends.vulkan.vertex_index_staging_buffer_host_handle, pcr->char_buffer, sizeof(struct internal_pixelchar) * pcr->char_count);
 
 	vkCmdBindDescriptorSets(
 		cmd,
 		VK_PIPELINE_BIND_POINT_GRAPHICS,
-		pcr->backend.vulkan.pipe_layout,
+		pcr->backends.vulkan.pipe_layout,
 		0,
 		1,
-		&pcr->backend.vulkan.descriptor_set,
+		&pcr->backends.vulkan.descriptor_set,
 		0,
 		0
 	);
 
-	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pcr->backend.vulkan.pipeline);
+	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pcr->backends.vulkan.pipeline);
 
 	VkDeviceSize device_size = 0;
-	vkCmdBindVertexBuffers(cmd, 0, 1, &pcr->backend.vulkan.vertex_index_buffer, &device_size);
-	vkCmdBindIndexBuffer(cmd, pcr->backend.vulkan.vertex_index_buffer, sizeof(struct internal_pixelchar) * pcr->char_buffer_length, VK_INDEX_TYPE_UINT16);
+	vkCmdBindVertexBuffers(cmd, 0, 1, &pcr->backends.vulkan.vertex_index_buffer, &device_size);
+	vkCmdBindIndexBuffer(cmd, pcr->backends.vulkan.vertex_index_buffer, sizeof(struct internal_pixelchar) * pcr->char_buffer_length, VK_INDEX_TYPE_UINT16);
 
 	struct vulkan_push_constants push_constants;
 	push_constants.screen_size.width = width;
@@ -634,7 +537,7 @@ void pixelchar_renderer_backend_vulkan_render(struct pixelchar_renderer* pcr, Vk
 
 		vkCmdPushConstants(
 			cmd,
-			pcr->backend.vulkan.pipe_layout,
+			pcr->backends.vulkan.pipe_layout,
 			VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
 			0,
 			sizeof(struct vulkan_push_constants),
@@ -643,4 +546,6 @@ void pixelchar_renderer_backend_vulkan_render(struct pixelchar_renderer* pcr, Vk
 
 		vkCmdDrawIndexed(cmd, 6, pcr->char_count, 0, 0, 0);
 	}
+
+	pcr->char_count = 0;
 }

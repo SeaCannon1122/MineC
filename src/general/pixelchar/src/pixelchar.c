@@ -1,4 +1,4 @@
-#include "pixelchar.h"
+#include "../include/pixelchar/pixelchar.h"
 
 PIXELCHAR_DEBUG_CALLBACK_FUNCTION debug_callback_function = NULL;
 

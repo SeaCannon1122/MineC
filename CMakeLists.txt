@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
 
 add_subdirectory(src/general/pixelchar)
+include_directories(src/general/pixelchar/include)
 
 project(blocks2)
 
@@ -91,16 +92,12 @@ if(WIN32)
         LINK_FLAGS "/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup"
     )
 
-    set_target_properties(blocks_test2 PROPERTIES
-        LINK_FLAGS "/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup"
-    )
-
 elseif(UNIX)
 
     find_package(X11 REQUIRED)
     include_directories(${X11_INCLUDE_DIR})
-    target_link_libraries(blocks_client X11 pthread m)
-    target_link_libraries(blocks_test2 X11 pthread m)
+    target_link_libraries(blocks_client PUBLIC X11 pthread m)
+    target_link_libraries(blocks_test2 PUBLIC X11 pthread m)
     
 endif()
 
