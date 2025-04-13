@@ -15,6 +15,8 @@ struct pixelchar_font_backend_vulkan
 	VkDeviceMemory memory;
 };
 
+struct pixelchar_font;
+
 #ifndef _PIXELCHAR_INTERNAL_EXCLUDE
 
 uint32_t _pixelchar_font_backend_vulkan_reference_add(struct pixelchar_font* font, struct pixelchar_renderer* pcr, uint32_t index);

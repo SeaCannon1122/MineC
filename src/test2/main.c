@@ -418,21 +418,29 @@ int main()
 	c[0].background_color[1] = 0;
 	c[0].background_color[2] = 0;
 	c[0].background_color[3] = 255;
-	c[0].masks = PIXELCHAR_MASK_CURSIVE | PIXELCHAR_MASK_SHADOW | PIXELCHAR_MASK_BACKGROUND;
+	c[0].masks = PIXELCHAR_MASK_BACKGROUND;
 	c[0].position[0][0] = 100;
 	c[0].position[0][1] = 100;
-	c[0].position[1][0] = 300;
-	c[0].position[1][1] = 300;
+	c[0].position[1][0] = 180;
+	c[0].position[1][1] = 228;
+	c[0].font = 0;
+	c[0].value = 'A';
 
 	c[1].color[0] = 0;
 	c[1].color[1] = 0;
 	c[1].color[2] = 255;
 	c[1].color[3] = 255;
-	c[1].masks = 0;
-	c[1].position[0][0] = 100;
+	c[1].background_color[0] = 255;
+	c[1].background_color[1] = 0;
+	c[1].background_color[2] = 0;
+	c[1].background_color[3] = 255;
+	c[1].masks = PIXELCHAR_MASK_CURSIVE | PIXELCHAR_MASK_SHADOW | PIXELCHAR_MASK_BACKGROUND;
+	c[1].position[0][0] = 250;
 	c[1].position[0][1] = 100;
-	c[1].position[1][0] = 132;
-	c[1].position[1][1] = 132;
+	c[1].position[1][0] = 350;
+	c[1].position[1][1] = 200;
+	c[1].font = 0;
+	c[1].value = 'A';
 
 	free(vert_src);
 	free(frag_src);
@@ -463,18 +471,18 @@ else name[i] = (struct pixelchar){ { r, g, b, a }, { r_b, g_b, b_b, a_b }, str[i
 			//chars[1].masks |= 1;
 			//pixelchar_renderer_queue_pixelchars(&pcr, NULL, 0);
 
-			pixelchar_renderer_queue_pixelchars(&pcr, c, 1);
+			pixelchar_renderer_queue_pixelchars(&pcr, c, 2);
 
 			VKCall(vkWaitForFences(device, 1, &queue_fence, VK_TRUE, UINT64_MAX));
-
-			VKCall(vkResetFences(device, 1, &queue_fence));
 
 			uint32_t swapchain_image_index;
 			if (vkAcquireNextImageKHR(device, swapchain, 0, aquire_semaphore, 0, &swapchain_image_index) != VK_SUCCESS) {
 				printf("[RENDERER BACKEND] Error aquireing next swapchain image\n");
 
-				return 1;
+				continue;
 			}
+
+			VKCall(vkResetFences(device, 1, &queue_fence));
 
 			VKCall(vkResetCommandBuffer(cmd, 0));
 
@@ -572,4 +580,5 @@ else name[i] = (struct pixelchar){ { r, g, b, a }, { r_b, g_b, b_b, a_b }, str[i
 	application_window_destroy(&window);
 
 	platform_exit();
+
 }

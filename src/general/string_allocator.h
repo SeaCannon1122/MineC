@@ -4,6 +4,7 @@
 #define STRING_ALLOCATOR_H
 
 #include <stdint.h>
+#include <stddef.h>
 
 void* string_allocator_new(size_t min_arena_size);
 

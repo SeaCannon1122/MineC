@@ -26,10 +26,12 @@ struct pixelchar_renderer_backend_vulkan
 	VkBuffer vertex_index_buffer;
 	VkBuffer staging_buffer;
 	VkDeviceMemory vertex_index_staging_buffer_memory;
-	void* vertex_index_staging_buffer_host_handle;
+	void* vertex_index_buffer_host_handle;
+	void* staging_buffer_host_handle;
 
 	VkQueue queue;
 	uint32_t queue_index;
+	VkFence fence;
 	VkCommandPool cmd_pool;
 	VkCommandBuffer cmd;
 

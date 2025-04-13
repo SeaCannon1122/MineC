@@ -26,7 +26,7 @@ struct pixelchar_font
 	uint32_t* mappings;
 
 	uint32_t bitmaps_count;
-	uint32_t* widths;
+	uint8_t* widths;
 	void* bitmaps;
 
 	uint32_t references;

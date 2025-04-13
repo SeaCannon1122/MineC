@@ -7,15 +7,15 @@ uint32_t _pixelchar_font_backend_vulkan_reference_add(struct pixelchar_font* fon
 
 		VkBufferCreateInfo buffer_info = { 0 };
 		buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		buffer_info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+		buffer_info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 		buffer_info.size = font->bitmaps_count * font->resolution * font->resolution / 8;
 		buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
 		VK_CALL_FUNCTION(
 			vkCreateBuffer(pcr->backends.vulkan.device, &buffer_info, 0, &font->backends.vulkan.buffer),
-			_DEBUG_CALLBACK_CRITICAL_ERROR("_pixelchar_font_backend_vulkan_reference_add: vkCreateBuffer failed");
-		goto vkCreateBuffer_filed
-			);
+			_DEBUG_CALLBACK_CRITICAL_ERROR("_pixelchar_font_backend_vulkan_reference_add: vkCreateBuffer failed"),
+			goto vkCreateBuffer_filed
+		);
 
 		VkMemoryRequirements memory_requirements;
 		vkGetBufferMemoryRequirements(pcr->backends.vulkan.device, font->backends.vulkan.buffer, &memory_requirements);
@@ -62,15 +62,29 @@ uint32_t _pixelchar_font_backend_vulkan_reference_add(struct pixelchar_font* fon
 		{
 			VkDeviceSize chunk_size = (PIXELCHAR_VULKAN_STAGING_SIZE < total_size - offset ? PIXELCHAR_VULKAN_STAGING_SIZE : total_size - offset);
 
-			memcpy(pcr->backends.vulkan.vertex_index_staging_buffer_host_handle, (size_t)font->bitmaps + offset, chunk_size);
+			memcpy(pcr->backends.vulkan.staging_buffer_host_handle, (size_t)font->bitmaps + offset, chunk_size);
 
-			vkResetCommandBuffer(pcr->backends.vulkan.cmd, 0);
+			VK_CALL_FUNCTION(
+				vkResetCommandBuffer(pcr->backends.vulkan.cmd, 0),
+				_DEBUG_CALLBACK_CRITICAL_ERROR("_pixelchar_font_backend_vulkan_reference_add: vkResetCommandBuffer failed"),
+				goto vkBindBufferMemory_failed
+			);
+
+			VK_CALL_FUNCTION(
+				vkResetFences(pcr->backends.vulkan.device, 1, &pcr->backends.vulkan.fence),
+				_DEBUG_CALLBACK_CRITICAL_ERROR("_pixelchar_font_backend_vulkan_reference_add: vkResetFences failed"),
+				goto vkBindBufferMemory_failed
+			);
 
 			VkCommandBufferBeginInfo begin_info = { 0 };
 			begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 			begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-			vkBeginCommandBuffer(pcr->backends.vulkan.cmd, &begin_info);
+			VK_CALL_FUNCTION(
+				vkBeginCommandBuffer(pcr->backends.vulkan.cmd, &begin_info),
+				_DEBUG_CALLBACK_CRITICAL_ERROR("_pixelchar_font_backend_vulkan_reference_add: vkBeginCommandBuffer failed"),
+				goto vkBindBufferMemory_failed
+			);
 
 			VkBufferCopy copy_region = { 0 };
 			copy_region.srcOffset = 0;
@@ -79,7 +93,12 @@ uint32_t _pixelchar_font_backend_vulkan_reference_add(struct pixelchar_font* fon
 
 			vkCmdCopyBuffer(pcr->backends.vulkan.cmd, pcr->backends.vulkan.staging_buffer, font->backends.vulkan.buffer, 1, &copy_region);
 
-			vkEndCommandBuffer(pcr->backends.vulkan.cmd);
+
+			VK_CALL_FUNCTION(
+				vkEndCommandBuffer(pcr->backends.vulkan.cmd),
+				_DEBUG_CALLBACK_CRITICAL_ERROR("_pixelchar_font_backend_vulkan_reference_add: vkEndCommandBuffer failed"),
+				goto vkBindBufferMemory_failed
+			);
 
 			// Submit
 			VkSubmitInfo submit_info = { 0 };
@@ -88,15 +107,12 @@ uint32_t _pixelchar_font_backend_vulkan_reference_add(struct pixelchar_font* fon
 			submit_info.pCommandBuffers = &pcr->backends.vulkan.cmd;
 
 			VK_CALL_FUNCTION(
-				vkQueueSubmit(pcr->backends.vulkan.queue, 1, &submit_info, VK_NULL_HANDLE),
+				vkQueueSubmit(pcr->backends.vulkan.queue, 1, &submit_info, pcr->backends.vulkan.fence),
 				_DEBUG_CALLBACK_CRITICAL_ERROR("_pixelchar_font_backend_vulkan_reference_add: vkQueueSubmit failed"),
 				goto vkBindBufferMemory_failed
 			);
-			VK_CALL_FUNCTION(
-				vkQueueWaitIdle(pcr->backends.vulkan.queue),
-				_DEBUG_CALLBACK_CRITICAL_ERROR("_pixelchar_font_backend_vulkan_reference_add: vkQueueWaitIdle failed"),
-				goto vkBindBufferMemory_failed
-			);
+
+			vkWaitForFences(pcr->backends.vulkan.device, 1, &pcr->backends.vulkan.fence, 1, UINT64_MAX);
 
 			offset += chunk_size;
 		}
@@ -106,8 +122,7 @@ uint32_t _pixelchar_font_backend_vulkan_reference_add(struct pixelchar_font* fon
 
 	VkDescriptorBufferInfo buffer_info = { 0 };
 	buffer_info.buffer = font->backends.vulkan.buffer;
-	buffer_info.range = font->bitmaps_count * font->resolution * font->resolution / 8;
-	buffer_info.offset = 0;
+	buffer_info.range = VK_WHOLE_SIZE;
 
 	VkWriteDescriptorSet buffer_write = { 0 };
 	buffer_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;

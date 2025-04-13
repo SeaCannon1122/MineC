@@ -3,6 +3,8 @@
 #include "pixelchar_vulkan_vertex_shader.h"
 #include "pixelchar_vulkan_fragment_shader.h"
 
+#define VULKAN_PIXELFONT_INVALID 255
+
 struct vulkan_push_constants
 {
 	struct
@@ -383,10 +385,12 @@ uint32_t pixelchar_renderer_backend_vulkan_init(
 	);
 
 	VK_CALL_FUNCTION(
-		vkMapMemory(backend.device, backend.vertex_index_staging_buffer_memory, 0, memory_size, 0, &backend.vertex_index_staging_buffer_host_handle),
+		vkMapMemory(backend.device, backend.vertex_index_staging_buffer_memory, 0, memory_size, 0, &backend.vertex_index_buffer_host_handle),
 		_DEBUG_CALLBACK_CRITICAL_ERROR("pixelchar_renderer_backend_vulkan_init: vkMapMemory failed"),
 		goto vkMapMemory_failed
 	);
+
+	backend.staging_buffer_host_handle = (size_t)backend.vertex_index_buffer_host_handle + offset;
 
 	VkDescriptorPoolSize pool_size = { 0 };
 	pool_size.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
@@ -416,7 +420,17 @@ uint32_t pixelchar_renderer_backend_vulkan_init(
 		goto vkAllocateDescriptorSets_failed
 	);
 
-	uint16_t* index_buffer_ptr = (size_t)backend.vertex_index_staging_buffer_host_handle + sizeof(struct internal_pixelchar) * pcr->char_buffer_length;
+	VkFenceCreateInfo fence_info = { 0 };
+	fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+	fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+	VK_CALL_FUNCTION(
+		vkCreateFence(backend.device, &fence_info, 0, &backend.fence),
+		_DEBUG_CALLBACK_CRITICAL_ERROR("pixelchar_renderer_backend_vulkan_init: vkCreateFence failed"),
+		goto vkCreateFence_failed
+	);
+
+	uint16_t* index_buffer_ptr = (size_t)backend.vertex_index_buffer_host_handle + sizeof(struct internal_pixelchar) * pcr->char_buffer_length;
 	for (uint32_t i = 0; i < pcr->char_buffer_length; i++)
 	{
 		index_buffer_ptr[i * 6 + 0] = 4 * i;
@@ -438,6 +452,7 @@ uint32_t pixelchar_renderer_backend_vulkan_init(
 
 	return PIXELCHAR_SUCCESS;
 
+vkCreateFence_failed:
 vkAllocateDescriptorSets_failed:
 	vkDestroyDescriptorPool(backend.device, backend.descriptor_pool, 0);
 vkCreateDescriptorPool_failed:
@@ -475,6 +490,8 @@ void pixelchar_renderer_backend_vulkan_deinit(struct pixelchar_renderer* pcr)
 
 	vkDeviceWaitIdle(pcr->backends.vulkan.device);
 
+	vkDestroyFence(pcr->backends.vulkan.device, pcr->backends.vulkan.fence, 0);
+
 	vkDestroyDescriptorPool(pcr->backends.vulkan.device, pcr->backends.vulkan.descriptor_pool, 0);
 
 	vkUnmapMemory(pcr->backends.vulkan.device, pcr->backends.vulkan.vertex_index_staging_buffer_memory);
@@ -504,7 +521,27 @@ void pixelchar_renderer_backend_vulkan_render(struct pixelchar_renderer* pcr, Vk
 
 	if (pcr->char_count == 0) return;
 
-	memcpy(pcr->backends.vulkan.vertex_index_staging_buffer_host_handle, pcr->char_buffer, sizeof(struct internal_pixelchar) * pcr->char_count);
+	struct internal_pixelchar* chars = pcr->char_buffer;
+
+	for (uint32_t i = 0; i < pcr->char_count; i++)
+	{
+		uint32_t value = pcr->char_buffer[i].value;
+		if (chars[i].font >= PIXELCHAR_RENDERER_MAX_FONTS) 
+			chars[i].font = VULKAN_PIXELFONT_INVALID;
+		else if (pcr->fonts[chars[i].font] == NULL) 
+			chars[i].font = VULKAN_PIXELFONT_INVALID;
+		else {
+			if (value >= pcr->fonts[chars[i].font]->mappings_count)
+				chars[i].bitmap_index = 0;
+			else
+				chars[i].bitmap_index = pcr->fonts[chars[i].font]->mappings[value];
+
+			chars[i].bitmap_width = pcr->fonts[chars[i].font]->widths[chars[i].bitmap_index];
+			chars[i].font_resolution = pcr->fonts[chars[i].font]->resolution;
+		}
+	}
+
+	memcpy(pcr->backends.vulkan.vertex_index_buffer_host_handle, pcr->char_buffer, sizeof(struct internal_pixelchar) * pcr->char_count);
 
 	vkCmdBindDescriptorSets(
 		cmd,

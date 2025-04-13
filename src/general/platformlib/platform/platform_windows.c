@@ -67,7 +67,7 @@ void* dynamic_library_load(uint8_t* src)
 
 void (*dynamic_library_get_function(void* library_handle, uint8_t* function_name)) (void) 
 {
-	return GetProcAddress(library_handle, function_name);
+	return (void (*)(void)) GetProcAddress(library_handle, function_name);
 }
 
 void dynamic_library_unload(void* library_handle) 

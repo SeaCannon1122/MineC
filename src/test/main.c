@@ -2,7 +2,7 @@
 #include <string.h>
 #include <malloc.h>
 
-#include "general/pixelchar/src/pixelchar.h"
+#include <pixelchar/pixelchar.h>
 
 
 int main(int argc, char* argv[]) {
@@ -11,17 +11,63 @@ int main(int argc, char* argv[]) {
 	for (int i = 0; i < 256; i++) mapping_table[i] = 0;
 	mapping_table['A'] = 1;
 
-	uint32_t bitmaps[2][2];
-	bitmaps[0][0] = 0b01010101101010100101010110101010;
-	bitmaps[0][1] = 0b01010101101010100101010110101010;
+	uint16_t bitmaps[2][16] = {
+		{
+			0b0000000000111111,
+			0b0000000000111111,
 
-	bitmaps[1][0] = 0xffff0000;
-	bitmaps[1][1] = 0xf0f0f0f0;
+			0b0000000000001100,
+			0b0000000000001100,
 
-	uint8_t widths[2] = { 8, 8 };
+			0b0000000000001100,
+			0b0000000000001100,
+
+			0b0000000000001100,
+			0b0000000000001100,
+
+			0b0000000000001100,
+			0b0000000000001100,
+
+			0b0000000000001100,
+			0b0000000000001100,
+
+			0b0000000000111111,
+			0b0000000000111111,
+
+			0b0000000000000000,
+			0b0000000000000000,
+		},
+		{
+			0b0000000011111100,
+			0b0000000011111100,
+
+			0b0000001100000011,
+			0b0000001100000011,
+
+			0b0000001111111111,
+			0b0000001111111111,
+
+			0b0000001100000011,
+			0b0000001100000011,
+
+			0b0000001100000011,
+			0b0000001100000011,
+
+			0b0000001100000011,
+			0b0000001100000011,
+
+			0b0000001100000011,
+			0b0000001100000011,
+
+			0b0000000000000000,
+			0b0000000000000000,
+		},
+	};
+
+	uint8_t widths[2] = { 6, 10 };
 
 	struct pixelchar_font_metadata metadata;
-	metadata.resolution = PIXELCHAR_FONT_RESOLUTION_8X8;
+	metadata.resolution = PIXELCHAR_FONT_RESOLUTION_16X16;
 	metadata.mappings_count = sizeof(mapping_table) / sizeof(mapping_table[0]);
 	metadata.bitmaps_count = sizeof(bitmaps) / sizeof(bitmaps[0]);
 	metadata.total_size = sizeof(metadata) + sizeof(mapping_table) + sizeof(widths) + sizeof(bitmaps);

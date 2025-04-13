@@ -5,40 +5,6 @@
 
 #include "pixelchar_renderer.h"
 
-struct pixelchar {
-	uint8_t color[4];
-	uint8_t background_color[4];
-	uint32_t value;
-	uint16_t font;
-	uint16_t masks;
-	uint16_t position[2][2];
-};
-
-enum pixelchar_mask {
-	PIXELCHAR_MASK_UNDERLINE = 1,
-	PIXELCHAR_MASK_CURSIVE = 2,
-	PIXELCHAR_MASK_SHADOW = 4,
-	PIXELCHAR_MASK_BACKGROUND = 8,
-};
-
-enum pixelchar_return_type
-{
-	PIXELCHAR_SUCCESS = 0,
-	PIXELCHAR_FAILED = 1,
-};
-
-typedef void (*PIXELCHAR_DEBUG_CALLBACK_FUNCTION)(uint32_t type, uint8_t* message);
-
-enum pixelchar_debug_message_type
-{
-	PIXELCHAR_DEBUG_MESSAGE_TYPE_WARNING,
-	PIXELCHAR_DEBUG_MESSAGE_TYPE_ERROR,
-	PIXELCHAR_DEBUG_MESSAGE_TYPE_CRITICAL_ERROR,
-};
-
-
-uint32_t pixelchar_set_debug_callback(PIXELCHAR_DEBUG_CALLBACK_FUNCTION callback_function);
-
 #ifndef _PIXELCHAR_INTERNAL_EXCLUDE
 
 #include <stdlib.h>

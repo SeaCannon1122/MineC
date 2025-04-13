@@ -15,8 +15,7 @@ struct window_state
 {
 	Window window;
 	XIC ic;
-	unsigned int* pixels;
-	int32_t active;
+
 	int32_t window_width;
 	int32_t window_height;
 	int32_t window_x_pos;
@@ -33,10 +32,6 @@ int32_t screen;
 Atom wm_delete_window;
 XIM xim;
 
-int32_t move_event = 0;
-int32_t move_window;
-int32_t move_x;
-int32_t move_y;
 
 void* dynamic_library_load(uint8_t* src) 
 {
@@ -148,8 +143,6 @@ uint32_t window_create(uint32_t posx, uint32_t posy, uint32_t width, uint32_t he
 
 	XIC ic = XCreateIC(xim, XNInputStyle, XIMPreeditNothing | XIMStatusNothing, XNClientWindow, window, NULL);
 
-	unsigned int* pixels = malloc(display_width * display_height * sizeof(unsigned int));
-
 	XSelectInput(display, window, ExposureMask | KeyPressMask | KeyReleaseMask | StructureNotifyMask | ButtonPressMask);
 	XStoreName(display, window, name);
 	XSetWMProtocols(display, window, &wm_delete_window, 1);
@@ -157,12 +150,10 @@ uint32_t window_create(uint32_t posx, uint32_t posy, uint32_t width, uint32_t he
 
 	window_states[next_free_window_index].window = window;
 	window_states[next_free_window_index].ic = ic;
-	window_states[next_free_window_index].pixels = pixels;
 	window_states[next_free_window_index].window_width = width;
 	window_states[next_free_window_index].window_height = height;
 	window_states[next_free_window_index].window_x_pos = posx;
 	window_states[next_free_window_index].window_y_pos = posy;
-	window_states[next_free_window_index].active = 1;
 
 	return next_free_window_index;
 }
@@ -197,23 +188,15 @@ int32_t window_is_selected(uint32_t window)
 	return focused_window == window_states[window].window;
 }
 
-int32_t window_is_active(uint32_t window) 
-{
-	return window_states[window].active;
-}
-
 void window_destroy(uint32_t window) 
 {
 
-	if (window_states[window].active) XDestroyWindow(display, window_states[window].window);
+	XDestroyWindow(display, window_states[window].window);
 	window_states[window].window = 0;
-
-	
 }
 
 struct point2d_int window_get_mouse_cursor_position(uint32_t window) 
 {
-	if (!window_states[window].active) return (struct point2d_int) { -1, -1 };
 	Window root, child;
 	int32_t root_x, root_y;
 	int32_t win_x, win_y;
@@ -222,8 +205,8 @@ struct point2d_int window_get_mouse_cursor_position(uint32_t window)
 	XQueryPointer(display, window_states[window].window, &root, &child, &root_x, &root_y, &win_x, &win_y, &mask);
 
 	struct point2d_int pos = { win_x + 1, win_y + 1 };
-
-	return pos;
+	if (pos.x > 0 && pos.x < window_states[window].window_width - 1 && pos.y > 0 && pos.y < window_states[window].window_height - 1) return pos;
+	else return (struct point2d_int) { -1, -1 };
 }
 
 void window_set_mouse_cursor_position(uint32_t window, int32_t x, int32_t y) 
@@ -248,128 +231,52 @@ VkResult destroy_vulkan_surface(VkInstance instance, VkSurfaceKHR surface)
 	return VK_SUCCESS;
 }
 
-uint32_t window_process_next_event(struct window_event* event) 
+int match_window(Display* dpy, XEvent* event, XPointer arg) {
+	Window target = *(Window*)arg;
+	return (event->xany.window == target);
+}
+
+uint32_t window_process_next_event(uint32_t window, struct window_event* event)
 {
 	XEvent xevent;
-
-	if (move_event) {
-		move_event = 0;
-
-		window_states[move_window].window_x_pos = move_x;
-		window_states[move_window].window_y_pos = move_y;
-
-		if (event) {
-			event->type = WINDOW_EVENT_MOVE;
-			event->window = move_window;
-			event->info.window_event_move.x_position = move_x;
-			event->info.window_event_move.y_position = move_y;
-		}
-
-		return 1;
-	}
-
-	int32_t is_trackable_window_event = 0;
-
-	while (XPending(display)) {
-		XNextEvent(display, &xevent);
-
-		int32_t window_index = 0;
-		for (; window_index < MAX_WINDOW_COUNT; window_index++) {
-			if (window_states[window_index].window == xevent.xany.window && window_states[window_index].active) break;
-		}
-		if (window_index == MAX_WINDOW_COUNT) continue;
-
+	
+	while (XCheckIfEvent(display, &xevent, match_window, (XPointer)&window_states[window].window))
+	{
 		switch (xevent.type) {
 
 		case ConfigureNotify: {
 
-			uint32_t new_width = (xevent.xconfigure.width > display_width ? display_width : xevent.xconfigure.width);
-			uint32_t new_heigt = (xevent.xconfigure.height > display_height ? display_height : xevent.xconfigure.height);
+			if (
+				xevent.xconfigure.width  != window_states[window].window_width | 
+				xevent.xconfigure.height != window_states[window].window_height |
+				xevent.xconfigure.x      != window_states[window].window_x_pos |
+				xevent.xconfigure.y      != window_states[window].window_y_pos
+			)
+			{
+				window_states[window].window_width  = xevent.xconfigure.width;
+				window_states[window].window_height = xevent.xconfigure.height;
+				window_states[window].window_x_pos  = xevent.xconfigure.x;
+				window_states[window].window_y_pos  = xevent.xconfigure.y;
 
-			if (new_width != window_states[window_index].window_width || new_heigt != window_states[window_index].window_height) {
-				is_trackable_window_event = 1;
+				event->type = WINDOW_EVENT_MOVE_SIZE;
+				event->info.event_move_size.width = xevent.xconfigure.width;
+				event->info.event_move_size.height = xevent.xconfigure.height;
+				event->info.event_move_size.position_x = xevent.xconfigure.x;
+				event->info.event_move_size.position_y = xevent.xconfigure.y;
 
-				window_states[window_index].window_width = new_width;
-				window_states[window_index].window_height = new_heigt;
-
-				if (event) {
-					event->type = WINDOW_EVENT_SIZE;
-					event->info.window_event_size.width = new_width;
-					event->info.window_event_size.height = new_heigt;
-				}
+				return 1;
 			}
-
-			uint32_t new_x_position = xevent.xconfigure.x;
-			uint32_t new_y_position = xevent.xconfigure.y;
-
-			if (new_x_position != window_states[window_index].window_x_pos || new_y_position != window_states[window_index].window_y_pos) {
-				if (is_trackable_window_event = 1) {
-					move_event = 1;
-					move_window = window_index;
-					move_x = new_x_position;
-					move_y = new_y_position;
-				}
-
-				else {
-					is_trackable_window_event = 1;
-
-					if (event) {
-						event->type = WINDOW_EVENT_MOVE;
-						event->info.window_event_move.x_position = new_x_position;
-						event->info.window_event_move.y_position = new_y_position;
-					}
-				}
-			}
-		
-			
 		} break;
 
 		case ClientMessage: {
-			if ((Atom)xevent.xclient.data.l[0] == wm_delete_window) {
-				is_trackable_window_event = 1;
+			if ((Atom)xevent.xclient.data.l[0] == wm_delete_window)
+			{
+				event->type = WINDOW_EVENT_DESTROY;
 
-				window_states[window_index].active = 0;
-				XDestroyWindow(display, window_states[window_index].window);
-
-				if (event) event->type = WINDOW_EVENT_DESTROY;
+				return 1;
 			}
 		} break;
 
-		case ButtonPress: {
-
-			if (xevent.xbutton.button == 4 || xevent.xbutton.button == 5) {
-				is_trackable_window_event = 1;
-
-				if (event) {
-					event->type = WINDOW_EVENT_MOUSE_SCROLL;
-
-					if (xevent.xbutton.button == 4) event->info.window_event_mouse_scroll.scroll_steps = 1;
-					else event->info.window_event_mouse_scroll.scroll_steps = -1;
-				}
-			}	
-
-		} break;
-
-		case KeyPress: {
-
-			KeySym keysym;
-			uint32_t utf8_char = 0;
-			uint32_t utf16_char = 0;
-			XComposeStatus compose_status;
-
-			int32_t len = Xutf8LookupString(window_states[window_index].ic, &xevent.xkey, utf8_char, sizeof(utf8_char), &keysym, &compose_status);
-
-			if (len) {
-				is_trackable_window_event = 1;
-			}
-
-		} break;
-
-		}
-
-		if (is_trackable_window_event) {
-			if (event) event->window = window_index;
-			return 1;
 		}
 	}
 
@@ -400,7 +307,6 @@ void platform_init()
 
 void platform_exit() 
 {
-	running = 0;
 	XCloseIM(xim);
 	XCloseDisplay(display);
 }
