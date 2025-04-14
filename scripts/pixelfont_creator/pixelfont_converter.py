@@ -27,7 +27,7 @@ def process_16x16_block(block):
     layout_bytes = struct.pack('32B', *layout)
 
     if max_width == 0:
-        max_width = 3
+        max_width = 6
 
     return max_width, layout_bytes
 
@@ -46,9 +46,6 @@ def png_to_pixelfont(input_png):
         for i in range(256):
             block = img.crop((i*16, 0, (i+1)*16, 16))  # Crop the 16x16 block
             max_width, layout_bytes = process_16x16_block(block)
-            
-            if i == 31:
-                max_width = 0
 
             # Pack the data: first 8 bytes for max width, then 32 bytes for layout (since it's 16x16)
             f.write(struct.pack('Q', max_width))  # Write max_width as a 64-bit integer

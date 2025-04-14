@@ -4,67 +4,48 @@
 
 #include <pixelchar/pixelchar.h>
 
+struct pixel_font {
+	struct {
+		uint64_t width;
+		int layout[8];
+	} char_font_entries[0x20000];
+};
+
+struct pixel_font* load_pixel_font(char* src) {
+
+	FILE* file = fopen(src, "rb");
+	if (file == NULL) return NULL;
+
+	fseek(file, 0, SEEK_END);
+	long fileSize = ftell(file);
+	rewind(file);
+
+	void* buffer = calloc(1, sizeof(struct pixel_font));
+	if (buffer == NULL) {
+		fclose(file);
+		return NULL;
+	}
+
+	size_t bytesRead = fread(buffer, 1, fileSize, file);
+
+	fclose(file);
+
+	return buffer;
+}
 
 int main(int argc, char* argv[]) {
 
-	uint32_t mapping_table[256];
-	for (int i = 0; i < 256; i++) mapping_table[i] = 0;
-	mapping_table['A'] = 1;
+	struct pixel_font* font = load_pixel_font("../../../resources/client/assets/fonts/debug.pixelfont");
 
-	uint16_t bitmaps[2][16] = {
-		{
-			0b0000000000111111,
-			0b0000000000111111,
+	uint32_t mapping_table[128];
+	uint16_t bitmaps[128][16];
+	uint8_t widths[128];
 
-			0b0000000000001100,
-			0b0000000000001100,
-
-			0b0000000000001100,
-			0b0000000000001100,
-
-			0b0000000000001100,
-			0b0000000000001100,
-
-			0b0000000000001100,
-			0b0000000000001100,
-
-			0b0000000000001100,
-			0b0000000000001100,
-
-			0b0000000000111111,
-			0b0000000000111111,
-
-			0b0000000000000000,
-			0b0000000000000000,
-		},
-		{
-			0b0000000011111100,
-			0b0000000011111100,
-
-			0b0000001100000011,
-			0b0000001100000011,
-
-			0b0000001111111111,
-			0b0000001111111111,
-
-			0b0000001100000011,
-			0b0000001100000011,
-
-			0b0000001100000011,
-			0b0000001100000011,
-
-			0b0000001100000011,
-			0b0000001100000011,
-
-			0b0000001100000011,
-			0b0000001100000011,
-
-			0b0000000000000000,
-			0b0000000000000000,
-		},
-	};
-
-	uint8_t widths[2] = { 6, 10 };
+	for (int i = 0; i < 128; i++) {
+		mapping_table[i] = i;
+		widths[i] = font->char_font_entries[i].width;
+		memcpy(&bitmaps[i][0], &font->char_font_entries[i].layout[0], 16 * 16 / 8);
+	}
 
 	struct pixelchar_font_metadata metadata;
 	metadata.resolution = PIXELCHAR_FONT_RESOLUTION_16X16;

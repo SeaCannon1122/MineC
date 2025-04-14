@@ -39,32 +39,38 @@ void main()
     masks = in_masks;
 	
     if ((draw_mode == 0 && (masks & PIXELCHAR_MASK_BACKGROUND) == 0) || (draw_mode == 1 && (masks & PIXELCHAR_MASK_SHADOW) == 0) || in_font == VULKAN_PIXELFONT_INVALID)
-        gl_Position = vec4(0.0, 0.0, 0.0, 0.0);
+        gl_Position = vec4(0.0, 0.0, 0.0, 1.0);
     else
     {
         char_dims = in_position.zw - in_position.xy;
     
-        vec2 vertex_position;
+        ivec2 vertex_position;
     
         if (gl_VertexIndex % 4 == 0)
-            vertex_position = vec2(-char_dims.y / 16, -(char_dims.y + 15) / 16);
+            vertex_position = ivec2(-char_dims.y / 16, -(char_dims.y + 15) / 16);
         else if (gl_VertexIndex % 4 == 1)
-            vertex_position = vec2(-char_dims.y / 16, char_dims.y + char_dims.y / 16);
+            vertex_position = ivec2(-char_dims.y / 16, 19 * char_dims.y / 16);
         else if (gl_VertexIndex % 4 == 2)
-            vertex_position = vec2(char_dims.x + (char_dims.y + 15) / 16, -(char_dims.y + 15) / 16);
+            vertex_position = ivec2(char_dims.x + (char_dims.y + 15) / 16, -(char_dims.y + 15) / 16);
         else if (gl_VertexIndex % 4 == 3)
-            vertex_position = vec2(char_dims.x + (char_dims.y + 15) / 16, char_dims.y + char_dims.y / 16);
+            vertex_position = ivec2(char_dims.x + (char_dims.y + 15) / 16, 19 * char_dims.y / 16);
 
-        fragment_position = vertex_position;
+        fragment_position = vec2(vertex_position);
         
-        vertex_position += vec2(in_position.xy);
+        vertex_position += in_position.xy;
         
-        if ((masks & PIXELCHAR_MASK_CURSIVE) != 0)
-            vertex_position.x += (float(char_dims.y * 7 / 8 + in_position.y) - vertex_position.y) / 2.0;
+        int vertex_position_y = vertex_position.y;
         
         if (draw_mode == 1)
-            vertex_position += (char_dims.y + 7) / 8;
+            vertex_position += (3 * char_dims.y / 8) / 5 + 1; //(char_dims.y + 7) / 8;
         
-        gl_Position = vec4((vertex_position * 2.0) / vec2(screen_size) - 1.0, 0.0, 1.0);
+        vec2 vertex_position_f = vec2(vertex_position);
+        
+        if ((masks & PIXELCHAR_MASK_CURSIVE) != 0)
+            vertex_position_f.x += float(char_dims.y * 7 / 8 + in_position.y - vertex_position_y) / 2.0;
+        
+        
+        
+        gl_Position = vec4((vertex_position_f * 2.0) / vec2(screen_size) - 1.0, 0.0, 1.0);
     }
 }

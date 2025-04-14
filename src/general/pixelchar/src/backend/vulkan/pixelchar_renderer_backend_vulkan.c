@@ -3,8 +3,6 @@
 #include "pixelchar_vulkan_vertex_shader.h"
 #include "pixelchar_vulkan_fragment_shader.h"
 
-#define VULKAN_PIXELFONT_INVALID 255
-
 struct vulkan_push_constants
 {
 	struct
@@ -55,8 +53,8 @@ uint32_t pixelchar_renderer_backend_vulkan_init(
 	VkShaderModuleCreateInfo shader_info = { 0 };
 	shader_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 
-	shader_info.pCode = (vertex_shader_custom == 0 ? vertex_shader_default : vertex_shader_custom);
-	shader_info.codeSize = (vertex_shader_custom == 0 ? vertex_shader_default_len : vertex_shader_custom_length);
+	shader_info.pCode = (vertex_shader_custom == 0 ? vertex_shader_code : vertex_shader_custom);
+	shader_info.codeSize = (vertex_shader_custom == 0 ? vertex_shader_code_len : vertex_shader_custom_length);
 
 	VK_CALL_FUNCTION(
 		vkCreateShaderModule(backend.device, &shader_info, 0, &vertex_shader),
@@ -64,8 +62,8 @@ uint32_t pixelchar_renderer_backend_vulkan_init(
 		goto vertex_vkCreateShaderModule_failed
 	);
 
-	shader_info.pCode = (fragment_shader_custom == 0 ? fragment_shader_default : fragment_shader_custom);
-	shader_info.codeSize = (fragment_shader_custom == 0 ? fragment_shader_default_len : fragment_shader_custom_length);
+	shader_info.pCode = (fragment_shader_custom == 0 ? fragment_shader_code : fragment_shader_custom);
+	shader_info.codeSize = (fragment_shader_custom == 0 ? fragment_shader_code_len : fragment_shader_custom_length);
 
 	VK_CALL_FUNCTION(
 		vkCreateShaderModule(backend.device, &shader_info, 0, &fragment_shader),
@@ -515,31 +513,13 @@ void pixelchar_renderer_backend_vulkan_deinit(struct pixelchar_renderer* pcr)
 }
 
 
-void pixelchar_renderer_backend_vulkan_render(struct pixelchar_renderer* pcr, VkCommandBuffer cmd, uint32_t width, uint32_t height)
+void pixelchar_renderer_backend_vulkan_render(struct pixelchar_renderer* pcr, VkCommandBuffer cmd, uint32_t width, uint32_t height, float shadow_devisor_r, float shadow_devisor_g, float shadow_devisor_b, float shadow_devisor_a)
 {
 	if (pcr->backends_initialized & PIXELCHAR_BACKEND_VULKAN_BIT == 0) _DEBUG_CALLBACK_ERROR_RETURN("pixelchar_renderer_backend_vulkan_render: vulkan backend not initialized");
 
 	if (pcr->char_count == 0) return;
 
-	struct internal_pixelchar* chars = pcr->char_buffer;
-
-	for (uint32_t i = 0; i < pcr->char_count; i++)
-	{
-		uint32_t value = pcr->char_buffer[i].value;
-		if (chars[i].font >= PIXELCHAR_RENDERER_MAX_FONTS) 
-			chars[i].font = VULKAN_PIXELFONT_INVALID;
-		else if (pcr->fonts[chars[i].font] == NULL) 
-			chars[i].font = VULKAN_PIXELFONT_INVALID;
-		else {
-			if (value >= pcr->fonts[chars[i].font]->mappings_count)
-				chars[i].bitmap_index = 0;
-			else
-				chars[i].bitmap_index = pcr->fonts[chars[i].font]->mappings[value];
-
-			chars[i].bitmap_width = pcr->fonts[chars[i].font]->widths[chars[i].bitmap_index];
-			chars[i].font_resolution = pcr->fonts[chars[i].font]->resolution;
-		}
-	}
+	_pixelchar_renderer_render_convert_to_internal_characters(pcr);
 
 	memcpy(pcr->backends.vulkan.vertex_index_buffer_host_handle, pcr->char_buffer, sizeof(struct internal_pixelchar) * pcr->char_count);
 
@@ -563,10 +543,10 @@ void pixelchar_renderer_backend_vulkan_render(struct pixelchar_renderer* pcr, Vk
 	struct vulkan_push_constants push_constants;
 	push_constants.screen_size.width = width;
 	push_constants.screen_size.height = height;
-	push_constants.shadow_color_devisor.r = 4.0;
-	push_constants.shadow_color_devisor.g = 4.0;
-	push_constants.shadow_color_devisor.b = 4.0;
-	push_constants.shadow_color_devisor.a = 1.4;
+	push_constants.shadow_color_devisor.r = shadow_devisor_r;
+	push_constants.shadow_color_devisor.g = shadow_devisor_g;
+	push_constants.shadow_color_devisor.b = shadow_devisor_b;
+	push_constants.shadow_color_devisor.a = shadow_devisor_a;
 
 	for (uint32_t char_render_mode = 0; char_render_mode < 3; char_render_mode++)
 	{

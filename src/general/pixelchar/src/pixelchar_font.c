@@ -78,3 +78,18 @@ uint32_t pixelchar_font_destroy(struct pixelchar_font* font)
 
 	return PIXELCHAR_SUCCESS;
 }
+
+uint32_t pixelchar_font_character_pixel_width(struct pixelchar_font* font, uint32_t character, uint32_t target_height)
+{
+	uint32_t bitmap_index;
+
+	if (character >= font->mappings_count) bitmap_index = 0;
+	else bitmap_index = font->mappings[character];
+
+	return (font->widths[bitmap_index] * target_height + font->resolution -1) / font->resolution;
+}
+
+uint32_t pixelchar_font_character_pixel_offset(struct pixelchar_font* font, uint32_t character, uint32_t target_width, uint32_t target_height, uint32_t next_target_height)
+{
+	return target_width + (target_height + 15) / 16 + next_target_height / 16;
+}

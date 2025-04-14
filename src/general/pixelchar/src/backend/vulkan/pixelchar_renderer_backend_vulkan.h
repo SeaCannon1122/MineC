@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef PIXELCHAR_VULKAN_BACKEND_H
-#define PIXELCHAR_VULKAN_BACKEND_H
+#ifndef PIXELCHAR_RENDERER_BACKEND_VULKAN_H
+#define PIXELCHAR_RENDERER_BACKEND_VULKAN_H
 
 #include <vulkan/vulkan.h>
 #include "../../pixelchar_renderer_max_pixelfonts.h"
@@ -54,6 +54,6 @@ uint32_t pixelchar_renderer_backend_vulkan_init(
 
 void pixelchar_renderer_backend_vulkan_deinit(struct pixelchar_renderer* pcr);
 
-void pixelchar_renderer_backend_vulkan_render(struct pixelchar_renderer* pcr, VkCommandBuffer cmd, uint32_t width, uint32_t height);
+void pixelchar_renderer_backend_vulkan_render(struct pixelchar_renderer* pcr, VkCommandBuffer cmd, uint32_t width, uint32_t height, float shadow_devisor_r, float shadow_devisor_g, float shadow_devisor_b, float shadow_devisor_a);
 
 #endif

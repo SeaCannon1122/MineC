@@ -10,6 +10,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define PIXELFONT_INVALID 255
+
 extern PIXELCHAR_DEBUG_CALLBACK_FUNCTION debug_callback_function;
 
 struct internal_pixelchar

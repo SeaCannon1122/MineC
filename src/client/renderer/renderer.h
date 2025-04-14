@@ -3,6 +3,8 @@
 #ifndef RENDERER_H
 #define RENDERER_H
 
+#include <pixelchar/pixelchar.h>
+
 #include "backend/renderer_backend.h"
 
 #include "renderer_samplers.h"
@@ -25,6 +27,8 @@ struct renderer_state {
 	struct renderer_backend backend;
 
 	struct sampler_configuration sampler_configurations[SAMPLERS_COUNT];
+
+	struct pixelchar_renderer pixelchar_renderer;
 };
 
 struct game_client;

@@ -13,17 +13,8 @@ uint32_t vulkan_device_resources_rectangles_destroy(struct game_client* game);
 
 uint32_t vulkan_device_resources_create(struct game_client* game) {
 
-	pixelchar_renderer_vk_new(
-		&game->renderer_state.backend.pcr,
-		game->renderer_state.backend.device,
-		game->renderer_state.backend.gpu,
-		game->renderer_state.backend.window_render_pass,
-		4096,
-		game->resource_state.shader_atlas[SHADER_VULKAN_PIXELCHAR_VERTEX].data,
-		game->resource_state.shader_atlas[SHADER_VULKAN_PIXELCHAR_VERTEX].size,
-		game->resource_state.shader_atlas[SHADER_VULKAN_PIXELCHAR_FRAGMENT].data,
-		game->resource_state.shader_atlas[SHADER_VULKAN_PIXELCHAR_FRAGMENT].size
-	);
+
+	pixelchar_renderer_backend_vulkan_init();
 
 	size_t max_image_memory_size = 0;
 
@@ -86,7 +77,7 @@ uint32_t vulkan_device_resources_create(struct game_client* game) {
 
 	//staging buffer
 
-	size_t staging_buffer_size = (sizeof(struct pixelfont_old) > max_image_memory_size ? sizeof(struct pixelfont_old) : max_image_memory_size);
+	size_t staging_buffer_size = max_image_memory_size;
 
 	VkBufferCreateInfo buffer_info = { 0 };
 	buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -438,62 +429,6 @@ uint32_t vulkan_device_resources_create(struct game_client* game) {
 
 	vkUpdateDescriptorSets(game->renderer_state.backend.device, 2, descriptor_update_writes, 0, NULL);
 
-	//pixelfonts
-	buffer_info.size = sizeof(struct pixelfont_old) * RESOURCES_PIXELFONTS_COUNT;
-	buffer_info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-
-	VKCall(vkCreateBuffer(game->renderer_state.backend.device, &buffer_info, 0, &game->renderer_state.backend.pixelfont_buffer));
-
-	VkMemoryRequirements mem_requirements;
-	vkGetBufferMemoryRequirements(game->renderer_state.backend.device, game->renderer_state.backend.pixelfont_buffer, &mem_requirements);
-
-	alloc_info.allocationSize = mem_requirements.size;
-
-	for (uint32_t i = 0; i < memory_properties.memoryTypeCount; i++) {
-
-		if ((mem_requirements.memoryTypeBits & (1 << i)) && (memory_properties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) {
-			alloc_info.memoryTypeIndex = i;
-			break;
-		}
-	}
-
-	VKCall(vkAllocateMemory(game->renderer_state.backend.device, &alloc_info, 0, &game->renderer_state.backend.pixelfonts_memory));
-	VKCall(vkBindBufferMemory(game->renderer_state.backend.device, game->renderer_state.backend.pixelfont_buffer, game->renderer_state.backend.pixelfonts_memory, 0));
-
-	for (uint32_t i = 0; i < RESOURCES_PIXELFONTS_COUNT; i++) {
-
-		memcpy(staging_buffer_host_handle, game->resource_state.pixelfont_atlas[i], sizeof(struct pixelfont_old));
-
-		VKCall(vkResetFences(game->renderer_state.backend.device, 1, &game->renderer_state.backend.queue_fence));
-
-		VkCommandBufferBeginInfo begin_info = { 0 };
-		begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-		VKCall(vkBeginCommandBuffer(game->renderer_state.backend.cmd, &begin_info));
-
-		VkBufferCopy copy_region = { 0 };
-		copy_region.srcOffset = 0;
-		copy_region.dstOffset = i * sizeof(struct pixelfont_old);
-		copy_region.size = sizeof(struct pixelfont_old);
-
-		vkCmdCopyBuffer(game->renderer_state.backend.cmd, staging_buffer, game->renderer_state.backend.pixelfont_buffer, 1, &copy_region);
-
-		VKCall(vkEndCommandBuffer(game->renderer_state.backend.cmd));
-
-		VkSubmitInfo submit_info = { 0 };
-		submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		submit_info.commandBufferCount = 1;
-		submit_info.pCommandBuffers = &game->renderer_state.backend.cmd;
-
-		VKCall(vkQueueSubmit(game->renderer_state.backend.queue, 1, &submit_info, game->renderer_state.backend.queue_fence));
-
-		VKCall(vkWaitForFences(game->renderer_state.backend.device, 1, &game->renderer_state.backend.queue_fence, 1, UINT64_MAX));
-
-		pixelchar_renderer_vk_add_font(&game->renderer_state.backend.pcr, game->renderer_state.backend.pixelfont_buffer, i * sizeof(struct pixelfont_old), i);
-
-	}
-
 	vkUnmapMemory(game->renderer_state.backend.device, staging_buffer_memory);
 
 	vkFreeMemory(game->renderer_state.backend.device, staging_buffer_memory, 0);
@@ -513,9 +448,6 @@ uint32_t vulkan_device_resources_destroy(struct game_client* game) {
 	vkDestroyDescriptorPool(game->renderer_state.backend.device, game->renderer_state.backend.images_descriptor_pool, 0);
 	vkDestroyDescriptorSetLayout(game->renderer_state.backend.device, game->renderer_state.backend.images_descriptor_set_layout, 0);
 
-	vkDestroyBuffer(game->renderer_state.backend.device, game->renderer_state.backend.pixelfont_buffer, 0);
-	vkFreeMemory(game->renderer_state.backend.device, game->renderer_state.backend.pixelfonts_memory, 0);
-
 	for (uint32_t i = 0; i < SAMPLERS_COUNT; i++) {
 		vkDestroySampler(game->renderer_state.backend.device, game->renderer_state.backend.samplers[i], 0);
 	}
@@ -527,8 +459,6 @@ uint32_t vulkan_device_resources_destroy(struct game_client* game) {
 	}
 
 	vkFreeMemory(game->renderer_state.backend.device, game->renderer_state.backend.images_memory, 0);
-
-	pixelchar_renderer_vk_destroy(&game->renderer_state.backend.pcr);
 
 	return 0;
 }

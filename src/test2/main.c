@@ -390,13 +390,8 @@ int main()
 
 	pixelchar_set_debug_callback(callback);
 
-	size_t vert_length;
-	void* vert_src = loadFile("../../../resources/client/assets/shaders/pixelchar.vert.spv", &vert_length);
-	size_t frag_length;
-	void* frag_src = loadFile("../../../resources/client/assets/shaders/pixelchar.frag.spv", &frag_length);
-
 	size_t pixelfont_size;
-	void* pixelfont = loadFile("test.pixelfont", &pixelfont_size);
+	void* pixelfont = loadFile("../../../resources/client/assets/fonts/debug.pixelfont", &pixelfont_size);
 
 	struct pixelchar_font font;
 	pixelchar_font_create(&font, pixelfont, pixelfont_size);
@@ -404,46 +399,38 @@ int main()
 	struct pixelchar_renderer pcr;
 	pixelchar_renderer_create(&pcr, 1000);
 
+	pixelchar_renderer_backend_vulkan_init(&pcr, device, gpu, queue, queue_index, window_render_pass, 0, 0, 0, 0);
+
 	pixelchar_renderer_set_font(&pcr, &font, 0);
 
-	pixelchar_renderer_backend_vulkan_init(&pcr, device, gpu, queue, queue_index, window_render_pass, vert_src, vert_length, frag_src, frag_length);
+	char str[] = { 1, 2, 4, 'A', '!', 0 };
+	uint32_t str_len = sizeof(str) - 1;
 
-	struct pixelchar c[2];
+	struct pixelchar c[100];
 
-	c[0].color[0] = 0;
-	c[0].color[1] = 0;
-	c[0].color[2] = 255;
-	c[0].color[3] = 255;
-	c[0].background_color[0] = 255;
-	c[0].background_color[1] = 0;
-	c[0].background_color[2] = 0;
-	c[0].background_color[3] = 255;
-	c[0].masks = PIXELCHAR_MASK_BACKGROUND;
-	c[0].position[0][0] = 100;
-	c[0].position[0][1] = 100;
-	c[0].position[1][0] = 180;
-	c[0].position[1][1] = 228;
-	c[0].font = 0;
-	c[0].value = 'A';
+	for (uint32_t i = 0; i < str_len; i++)
+	{
+		c[i].color[0] = 0;
+		c[i].color[1] = 0;
+		c[i].color[2] = 0;
+		c[i].color[3] = 255;
+		c[i].background_color[0] = 255;
+		c[i].background_color[1] = 255;
+		c[i].background_color[2] = 0;
+		c[i].background_color[3] = 255;
+		c[i].masks = PIXELCHAR_MASK_BACKGROUND | PIXELCHAR_MASK_UNDERLINE | PIXELCHAR_MASK_SHADOW;
 
-	c[1].color[0] = 0;
-	c[1].color[1] = 0;
-	c[1].color[2] = 255;
-	c[1].color[3] = 255;
-	c[1].background_color[0] = 255;
-	c[1].background_color[1] = 0;
-	c[1].background_color[2] = 0;
-	c[1].background_color[3] = 255;
-	c[1].masks = PIXELCHAR_MASK_CURSIVE | PIXELCHAR_MASK_SHADOW | PIXELCHAR_MASK_BACKGROUND;
-	c[1].position[0][0] = 250;
-	c[1].position[0][1] = 100;
-	c[1].position[1][0] = 350;
-	c[1].position[1][1] = 200;
-	c[1].font = 0;
-	c[1].value = 'A';
+		if (i == 0) c[i].position[0][0] = 100;
 
-	free(vert_src);
-	free(frag_src);
+		else c[i].position[0][0] = c[i - 1].position[0][0] + pixelchar_font_character_pixel_offset(&font, str[i - 1], c[i - 1].position[1][0] - c[i - 1].position[0][0], 16, 16);
+
+		c[i].position[1][0] = c[i].position[0][0] + pixelchar_font_character_pixel_width(&font, str[i], 16);
+
+		c[i].position[0][1] = 100;
+		c[i].position[1][1] = 116;
+		c[i].font = 0;
+		c[i].value = str[i];
+	}
 
 	free(pixelfont);
 
@@ -458,20 +445,8 @@ int main()
 
 		if (window.frame_flags & FRAME_FLAG_RENDERABLE)
 		{
-			char pixel_str[] = "WWLLOW!";
 
-#define string_to_pixel_char(name, str, size, x, y, flags, r, g, b, a, r_b, g_b, b_b, a_b) struct pixelchar name[sizeof(str) - 1];\
-for(int i = 0; i < sizeof(str) - 1; i++) {\
-if(i == 0) name[i] = (struct pixelchar){ { r, g, b, a }, { r_b, g_b, b_b, a_b }, str[i], {x, y}, flags, size };\
-else name[i] = (struct pixelchar){ { r, g, b, a }, { r_b, g_b, b_b, a_b }, str[i], {name[i-1].position[0] + (size * ((font1->bitmaps[name[i-1].value].width + 3) / 2 )), y}, flags, size  };\
-}\
-
-			//string_to_pixel_char(chars, pixel_str, 20, 100, 100, PIXELCHAR_MASK_BACKGROUND | PIXELCHAR_MASK_UNDERLINE, 255, 255, 0, 127, 127, 0, 255, 255)
-
-			//chars[1].masks |= 1;
-			//pixelchar_renderer_queue_pixelchars(&pcr, NULL, 0);
-
-			pixelchar_renderer_queue_pixelchars(&pcr, c, 2);
+			pixelchar_renderer_queue_pixelchars(&pcr, c, str_len);
 
 			VKCall(vkWaitForFences(device, 1, &queue_fence, VK_TRUE, UINT64_MAX));
 
@@ -529,7 +504,7 @@ else name[i] = (struct pixelchar){ { r, g, b, a }, { r_b, g_b, b_b, a_b }, str[i
 
 			//pixel_chars
 			
-			pixelchar_renderer_backend_vulkan_render(&pcr, cmd, window.width, window.height);
+			pixelchar_renderer_backend_vulkan_render(&pcr, cmd, window.width, window.height, 4.f, 4.f, 4.f, 1.4f);
 
 			vkCmdEndRenderPass(cmd);
 
@@ -567,7 +542,7 @@ else name[i] = (struct pixelchar){ { r, g, b, a }, { r_b, g_b, b_b, a_b }, str[i
 
 	vkDeviceWaitIdle(device);
 
-	//pixelchar_renderer_backend_vulkan_deinit(&pcr);
+	pixelchar_renderer_backend_vulkan_deinit(&pcr);
 	pixelchar_renderer_destroy(&pcr);
 
 	pixelchar_font_destroy(&font);

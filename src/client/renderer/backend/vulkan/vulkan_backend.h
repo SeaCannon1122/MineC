@@ -82,10 +82,7 @@ struct renderer_backend {
 	VkDescriptorPool images_descriptor_pool;
 	VkDescriptorSet images_descriptor_set;
 
-	uint32_t pixel_char_renderer_usable;
-	struct pixelchar_renderer_vk pcr;
-	VkDeviceMemory pixelfonts_memory;
-	VkBuffer pixelfont_buffer;
+	uint32_t pixelchar_renderer_usable;
 
 	uint32_t rectangles_pipeline_usable_bool;
 	VkPipelineLayout rectangles_pipeline_layout;

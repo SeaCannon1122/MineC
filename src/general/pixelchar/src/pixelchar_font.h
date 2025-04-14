@@ -59,4 +59,7 @@ enum pixelchar_font_resolution
 uint32_t pixelchar_font_create(struct pixelchar_font* font, void* font_file_data, size_t font_file_data_size);
 uint32_t pixelchar_font_destroy(struct pixelchar_font* font);
 
+uint32_t pixelchar_font_character_pixel_width(struct pixelchar_font* font, uint32_t character, uint32_t target_height);
+uint32_t pixelchar_font_character_pixel_offset(struct pixelchar_font* font, uint32_t character, uint32_t target_width, uint32_t target_height, uint32_t next_target_height);
+
 #endif

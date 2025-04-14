@@ -27,14 +27,19 @@ void pixelchar_renderer_set_font(struct pixelchar_renderer* pcr, struct pixelcha
 		for (uint32_t i = 0; (1 << i) < PIXELCHAR_BACKEND_MAX_BIT; i++) if (pcr->backends_initialized & (1 << i))
 		{
 			_pixelchar_font_backend_reference_subtract_functions[i](pcr->fonts[index]);
-			_pixelchar_font_backend_reference_add_functions[i](font, pcr, index);
 		}
-
 		pcr->fonts[index]->references--;
-		font->references++;
 	}
 
 	pcr->fonts[index] = font;
+
+	if (pcr->fonts[index] != NULL) {
+		for (uint32_t i = 0; (1 << i) < PIXELCHAR_BACKEND_MAX_BIT; i++) if (pcr->backends_initialized & (1 << i))
+		{
+			_pixelchar_font_backend_reference_add_functions[i](pcr->fonts[index], pcr, index);
+		}
+		pcr->fonts[index]->references++;
+	}
 }
 
 void pixelchar_renderer_queue_pixelchars(struct pixelchar_renderer* pcr, struct pixelchar* chars, uint32_t char_count)
@@ -66,5 +71,33 @@ void pixelchar_renderer_destroy(struct pixelchar_renderer* pcr)
 			pixelchar_renderer_backend_deinit_functions[i](pcr);
 	}
 
+	for (uint32_t i = 0; i < PIXELCHAR_RENDERER_MAX_FONTS; i++)
+	{
+		if (pcr->fonts[i] != NULL) pcr->fonts[i]->references--;
+	}
+
 	free(pcr->char_buffer);
+}
+
+void _pixelchar_renderer_render_convert_to_internal_characters(struct pixelchar_renderer* pcr)
+{
+	struct internal_pixelchar* chars = pcr->char_buffer;
+
+	for (uint32_t i = 0; i < pcr->char_count; i++)
+	{
+		uint32_t value = pcr->char_buffer[i].value;
+		if (chars[i].font >= PIXELCHAR_RENDERER_MAX_FONTS)
+			chars[i].font = PIXELFONT_INVALID;
+		else if (pcr->fonts[chars[i].font] == NULL)
+			chars[i].font = PIXELFONT_INVALID;
+		else {
+			if (value >= pcr->fonts[chars[i].font]->mappings_count)
+				chars[i].bitmap_index = 0;
+			else
+				chars[i].bitmap_index = pcr->fonts[chars[i].font]->mappings[value];
+
+			chars[i].bitmap_width = pcr->fonts[chars[i].font]->widths[chars[i].bitmap_index];
+			chars[i].font_resolution = pcr->fonts[chars[i].font]->resolution;
+		}
+	}
 }

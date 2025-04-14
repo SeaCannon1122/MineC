@@ -422,7 +422,7 @@ uint32_t gui_scene_render(struct game_client* game, void* scene, uint32_t scale)
 					line_i++;
 					line_widths[line_i] = 0;
 				}
-				else line_widths[line_i] += ((game->resource_state.pixelfont_atlas[text[char_i].masks & PIXELCHAR_MASK_FONT]->bitmaps[text[char_i].value].width + 1) / 2 + 1) * text_size;
+				else line_widths[line_i] += 1;
 
 			}
 

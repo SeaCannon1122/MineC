@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef PIXELCHAR_PIXELCHAR_RENDERER_H
-#define PIXELCHAR_PIXELCHAR_RENDERER_H
+#ifndef PIXELCHAR_RENDERER_H
+#define PIXELCHAR_RENDERER_H
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -69,5 +69,12 @@ void pixelchar_renderer_set_font(struct pixelchar_renderer* pcr, struct pixelcha
 void pixelchar_renderer_queue_pixelchars(struct pixelchar_renderer* pcr, struct pixelchar* chars, uint32_t char_count);
 
 void pixelchar_renderer_destroy(struct pixelchar_renderer* pcr);
+
+#ifndef _PIXELCHAR_INTERNAL_EXCLUDE
+
+void _pixelchar_renderer_render_convert_to_internal_characters(struct pixelchar_renderer* pcr);
+
+#endif // !_PIXELCHAR_INTERNEL_EXCLUDE
+
 
 #endif

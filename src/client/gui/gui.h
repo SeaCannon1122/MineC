@@ -5,13 +5,19 @@
 
 #include <stdint.h>
 
-#include "game/game.h"
-
 #define GUI_INVALID_ITEM_HANDLE (void*)(uint32_t)(-1)
 
 #define GUI_SIZE_NORMAL 0
 #define GUI_SIZE_SHORT 1
 
+struct gui_char
+{
+	uint8_t color[4];
+	uint8_t background_color[4];
+	uint32_t value;
+	uint8_t masks;
+	uint8_t font;
+};
 
 void* gui_scene_new(uint32_t item_count, uint32_t total_labeltext_buffer_length, uint32_t total_textfield_buffer_size);
 uint32_t gui_scene_destroy(void* scene);

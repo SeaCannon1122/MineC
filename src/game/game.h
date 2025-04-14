@@ -32,11 +32,12 @@ struct entity {
 	};
 };
 
-struct game_char {
+struct game_char_ {
 	uint8_t color[4];
 	uint8_t background_color[4];
 	uint32_t value;
-	uint16_t masks;
+	uint8_t masks;
+	uint8_t font;
 };
 
 enum game_font_types {
