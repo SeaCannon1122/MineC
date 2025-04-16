@@ -10,8 +10,8 @@
 #include <math.h>
 #include <stdarg.h>
 
-#include <general/platformlib/platform/platform.h>
-#include <general/platformlib/networking/networking.h>
+#include "platformlib/platform/platform.h"
+#include "platformlib/networking/networking.h"
 
 #include "resources/resources.h"
 #include "application/application.h"
@@ -20,8 +20,6 @@
 #include "settings/settings.h"
 #include "simulator/simulator.h"
 #include "networker/networker.h"
-
-#include "game/game.h"
 
 static uint32_t game_strlen(uint32_t* str) {
 	uint32_t len = 0;

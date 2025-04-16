@@ -4,6 +4,8 @@
 
 #include <pixelchar/pixelchar.h>
 
+#include <vulkan/vulkan.h>
+
 #include <malloc.h>
 #include <stdio.h>
 #include <math.h>

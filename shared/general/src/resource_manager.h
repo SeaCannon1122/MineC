@@ -3,7 +3,7 @@
 #ifndef RESOURCE_MANAGER_H
 #define RESOURCE_MANAGER_H
 
-#include "general/key_value.h"
+#include "key_value.h"
 
 struct resource_manager_image {
 	uint32_t width;

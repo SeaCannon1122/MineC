@@ -1,6 +1,6 @@
-#include "client/minec_client.h"
+#include "minec_client.h"
 
-#include "general/string_allocator.h"
+#include "string_allocator.h"
 
 uint32_t application_create(struct application_state* app)
 {
@@ -13,7 +13,7 @@ uint32_t application_create(struct application_state* app)
 		screen_height / 8,
 		screen_width / 2,
 		screen_height / 2,
-		"Minecraft Clone",
+		"MineC",
 		1
 	);
 
@@ -34,7 +34,7 @@ uint32_t application_update_renderer_backends(struct application_state* app)
 
 uint32_t application_destroy(struct application_state* app)
 {
-	string_allocator_destroy(app->string_allocator);
+	string_allocator_delete(app->string_allocator);
 
 	application_window_destroy(&app->main_window);
 

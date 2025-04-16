@@ -1,4 +1,4 @@
- #include "client/minec_client.h"
+ #include "minec_client.h"
 
 void networker_thread_function(struct minec_client* game) {
 

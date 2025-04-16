@@ -1,4 +1,4 @@
-#include "client/minec_client.h"
+#include "minec_client.h"
 
 uint32_t renderer_load_samplers(struct resource_state* resource_state, struct renderer_state* renderer);
 

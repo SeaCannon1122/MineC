@@ -1,4 +1,4 @@
-#include "client/minec_client.h"
+#include "minec_client.h"
 
 enum gui_items {
 	GUI_LABEL,

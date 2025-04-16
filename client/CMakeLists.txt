@@ -2,70 +2,74 @@ cmake_minimum_required(VERSION 3.15)
 
 project(MineC_Client)
 
-add_subdirectory(../shared/pixelchar)
-include_directories(../shared/pixelchar/include)
+set(MINEC_CLIENT_SOURCE_FILES
 
-set(SOURCE_FILES
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/main.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/minec_client.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/application/application.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/application/application_window.c
 
-    src/main.c
-    src/minec_client.c
-    src/application/application.c
-    src/application/application_window.c
-    src/resources/resources.c
-    src/settings/settings.c
-    src/simulator/simulator.c
-    src/networker/networker.c
-    src/renderer/renderer.c
-    src/renderer/backend/renderer_backend.c
-    src/gui/gui.c
-    src/gui/gui_menus.c
-
-    ../shared/general/src/key_value.c
-    ../shared/general/src/resource_manager.c
-    ../shared/general/src/string_allocator.c
-    ../shared/general/src/platformlib/platform/platform.c
-    ../shared/general/src/platformlib/networking/networking.c
+    ${CMAKE_SOURCE_DIR}/shared/general/src/key_value.c
+    ${CMAKE_SOURCE_DIR}/shared/general/src/resource_manager.c
+    ${CMAKE_SOURCE_DIR}/shared/general/src/string_allocator.c
+    ${CMAKE_SOURCE_DIR}/shared/general/src/platformlib/platform/platform.c
+    ${CMAKE_SOURCE_DIR}/shared/general/src/platformlib/networking/networking.c
 )
 
-set(RENDERER_BACKEND_VULKAN_SOURCE_FILES
-    src/renderer/backend/vulkan/vulkan_backend.c
+add_executable(minec_client ${MINEC_CLIENT_SOURCE_FILES})
+
+target_include_directories(minec_client
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/shared/pixelchar/include
+        ${CMAKE_SOURCE_DIR}/shared/general/src
+        ${CMAKE_SOURCE_DIR}/dependencies/stb_image/include
 )
-
-find_package(Vulkan REQUIRED)
-
-include_directories(
-    src
-    ../dependencies/stb_image/include
-    ${Vulkan_INCLUDE_DIRS}
-)
-
-link_libraries(${Vulkan_LIBRARIES})
-
-add_compile_definitions(CLIENT_GRAPHICS_API_VULKAN=1)
-add_compile_definitions(CLIENT_GRAPHICS_API_OPENGL=1)
-add_compile_definitions(CLIENT_GRAPHICS_API_DIRECT=1)
-
-add_executable(minec_client ${SOURCE_FILES})
-add_library(minec_client_renderer_backend_vulkan ${RENDERER_BACKEND_VULKAN_SOURCE_FILES})
-
-target_link_libraries(minec_client PRIVATE blocks_client_vulkan_backend pixelchar)
 
 if(WIN32)
-
-    set_target_properties(minec_client PROPERTIES
-        LINK_FLAGS "/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup"
+    set_target_properties(minec_client 
+        PROPERTIES LINK_FLAGS "/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup"
     )
 
 elseif(UNIX)
-
     find_package(X11 REQUIRED)
-    include_directories(${X11_INCLUDE_DIR})
-    target_link_libraries(minec_client PUBLIC X11 pthread m)
+
+    target_include_directories(minec_client
+        PRIVATE ${X11_INCLUDE_DIR}
+    )
+    
+    target_link_libraries(minec_client 
+        PRIVATE 
+            X11 
+            pthread 
+            m
+    )
    
 endif()
 
+find_package(Vulkan)
+if (Vulkan_FOUND)
+
+    set(MINEC_CLIENT_RENDERER_BACKEND_VULKAN_SOURCE_FILES
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/backend/vulkan/vulkan_backend.c
+    )
+    add_library(minec_client_renderer_backend_vulkan ${MINEC_CLIENT_RENDERER_BACKEND_VULKAN_SOURCE_FILES})
+
+    target_compile_definitions(minec_client_renderer_backend_vulkan
+        PUBLIC _MINEC_CLIENT_RENDERER_BACKEND_VULKAN=1
+    )
+    target_link_libraries(minec_client_renderer_backend_vulkan 
+        PUBLIC pixelchar
+    )
+
+    target_link_libraries(minec_client PUBLIC pixelchar)
+
+endif()
+
+
+
 add_custom_command(TARGET minec_client POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
-    "${CMAKE_SOURCE_DIR}/runtime_files"
-    "${CMAKE_BINARY_DIR}/runtime_files"
+    "${CMAKE_CURRENT_SOURCE_DIR}/runtime_files"
+    "${CMAKE_CURRENT_BINARY_DIR}/runtime_files"
 )

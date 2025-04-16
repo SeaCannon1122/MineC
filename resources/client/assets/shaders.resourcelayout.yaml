@@ -1,4 +1,0 @@
-vulkan_rectangles_vertex: shaders/basic.vert.spv
-vulkan_rectangles_fragment: shaders/basic.frag.spv
-vulkan_pixelchar_vertex: shaders/pixel_char.vert.spv
-vulkan_pixelchar_fragment: shaders/pixel_char.frag.spv

@@ -3,9 +3,9 @@
 #ifndef RENDERER_VULKAN_H
 #define RENDERER_VULKAN_H
 
-#include "general/platformlib/platform/platform.h"
-#include "client/resources/resources.h"
-#include "client/renderer/renderer_samplers.h"
+#include "platformlib/platform/platform.h"
+#include "resources/resources.h"
+#include "renderer/renderer_samplers.h"
 
 #include <pixelchar/pixelchar.h>
 

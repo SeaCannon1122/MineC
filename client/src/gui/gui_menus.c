@@ -1,4 +1,4 @@
-#include "client/minec_client.h"
+#include "minec_client.h"
 
 uint32_t gui_menus_create(struct minec_client* game) {
 
