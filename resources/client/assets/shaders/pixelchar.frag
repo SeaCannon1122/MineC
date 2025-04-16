@@ -9,6 +9,8 @@ uint PIXELCHAR_MASK_CURSIVE = 2;
 uint PIXELCHAR_MASK_SHADOW = 4;
 uint PIXELCHAR_MASK_BACKGROUND = 8;
 
+uint invalid_bitmap[2] = { 0x392B293B, 0x494DEB00 };
+
 layout(set = 0, binding = 0) readonly buffer font0 { uint font0_bitmaps[]; };
 layout(set = 0, binding = 1) readonly buffer font1 { uint font1_bitmaps[]; };
 layout(set = 0, binding = 2) readonly buffer font2 { uint font2_bitmaps[]; };
@@ -41,7 +43,7 @@ void main() {
     uint font = bitmap_index_I_masks_I_font_I_font_resolution.z;
     int font_resolution = int(bitmap_index_I_masks_I_font_I_font_resolution.w);
     
-    if ((draw_mode == 0 && (masks & PIXELCHAR_MASK_BACKGROUND) == 0) || (draw_mode == 1 && (masks & PIXELCHAR_MASK_SHADOW) == 0) || font == VULKAN_PIXELFONT_INVALID)
+    if ((draw_mode == 0 && (masks & PIXELCHAR_MASK_BACKGROUND) == 0) || (draw_mode == 1 && (masks & PIXELCHAR_MASK_SHADOW) == 0))
         fragmentColor = vec4(0.0, 0.0, 0.0, 0.0);
     else
     {
@@ -95,6 +97,31 @@ void main() {
                 else if (font == 3)
                 {
                     if (PIXELCHAR_IF_BIT(font3_bitmaps, font_resolution, bitmap_index, check_coords.x, check_coords.y) != 0)
+                        bit_set = 1;
+                }
+                else if (font == 4)
+                {
+                    if (PIXELCHAR_IF_BIT(font4_bitmaps, font_resolution, bitmap_index, check_coords.x, check_coords.y) != 0)
+                        bit_set = 1;
+                }
+                else if (font == 5)
+                {
+                    if (PIXELCHAR_IF_BIT(font5_bitmaps, font_resolution, bitmap_index, check_coords.x, check_coords.y) != 0)
+                        bit_set = 1;
+                }
+                else if (font == 6)
+                {
+                    if (PIXELCHAR_IF_BIT(font6_bitmaps, font_resolution, bitmap_index, check_coords.x, check_coords.y) != 0)
+                        bit_set = 1;
+                }
+                else if (font == 7)
+                {
+                    if (PIXELCHAR_IF_BIT(font7_bitmaps, font_resolution, bitmap_index, check_coords.x, check_coords.y) != 0)
+                        bit_set = 1;
+                }
+                else
+                {
+                    if (PIXELCHAR_IF_BIT(invalid_bitmap, 8, 0, check_coords.x, check_coords.y) != 0)
                         bit_set = 1;
                 }
 

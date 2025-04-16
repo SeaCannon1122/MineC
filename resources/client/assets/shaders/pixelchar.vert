@@ -31,14 +31,13 @@ layout(location = 3) out vec4 color;
 layout(location = 4) out vec4 background_color;
 
 void main()
-{
-
+{   
     color = in_color;
     background_color = in_background_color;
     bitmap_index_I_masks_I_font_I_font_resolution = uvec4(in_bitmap_index, in_masks, in_font, in_font_resolution);
     scale = in_scale;
 
-    if ((draw_mode == 0 && (in_masks & PIXELCHAR_MASK_BACKGROUND) == 0) || (draw_mode == 1 && (in_masks & PIXELCHAR_MASK_SHADOW) == 0) || in_font == VULKAN_PIXELFONT_INVALID)
+    if ((draw_mode == 0 && (in_masks & PIXELCHAR_MASK_BACKGROUND) == 0) || (draw_mode == 1 && (in_masks & PIXELCHAR_MASK_SHADOW) == 0))
         gl_Position = vec4(0.0, 0.0, 0.0, 0.0);
     else
     {
@@ -58,12 +57,14 @@ void main()
         
         vertex_position += in_position.xy;
         
-        //if ((masks & PIXELCHAR_MASK_CURSIVE) != 0)
-        //    vertex_position.x += (dimensions.y * 7 / 8 + float(in_position.y) - vertex_position.y) / 2.0;
+        vec2 vertex_position_f = vec2(vertex_position);
+        
+        if ((in_masks & PIXELCHAR_MASK_CURSIVE) != 0)
+            vertex_position_f.x -= float(vertex_position.y - int(scale) * 7) / 2.0;
         
         if (draw_mode == 1)
-            vertex_position += 3 * int(in_scale) / 5 + 1;
+            vertex_position_f += float(3 * int(in_scale) / 5 + 1);
         
-        gl_Position = vec4(vec2(vertex_position * 2) / vec2(screen_size) - 1.0, 0.0, 1.0);
+        gl_Position = vec4(vertex_position_f * 2.0 / vec2(screen_size) - 1.0, 0.0, 1.0);
     }
 }
