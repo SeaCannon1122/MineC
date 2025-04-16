@@ -7,6 +7,10 @@
 
 #define PIXELFONT_MAX_NAME_SIZE 31
 
+#define pixelchar_font_character_width(font, character, scale) (((font)->widths[(character) >= (font)->mappings_count ? 0 : (font)->mappings[(character)]] * (scale) * 8 + (font)->resolution - 1) / (font)->resolution)
+
+#define pixelchar_font_get_character_offset(scale, next_scale) (((scale) * 8 + 15) / 16 + ((next_scale) * 8) / 16)
+
 struct pixelchar_font
 {
 	struct
@@ -58,8 +62,5 @@ enum pixelchar_font_resolution
 
 uint32_t pixelchar_font_create(struct pixelchar_font* font, void* font_file_data, size_t font_file_data_size);
 uint32_t pixelchar_font_destroy(struct pixelchar_font* font);
-
-uint32_t pixelchar_font_character_pixel_width(struct pixelchar_font* font, uint32_t character, uint32_t target_height);
-uint32_t pixelchar_font_character_pixel_offset(struct pixelchar_font* font, uint32_t character, uint32_t target_width, uint32_t target_height, uint32_t next_target_height);
 
 #endif

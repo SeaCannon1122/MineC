@@ -111,8 +111,11 @@ uint32_t string_free(void* allocator, void* memory_handle)
 			string_allocator->arenas[i].allocations_count--;
 
 			if (string_allocator->arenas[i].allocations_count == 0)
+			{
 				string_allocator->arenas[i].free_index = 0;
-
+				string_allocator->arenas[i].allocated = false;
+				free(string_allocator->arenas[i].memory_pointer);
+			}
 			return 0;
 		}	
 	}
@@ -120,7 +123,7 @@ uint32_t string_free(void* allocator, void* memory_handle)
 	return 1;
 }
 
-void string_allocator_destroy(void* allocator)
+void string_allocator_delete(void* allocator)
 {
 	struct string_allocator* string_allocator = (struct string_allocator*)allocator;
 

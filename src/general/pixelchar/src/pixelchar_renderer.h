@@ -9,12 +9,13 @@
 #include "pixelchar_renderer_max_pixelfonts.h"
 
 struct pixelchar {
+	uint32_t value;
+	uint16_t masks;
+	uint16_t font;
+	uint16_t scale;
+	int16_t position[2];
 	uint8_t color[4];
 	uint8_t background_color[4];
-	uint32_t value;
-	uint16_t font;
-	uint16_t masks;
-	uint16_t position[2][2];
 };
 
 enum pixelchar_mask {

@@ -29,12 +29,4 @@ struct resource_loader_item
 	size_t resource_data_size;
 };
 
-struct resource_loader
-{
-	void* string_allocator;
-
-	struct resource_loader_item* items;
-	uint32_t item_count;
-};
-
 #endif // !RESOURCE_LOADER_INTERNAL_H

@@ -117,65 +117,70 @@ uint32_t pixelchar_renderer_backend_vulkan_init(
 	vertex_binding_description.stride = sizeof(struct internal_pixelchar);
 	vertex_binding_description.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
 
-
 	VkVertexInputAttributeDescription vertex_attribute_descriptions[] = 
 	{
-
 		{
 			.binding = 0,
 			.location = 0,
-			.format = VK_FORMAT_R8G8B8A8_UNORM,
-			.offset = offsetof(struct internal_pixelchar, color)
-		},
-
-		{
-			.binding = 0,
-			.location = 1,
-			.format = VK_FORMAT_R8G8B8A8_UNORM,
-			.offset = offsetof(struct internal_pixelchar, background_color)
-		},
-
-		{
-			.binding = 0,
-			.location = 2,
 			.format = VK_FORMAT_R32_UINT,
 			.offset = offsetof(struct internal_pixelchar, bitmap_index)
 		},
 
 		{
 			.binding = 0,
-			.location = 3,
+			.location = 1,
+			.format = VK_FORMAT_R16_UINT,
+			.offset = offsetof(struct internal_pixelchar, masks)
+		},
+
+		{
+			.binding = 0,
+			.location = 2,
 			.format = VK_FORMAT_R8_UINT,
 			.offset = offsetof(struct internal_pixelchar, font)
 		},
 
 		{
 			.binding = 0,
-			.location = 4,
-			.format = VK_FORMAT_R8_UINT,
-			.offset = offsetof(struct internal_pixelchar, bitmap_width)
-		},
-
-		{
-			.binding = 0,
-			.location = 5,
-			.format = VK_FORMAT_R8_UINT,
-			.offset = offsetof(struct internal_pixelchar, masks)
-		},
-
-		{
-			.binding = 0,
-			.location = 6,
+			.location = 3,
 			.format = VK_FORMAT_R8_UINT,
 			.offset = offsetof(struct internal_pixelchar, font_resolution)
 		},
 
 		{
 			.binding = 0,
-			.location = 7,
-			.format = VK_FORMAT_R16G16B16A16_SINT,
+			.location = 4,
+			.format = VK_FORMAT_R8_UINT,
+			.offset = offsetof(struct internal_pixelchar, scale)
+		},
+
+		{
+			.binding = 0,
+			.location = 5,
+			.format = VK_FORMAT_R8_UINT,
+			.offset = offsetof(struct internal_pixelchar, bitmap_width)
+		},
+
+		{
+			.binding = 0,
+			.location = 6,
+			.format = VK_FORMAT_R16G16_SINT,
 			.offset = offsetof(struct internal_pixelchar, position)
 		},
+
+		{
+			.binding = 0,
+			.location = 7,
+			.format = VK_FORMAT_R8G8B8A8_UNORM,
+			.offset = offsetof(struct internal_pixelchar, color)
+		},
+
+		{
+			.binding = 0,
+			.location = 8,
+			.format = VK_FORMAT_R8G8B8A8_UNORM,
+			.offset = offsetof(struct internal_pixelchar, background_color)
+		},		
 
 	};
 
@@ -184,7 +189,7 @@ uint32_t pixelchar_renderer_backend_vulkan_init(
 	vertex_input_stage.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 	vertex_input_stage.vertexBindingDescriptionCount = 1;
 	vertex_input_stage.pVertexBindingDescriptions = &vertex_binding_description;
-	vertex_input_stage.vertexAttributeDescriptionCount = 8;
+	vertex_input_stage.vertexAttributeDescriptionCount = sizeof(vertex_attribute_descriptions) / sizeof(vertex_attribute_descriptions[0]);
 	vertex_input_stage.pVertexAttributeDescriptions = vertex_attribute_descriptions;
 
 

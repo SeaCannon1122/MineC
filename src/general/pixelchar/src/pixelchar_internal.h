@@ -14,16 +14,16 @@
 
 extern PIXELCHAR_DEBUG_CALLBACK_FUNCTION debug_callback_function;
 
-struct internal_pixelchar
-{
+struct internal_pixelchar {
+	uint32_t bitmap_index;
+	uint16_t masks;
+	uint8_t font;
+	uint8_t font_resolution;
+	uint8_t scale;
+	uint8_t bitmap_width;
+	int16_t position[2];
 	uint8_t color[4];
 	uint8_t background_color[4];
-	uint32_t bitmap_index;
-	uint8_t font;
-	uint8_t bitmap_width;
-	uint8_t masks;
-	uint8_t font_resolution;
-	uint16_t position[2][2];
 };
 
 #define _DEBUG_CALLBACK_WARNING(msg) do { if (debug_callback_function) debug_callback_function(PIXELCHAR_DEBUG_MESSAGE_TYPE_WARNING, msg); } while(0)

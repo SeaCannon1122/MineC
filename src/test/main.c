@@ -35,13 +35,13 @@ struct pixel_font* load_pixel_font(char* src) {
 
 int main(int argc, char* argv[]) {
 
-	struct pixel_font* font = load_pixel_font("../../../resources/client/assets/fonts/debug.pixelfont");
+	struct pixel_font* font = load_pixel_font("../../../resources/client/assets/fonts/default.pixelfont");
 
-	uint32_t mapping_table[128];
-	uint16_t bitmaps[128][16];
-	uint8_t widths[128];
+	uint32_t mapping_table[130];
+	uint16_t bitmaps[130][16];
+	uint8_t widths[130];
 
-	for (int i = 0; i < 128; i++) {
+	for (int i = 0; i < 130; i++) {
 		mapping_table[i] = i;
 		widths[i] = font->char_font_entries[i].width;
 		memcpy(&bitmaps[i][0], &font->char_font_entries[i].layout[0], 16 * 16 / 8);
@@ -69,7 +69,7 @@ int main(int argc, char* argv[]) {
 	memcpy((size_t)font_data + sizeof(metadata) + sizeof(mapping_table), &widths, sizeof(widths));
 	memcpy((size_t)font_data + sizeof(metadata) + sizeof(mapping_table) + sizeof(widths), &bitmaps, sizeof(bitmaps));
 
-	FILE* file = fopen("test.pixelfont", "wb");
+	FILE* file = fopen("default.pixelchar_font", "wb");
 
 	size_t written = fwrite(font_data, 1, metadata.total_size, file);
 	if (written != metadata.total_size) {

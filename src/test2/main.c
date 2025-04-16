@@ -391,7 +391,7 @@ int main()
 	pixelchar_set_debug_callback(callback);
 
 	size_t pixelfont_size;
-	void* pixelfont = loadFile("../../../resources/client/assets/fonts/debug.pixelfont", &pixelfont_size);
+	void* pixelfont = loadFile("default.pixelchar_font", &pixelfont_size);
 
 	struct pixelchar_font font;
 	pixelchar_font_create(&font, pixelfont, pixelfont_size);
@@ -399,41 +399,46 @@ int main()
 	struct pixelchar_renderer pcr;
 	pixelchar_renderer_create(&pcr, 1000);
 
-	pixelchar_renderer_backend_vulkan_init(&pcr, device, gpu, queue, queue_index, window_render_pass, 0, 0, 0, 0);
+	size_t vert_length;
+	void* vert_src = loadFile("../../../resources/client/assets/shaders/pixelchar.vert.spv", &vert_length);
+	size_t frag_length;
+	void* frag_src = loadFile("../../../resources/client/assets/shaders/pixelchar.frag.spv", &frag_length);
+
+	pixelchar_renderer_backend_vulkan_init(&pcr, device, gpu, queue, queue_index, window_render_pass, vert_src, vert_length, frag_src, frag_length);
 
 	pixelchar_renderer_set_font(&pcr, &font, 0);
 
-	char str[] = { 1, 2, 4, 'A', '!', 0 };
+	uint8_t str[] = { 'H', 'e', 'l', 'l', 'o', ' ', 'W', 'O', 'R', 'L', 'D', '!', 128, 129, 0 };
 	uint32_t str_len = sizeof(str) - 1;
 
 	struct pixelchar c[100];
 
+	uint32_t scale = 3;
+
 	for (uint32_t i = 0; i < str_len; i++)
 	{
-		c[i].color[0] = 0;
-		c[i].color[1] = 0;
-		c[i].color[2] = 0;
+		c[i].value = str[i];
+		c[i].masks = PIXELCHAR_MASK_BACKGROUND | PIXELCHAR_MASK_UNDERLINE | PIXELCHAR_MASK_SHADOW;
+		c[i].font = 0;
+		c[i].scale = scale;
+
+		c[i].position[1] = 100;
+		
+		if (i == 0) c[i].position[0] = 100;
+		else c[i].position[0] = c[i - 1].position[0] + pixelchar_font_character_width(&font, c[i - 1].value, scale) + pixelchar_font_get_character_offset(scale, scale);
+
+		c[i].color[0] = 0xdc;
+		c[i].color[1] = 0xdc;
+		c[i].color[2] = 0xdc;
 		c[i].color[3] = 255;
 		c[i].background_color[0] = 255;
-		c[i].background_color[1] = 255;
+		c[i].background_color[1] = 0;
 		c[i].background_color[2] = 0;
 		c[i].background_color[3] = 255;
-		c[i].masks = PIXELCHAR_MASK_BACKGROUND | PIXELCHAR_MASK_UNDERLINE | PIXELCHAR_MASK_SHADOW;
-
-		if (i == 0) c[i].position[0][0] = 100;
-
-		else c[i].position[0][0] = c[i - 1].position[0][0] + pixelchar_font_character_pixel_offset(&font, str[i - 1], c[i - 1].position[1][0] - c[i - 1].position[0][0], 16, 16);
-
-		c[i].position[1][0] = c[i].position[0][0] + pixelchar_font_character_pixel_width(&font, str[i], 16);
-
-		c[i].position[0][1] = 100;
-		c[i].position[1][1] = 116;
-		c[i].font = 0;
-		c[i].value = str[i];
+		
 	}
 
 	free(pixelfont);
-
 
 	while (application_window_handle_events(&window) == 0) {
 
@@ -483,9 +488,9 @@ int main()
 			vkCmdSetScissor(cmd, 0, 1, &scissor);
 
 			VkClearColorValue clearColor = {0};
-			clearColor.float32[0] = 1.0f; // Red
-			clearColor.float32[1] = 1.0f; // Green
-			clearColor.float32[2] = 1.0f; // Blue
+			clearColor.float32[0] = 0.0f; // Red
+			clearColor.float32[1] = 0.0f; // Green
+			clearColor.float32[2] = 0.0f; // Blue
 			clearColor.float32[3] = 1.0f; // Alpha
 
 			// Set up the clear value for the color attachment

@@ -14,6 +14,6 @@ uint8_t* string_allocate_string(void* allocator, uint8_t* string);
 
 uint32_t string_free(void* allocator, void* memory_handle);
 
-void string_allocator_destroy(void* allocator);
+void string_allocator_delete(void* allocator);
 
 #endif // !STRING_ALLOCATOR_H
