@@ -4,15 +4,31 @@
 #define HASHMAP_H
 
 #include <stdint.h>
-#include <stddef.h>
+
+enum hasmap_value
+{
+	HASHMAP_VALUE_STRING,
+	HASHMAP_VALUE_FLOAT,
+	HASHMAP_VALUE_INT,
+};
+
+struct hashmap_multi_type
+{
+	union
+	{
+		uint8_t* _string;
+		uint32_t _int;
+		float _float;
+	} data;
+	uint32_t type;
+};
+
 
 void* hashmap_new(uint32_t sub_array_count, uint32_t subarray_extension_mappings_count);
 void hashmap_delete(void* hashmap);
 
-void hashmap_set_string(void* hashmap, uint8_t* key, uint8_t* string);
-void hashmap_set_data(void* hashmap, uint8_t* key, void* data, size_t data_size);
-
-uint8_t* hashmap_get_string(void* hashmap, uint8_t* key);
-uint32_t hashmap_get_data(void* hashmap, uint8_t* key, void* data, size_t data_size);
+void hashmap_set_value(void* hashmap, uint8_t* key, void* value, uint32_t value_type);
+struct hashmap_multi_type* hashmap_get_value(void* hashmap, uint8_t* key);
+void hashmap_delete_key(void* hashmap, uint8_t* key);
 
 #endif // !HASHMAP_H

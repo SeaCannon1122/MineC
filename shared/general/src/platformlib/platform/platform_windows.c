@@ -161,7 +161,7 @@ uint32_t window_create(uint32_t posx, uint32_t posy, uint32_t width, uint32_t he
 	int32_t name_length = 1;
 	for (; name[name_length - 1] != '\0'; name_length++);
 
-	USHORT* wide_name = _malloca(name_length * sizeof(USHORT));
+	USHORT* wide_name = alloca(name_length * sizeof(USHORT));
 
 	for (int32_t i = 0; i < name_length; i++) wide_name[i] = (*(USHORT*)&name[i] & 255);
 

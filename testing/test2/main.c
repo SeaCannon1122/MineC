@@ -393,7 +393,7 @@ int main()
 	pixelchar_set_debug_callback(callback);
 
 	size_t pixelfont_size;
-	void* pixelfont = loadFile("../../../../resources/client/assets/fonts/default.pixelchar_font", &pixelfont_size);
+	void* pixelfont = loadFile("../../../../client/resourcepacks/MineCdefault/fonts/default.pixelchar_font", &pixelfont_size);
 
 	struct pixelchar_font font;
 	pixelchar_font_create(&font, pixelfont, pixelfont_size);
@@ -402,11 +402,15 @@ int main()
 	pixelchar_renderer_create(&pcr, 1000);
 
 	size_t vert_length;
-	void* vert_src = loadFile("../../../../resources/client/assets/shaders/pixelchar.vert.spv", &vert_length);
+	void* vert_src = loadFile("../../../../client/resourcepacks/MineCdefault//shaders/pixelchar.vert.spv", &vert_length);
 	size_t frag_length;
-	void* frag_src = loadFile("../../../../resources/client/assets/shaders/pixelchar.frag.spv", &frag_length);
+	void* frag_src = loadFile("../../../../client/resourcepacks/MineCdefault//shaders/pixelchar.frag.spv", &frag_length);
 
 	pixelchar_renderer_backend_vulkan_init(&pcr, device, gpu, queue, queue_index, window_render_pass, vert_src, vert_length, frag_src, frag_length);
+
+	free(pixelfont);
+	free(vert_src);
+	free(frag_src);
 
 	pixelchar_renderer_set_font(&pcr, &font, 0);
 
@@ -439,8 +443,6 @@ int main()
 		c[i].background_color[3] = 255;
 		
 	}
-
-	free(pixelfont);
 
 	while (application_window_handle_events(&window) == 0) {
 
