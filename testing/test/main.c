@@ -2,19 +2,74 @@
 #include <string.h>
 #include <malloc.h>
 
+#include "string_allocator.h"
 #include "hashmap.h"
 
 int main(int argc, char* argv[]) {
 
-	void* map = hashmap_new(2, 1);
+	uint8_t* strings[] = { "Hello", ", ", "is", " ", "it", " ", "me", " ", "you're", " ", "looking", " ", "for", "?" };
+	
+	void* allocator = string_allocator_new(4096);
 
-	hashmap_set_value(map, "key0", "value0", HASHMAP_VALUE_STRING);
-	float pi = 3.141;
-	hashmap_set_value(map, "key5", &pi, HASHMAP_VALUE_FLOAT);
+	printf(string_allocate_joined_string(allocator, strings, sizeof(strings) / sizeof(strings[0])));
+
+	string_allocator_delete(allocator);
+
+	printf("test");
+
+	uint8_t* yaml_data = "";
+
+	void* map = hashmap_new(4, 1);
+
+	hashmap_read_yaml(map, yaml_data, strlen(yaml_data));
+
+	struct hashmap_iterator it;
+	hashmap_iterator_start(&it, map);
 
 	struct hashmap_multi_type* val;
+	uint8_t* key;
 
-	if (val = hashmap_get_value(map, "key0")) if (val->type == HASHMAP_VALUE_STRING) printf("%s\n", val->data._string);
+	while (val = hashmap_iterator_next_key_value_pair(&it, &key))
+	{
+		switch (val->type)
+		{
+		case HASHMAP_VALUE_STRING: {
+			printf("key: %s   value: %s\n", key, val->data._string);
+		} break;
+
+		case HASHMAP_VALUE_INT: {
+			printf("key: %s   value: %d\n", key, val->data._int);
+		} break;
+
+		case HASHMAP_VALUE_FLOAT: {
+			printf("key: %s   value: %f\n", key, val->data._float);
+		} break;
+		}
+		
+	}
+
+	hashmap_delete_key(map, "pi");
+		
+	hashmap_iterator_start(&it, map);
+
+	while (val = hashmap_iterator_next_key_value_pair(&it, &key))
+	{
+		switch (val->type)
+		{
+		case HASHMAP_VALUE_STRING: {
+			printf("key: %s   value: %s\n", key, val->data._string);
+		} break;
+
+		case HASHMAP_VALUE_INT: {
+			printf("key: %s   value: %d\n", key, val->data._int);
+		} break;
+
+		case HASHMAP_VALUE_FLOAT: {
+			printf("key: %s   value: %f\n", key, val->data._float);
+		} break;
+		}
+
+	}
 
 	hashmap_delete(map);
 

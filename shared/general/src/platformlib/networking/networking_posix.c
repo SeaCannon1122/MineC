@@ -140,7 +140,7 @@ uint32_t networking_server_init(uint16_t port, void** p_server_handle) {
         return NETWORKING_ERROR;
     }
 
-    *p_server_handle = server_socket;
+    *p_server_handle = (void*)server_socket;
     return NETWORKING_SUCCESS;
 }
 

@@ -24,7 +24,7 @@ if (Vulkan_FOUND)
     )
     
     target_compile_definitions(pixelchar_backend_vulkan 
-        PUBLIC _PIXELCHAR_BACKEND_VULKAN = 1
+        PUBLIC _PIXELCHAR_BACKEND_VULKAN=1
     )
     target_link_libraries(pixelchar_backend_vulkan PUBLIC ${Vulkan_LIBRARIES})
 

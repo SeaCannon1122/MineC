@@ -34,6 +34,8 @@ struct _hashmap
 	uint32_t sub_array_count;
 	uint32_t subarray_extension_mappings_count;
 
+	uint32_t key_count;
+
 	struct _hashmap_subarray sub_arrays[];
 };
 
@@ -76,9 +78,10 @@ void _hashmap_key_get_empty_space(struct _hashmap* map, uint8_t* key, uint32_t i
 		struct _hashmap_entry* old_entries = map->sub_arrays[index].entries;
 		map->sub_arrays[index].entries = string_allocate(map->string_allocator, sizeof(struct _hashmap_entry) * map->sub_arrays[index].entry_count);
 		memcpy(map->sub_arrays[index].entries, old_entries, sizeof(struct _hashmap_entry) * old_entry_count);
-		memset((size_t)map->sub_arrays[index].entries + sizeof(struct _hashmap_entry) * old_entry_count, 0, sizeof(struct _hashmap_entry) * map->subarray_extension_mappings_count);
 		string_free(map->string_allocator, old_entries);
 	}
+
+	memset((size_t)map->sub_arrays[index].entries + sizeof(struct _hashmap_entry) * old_entry_count, 0, sizeof(struct _hashmap_entry) * map->subarray_extension_mappings_count);
 
 	map->sub_arrays[index].entries[old_entry_count].in_use = true;
 	map->sub_arrays[index].entries[old_entry_count].key = string_allocate_string(map->string_allocator, key);
@@ -89,12 +92,15 @@ void _hashmap_key_get_empty_space(struct _hashmap* map, uint8_t* key, uint32_t i
 
 void* hashmap_new(uint32_t sub_array_count, uint32_t subarray_extension_mappings_count)
 {
+	if (sub_array_count == 0 || subarray_extension_mappings_count == 0) return NULL;
+
 	struct _hashmap* map = malloc(sizeof(struct _hashmap) + sizeof(struct _hashmap_subarray) * sub_array_count);
 
 	map->sub_array_count = sub_array_count;
 	map->subarray_extension_mappings_count = subarray_extension_mappings_count;
 	memset(map->sub_arrays, 0, sizeof(struct _hashmap_subarray) * sub_array_count);
 	map->string_allocator = string_allocator_new(16384);
+	map->key_count = 0;
 
 	return map;
 }
@@ -125,7 +131,7 @@ void hashmap_set_value(void* hashmap, uint8_t* key, void* value, uint32_t value_
 	} break;
 
 	case HASHMAP_VALUE_INT: {
-		resolved_value.data._int = *((uint32_t*)value);
+		resolved_value.data._int = *((int32_t*)value);
 	} break;
 
 	default: return;
@@ -140,7 +146,11 @@ void hashmap_set_value(void* hashmap, uint8_t* key, void* value, uint32_t value_
 			string_free(map->string_allocator, map->sub_arrays[index].entries[sub_index].value.data._string);
 	}
 	else
+	{
 		_hashmap_key_get_empty_space(map, key, index, &sub_index);
+		map->key_count++;
+	}
+		
 
 	map->sub_arrays[index].entries[sub_index].value = resolved_value;
 }
@@ -170,5 +180,140 @@ void hashmap_delete_key(void* hashmap, uint8_t* key)
 
 		string_free(map->string_allocator, map->sub_arrays[index].entries[sub_index].key);
 		map->sub_arrays[index].entries[sub_index].in_use = false;
+
+		map->key_count--;
 	}
+}
+
+uint32_t hashmap_get_key_count(void* hashmap)
+{
+	struct _hashmap* map = hashmap;
+	return map->key_count;
+}
+
+void hashmap_iterator_start(struct hashmap_iterator* iterator, void* hashmap)
+{
+	iterator->map = hashmap;
+	iterator->index = 0;
+	iterator->sub_index = 0;
+}
+
+struct hashmap_multi_type* hashmap_iterator_next_key_value_pair(struct hashmap_iterator* iterator, uint8_t** key)
+{
+	struct _hashmap* map = iterator->map;
+
+	for (; iterator->index < map->sub_array_count; iterator->index++)
+	{
+		for (; iterator->sub_index < map->sub_arrays[iterator->index].entry_count; iterator->sub_index++)
+		{
+			if (map->sub_arrays[iterator->index].entries[iterator->sub_index].in_use)
+			{
+				*key = map->sub_arrays[iterator->index].entries[iterator->sub_index].key;
+				struct hashmap_multi_type* ret = &map->sub_arrays[iterator->index].entries[iterator->sub_index].value;
+
+				iterator->sub_index++;
+				return ret;
+			}
+		}
+		iterator->sub_index = 0;
+	}
+
+	return NULL;
+}
+
+void hashmap_read_yaml(void* hashmap, uint8_t* yaml_data, size_t yaml_data_size)
+{
+	struct _hashmap* map = hashmap;
+
+	uint8_t* data = (uint8_t*)malloc(yaml_data_size + 1);
+	memcpy(data, yaml_data, yaml_data_size);
+	data[yaml_data_size] = '\0';
+
+	uint32_t line_breaks = 0;
+	for (uint32_t i = 0; i < yaml_data_size; i++) if (yaml_data[i] == '\n') line_breaks++;
+
+	uint32_t text_i = 0;
+	for (uint32_t lines_i = 0; lines_i < line_breaks + 1; lines_i++) {
+
+#define skip_spaces while(data[text_i] == ' ') text_i++
+#define continue_on_next_line for(;data[text_i] != '\n' && data[text_i + 1] != '\0'; text_i++) {} text_i++;  continue
+
+		skip_spaces;
+
+		uint32_t key_start = text_i;
+		for (; data[text_i] != ' ' && data[text_i] != ':' && data[text_i] != '\n' && data[text_i] != '\0' && data[text_i] != '\r'; text_i++);
+		uint32_t key_end = text_i;
+		if (key_end - key_start == 0) { continue_on_next_line; }
+
+		skip_spaces;
+
+		if (data[text_i] != ':') { continue_on_next_line; }
+		text_i++;
+		data[key_end] = '\0';
+		skip_spaces;
+
+		uint32_t type = HASHMAP_VALUE_INT;
+		uint32_t string_quotes = 0;
+
+		uint32_t value_start = text_i;
+
+		for (; data[text_i] != '\n' && data[text_i] != '\r' && data[text_i] != '\0' && (data[text_i] != ' ' || string_quotes); text_i++) {
+			if (data[text_i] == '"') { type = HASHMAP_VALUE_STRING; string_quotes ^= 1; }
+			if (type == HASHMAP_VALUE_STRING) continue;
+			if (data[text_i] == '.' && type == HASHMAP_VALUE_INT) type = HASHMAP_VALUE_FLOAT;
+			else if ((data[text_i] < '0' || data[text_i] > '9') && (data[text_i] != '-' || text_i != value_start)) { type = HASHMAP_VALUE_STRING; }
+		}
+
+		if (text_i - value_start == 0) { continue_on_next_line; }
+
+		if (type == HASHMAP_VALUE_STRING) {
+			if (data[text_i - 1] == '"' && string_quotes == 0) {
+				data[text_i - 1] = '\0';
+				hashmap_set_value(map, &data[key_start], &data[value_start + 1], HASHMAP_VALUE_STRING);
+			}
+			else {
+				uint8_t end_val = data[text_i];
+				data[text_i] = '\0';
+				hashmap_set_value(map, &data[key_start], &data[value_start], HASHMAP_VALUE_STRING);
+				data[text_i] = end_val;
+			}
+		}
+		else if (type == HASHMAP_VALUE_INT) {
+			int32_t int_val = 0;
+			int32_t negative = 1;
+
+			if (data[value_start] == '-') { value_start++; negative = -1; }
+			for (uint32_t _i = value_start; _i < text_i; _i++) {
+				int_val *= 10;
+				int_val += data[_i] - '0';
+			}
+			int_val *= negative;
+			hashmap_set_value(map, &data[key_start], &int_val, HASHMAP_VALUE_INT);
+		}
+		else {
+			float float_val = 0.f;
+			float decimal = -1.f;
+			float negative = 1.f;
+
+			if (data[value_start] == '-') { value_start++; negative = -1.f; }
+
+			for (uint32_t _i = value_start; _i < text_i; _i++) {
+				if (data[_i] == '.') decimal = 10.f;
+				else if (decimal < 0) {
+					float_val *= 10.f;
+					float_val += (float)(data[_i] - '0');
+				}
+				else {
+					float_val += (float)(data[_i] - '0') / decimal;
+					decimal *= 10.f;
+				}
+			}
+			float_val *= negative;
+			hashmap_set_value(map, &data[key_start], &float_val, HASHMAP_VALUE_FLOAT);
+		}
+
+		continue_on_next_line;
+	}
+
+	free(data);
 }

@@ -1,8 +1,59 @@
 #include "minec_client.h"
 
-uint32_t minec_client_run(struct minec_client* client, uint8_t* resource_path) {
+void* minec_client_load_file(uint8_t* path, size_t* size) {
 
-	application_create(&client->application_state);
+	FILE* file = fopen(path, "rb");
+
+	if (file == NULL) return NULL;
+
+	fseek(file, 0, SEEK_END);
+	long fileSize = ftell(file);
+	rewind(file);
+
+	void* buffer = malloc(fileSize);
+	if (buffer == NULL) {
+		fclose(file);
+		return NULL;
+	}
+
+	size_t read = fread(buffer, 1, fileSize, file);
+
+	fclose(file);
+
+	if (read != fileSize)
+	{
+		free(buffer);
+		return NULL;
+	}
+
+	*size = read;
+
+	return buffer;
+}
+
+
+uint32_t minec_client_run(struct minec_client* client, uint8_t* runtime_files_path)
+{
+	client->string_allocator = string_allocator_new(4096);
+	client->runtime_files_path = string_allocate_string(client->string_allocator, runtime_files_path);
+	client->runtime_files_path_length = strlen(runtime_files_path);
+
+	uint32_t screen_width = get_screen_width();
+	uint32_t screen_height = get_screen_height();
+
+	uint32_t ret = application_window_create(
+		&client->main_window,
+		screen_width / 4,
+		screen_height / 8,
+		screen_width / 2,
+		screen_height / 2,
+		"MineC"
+	);
+
+	settings_create(client);
+	settings_load(client);
+
+	resources_create(client);
 
 	/*resources_create(client, resource_path);
 	settings_load(client);
@@ -17,7 +68,8 @@ uint32_t minec_client_run(struct minec_client* client, uint8_t* resource_path) {
 	while (get_key_state(KEY_MOUSE_LEFT) & 0b1 != 0) sleep_for_ms(1);
 #endif // UNIX
 
-	while (application_handle_events(&client->application_state) == 0) {
+	while (application_window_handle_events(&client->main_window) == 0)
+	{
 
 		/*gui_menus_simulation_frame(client);
 
@@ -37,7 +89,12 @@ uint32_t minec_client_run(struct minec_client* client, uint8_t* resource_path) {
 	settings_save(client);
 	resources_destroy(client);*/
 
-	application_destroy(&client->application_state);
+	resources_destroy(client);
+
+	settings_destroy(client);
+
+	application_window_destroy(&client->main_window);
+	string_allocator_delete(client->string_allocator);
 
 	return 0;
 }

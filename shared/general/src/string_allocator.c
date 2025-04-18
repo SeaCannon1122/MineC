@@ -91,10 +91,31 @@ void* string_allocate(void* allocator, size_t size)
 
 uint8_t* string_allocate_string(void* allocator, uint8_t* string)
 {
-	uint8_t* str_ptr = string_allocate(allocator, strlen(string) + 1);
-	memcpy(str_ptr, string, strlen(string) + 1);
+	size_t str_len = strlen(string);
+	uint8_t* str_ptr = string_allocate(allocator, str_len + 1);
+	memcpy(str_ptr, string, str_len + 1);
 
 	return str_ptr;
+}
+
+uint8_t* string_allocate_joined_string(void* allocator, uint8_t** strings, uint32_t string_count)
+{
+	size_t joined_string_length = 0;
+	for (uint32_t i = 0; i < string_count; i++) joined_string_length += strlen(strings[i]);
+
+	uint8_t* joined_string = string_allocate(allocator, joined_string_length + 1);
+
+	size_t offset = 0;
+	for (uint32_t i = 0; i < string_count; i++)
+	{
+		size_t string_length = strlen(strings[i]);
+		memcpy(&joined_string[offset], strings[i], string_length);
+		offset += string_length;
+	}
+
+	joined_string[joined_string_length] = 0;
+
+	return joined_string;
 }
 
 uint32_t string_free(void* allocator, void* memory_handle)

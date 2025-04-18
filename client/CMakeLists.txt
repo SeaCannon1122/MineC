@@ -6,12 +6,12 @@ set(MINEC_CLIENT_SOURCE_FILES
 
     ${CMAKE_CURRENT_SOURCE_DIR}/src/main.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/minec_client.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/application/application.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/application/application_window.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/application_window/application_window.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/settings/settings.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/resources/resources.c
 
-    ${CMAKE_SOURCE_DIR}/shared/general/src/key_value.c
-    ${CMAKE_SOURCE_DIR}/shared/general/src/resource_manager.c
     ${CMAKE_SOURCE_DIR}/shared/general/src/string_allocator.c
+    ${CMAKE_SOURCE_DIR}/shared/general/src/hashmap.c
     ${CMAKE_SOURCE_DIR}/shared/general/src/platformlib/platform/platform.c
     ${CMAKE_SOURCE_DIR}/shared/general/src/platformlib/networking/networking.c
 )
@@ -30,6 +30,11 @@ if(WIN32)
     set_target_properties(minec_client 
         PROPERTIES LINK_FLAGS "/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup"
     )
+    
+    target_compile_options(minec_client 
+        PRIVATE /experimental:c11atomics
+    )
+
 
 elseif(UNIX)
     find_package(X11 REQUIRED)
@@ -66,10 +71,11 @@ if (Vulkan_FOUND)
 
 endif()
 
-
-
-add_custom_command(TARGET minec_client POST_BUILD
+add_custom_target(copy_runtime_files ALL
     COMMAND ${CMAKE_COMMAND} -E copy_directory
     "${CMAKE_CURRENT_SOURCE_DIR}/runtime_files"
     "${CMAKE_CURRENT_BINARY_DIR}/runtime_files"
+    COMMENT "Copying runtime files..."
 )
+
+add_dependencies(minec_client copy_runtime_files)

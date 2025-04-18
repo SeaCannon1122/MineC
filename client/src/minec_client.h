@@ -4,43 +4,38 @@
 #define GAME_CLIENT_H
 
 #include <stdio.h>
-#include <malloc.h>
+#include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
+#include <stddef.h>
+#include <stdbool.h>
 #include <time.h>
 #include <math.h>
 #include <stdarg.h>
 
-#include "platformlib/platform/platform.h"
-#include "platformlib/networking/networking.h"
+#include "string_allocator.h"
+#include "hashmap.h"
 
-#include "resources/resources.h"
-#include "application/application.h"
-#include "renderer/renderer.h"
-#include "gui/gui_menus.h"
+#include "application_window/application_window.h"
 #include "settings/settings.h"
-#include "simulator/simulator.h"
-#include "networker/networker.h"
+#include "resources/resources.h"
 
-static uint32_t game_strlen(uint32_t* str) {
-	uint32_t len = 0;
-	for (; str[len] != 0; len++);
-	return len;
-}
+struct minec_client
+{
+	void* string_allocator;
+	uint8_t* runtime_files_path;
+	size_t runtime_files_path_length;
 
-struct minec_client {
-
+	struct application_window main_window;
+	
 	struct settings_state settings_state;
 
-	struct resource_state resource_state;
-	struct application_state application_state;
-	struct renderer_state renderer_state;
-	struct gui_menus_state gui_menus_state;
-	struct simulator_state simulator_state;
-	struct networker_state networker_state;
+	struct resources_state resources_state;
 
 };
 
+void* minec_client_load_file(uint8_t* path, size_t* size);
 
-uint32_t minec_client_run(struct minec_client* game, uint8_t* resource_path);
+uint32_t minec_client_run(struct minec_client* client, uint8_t* runtime_files_path);
 
 #endif // !GAME_CLIENT_H

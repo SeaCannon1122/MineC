@@ -6,23 +6,17 @@
 #include "stdbool.h"
 #include <pixelchar/pixelchar.h>
 
-struct resources_image
+struct resources_texture
 {
-	struct
-	{
-		uint32_t width;
-		uint32_t height;
-		void* data;
-	} image;
-
-	bool in_use;
+	uint32_t width;
+	uint32_t height;
+	void* data;
 };
 
 struct resources_pixelchar_font
 {
-	struct pixelchar_font font;
-
-	bool in_use;
+	void* font_file_data;
+	size_t font_file_data_size;
 };
 
 struct resources_key_value_map
@@ -43,9 +37,21 @@ struct resources_shader
 	bool in_use;
 };
 
-struct resources_state {
+struct resources_state
+{
+	struct resources_texture* textures;
+	uint32_t texture_count;
+	void* texture_token_id_hashmap;
 
-
+	struct resources_pixelchar_font* pixelchar_fonts;
+	uint32_t pixelchar_font_count;
+	void* pixelchar_font_token_id_hashmap;
 };
+
+struct minec_client;
+
+void resources_create(struct minec_client* client);
+
+void resources_destroy(struct minec_client* client);
 
 #endif // !RESOURCES_H

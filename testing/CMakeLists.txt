@@ -14,7 +14,7 @@ set(TEST_SOURCE_FILES
 set(TEST_2_SOURCE_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/test2/main.c
 
-    ${CMAKE_SOURCE_DIR}/client/src/application/application_window.c
+    ${CMAKE_SOURCE_DIR}/client/src/application_window/application_window.c
 
     ${CMAKE_SOURCE_DIR}/shared/general/src/platformlib/platform/platform.c
 )

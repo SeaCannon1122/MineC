@@ -7,24 +7,26 @@
 
 struct settings_state {
 
-	struct game_settings {
+	struct
+	{
+		struct
+		{
+			uint32_t gui_scale;
+			uint32_t fov;
 
-		uint32_t gui_scale;
+		} video_settings;
 
 	} game_settings;
 
-	struct game_constants {
-
-		uint32_t server_request_timeout;
-
-	} game_constants;
-
+	void* resource_pack_paths_hashmap;
 };
 
 struct minec_client;
 
-uint32_t settings_load(struct minec_client* game);
+void settings_create(struct minec_client* client);
+void settings_destroy(struct minec_client* client);
 
-uint32_t settings_save(struct minec_client* game);
+void settings_load(struct minec_client* client);
+void settings_save(struct minec_client* client);
 
 #endif // !SETTINGS_H

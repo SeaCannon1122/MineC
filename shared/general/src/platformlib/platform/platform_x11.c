@@ -1,15 +1,16 @@
 #include "platform.h"
 
+#include <unistd.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/XKBlib.h>
 #include <X11/Xlocale.h>
 #include <pthread.h>
-#include <unistd.h>
 #include <sys/time.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <dlfcn.h>
+#include <malloc.h>
 
 struct window_state 
 {
