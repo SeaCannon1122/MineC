@@ -28,7 +28,6 @@ void _resources_load_paths_of_resource_type(struct minec_client* client, void* p
 	size_t file_length;
 	void* file_data = minec_client_load_file(layout_file_path, &file_length);
 
-	string_free(client->string_allocator, layout_file_path);
 
 	if (file_data != NULL)
 	{
@@ -55,6 +54,9 @@ void _resources_load_paths_of_resource_type(struct minec_client* client, void* p
 
 		hashmap_delete(pack_paths_hashmap);
 	}
+	else printf("[RESOURCES] failed to open %s\n", layout_file_path);
+
+	string_free(client->string_allocator, layout_file_path);
 }
 
 void resources_create(struct minec_client* client) {
@@ -118,6 +120,7 @@ void resources_create(struct minec_client* client) {
 				hashmap_set_value(client->resources_state.texture_token_id_hashmap, key, &client->resources_state.texture_count, HASHMAP_VALUE_INT);
 				client->resources_state.texture_count++;
 			}
+			else printf("[RESOURCES] failed to load %s\n", val->data._string);
 		}
 	}
 
@@ -149,6 +152,7 @@ void resources_create(struct minec_client* client) {
 				hashmap_set_value(client->resources_state.pixelchar_font_token_id_hashmap, key, &client->resources_state.pixelchar_font_count, HASHMAP_VALUE_INT);
 				client->resources_state.pixelchar_font_count++;
 			}
+			else printf("[RESOURCES] failed to load %s\n", val->data._string);
 		}
 	}
 

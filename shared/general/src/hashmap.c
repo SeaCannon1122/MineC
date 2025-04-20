@@ -81,7 +81,7 @@ void _hashmap_key_get_empty_space(struct _hashmap* map, uint8_t* key, uint32_t i
 		string_free(map->string_allocator, old_entries);
 	}
 
-	memset((size_t)map->sub_arrays[index].entries + sizeof(struct _hashmap_entry) * old_entry_count, 0, sizeof(struct _hashmap_entry) * map->subarray_extension_mappings_count);
+	memset((void*)((size_t)map->sub_arrays[index].entries + sizeof(struct _hashmap_entry) * old_entry_count), 0, sizeof(struct _hashmap_entry) * map->subarray_extension_mappings_count);
 
 	map->sub_arrays[index].entries[old_entry_count].in_use = true;
 	map->sub_arrays[index].entries[old_entry_count].key = string_allocate_string(map->string_allocator, key);

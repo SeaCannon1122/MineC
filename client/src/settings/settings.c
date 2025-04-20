@@ -31,7 +31,7 @@ void settings_load(struct minec_client* client)
 		uint8_t* path = string_allocate_joined_string(client->string_allocator, path_components, 2);
 
 		void* file_data = minec_client_load_file(path, &file_length);
-		string_free(client->string_allocator, path);
+		
 
 		if (file_data != NULL)
 		{
@@ -40,7 +40,7 @@ void settings_load(struct minec_client* client)
 
 			hashmap_read_yaml(hashmap, file_data, file_length);
 			free(file_data);
-		
+
 			struct hashmap_multi_type* value;
 
 			if (value = hashmap_get_value(hashmap, "gui_scale")) if (value->type == HASHMAP_VALUE_INT)
@@ -48,11 +48,13 @@ void settings_load(struct minec_client* client)
 
 			if (value = hashmap_get_value(hashmap, "fov")) if (value->type == HASHMAP_VALUE_INT)
 				client->settings_state.game_settings.video_settings.fov = value->data._int;
-		
-		
+
+
 			hashmap_delete(hashmap);
 		}
+		else printf("[SETTINGS] failed to open %s\n", path);
 
+		string_free(client->string_allocator, path);
 	}
 
 	//resource packs
@@ -62,7 +64,7 @@ void settings_load(struct minec_client* client)
 		uint8_t* path = string_allocate_joined_string(client->string_allocator, path_components, 2);
 
 		void* file_data = minec_client_load_file(path, &file_length);
-		string_free(client->string_allocator, path);
+		
 
 		if (file_data != NULL)
 		{
@@ -85,7 +87,9 @@ void settings_load(struct minec_client* client)
 
 			hashmap_delete(hashmap);
 		}
+		else printf("[SETTINGS] failed to open %s\n", path);
 
+		string_free(client->string_allocator, path);
 	}
 
 

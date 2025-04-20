@@ -143,12 +143,10 @@ uint32_t get_screen_height()
 
 void show_console_window() 
 {
-	ShowWindow(console, SW_SHOW);;
 }
 
 void hide_console_window() 
 {
-	ShowWindow(console, SW_HIDE);
 }
 
 uint32_t window_create(uint32_t posx, uint32_t posy, uint32_t width, uint32_t height, uint8_t* name, uint32_t visible) 
@@ -485,27 +483,6 @@ uint32_t window_process_next_event(uint32_t window, struct window_event* event)
 
 void platform_init() 
 {
-
-	AllocConsole();
-	console = GetConsoleWindow();
-	ShowWindow(console, SW_HIDE);
-
-	FILE* fstdout;
-	freopen_s(&fstdout, "CONOUT$", "w", stdout);
-
-	SetConsoleCP(CP_UTF8);
-	SetConsoleOutputCP(CP_UTF8);
-
-	setvbuf(stdout, NULL, _IONBF, 0);
-
-	DWORD dwMode = 0;
-	HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
-
-	if (GetConsoleMode(hStdOut, &dwMode)) {
-		dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-		SetConsoleMode(hStdOut, dwMode);
-	}
-
 	wc = (WNDCLASSW){
 		CS_HREDRAW | CS_VREDRAW | CS_CLASSDC,
 		WinProc,
@@ -529,5 +506,4 @@ void platform_exit()
 	for (int32_t i = 0; i < MAX_WINDOW_COUNT; i++) window_destroy(i);
 
 	UnregisterClassW(L"BasicWindowClass", GetModuleHandleA(NULL));
-	FreeConsole();
 }

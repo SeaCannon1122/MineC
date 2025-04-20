@@ -1,6 +1,6 @@
 
 #include "platformlib/platform/platform.h"
-#include "application/application_window.h"
+#include "application_window/application_window.h"
 
 #include <pixelchar/pixelchar.h>
 
@@ -393,7 +393,8 @@ int main()
 	pixelchar_set_debug_callback(callback);
 
 	size_t pixelfont_size;
-	void* pixelfont = loadFile("../../../../client/resourcepacks/MineCdefault/fonts/default.pixelchar_font", &pixelfont_size);
+	void* pixelfont = loadFile("runtime_files/assets/MineCdefault/fonts/default.pixelfont", &pixelfont_size);
+	if (pixelfont == NULL) printf("failed to load pixelfont\n");
 
 	struct pixelchar_font font;
 	pixelchar_font_create(&font, pixelfont, pixelfont_size);
@@ -402,9 +403,11 @@ int main()
 	pixelchar_renderer_create(&pcr, 1000);
 
 	size_t vert_length;
-	void* vert_src = loadFile("../../../../client/resourcepacks/MineCdefault//shaders/pixelchar.vert.spv", &vert_length);
+	void* vert_src = loadFile("runtime_files/assets/MineCdefault/shaders/pixelchar_vk.vert.spv", &vert_length);
+	if (vert_src == NULL) printf("failed to load vert_src\n");
 	size_t frag_length;
-	void* frag_src = loadFile("../../../../client/resourcepacks/MineCdefault//shaders/pixelchar.frag.spv", &frag_length);
+	void* frag_src = loadFile("runtime_files/assets/MineCdefault/shaders/pixelchar_vk.frag.spv", &frag_length);
+	if (frag_src == NULL) printf("failed to load frag_src\n");
 
 	pixelchar_renderer_backend_vulkan_init(&pcr, device, gpu, queue, queue_index, window_render_pass, vert_src, vert_length, frag_src, frag_length);
 
@@ -419,7 +422,7 @@ int main()
 
 	struct pixelchar c[100];
 
-	uint32_t scale = 32;
+	uint32_t scale = 16;
 
 	for (uint32_t i = 0; i < str_len; i++)
 	{

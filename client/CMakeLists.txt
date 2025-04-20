@@ -9,6 +9,7 @@ set(MINEC_CLIENT_SOURCE_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/application_window/application_window.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/settings/settings.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/resources/resources.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/renderer.c
 
     ${CMAKE_SOURCE_DIR}/shared/general/src/string_allocator.c
     ${CMAKE_SOURCE_DIR}/shared/general/src/hashmap.c
@@ -27,10 +28,7 @@ target_include_directories(minec_client
 )
 
 if(WIN32)
-    set_target_properties(minec_client 
-        PROPERTIES LINK_FLAGS "/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup"
-    )
-    
+   
     target_compile_options(minec_client 
         PRIVATE /experimental:c11atomics
     )
@@ -63,19 +61,16 @@ if (Vulkan_FOUND)
     target_compile_definitions(minec_client_renderer_backend_vulkan
         PUBLIC _MINEC_CLIENT_RENDERER_BACKEND_VULKAN=1
     )
-    target_link_libraries(minec_client_renderer_backend_vulkan 
-        PUBLIC pixelchar
-    )
 
     target_link_libraries(minec_client PUBLIC pixelchar)
 
 endif()
 
-add_custom_target(copy_runtime_files ALL
+add_custom_target(minec_copy_runtime_files ALL
     COMMAND ${CMAKE_COMMAND} -E copy_directory
     "${CMAKE_CURRENT_SOURCE_DIR}/runtime_files"
     "${CMAKE_CURRENT_BINARY_DIR}/runtime_files"
     COMMENT "Copying runtime files..."
 )
 
-add_dependencies(minec_client copy_runtime_files)
+add_dependencies(minec_client minec_copy_runtime_files)

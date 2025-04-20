@@ -55,10 +55,9 @@ uint32_t minec_client_run(struct minec_client* client, uint8_t* runtime_files_pa
 
 	resources_create(client);
 
-	/*resources_create(client, resource_path);
-	settings_load(client);
+	renderer_create(client);
 
-	gui_menus_create(client);
+	/*gui_menus_create(client);
 	renderer_create(client);
 
 	simulator_start(client);
@@ -84,10 +83,9 @@ uint32_t minec_client_run(struct minec_client* client, uint8_t* runtime_files_pa
 	simulator_stop(client);
 
 	renderer_destroy(client);
-	gui_menus_destroy(client);
+	gui_menus_destroy(client);*/
 
-	settings_save(client);
-	resources_destroy(client);*/
+	renderer_destroy(client);
 
 	resources_destroy(client);
 

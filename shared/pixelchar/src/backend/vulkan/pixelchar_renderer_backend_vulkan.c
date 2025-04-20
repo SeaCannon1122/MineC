@@ -312,7 +312,7 @@ uint32_t pixelchar_renderer_backend_vulkan_init(
 		goto vkAllocateCommandBuffers_failed
 	);
 
-	size_t vertex_index_buffer_size = pcr->char_buffer_length * (sizeof(struct internal_pixelchar) + sizeof(uint16_t) * 6);
+	size_t vertex_index_buffer_size = pcr->char_buffer_length * sizeof(struct internal_pixelchar) + sizeof(uint16_t) * 6;
 	size_t staging_buffer_size = PIXELCHAR_VULKAN_STAGING_SIZE;
 	size_t vertex_index_staging_memory_size = vertex_index_buffer_size + staging_buffer_size;
 
@@ -434,15 +434,12 @@ uint32_t pixelchar_renderer_backend_vulkan_init(
 	);
 
 	uint16_t* index_buffer_ptr = (size_t)backend.vertex_index_buffer_host_handle + sizeof(struct internal_pixelchar) * pcr->char_buffer_length;
-	for (uint32_t i = 0; i < pcr->char_buffer_length; i++)
-	{
-		index_buffer_ptr[i * 6 + 0] = 4 * i;
-		index_buffer_ptr[i * 6 + 1] = 4 * i + 1;
-		index_buffer_ptr[i * 6 + 2] = 4 * i + 2;
-		index_buffer_ptr[i * 6 + 3] = 4 * i + 1;
-		index_buffer_ptr[i * 6 + 4] = 4 * i + 3;
-		index_buffer_ptr[i * 6 + 5] = 4 * i + 2;
-	}
+	index_buffer_ptr[0] = 0;
+	index_buffer_ptr[1] = 1;
+	index_buffer_ptr[2] = 2;
+	index_buffer_ptr[3] = 1;
+	index_buffer_ptr[4] = 3;
+	index_buffer_ptr[5] = 2;
 
 	vkDestroyShaderModule(backend.device, vertex_shader, 0);
 	vkDestroyShaderModule(backend.device, fragment_shader, 0);
@@ -513,8 +510,6 @@ void pixelchar_renderer_backend_vulkan_deinit(struct pixelchar_renderer* pcr)
 		_pixelchar_font_backend_vulkan_reference_subtract(pcr->fonts[i]);
 
 	pcr->backends_initialized &= (~PIXELCHAR_BACKEND_VULKAN_BIT);
-
-	return PIXELCHAR_SUCCESS;
 }
 
 

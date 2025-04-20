@@ -49,7 +49,7 @@ static void (*pixelchar_renderer_backend_deinit_functions[])(struct pixelchar_re
 	NULL,
 #endif
 #ifdef _PIXELCHAR_BACKEND_OPENGL
-	NULL,
+	pixelchar_renderer_backend_opengl_deinit,
 #else
 	NULL,
 #endif
@@ -67,7 +67,7 @@ static void (*_pixelchar_font_backend_reference_init_functions[])(struct pixelch
 	NULL,
 #endif
 #ifdef _PIXELCHAR_BACKEND_OPENGL
-	NULL,
+	_pixelchar_font_backend_opengl_reference_init,
 #else
 	NULL,
 #endif
@@ -85,7 +85,7 @@ static uint32_t (*_pixelchar_font_backend_reference_add_functions[])(struct pixe
 	NULL,
 #endif
 #ifdef _PIXELCHAR_BACKEND_OPENGL
-	NULL,
+	_pixelchar_font_backend_opengl_reference_add,
 #else
 	NULL,
 #endif
@@ -103,7 +103,7 @@ static void (*_pixelchar_font_backend_reference_subtract_functions[])(struct pix
 	NULL,
 #endif
 #ifdef _PIXELCHAR_BACKEND_OPENGL
-	NULL,
+	_pixelchar_font_backend_opengl_reference_subtract,
 #else
 	NULL,
 #endif

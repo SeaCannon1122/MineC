@@ -19,6 +19,7 @@
 #include "application_window/application_window.h"
 #include "settings/settings.h"
 #include "resources/resources.h"
+#include "renderer/renderer.h"
 
 struct minec_client
 {
@@ -31,6 +32,8 @@ struct minec_client
 	struct settings_state settings_state;
 
 	struct resources_state resources_state;
+
+	struct renderer_state renderer_state;
 
 };
 

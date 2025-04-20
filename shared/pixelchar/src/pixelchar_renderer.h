@@ -51,6 +51,9 @@ struct pixelchar_renderer
 #ifdef _PIXELCHAR_BACKEND_VULKAN
 		struct pixelchar_renderer_backend_vulkan vulkan;
 #endif
+#ifdef _PIXELCHAR_BACKEND_OPENGL
+		struct pixelchar_renderer_backend_opengl opengl;
+#endif
 
 	} backends;
 

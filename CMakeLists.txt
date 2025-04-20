@@ -5,6 +5,7 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 
 project(MineC)
 
+add_subdirectory(shared/window)
 add_subdirectory(shared/pixelchar)
 
 add_subdirectory(testing)

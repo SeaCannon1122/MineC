@@ -15,6 +15,9 @@ struct pixelchar_font
 #ifdef _PIXELCHAR_BACKEND_VULKAN
 		struct pixelchar_font_backend_vulkan vulkan;
 #endif
+#ifdef _PIXELCHAR_BACKEND_OPENGL
+		struct pixelchar_font_backend_opengl opengl;
+#endif
 
 	} backends;
 
