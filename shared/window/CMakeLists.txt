@@ -8,6 +8,16 @@ target_include_directories(window
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/window
 )
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    
+    find_package(X11 REQUIRED)
+
+    target_link_libraries(window 
+        PUBLIC ${X11_LIBRARIES}
+    )
+
+endif()
+
 find_package(Vulkan)
 if (Vulkan_FOUND)
 
@@ -35,5 +45,13 @@ if (OpenGL_FOUND)
     target_link_libraries(window 
         PUBLIC OpenGL::GL
     )
+
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    
+        target_link_libraries(window 
+            PUBLIC GLX
+        )
+
+    endif()
 
 endif()

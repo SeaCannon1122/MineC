@@ -64,15 +64,5 @@ void main()
         
         gl_Position = vec4(vertex_position_f.x * 2.0 / float(screen_size.x) - 1.0, 1.0 - vertex_position_f.y * 2.0 / float(screen_size.y), 0.0, 1.0);
     }
-    
-    //if (gl_VertexID % 4 == 0)
-    //    gl_Position = vec4(100, 200, 0.0, 1.0);
-    //else if (gl_VertexID % 4 == 1)
-    //    gl_Position = vec4(100, 100, 0.0, 1.0);
-    //else if (gl_VertexID % 4 == 2)
-    //    gl_Position = vec4(200, 200, 0.0, 1.0);
-    //else if (gl_VertexID % 4 == 3)
-    //    gl_Position = vec4(200, 100, 0.0, 1.0);
-    
-    //gl_Position = vec4(gl_Position.x * 2.0 / float(screen_size.x) - 1.0, 1.0 - gl_Position.y * 2.0 / float(screen_size.y), 0.0, 1.0);
+
 }

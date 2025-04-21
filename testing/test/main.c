@@ -6,8 +6,6 @@
 #include <glad/glad.h>
 #include <pixelchar/pixelchar.h>
 
-#include "Windows.h"
-
 void GLAPIENTRY DebugCallback(GLenum source, GLenum type, GLuint id, GLenum severity,
 	GLsizei length, const GLchar* message, const void* userParam) {
 	// Output all debug messages (info, warnings, errors)
@@ -24,15 +22,6 @@ void GLAPIENTRY DebugCallback(GLenum source, GLenum type, GLuint id, GLenum seve
 static void callback(uint32_t type, uint8_t* msg)
 {
 	printf("%s %s\n", (type == PIXELCHAR_DEBUG_MESSAGE_TYPE_WARNING ? "[WARNING]" : (type == PIXELCHAR_DEBUG_MESSAGE_TYPE_ERROR ? "[ERROR]" : "[CRITICAL ERROR]")), msg);
-}
-
-double get_time()
-{
-	LARGE_INTEGER frequency, start;
-	QueryPerformanceFrequency(&frequency);
-	QueryPerformanceCounter(&start);
-
-	return (double)1000 * ((double)start.QuadPart / (double)frequency.QuadPart);
 }
 
 void* loadFile(uint8_t* src, size_t* size) {
@@ -61,25 +50,25 @@ int main(int argc, char* argv[]) {
 
 	window_init_system();
 
-	void* window = window_create(100, 100, 200, 200, "window for test", true);
-	window_opengl_context_create(window, 4, 6, NULL);
+	void* window = window_create(100, 100, 200, 200, "window for test", true, NULL);
+	window_opengl_context_create(window, 3, 3, NULL);
 	window_opengl_context_make_current(window);
 
 	window_opengl_set_vsync(true);
 
 	gladLoadGL();
 
-	glEnable(GL_DEBUG_OUTPUT);
-	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS); // Optional: ensures messages are delivered synchronously
+	//glEnable(GL_DEBUG_OUTPUT);
+	//glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS); // Optional: ensures messages are delivered synchronously
 
-	// Register the debug callback function
-	glDebugMessageCallback(DebugCallback, NULL);
+	//// Register the debug callback function
+	//glDebugMessageCallback(DebugCallback, NULL);
 
-	// Set the debug message control to allow all messages
-	glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_HIGH, 0, NULL, GL_TRUE);
-	glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_MEDIUM, 0, NULL, GL_TRUE);
-	glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_LOW, 0, NULL, GL_TRUE);
-	glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_NOTIFICATION, 0, NULL, GL_TRUE);
+	//// Set the debug message control to allow all messages
+	//glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_HIGH, 0, NULL, GL_TRUE);
+	//glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_MEDIUM, 0, NULL, GL_TRUE);
+	//glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_LOW, 0, NULL, GL_FALSE);
+	//glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_NOTIFICATION, 0, NULL, GL_FALSE);
 
 	printf("%s\n",glGetString(GL_RENDERER));
 	printf("%s\n", glGetString(GL_VENDOR));
@@ -109,7 +98,7 @@ int main(int argc, char* argv[]) {
 	void* frag_src = loadFile("runtime_files/assets/MineCdefault/shaders/pixelchar_gl.frag", &frag_length);
 	if (frag_src == NULL) printf("failed to load frag_src\n");
 
-	pixelchar_renderer_backend_opengl_init(&pcr, vert_src, vert_length, frag_src, frag_length);
+	pixelchar_renderer_backend_opengl_init(&pcr, 0, 0, 0, 0);
 
 	free(pixelfont);
 	free(vert_src);
@@ -122,7 +111,7 @@ int main(int argc, char* argv[]) {
 
 	struct pixelchar c[100];
 
-	uint32_t scale = 3;
+	uint32_t scale = 16;
 
 	for (uint32_t i = 0; i < str_len; i++)
 	{

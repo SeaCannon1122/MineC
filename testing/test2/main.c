@@ -402,18 +402,9 @@ int main()
 	struct pixelchar_renderer pcr;
 	pixelchar_renderer_create(&pcr, 1000);
 
-	size_t vert_length;
-	void* vert_src = loadFile("runtime_files/assets/MineCdefault/shaders/pixelchar_vk.vert.spv", &vert_length);
-	if (vert_src == NULL) printf("failed to load vert_src\n");
-	size_t frag_length;
-	void* frag_src = loadFile("runtime_files/assets/MineCdefault/shaders/pixelchar_vk.frag.spv", &frag_length);
-	if (frag_src == NULL) printf("failed to load frag_src\n");
-
-	pixelchar_renderer_backend_vulkan_init(&pcr, device, gpu, queue, queue_index, window_render_pass, vert_src, vert_length, frag_src, frag_length);
+	pixelchar_renderer_backend_vulkan_init(&pcr, device, gpu, queue, queue_index, window_render_pass, 0, 0, 0, 0);
 
 	free(pixelfont);
-	free(vert_src);
-	free(frag_src);
 
 	pixelchar_renderer_set_font(&pcr, &font, 0);
 

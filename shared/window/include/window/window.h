@@ -122,10 +122,15 @@ struct window_event {
 	} info;
 };
 
+struct window_opengL_format_description
+{
+	int a;
+};
+
 void window_init_system();
 void window_deinit_system();
 
-void* window_create(int32_t posx, int32_t posy, uint32_t width, uint32_t height, uint8_t* name, bool visible);
+void* window_create(int32_t posx, int32_t posy, uint32_t width, uint32_t height, uint8_t* name, bool visible, struct window_opengL_format_description* opengl_format_description);
 
 void window_destroy(void* window);
 

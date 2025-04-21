@@ -4,7 +4,7 @@ uint32_t pixelchar_font_create(struct pixelchar_font* font, void* font_file_data
 {
 	struct pixelchar_font_metadata* metadata = font_file_data;
 
-	size_t bitmap_size = metadata->bitmaps_count * metadata->resolution * metadata->resolution / 8;
+	size_t bitmap_size = metadata->resolution * metadata->resolution / 8;
 
 	if (metadata->total_size != font_file_data_size)
 		_DEBUG_CALLBACK_ERROR_RETURN("pixelchar_font_create: size does not match total_size");
@@ -24,7 +24,7 @@ uint32_t pixelchar_font_create(struct pixelchar_font* font, void* font_file_data
 	if (metadata->widths_section_size % 8 != 0)
 		_DEBUG_CALLBACK_WARNING("pixelchar_font_create: widths_section_size is not a multiple of eight");
 
-	if (metadata->bitmaps_section_size < bitmap_size)
+	if (metadata->bitmaps_section_size < bitmap_size * metadata->bitmaps_count)
 		_DEBUG_CALLBACK_ERROR_RETURN("pixelchar_font_create: bitmaps_section_size is smaller than minimum size of 'bitmap_count * resolution * resolution / 8'");
 	if (metadata->bitmaps_section_size % 8 != 0)
 		_DEBUG_CALLBACK_WARNING("pixelchar_font_create: bitmaps_section_size is not a multiple of eight");

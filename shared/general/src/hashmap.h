@@ -4,6 +4,7 @@
 #define HASHMAP_H
 
 #include <stdint.h>
+#include <stddef.h>
 
 enum hasmap_value
 {

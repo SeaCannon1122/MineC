@@ -1,5 +1,8 @@
 #include "pixelchar_internal.h"
 
+#include "pixelchar_opengl_vertex_shader.h"
+#include "pixelchar_opengl_fragment_shader.h"
+
 uint32_t pixelchar_renderer_backend_opengl_init(
 	struct pixelchar_renderer* pcr,
 	uint8_t* vertex_shader_custom_source,
@@ -59,11 +62,20 @@ uint32_t pixelchar_renderer_backend_opengl_init(
 
 	glBindVertexArray(0);
 
+	size_t pixelchar_opengl_vertex_shader_code_size = sizeof(pixelchar_opengl_vertex_shader_code) - 1;
+	size_t pixelchar_opengl_fragment_shader_code_size = sizeof(pixelchar_opengl_fragment_shader_code) - 1;
+
 	GLuint vertex_shader = glCreateShader(GL_VERTEX_SHADER);
 	GLuint fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
 
-	glShaderSource(vertex_shader, 1, &vertex_shader_custom_source, &vertex_shader_custom_source_size);
-	glShaderSource(fragment_shader, 1, &fragment_shader_custom_source, &fragment_shader_custom_source_size);
+	uint8_t* vertex_src = vertex_shader_custom_source? vertex_shader_custom_source : pixelchar_opengl_vertex_shader_code;
+	int32_t vertex_src_length = vertex_shader_custom_source ? vertex_shader_custom_source_size : pixelchar_opengl_vertex_shader_code_size;
+
+	uint8_t* fragment_src = fragment_shader_custom_source ? fragment_shader_custom_source : pixelchar_opengl_fragment_shader_code;
+	int32_t fragment_src_length = fragment_shader_custom_source ? fragment_shader_custom_source_size : pixelchar_opengl_fragment_shader_code_size;
+
+	glShaderSource(vertex_shader, 1, &vertex_src, &vertex_src_length);
+	glShaderSource(fragment_shader, 1, &fragment_src, &fragment_src_length);
 
 	glCompileShader(vertex_shader);
 	glCompileShader(fragment_shader);

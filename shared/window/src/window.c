@@ -17,7 +17,7 @@
 #include "window_windows.c"
 
 #elif defined(__linux__)
-include "window_x11.c"
+#include "window_x11.c"
 
 #endif
 
