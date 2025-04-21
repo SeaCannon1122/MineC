@@ -10,11 +10,6 @@ set(MINEC_CLIENT_SOURCE_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/settings/settings.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/resources/resources.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/renderer.c
-
-    ${CMAKE_SOURCE_DIR}/shared/general/src/string_allocator.c
-    ${CMAKE_SOURCE_DIR}/shared/general/src/hashmap.c
-    ${CMAKE_SOURCE_DIR}/shared/general/src/platformlib/platform/platform.c
-    ${CMAKE_SOURCE_DIR}/shared/general/src/platformlib/networking/networking.c
 )
 
 add_executable(minec_client ${MINEC_CLIENT_SOURCE_FILES})
@@ -22,30 +17,19 @@ add_executable(minec_client ${MINEC_CLIENT_SOURCE_FILES})
 target_include_directories(minec_client
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src
-        ${CMAKE_SOURCE_DIR}/shared/pixelchar/include
-        ${CMAKE_SOURCE_DIR}/shared/general/src
         ${CMAKE_SOURCE_DIR}/dependencies/stb_image/include
 )
 
+target_link_libraries(minec_client 
+    PRIVATE window pixelchar utility networking
+)
+
 if(WIN32)
-   
-    target_compile_options(minec_client 
-        PRIVATE /experimental:c11atomics
-    )
 
 
 elseif(UNIX)
-    find_package(X11 REQUIRED)
-
-    target_include_directories(minec_client
-        PRIVATE ${X11_INCLUDE_DIR}
-    )
-    
     target_link_libraries(minec_client 
-        PRIVATE 
-            X11 
-            pthread 
-            m
+        PRIVATE pthread m
     )
    
 endif()
@@ -61,8 +45,6 @@ if (Vulkan_FOUND)
     target_compile_definitions(minec_client_renderer_backend_vulkan
         PUBLIC _MINEC_CLIENT_RENDERER_BACKEND_VULKAN=1
     )
-
-    target_link_libraries(minec_client PUBLIC pixelchar)
 
 endif()
 

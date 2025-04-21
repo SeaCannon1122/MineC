@@ -1,4 +1,4 @@
-#include "networking.h"
+#include <networking/networking.h>
 #include <stdio.h>
 
 #include <sys/types.h>

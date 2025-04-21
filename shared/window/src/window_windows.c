@@ -1,6 +1,6 @@
 #define VK_USE_PLATFORM_WIN32_KHR
 
-#include "window.h"
+#include <window/window.h>
 
 #include <windows.h>
 #include <stdio.h>

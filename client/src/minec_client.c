@@ -38,15 +38,12 @@ uint32_t minec_client_run(struct minec_client* client, uint8_t* runtime_files_pa
 	client->runtime_files_path = string_allocate_string(client->string_allocator, runtime_files_path);
 	client->runtime_files_path_length = strlen(runtime_files_path);
 
-	uint32_t screen_width = get_screen_width();
-	uint32_t screen_height = get_screen_height();
-
 	uint32_t ret = application_window_create(
 		&client->main_window,
-		screen_width / 4,
-		screen_height / 8,
-		screen_width / 2,
-		screen_height / 2,
+		100,
+		100,
+		700,
+		500,
 		"MineC"
 	);
 

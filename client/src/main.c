@@ -1,14 +1,12 @@
 ﻿#include "minec_client.h"
 
-#include "platformlib/platform/platform.h"
-#include "platformlib/networking/networking.h"
+#include <window/window.h>
+#include <networking/networking.h>
 
 int main(int argc, char* argv[]) {
-
-	platform_init();
+	
+	window_init_system();
 	networking_init();
-
-	show_console_window();
 
 	struct minec_client client;
 	uint32_t game_return_status = minec_client_run(&client, "runtime_files/");
@@ -19,7 +17,7 @@ int main(int argc, char* argv[]) {
 	}
 
 	networking_exit();
-	platform_exit();
+	window_deinit_system();
 
 	return 0;
 }

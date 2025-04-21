@@ -1,14 +1,24 @@
-
-#include "platformlib/platform/platform.h"
-#include "application_window/application_window.h"
-
 #include <pixelchar/pixelchar.h>
-
-#include <vulkan/vulkan.h>
+#include <window/window.h>
 
 #include <malloc.h>
 #include <stdio.h>
 #include <math.h>
+
+#if defined(_WIN32)
+
+#define DEBUG_BREAK() __debugbreak()
+
+#elif defined(__linux__)
+#include <signal.h>
+#define DEBUG_BREAK() raise(SIGTRAP)
+
+#elif defined(__APPLE__)
+
+#define DEBUG_BREAK __builtin_trap()
+#define RESTRICT restrict
+
+#endif
 
 void* loadFile(uint8_t* src, size_t* size) {
 
@@ -56,7 +66,11 @@ do { \
     } \
 } while(0)
 
-struct application_window window;
+void* window;
+uint32_t width;
+uint32_t height;
+uint32_t position_x;
+uint32_t position_y;
 
 VkInstance instance;
 VkDebugUtilsMessengerEXT debug_messenger;
@@ -96,7 +110,7 @@ void vulkan_instance_create()
 	app_info.apiVersion = VK_API_VERSION_1_3;
 
 	char* instance_extensions[] = {
-		PLATFORM_VK_SURFACE_EXTENSION,
+		window_get_vk_khr_surface_extension_name(),
 		VK_KHR_SURFACE_EXTENSION_NAME,
 		VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
 		VK_EXT_DEBUG_UTILS_EXTENSION_NAME
@@ -130,12 +144,12 @@ void vulkan_instance_create()
 		vkCreateDebugUtilsMessengerEXT(instance, &debug_info, 0, &debug_messenger);
 	}
 
-	VKCall(create_vulkan_surface(instance, window.window_handle, &surface));
+	VKCall(window_vkCreateSurfaceKHR(window, instance, &surface));
 }
 
 void vulkan_instance_destroy()
 {
-	VKCall(destroy_vulkan_surface(instance, surface));
+	vkDestroySurfaceKHR(instance, surface, 0);
 
 	PFN_vkDestroyDebugUtilsMessengerEXT vkDestroyDebugUtilsMessengerEXT = vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
 
@@ -355,8 +369,8 @@ void vulkan_device_swapchain_and_framebuffers_create()
 
 	VkFramebufferCreateInfo framebuffer_info = { 0 };
 	framebuffer_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-	framebuffer_info.width = window.width;
-	framebuffer_info.height = window.height;
+	framebuffer_info.width = width;
+	framebuffer_info.height = height;
 	framebuffer_info.renderPass = window_render_pass;
 	framebuffer_info.layers = 1;
 	framebuffer_info.attachmentCount = 1;
@@ -380,10 +394,11 @@ void vulkan_device_swapchain_and_framebuffers_destroy()
 
 int main()
 {
-	platform_init();
-	show_console_window();
+	window_init_system();
 
-	application_window_create(&window, 100, 100, 400, 400, "test2");
+	window = window_create(100, 100, 500, 300, "test2 window vulkan", true, NULL);
+
+	window_get_dimensions(window, &width, &height, &position_x, &position_y);
 
 	vulkan_instance_create();
 	vulkan_device_create();
@@ -438,17 +453,44 @@ int main()
 		
 	}
 
-	while (application_window_handle_events(&window) == 0) {
+	bool leave = false;
+	while (leave == false) {
 
-		if (window.frame_flags & FRAME_FLAG_RESIZE)
+		struct window_event* event;
+		while (event = window_next_event(window))
 		{
-			vulkan_device_swapchain_and_framebuffers_destroy();
-			vulkan_device_swapchain_and_framebuffers_create();
+			switch (event->type)
+			{
+
+			case WINDOW_EVENT_MOVE_SIZE: {
+				printf(
+					"New window dimensions:\n  width: %d\n  height: %d\n  position x: %d\n  position y: %d\n\n",
+					event->info.move_size.width,
+					event->info.move_size.height,
+					event->info.move_size.position_x,
+					event->info.move_size.position_y
+				);
+
+				width = event->info.move_size.width;
+				height = event->info.move_size.height;
+				if (width != 0 && height != 0) {
+					vulkan_device_swapchain_and_framebuffers_destroy();
+					vulkan_device_swapchain_and_framebuffers_create();
+				}
+				
+
+			} break;
+
+			case WINDOW_EVENT_DESTROY: {
+				leave = true;
+			} break;
+
+			}
 		}
 
-		if (window.frame_flags & FRAME_FLAG_RENDERABLE)
-		{
 
+		if (width != 0 && height != 0)
+		{
 			pixelchar_renderer_queue_pixelchars(&pcr, c, str_len);
 
 			VKCall(vkWaitForFences(device, 1, &queue_fence, VK_TRUE, UINT64_MAX));
@@ -471,8 +513,8 @@ int main()
 			VKCall(vkBeginCommandBuffer(cmd, &begin_info));
 
 			VkExtent2D screen_size;
-			screen_size.width = window.width;
-			screen_size.height = window.height;
+			screen_size.width = width;
+			screen_size.height = height;
 
 			VkRect2D scissor = { 0 };
 			scissor.extent = screen_size;
@@ -507,7 +549,7 @@ int main()
 
 			//pixel_chars
 			
-			pixelchar_renderer_backend_vulkan_render(&pcr, cmd, window.width, window.height, 4.f, 4.f, 4.f, 1.4f);
+			pixelchar_renderer_backend_vulkan_render(&pcr, cmd, width, height, 4.f, 4.f, 4.f, 1.4f);
 
 			vkCmdEndRenderPass(cmd);
 
@@ -537,10 +579,9 @@ int main()
 			present_info.pWaitSemaphores = &submit_semaphore;
 			present_info.waitSemaphoreCount = 1;
 
-			VKCall(vkQueuePresentKHR(queue, &present_info));
+			vkQueuePresentKHR(queue, &present_info);
 		}
 
-		sleep_for_ms(16);
 	}
 
 	vkDeviceWaitIdle(device);
@@ -555,8 +596,7 @@ int main()
 	vulkan_device_destroy();
 	vulkan_instance_destroy();
 
-	application_window_destroy(&window);
+	window_destroy(window);
 
-	platform_exit();
-
+	window_deinit_system();
 }

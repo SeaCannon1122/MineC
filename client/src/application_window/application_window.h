@@ -4,8 +4,7 @@
 #define APPLICATION_WINDOW
 
 #include <stdint.h>
-
-#include "platformlib/platform/platform.h"
+#include <window/window.h>
 
 #define MAX_FRAME_CHAR_INPUTS 16
 
@@ -22,7 +21,7 @@ enum frame_flags
 
 struct application_window
 {
-	uint32_t window_handle;
+	void* window_handle;
 
 	void* rendering_backend_handle;
 
@@ -38,7 +37,7 @@ struct application_window
 		uint32_t characters[MAX_FRAME_CHAR_INPUTS];
 		uint32_t character_count;
 
-		uint8_t keyboard[KEY_TOTAL_COUNT];
+		uint8_t keyboard[WINDOW_KEY_TOTAL_COUNT];
 
 		uint32_t mouse_x;
 		uint32_t mouse_y;

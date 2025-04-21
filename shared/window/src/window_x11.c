@@ -1,6 +1,6 @@
 #define VK_USE_PLATFORM_XLIB_KHR
 
-#include "window.h"
+#include <window/window.h>
 
 #include <unistd.h>
 #include <X11/Xlib.h>

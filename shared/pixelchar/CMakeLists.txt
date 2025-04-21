@@ -10,6 +10,7 @@ target_sources(pixelchar PRIVATE
 )
 target_include_directories(pixelchar 
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 find_package(Vulkan)

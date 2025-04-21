@@ -5,7 +5,7 @@ add_library(window STATIC
     ${CMAKE_CURRENT_SOURCE_DIR}/src/window.c
 )
 target_include_directories(window 
-    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/window
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
