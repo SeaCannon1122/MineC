@@ -3,6 +3,10 @@
 #ifndef PIXELCHAR_RENDERER_H
 #define PIXELCHAR_RENDERER_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 #include <stdbool.h>
 #include "pixelchar_font.h"
@@ -54,7 +58,9 @@ struct pixelchar_renderer
 #ifdef _PIXELCHAR_BACKEND_OPENGL
 		struct pixelchar_renderer_backend_opengl opengl;
 #endif
-
+#ifdef _PIXELCHAR_BACKEND_DIRECTX
+		struct pixelchar_renderer_backend_directx directx;
+#endif
 	} backends;
 
 	uint32_t backends_initialized;
@@ -83,5 +89,8 @@ void _pixelchar_renderer_render_convert_to_internal_characters(struct pixelchar_
 
 #endif // !_PIXELCHAR_INTERNEL_EXCLUDE
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

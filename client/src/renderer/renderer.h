@@ -5,11 +5,17 @@
 
 #include <pixelchar/pixelchar.h>
 
+#include "backend/renderer_backend.h"
+
 struct renderer_state
 {
 	struct
 	{
 		int a;
+#ifdef _MINEC_CLIENT_RENDERER_BACKEND_VULKAN
+		struct backend_vulkan vulkan;
+#endif
+		
 	} backend;
 
 	struct pixelchar_renderer pixelchar_renderer;

@@ -1,0 +1,5 @@
+pixelchar_vertex_vk: shaders/pixelchar_vk.vert.spv
+pixelchar_fragment_vk: shaders/pixelchar_vk.frag.spv
+
+pixelchar_vertex_gl: shaders/pixelchar_gl.vert
+pixelchar_fragment_gl: shaders/pixelchar_gl.frag

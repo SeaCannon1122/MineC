@@ -379,6 +379,13 @@ struct window_event* window_next_event(void* window)
 	}
 }
 
+HWND window_windows_get_hwnd(void* window)
+{
+	struct window_data_windows* window_data = window;
+
+	return window_data->hwnd;
+}
+
 #ifdef _WINDOW_SUPPORT_VULKAN
 
 VkResult window_vkCreateSurfaceKHR(void* window, VkInstance instance, VkSurfaceKHR* surface)
@@ -399,8 +406,6 @@ uint8_t* window_get_vk_khr_surface_extension_name()
 }
 
 #endif 
-
-#ifdef _WINDOW_SUPPORT_OPENGL
 
 #include <GL/gl.h>
 #include "wgl.h"
@@ -532,5 +537,3 @@ void window_opengl_swap_buffers(void* window)
 
 	wglSwapBuffers(window_data->hdc);
 }
-
-#endif

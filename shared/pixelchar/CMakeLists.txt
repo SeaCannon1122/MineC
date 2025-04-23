@@ -51,3 +51,19 @@ if (OpenGL_FOUND)
 
     target_link_libraries(pixelchar PUBLIC OpenGL::GL)
 endif()
+
+if(WIN32)
+
+    target_sources(pixelchar PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/backend/directx/pixelchar_renderer_backend_directx.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/backend/directx/pixelchar_font_backend_directx.cpp
+    )
+
+
+    target_compile_definitions(pixelchar 
+        PUBLIC _PIXELCHAR_BACKEND_DIRECTX=1
+    )
+
+    target_link_libraries(pixelchar PUBLIC d3d12 dxguid d3dcompiler)
+
+endif()

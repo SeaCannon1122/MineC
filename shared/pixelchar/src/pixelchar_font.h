@@ -3,6 +3,10 @@
 #ifndef PIXELCHAR_FONT_H
 #define PIXELCHAR_FONT_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "backend/pixelchar_backend.h"
 
 #define PIXELFONT_MAX_NAME_SIZE 31
@@ -17,6 +21,9 @@ struct pixelchar_font
 #endif
 #ifdef _PIXELCHAR_BACKEND_OPENGL
 		struct pixelchar_font_backend_opengl opengl;
+#endif
+#ifdef _PIXELCHAR_BACKEND_DIRECTX
+		struct pixelchar_font_backend_directx directx;
 #endif
 
 	} backends;
@@ -62,5 +69,9 @@ enum pixelchar_font_resolution
 
 uint32_t pixelchar_font_create(struct pixelchar_font* font, void* font_file_data, size_t font_file_data_size);
 uint32_t pixelchar_font_destroy(struct pixelchar_font* font);
+
+#ifdef __cplusplus
+ }
+#endif
 
 #endif

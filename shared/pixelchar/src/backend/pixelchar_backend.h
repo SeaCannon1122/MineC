@@ -7,7 +7,7 @@ enum pixelchar_backend_bit_enum
 {
 	PIXELCHAR_BACKEND_VULKAN_BIT = 1,
 	PIXELCHAR_BACKEND_OPENGL_BIT = 2,
-	PIXELCHAR_BACKEND_DIRECT_BIT = 4,
+	PIXELCHAR_BACKEND_DIRECTX_BIT = 4,
 	PIXELCHAR_BACKEND_MAX_BIT = 8
 };
 
@@ -19,9 +19,9 @@ enum pixelchar_backend_bit_enum
 #include "opengl/pixelchar_renderer_backend_opengl.h"
 #include "opengl/pixelchar_font_backend_opengl.h"
 #endif
-#ifdef _PIXELCHAR_BACKEND_DIRECT
-#include "direct/pixelchar_renderer_backend_direct.h"
-#include "direct/pixelchar_font_backend_direct.h"
+#ifdef _PIXELCHAR_BACKEND_DIRECTX
+#include "directx/pixelchar_renderer_backend_directx.h"
+#include "directx/pixelchar_font_backend_directx.h"
 #endif
 
 #endif

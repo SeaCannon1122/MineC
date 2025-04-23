@@ -11,6 +11,8 @@ uint32_t _pixelchar_font_backend_opengl_reference_add(struct pixelchar_font* fon
 	}
 
 	font->backends.opengl.references++;
+
+	return PIXELCHAR_SUCCESS;
 }
 
 void _pixelchar_font_backend_opengl_reference_subtract(struct pixelchar_font* font)

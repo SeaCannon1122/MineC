@@ -3,6 +3,10 @@
 #ifndef WINDOW_H
 #define WINDOW_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -144,6 +148,14 @@ void window_set_mouse_cursor_position(void* window, int32_t x, int32_t y);
 
 struct window_event* window_next_event(void* window);
 
+#ifdef _WIN32
+
+#include <Windows.h>
+
+HWND window_windows_get_hwnd(void* window);
+
+#endif
+
 #ifdef _WINDOW_SUPPORT_VULKAN
 
 #include <vulkan/vulkan.h>
@@ -166,6 +178,10 @@ void window_opengl_set_vsync(bool vsync);
 
 void window_opengl_swap_buffers(void* window);
 
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif

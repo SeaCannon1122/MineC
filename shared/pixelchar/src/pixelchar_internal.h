@@ -3,6 +3,10 @@
 #ifndef PIXLECHAR_INTERNAL_H
 #define PIXELCHAR_INTERNAL_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "pixelchar_renderer.h"
 
 #ifndef _PIXELCHAR_INTERNAL_EXCLUDE
@@ -35,11 +39,21 @@ if (debug_callback_function) {debug_callback_function(PIXELCHAR_DEBUG_MESSAGE_TY
 return PIXELCHAR_FAILED;\
 } while(0)
 
+#define _DEBUG_CALLBACK_ERROR_RETURN_VOID(msg) do {\
+if (debug_callback_function) {debug_callback_function(PIXELCHAR_DEBUG_MESSAGE_TYPE_ERROR, msg);}\
+return;\
+} while(0)
+
 #define _DEBUG_CALLBACK_CRITICAL_ERROR(msg) do { if (debug_callback_function) debug_callback_function(PIXELCHAR_DEBUG_MESSAGE_TYPE_CRITICAL_ERROR, msg); } while(0)
 
 #define _DEBUG_CALLBACK_CRITICAL_ERROR_RETURN(msg) do {\
 if (debug_callback_function) {debug_callback_function(PIXELCHAR_DEBUG_MESSAGE_TYPE_CRITICAL_ERROR, msg);}\
 return PIXELCHAR_FAILED;\
+} while(0)
+
+#define _DEBUG_CALLBACK_CRITICAL_ERROR_RETURN_VOID(msg) do {\
+if (debug_callback_function) {debug_callback_function(PIXELCHAR_DEBUG_MESSAGE_TYPE_CRITICAL_ERROR, msg);}\
+return;\
 } while(0)
 
 static void (*pixelchar_renderer_backend_deinit_functions[])(struct pixelchar_renderer*) = {
@@ -53,8 +67,8 @@ static void (*pixelchar_renderer_backend_deinit_functions[])(struct pixelchar_re
 #else
 	NULL,
 #endif
-#ifdef _PIXELCHAR_BACKEND_DIRECT
-	NULL,
+#ifdef _PIXELCHAR_BACKEND_DIRECTX
+	pixelchar_renderer_backend_directx_deinit,
 #else
 	NULL,
 #endif
@@ -71,8 +85,8 @@ static void (*_pixelchar_font_backend_reference_init_functions[])(struct pixelch
 #else
 	NULL,
 #endif
-#ifdef _PIXELCHAR_BACKEND_DIRECT
-	NULL,
+#ifdef _PIXELCHAR_BACKEND_DIRECTX
+	_pixelchar_font_backend_directx_reference_init,
 #else
 	NULL,
 #endif
@@ -89,8 +103,8 @@ static uint32_t (*_pixelchar_font_backend_reference_add_functions[])(struct pixe
 #else
 	NULL,
 #endif
-#ifdef _PIXELCHAR_BACKEND_DIRECT
-	NULL,
+#ifdef _PIXELCHAR_BACKEND_DIRECTX
+	_pixelchar_font_backend_directx_reference_add,
 #else
 	NULL,
 #endif
@@ -107,13 +121,17 @@ static void (*_pixelchar_font_backend_reference_subtract_functions[])(struct pix
 #else
 	NULL,
 #endif
-#ifdef _PIXELCHAR_BACKEND_DIRECT
-	NULL,
+#ifdef _PIXELCHAR_BACKEND_DIRECTX
+	_pixelchar_font_backend_directx_reference_subtract,
 #else
 	NULL,
 #endif
 };
 
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif

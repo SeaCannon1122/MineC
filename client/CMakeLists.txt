@@ -38,7 +38,7 @@ find_package(Vulkan)
 if (Vulkan_FOUND)
 
     set(MINEC_CLIENT_RENDERER_BACKEND_VULKAN_SOURCE_FILES
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/backend/vulkan/vulkan_backend.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/backend/_vulkan/vulkan_backend.c
     )
     add_library(minec_client_renderer_backend_vulkan ${MINEC_CLIENT_RENDERER_BACKEND_VULKAN_SOURCE_FILES})
 

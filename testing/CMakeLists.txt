@@ -15,6 +15,7 @@ set(TEST_2_SOURCE_FILES
 
 add_executable(minec_test ${TEST_SOURCE_FILES})
 add_executable(minec_test2 ${TEST_2_SOURCE_FILES})
+add_executable(minec_test3  ${CMAKE_CURRENT_SOURCE_DIR}/test3/main.cpp)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     
@@ -26,19 +27,8 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 
 endif()
 
-target_include_directories(minec_test2
-    PRIVATE
-        ${CMAKE_SOURCE_DIR}/shared/pixelchar/include
-        ${CMAKE_SOURCE_DIR}/shared/window/include
-)
-
-target_include_directories(minec_test
-    PRIVATE
-        ${CMAKE_SOURCE_DIR}/client/src
-        ${CMAKE_SOURCE_DIR}/dependencies/glad/include
-)
-
 target_link_libraries(minec_test2 PRIVATE pixelchar window)
+target_link_libraries(minec_test3 PRIVATE pixelchar window d3d12 dxguid d3dcompiler dxgi)
 target_link_libraries(minec_test PRIVATE pixelchar window)
 
 add_custom_target(test_copy_runtime_files ALL
