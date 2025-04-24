@@ -7,128 +7,73 @@
 extern "C" {
 #endif
 
-#include "pixelchar_renderer.h"
-
-#ifndef _PIXELCHAR_INTERNAL_EXCLUDE
-
-#include <stdlib.h>
-#include <string.h>
+#include <pixelchar/pixelchar.h>
+#include <backend/backend.h>
 
 #define PIXELFONT_INVALID 255
 
-extern PIXELCHAR_DEBUG_CALLBACK_FUNCTION debug_callback_function;
+#define PIXELCHAR_PAD(x, bytes) ((x) + (bytes) - ((x) % (bytes)))
 
-struct internal_pixelchar {
-	uint32_t bitmap_index;
-	uint16_t masks;
-	uint8_t font;
-	uint8_t font_resolution;
-	uint8_t scale;
-	uint8_t bitmap_width;
+typedef struct _pixelchar_renderer_char {
+	uint32_t bitmapIndex;
+	uint32_t flags;
+	uint16_t fontIndex;
+	uint16_t fontResolution;
+	uint16_t scale;
+	uint16_t bitmapWidth;
 	int32_t position[2];
 	uint8_t color[4];
-	uint8_t background_color[4];
-};
+	uint8_t backgroundColor[4];
+} _pixelchar_renderer_char;
 
-#define _DEBUG_CALLBACK_WARNING(msg) do { if (debug_callback_function) debug_callback_function(PIXELCHAR_DEBUG_MESSAGE_TYPE_WARNING, msg); } while(0)
+typedef struct PixelcharFont_T
+{
+	void* backends[PIXELCHAR_BACKEND_s_COUNT];
+	uint32_t backends_reference_count[PIXELCHAR_BACKEND_s_COUNT];
 
-#define _DEBUG_CALLBACK_ERROR(msg) do { if (debug_callback_function) debug_callback_function(PIXELCHAR_DEBUG_MESSAGE_TYPE_ERROR, msg); } while(0)
+	uint32_t resolution;
 
-#define _DEBUG_CALLBACK_ERROR_RETURN(msg) do {\
-if (debug_callback_function) {debug_callback_function(PIXELCHAR_DEBUG_MESSAGE_TYPE_ERROR, msg);}\
-return PIXELCHAR_FAILED;\
-} while(0)
+	uint32_t mappings_count;
+	uint32_t* mappings;
 
-#define _DEBUG_CALLBACK_ERROR_RETURN_VOID(msg) do {\
-if (debug_callback_function) {debug_callback_function(PIXELCHAR_DEBUG_MESSAGE_TYPE_ERROR, msg);}\
-return;\
-} while(0)
+	uint32_t bitmaps_count;
+	uint8_t* widths;
+	void* bitmaps;
 
-#define _DEBUG_CALLBACK_CRITICAL_ERROR(msg) do { if (debug_callback_function) debug_callback_function(PIXELCHAR_DEBUG_MESSAGE_TYPE_CRITICAL_ERROR, msg); } while(0)
+	uint32_t reference_count;
 
-#define _DEBUG_CALLBACK_CRITICAL_ERROR_RETURN(msg) do {\
-if (debug_callback_function) {debug_callback_function(PIXELCHAR_DEBUG_MESSAGE_TYPE_CRITICAL_ERROR, msg);}\
-return PIXELCHAR_FAILED;\
-} while(0)
+	bool destroyed;
+} PixelcharFont_T;
 
-#define _DEBUG_CALLBACK_CRITICAL_ERROR_RETURN_VOID(msg) do {\
-if (debug_callback_function) {debug_callback_function(PIXELCHAR_DEBUG_MESSAGE_TYPE_CRITICAL_ERROR, msg);}\
-return;\
-} while(0)
+typedef struct PixelcharRenderer_T
+{
+	void* backends[PIXELCHAR_BACKEND_s_COUNT];
 
-static void (*pixelchar_renderer_backend_deinit_functions[])(struct pixelchar_renderer*) = {
-#ifdef _PIXELCHAR_BACKEND_VULKAN
-	pixelchar_renderer_backend_vulkan_deinit,
-#else
-	NULL,
-#endif
-#ifdef _PIXELCHAR_BACKEND_OPENGL
-	pixelchar_renderer_backend_opengl_deinit,
-#else
-	NULL,
-#endif
-#ifdef _PIXELCHAR_BACKEND_DIRECTX
-	pixelchar_renderer_backend_directx_deinit,
-#else
-	NULL,
-#endif
-};
+	PixelcharFont fonts[PIXELCHAR_RENDERER_MAX_FONT_COUNT];
+	bool font_backends_referenced[PIXELCHAR_RENDERER_MAX_FONT_COUNT][PIXELCHAR_BACKEND_s_COUNT];
 
-static void (*_pixelchar_font_backend_reference_init_functions[])(struct pixelchar_font*) = {
-#ifdef _PIXELCHAR_BACKEND_VULKAN
-	_pixelchar_font_backend_vulkan_reference_init,
-#else
-	NULL,
-#endif
-#ifdef _PIXELCHAR_BACKEND_OPENGL
-	_pixelchar_font_backend_opengl_reference_init,
-#else
-	NULL,
-#endif
-#ifdef _PIXELCHAR_BACKEND_DIRECTX
-	_pixelchar_font_backend_directx_reference_init,
-#else
-	NULL,
-#endif
-};
+	uint32_t queue_total_length;
+	uint32_t queue_filled_length;
+	Pixelchar queue[];
+} PixelcharRenderer_T;
 
-static uint32_t (*_pixelchar_font_backend_reference_add_functions[])(struct pixelchar_font*, struct pixelchar_renderer*, uint32_t) = {
-#ifdef _PIXELCHAR_BACKEND_VULKAN
-	_pixelchar_font_backend_vulkan_reference_add,
-#else
-	NULL,
-#endif
-#ifdef _PIXELCHAR_BACKEND_OPENGL
-	_pixelchar_font_backend_opengl_reference_add,
-#else
-	NULL,
-#endif
-#ifdef _PIXELCHAR_BACKEND_DIRECTX
-	_pixelchar_font_backend_directx_reference_add,
-#else
-	NULL,
-#endif
-};
+typedef struct _pixelchar_font_metadata
+{
+	size_t total_size;
+	size_t metadata_section_size;
+	size_t mappings_section_size;
+	size_t widths_section_size;
+	size_t bitmaps_section_size;
 
-static void (*_pixelchar_font_backend_reference_subtract_functions[])(struct pixelchar_font*) = {
-#ifdef _PIXELCHAR_BACKEND_VULKAN
-	_pixelchar_font_backend_vulkan_reference_subtract,
-#else
-	NULL,
-#endif
-#ifdef _PIXELCHAR_BACKEND_OPENGL
-	_pixelchar_font_backend_opengl_reference_subtract,
-#else
-	NULL,
-#endif
-#ifdef _PIXELCHAR_BACKEND_DIRECTX
-	_pixelchar_font_backend_directx_reference_subtract,
-#else
-	NULL,
-#endif
-};
+	uint8_t name[32];
+	uint32_t mappings_count;
+	uint32_t bitmaps_count;
+	uint32_t resolution;
+} _pixelchar_font_metadata;
 
-#endif
+extern PIXELCHAR_DEBUG_CALLBACK_FUNCTION debug_callback_function;
+
+void _pixelchar_renderer_convert_queue(PixelcharRenderer renderer, uint32_t backend_index);
 
 #ifdef __cplusplus
 }

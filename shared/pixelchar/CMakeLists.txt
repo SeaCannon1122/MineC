@@ -5,8 +5,6 @@ add_library(pixelchar STATIC)
 
 target_sources(pixelchar PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src/pixelchar.c 
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/pixelchar_renderer.c 
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/pixelchar_font.c
 )
 target_include_directories(pixelchar 
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
@@ -17,8 +15,8 @@ find_package(Vulkan)
 if (Vulkan_FOUND)
     
     target_sources(pixelchar PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/backend/vulkan/pixelchar_renderer_backend_vulkan.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/backend/vulkan/pixelchar_font_backend_vulkan.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/backend/backend_vulkan.c
+
     )
 
     target_include_directories(pixelchar 
@@ -36,8 +34,7 @@ find_package(OpenGL)
 if (OpenGL_FOUND)
     
     target_sources(pixelchar PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/backend/opengl/pixelchar_renderer_backend_opengl.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/backend/opengl/pixelchar_font_backend_opengl.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/backend/backend_opengl.c
         ${CMAKE_SOURCE_DIR}/dependencies/glad/src/glad.c
     )
 
@@ -55,15 +52,17 @@ endif()
 if(WIN32)
 
     target_sources(pixelchar PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/backend/directx/pixelchar_renderer_backend_directx.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/backend/directx/pixelchar_font_backend_directx.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/backend/backend_direct3d12.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/backend/backend_direct3d11.cpp
     )
 
 
     target_compile_definitions(pixelchar 
-        PUBLIC _PIXELCHAR_BACKEND_DIRECTX=1
+        PUBLIC 
+            _PIXELCHAR_BACKEND_DIRECT3D11=1
+            _PIXELCHAR_BACKEND_DIRECT3D12=1
     )
 
-    target_link_libraries(pixelchar PUBLIC d3d12 dxguid d3dcompiler)
+    target_link_libraries(pixelchar PUBLIC d3d11 d3d12 dxguid d3dcompiler)
 
 endif()

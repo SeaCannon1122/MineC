@@ -1,6 +1,0 @@
-#pragma once
-
-#ifndef PIXELCHAR_BACKEND_VULKANL_H
-#define PIXELCHAR_BACKEND_VULKANL_H
-
-#endif

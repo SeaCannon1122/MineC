@@ -28,7 +28,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 endif()
 
 target_link_libraries(minec_test2 PRIVATE pixelchar window)
-target_link_libraries(minec_test3 PRIVATE pixelchar window d3d12 dxguid d3dcompiler dxgi)
+target_link_libraries(minec_test3 PRIVATE window d3d12 dxguid d3dcompiler dxgi)
 target_link_libraries(minec_test PRIVATE pixelchar window)
 
 add_custom_target(test_copy_runtime_files ALL

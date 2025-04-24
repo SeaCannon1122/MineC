@@ -3,4 +3,6 @@
 #ifndef PIXELCHAR_BACKEND_OPENGL_H
 #define PIXELCHAR_BACKEND_OPENGL_H
 
+#include <pixelchar/pixelchar.h>
+
 #endif

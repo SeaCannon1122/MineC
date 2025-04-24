@@ -9,7 +9,6 @@
 #include <dxgidebug.h>
 
 #include <window/window.h>
-#include <pixelchar/pixelchar.h>
 
 #include <wrl.h>
 #include <stdio.h>
