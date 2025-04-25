@@ -135,7 +135,7 @@ void pixelcharRendererDestroy(PixelcharRenderer renderer)
 
 	for (uint32_t i = 0; i < PIXELCHAR_BACKEND_s_COUNT; i++)
 	{
-		if (renderer->backends[i] != NULL);
+		if (renderer->backends[i] != NULL) _renderer_backend_deinitialize_functions[i](renderer);
 	}
 
 	free(renderer);
@@ -144,15 +144,16 @@ void pixelcharRendererDestroy(PixelcharRenderer renderer)
 PixelcharResult pixelcharRendererBindFont(PixelcharRenderer renderer, PixelcharFont font, uint32_t bindingIndex)
 {
 	if (renderer == NULL) return PIXELCHAR_ERROR_INVALID_ARGUMENTS;
-	if (font == NULL) return PIXELCHAR_ERROR_INVALID_ARGUMENTS;
 	if (bindingIndex >= PIXELCHAR_RENDERER_MAX_FONT_COUNT) return PIXELCHAR_ERROR_INVALID_ARGUMENTS;
 
 	if (renderer->fonts[bindingIndex] != NULL)
 	{
 		for (uint32_t i = 0; i < PIXELCHAR_BACKEND_s_COUNT; i++)
 		{
-			if (renderer->backends[i] != NULL);
-			//_pixelchar_font_backend_reference_subtract_functions[i](pcr->fonts[index]);
+			if (renderer->font_backends_referenced[bindingIndex][i] == true && _font_backend_sub_reference_functions[i] != NULL) 
+				_font_backend_sub_reference_functions[i](renderer, bindingIndex);
+
+			renderer->font_backends_referenced[bindingIndex][i] = false;
 		}
 		renderer->fonts[bindingIndex]->reference_count--;
 
@@ -165,8 +166,12 @@ PixelcharResult pixelcharRendererBindFont(PixelcharRenderer renderer, PixelcharF
 	{
 		for (uint32_t i = 0; i < PIXELCHAR_BACKEND_s_COUNT; i++)
 		{
-			if (renderer->backends[i] != NULL);
-			//_pixelchar_font_backend_reference_subtract_functions[i](pcr->fonts[index]);
+			if (renderer->backends[i] != NULL && _font_backend_add_reference_functions[i] != NULL)
+			{
+				if (_font_backend_add_reference_functions[i](renderer, bindingIndex) == PIXELCHAR_SUCCESS)
+					renderer->font_backends_referenced[bindingIndex][i] = true;
+			}
+
 		}
 		renderer->fonts[bindingIndex]->reference_count++;
 	}

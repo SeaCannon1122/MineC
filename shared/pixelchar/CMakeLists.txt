@@ -51,6 +51,8 @@ endif()
 
 if(WIN32)
 
+    include(CheckCXXSourceCompiles)
+
     target_sources(pixelchar PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backend/backend_direct3d12.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/backend/backend_direct3d11.cpp
@@ -64,5 +66,9 @@ if(WIN32)
     )
 
     target_link_libraries(pixelchar PUBLIC d3d11 d3d12 dxguid d3dcompiler)
+
+endif()
+
+if(APPLE)
 
 endif()

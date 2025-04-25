@@ -1,4 +1,5 @@
 #include <pixelchar/pixelchar.h>
+#include <pixelchar/backend/backend_vulkan.h>
 #include <window/window.h>
 
 #include <malloc.h>
@@ -44,7 +45,7 @@ void* loadFile(uint8_t* src, size_t* size) {
 
 static void callback(uint32_t type, uint8_t* msg)
 {
-	printf("%s %s\n", (type == PIXELCHAR_DEBUG_MESSAGE_TYPE_WARNING ? "[WARNING]" : (type == PIXELCHAR_DEBUG_MESSAGE_TYPE_ERROR ? "[ERROR]" : "[CRITICAL ERROR]")), msg);
+	//printf("%s %s\n", (type == PIXELCHAR_DEBUG_MESSAGE_TYPE_WARNING ? "[WARNING]" : (type == PIXELCHAR_DEBUG_MESSAGE_TYPE_ERROR ? "[ERROR]" : "[CRITICAL ERROR]")), msg);
 }
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL vulkan_debug_callbck(
@@ -405,51 +406,58 @@ int main()
 	vulkan_device_renderpasses_create();
 	vulkan_device_swapchain_and_framebuffers_create();
 
-	pixelchar_set_debug_callback(callback);
+	size_t default_font_data_size;
+	void* default_font_data = loadFile("runtime_files/assets/MineCdefault/fonts/default.pixelfont", &default_font_data_size);
+	if (default_font_data == NULL) printf("failed to load pixelfont\n");
 
-	size_t pixelfont_size;
-	void* pixelfont = loadFile("runtime_files/assets/MineCdefault/fonts/default.pixelfont", &pixelfont_size);
-	if (pixelfont == NULL) printf("failed to load pixelfont\n");
+	size_t smooth_font_data_size;
+	void* smooth_font_data = loadFile("runtime_files/assets/MineCdefault/fonts/smooth.pixelfont", &smooth_font_data_size);
+	if (smooth_font_data == NULL) printf("failed to load pixelfont\n");
 
-	struct pixelchar_font font;
-	pixelchar_font_create(&font, pixelfont, pixelfont_size);
+	PixelcharFont default_font;
+	PixelcharResult res = pixelcharFontCreate(default_font_data, default_font_data_size, &default_font);
+	PixelcharFont smooth_font;
+	res = pixelcharFontCreate(smooth_font_data, smooth_font_data_size, &smooth_font);
 
-	struct pixelchar_renderer pcr;
-	pixelchar_renderer_create(&pcr, 1000);
+	free(default_font_data);
+	free(smooth_font_data);
 
-	pixelchar_renderer_backend_vulkan_init(&pcr, device, gpu, queue, queue_index, window_render_pass, 0, 0, 0, 0);
+	PixelcharRenderer pcr;
+	res = pixelcharRendererCreate(100, &pcr);
+	res = pixelcharRendererBackendVulkanInitialize(pcr, device, gpu, queue, queue_index, window_render_pass, 0, 0, 0, 0);
+	res = pixelcharRendererBindFont(pcr, default_font, 0);
+	res = pixelcharRendererBindFont(pcr, smooth_font, 1);
 
-	free(pixelfont);
-
-	pixelchar_renderer_set_font(&pcr, &font, 0);
+	pixelcharFontDestroy(default_font);
+	pixelcharFontDestroy(smooth_font);
 
 	uint8_t str[] = { 'H', 'e', 'l', 'l', 'o', ' ', 'W', 'O', 'R', 'L', 'D', '!', 128, 129, 0 };
 	uint32_t str_len = sizeof(str) - 1;
 
-	struct pixelchar c[100];
+	Pixelchar c[100];
 
-	uint32_t scale = 16;
+	uint32_t scale = 2;
 
 	for (uint32_t i = 0; i < str_len; i++)
 	{
-		c[i].value = str[i];
-		c[i].masks = PIXELCHAR_MASK_BACKGROUND | PIXELCHAR_MASK_UNDERLINE | PIXELCHAR_MASK_SHADOW;
-		c[i].font = 0;
+		c[i].character = str[i];
+		c[i].flags = PIXELCHAR_BACKGROUND_BIT | PIXELCHAR_UNDERLINE_BIT | PIXELCHAR_SHADOW_BIT;
+		c[i].fontIndex = i % 2;
 		c[i].scale = scale;
 
 		c[i].position[1] = 100;
 		
 		if (i == 0) c[i].position[0] = 100;
-		else c[i].position[0] = c[i - 1].position[0] + pixelchar_renderer_get_pixelchar_width(&pcr, &c[i-1]) + pixelchar_renderer_get_pixelchar_spacing(&pcr, &c[i-1], &c[i]);
+		else c[i].position[0] = c[i - 1].position[0] + pixelcharGetCharacterRenderingWidth(pcr, &c[i - 1]) + pixelcharGetCharacterRenderingSpacing(pcr, &c[i - 1], &c[i]);
 
 		c[i].color[0] = 0xdc;
 		c[i].color[1] = 0xdc;
 		c[i].color[2] = 0xdc;
 		c[i].color[3] = 255;
-		c[i].background_color[0] = 255;
-		c[i].background_color[1] = 0;
-		c[i].background_color[2] = 0;
-		c[i].background_color[3] = 255;
+		c[i].backgroundColor[0] = 255;
+		c[i].backgroundColor[1] = 0;
+		c[i].backgroundColor[2] = 0;
+		c[i].backgroundColor[3] = 255;
 		
 	}
 
@@ -478,7 +486,7 @@ int main()
 					vulkan_device_swapchain_and_framebuffers_create();
 				}
 				
-
+				
 			} break;
 
 			case WINDOW_EVENT_DESTROY: {
@@ -491,7 +499,7 @@ int main()
 
 		if (width != 0 && height != 0)
 		{
-			pixelchar_renderer_queue_pixelchars(&pcr, c, str_len);
+			pixelcharRendererEnqueCharacters(pcr, c, str_len);
 
 			VKCall(vkWaitForFences(device, 1, &queue_fence, VK_TRUE, UINT64_MAX));
 
@@ -511,6 +519,8 @@ int main()
 			begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
 			VKCall(vkBeginCommandBuffer(cmd, &begin_info));
+
+			pixelcharRendererBackendVulkanUpdateRenderingData(pcr, cmd);
 
 			VkExtent2D screen_size;
 			screen_size.width = width;
@@ -549,7 +559,7 @@ int main()
 
 			//pixel_chars
 			
-			pixelchar_renderer_backend_vulkan_render(&pcr, cmd, width, height, 4.f, 4.f, 4.f, 1.4f);
+			pixelcharRendererBackendVulkanRender(pcr, cmd, width, height, 4.f, 4.f, 4.f, 1.4f);
 
 			vkCmdEndRenderPass(cmd);
 
@@ -586,10 +596,9 @@ int main()
 
 	vkDeviceWaitIdle(device);
 
-	pixelchar_renderer_backend_vulkan_deinit(&pcr);
-	pixelchar_renderer_destroy(&pcr);
+	pixelcharRendererBackendVulkanDeinitialize(pcr);
+	pixelcharRendererDestroy(pcr);
 
-	pixelchar_font_destroy(&font);
 
 	vulkan_device_swapchain_and_framebuffers_destroy();
 	vulkan_device_renderpasses_destroy();

@@ -3,6 +3,10 @@
 #ifndef PIXELCHAR_BACKEND_VULKANL_H
 #define PIXELCHAR_BACKEND_VULKANL_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <pixelchar/pixelchar.h>
 
 #include <vulkan/vulkan.h>
@@ -22,6 +26,8 @@ PixelcharResult pixelcharRendererBackendVulkanInitialize(
 
 void pixelcharRendererBackendVulkanDeinitialize(PixelcharRenderer renderer);
 
+PixelcharResult pixelcharRendererBackendVulkanUpdateRenderingData(PixelcharRenderer renderer, VkCommandBuffer commandBuffer);
+
 PixelcharResult pixelcharRendererBackendVulkanRender(
 	PixelcharRenderer renderer,
 	VkCommandBuffer commandBuffer,
@@ -32,5 +38,9 @@ PixelcharResult pixelcharRendererBackendVulkanRender(
 	float shadowDevisorB,
 	float shadowDevisorA
 );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

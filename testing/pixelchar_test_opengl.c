@@ -5,6 +5,7 @@
 #include <window/window.h>
 #include <glad/glad.h>
 #include <pixelchar/pixelchar.h>
+#include <pixelchar/backend/backend_opengl.h>
 
 void GLAPIENTRY DebugCallback(GLenum source, GLenum type, GLuint id, GLenum severity,
 	GLsizei length, const GLchar* message, const void* userParam) {
@@ -21,7 +22,7 @@ void GLAPIENTRY DebugCallback(GLenum source, GLenum type, GLuint id, GLenum seve
 
 static void callback(uint32_t type, uint8_t* msg)
 {
-	printf("%s %s\n", (type == PIXELCHAR_DEBUG_MESSAGE_TYPE_WARNING ? "[WARNING]" : (type == PIXELCHAR_DEBUG_MESSAGE_TYPE_ERROR ? "[ERROR]" : "[CRITICAL ERROR]")), msg);
+	//printf("%s %s\n", (type == PIXELCHAR_DEBUG_MESSAGE_TYPE_WARNING ? "[WARNING]" : (type == PIXELCHAR_DEBUG_MESSAGE_TYPE_ERROR ? "[ERROR]" : "[CRITICAL ERROR]")), msg);
 }
 
 void* loadFile(uint8_t* src, size_t* size) {
@@ -51,24 +52,22 @@ int main(int argc, char* argv[]) {
 	window_init_system();
 
 	void* window = window_create(100, 100, 200, 200, "window for test", true, NULL);
-	window_opengl_context_create(window, 3, 3, NULL);
+	window_opengl_context_create(window, 4, 6, NULL);
 	window_opengl_context_make_current(window);
 
 	window_opengl_set_vsync(true);
 
 	gladLoadGL();
 
-	//glEnable(GL_DEBUG_OUTPUT);
-	//glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS); // Optional: ensures messages are delivered synchronously
+	glEnable(GL_DEBUG_OUTPUT);
+	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 
-	//// Register the debug callback function
-	//glDebugMessageCallback(DebugCallback, NULL);
+	glDebugMessageCallback(DebugCallback, NULL);
 
-	//// Set the debug message control to allow all messages
-	//glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_HIGH, 0, NULL, GL_TRUE);
-	//glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_MEDIUM, 0, NULL, GL_TRUE);
-	//glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_LOW, 0, NULL, GL_FALSE);
-	//glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_NOTIFICATION, 0, NULL, GL_FALSE);
+	glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_HIGH, 0, NULL, GL_TRUE);
+	glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_MEDIUM, 0, NULL, GL_TRUE);
+	glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_LOW, 0, NULL, GL_FALSE);
+	glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_NOTIFICATION, 0, NULL, GL_FALSE);
 
 	printf("%s\n",glGetString(GL_RENDERER));
 	printf("%s\n", glGetString(GL_VENDOR));
@@ -79,60 +78,58 @@ int main(int argc, char* argv[]) {
 
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
-	pixelchar_set_debug_callback(callback);
+	size_t default_font_data_size;
+	void* default_font_data = loadFile("runtime_files/assets/MineCdefault/fonts/default.pixelfont", &default_font_data_size);
+	if (default_font_data == NULL) printf("failed to load pixelfont\n");
 
-	size_t pixelfont_size;
-	void* pixelfont = loadFile("runtime_files/assets/MineCdefault/fonts/default.pixelfont", &pixelfont_size);
-	if (pixelfont == NULL) printf("failed to load pixelfont\n");
+	size_t smooth_font_data_size;
+	void* smooth_font_data = loadFile("runtime_files/assets/MineCdefault/fonts/smooth.pixelfont", &smooth_font_data_size);
+	if (smooth_font_data == NULL) printf("failed to load pixelfont\n");
 
-	struct pixelchar_font font;
-	pixelchar_font_create(&font, pixelfont, pixelfont_size);
+	PixelcharFont default_font;
+	PixelcharResult res = pixelcharFontCreate(default_font_data, default_font_data_size, &default_font);
+	PixelcharFont smooth_font;
+	res = pixelcharFontCreate(smooth_font_data, smooth_font_data_size, &smooth_font);
 
-	struct pixelchar_renderer pcr;
-	pixelchar_renderer_create(&pcr, 1000);
+	free(default_font_data);
+	free(smooth_font_data);
 
-	size_t vert_length;
-	void* vert_src = loadFile("runtime_files/assets/MineCdefault/shaders/pixelchar_gl.vert", &vert_length);
-	if (vert_src == NULL) printf("failed to load vert_src\n");
-	size_t frag_length;
-	void* frag_src = loadFile("runtime_files/assets/MineCdefault/shaders/pixelchar_gl.frag", &frag_length);
-	if (frag_src == NULL) printf("failed to load frag_src\n");
+	PixelcharRenderer pcr;
+	res = pixelcharRendererCreate(100, &pcr);
+	res = pixelcharRendererBackendOpenGLInitialize(pcr, 0, 0, 0, 0);
+	res = pixelcharRendererBindFont(pcr, default_font, 0);
+	res = pixelcharRendererBindFont(pcr, smooth_font, 1);
 
-	pixelchar_renderer_backend_opengl_init(&pcr, 0, 0, 0, 0);
-
-	free(pixelfont);
-	free(vert_src);
-	free(frag_src);
-
-	pixelchar_renderer_set_font(&pcr, &font, 0);
+	pixelcharFontDestroy(default_font);
+	pixelcharFontDestroy(smooth_font);
 
 	uint8_t str[] = { 'H', 'e', 'l', 'l', 'o', ' ', 'W', 'O', 'R', 'L', 'D', '!', 128, 129, 0 };
 	uint32_t str_len = sizeof(str) - 1;
 
-	struct pixelchar c[100];
+	Pixelchar c[100];
 
-	uint32_t scale = 16;
+	uint32_t scale = 2;
 
 	for (uint32_t i = 0; i < str_len; i++)
 	{
-		c[i].value = str[i];
-		c[i].masks = PIXELCHAR_MASK_BACKGROUND | PIXELCHAR_MASK_UNDERLINE | PIXELCHAR_MASK_SHADOW;
-		c[i].font = 0;
+		c[i].character = str[i];
+		c[i].flags = PIXELCHAR_BACKGROUND_BIT | PIXELCHAR_UNDERLINE_BIT | PIXELCHAR_SHADOW_BIT;
+		c[i].fontIndex = i % 2;
 		c[i].scale = scale;
 
 		c[i].position[1] = 100;
 
 		if (i == 0) c[i].position[0] = 100;
-		else c[i].position[0] = c[i - 1].position[0] + pixelchar_renderer_get_pixelchar_width(&pcr, &c[i - 1]) + pixelchar_renderer_get_pixelchar_spacing(&pcr, &c[i - 1], &c[i]);
+		else c[i].position[0] = c[i - 1].position[0] + pixelcharGetCharacterRenderingWidth(pcr, &c[i - 1]) + pixelcharGetCharacterRenderingSpacing(pcr, &c[i - 1], &c[i]);
 
 		c[i].color[0] = 0xdc;
 		c[i].color[1] = 0xdc;
 		c[i].color[2] = 0xdc;
 		c[i].color[3] = 255;
-		c[i].background_color[0] = 255;
-		c[i].background_color[1] = 0;
-		c[i].background_color[2] = 0;
-		c[i].background_color[3] = 255;
+		c[i].backgroundColor[0] = 255;
+		c[i].backgroundColor[1] = 0;
+		c[i].backgroundColor[2] = 0;
+		c[i].backgroundColor[3] = 255;
 
 	}
 
@@ -179,17 +176,15 @@ int main(int argc, char* argv[]) {
 
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		pixelchar_renderer_queue_pixelchars(&pcr, c, str_len);
+		pixelcharRendererEnqueCharacters(pcr, c, str_len);
 
-		pixelchar_renderer_backend_opengl_render(&pcr, width, height, 4.f, 4.f, 4.f, 1.4f);
+		pixelcharRendererBackendOpenGLRender(pcr, width, height, 4.f, 4.f, 4.f, 1.4f);
 
 		window_opengl_swap_buffers(window);
 	}
 
-	pixelchar_renderer_backend_opengl_deinit(&pcr);
-	pixelchar_renderer_destroy(&pcr);
-
-	pixelchar_font_destroy(&font);
+	pixelcharRendererBackendOpenGLDeinitialize(pcr);
+	pixelcharRendererDestroy(pcr);
 
 	window_opengl_context_make_current(NULL);
 

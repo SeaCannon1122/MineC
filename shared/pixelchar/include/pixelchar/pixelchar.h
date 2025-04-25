@@ -3,6 +3,10 @@
 #ifndef PIXELCHAR_H
 #define PIXELCHAR_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -58,5 +62,9 @@ PixelcharResult pixelcharRendererEnqueCharacters(PixelcharRenderer renderer, Pix
 
 uint32_t pixelcharGetCharacterRenderingWidth(PixelcharRenderer renderer, Pixelchar* character);
 uint32_t pixelcharGetCharacterRenderingSpacing(PixelcharRenderer renderer, Pixelchar* character0, Pixelchar* character1);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

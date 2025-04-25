@@ -1,5 +1,4 @@
 #include <pixelchar_internal.h>
-
 #include <pixelchar/backend/backend_vulkan.h>
 
 #include "vulkan_vertex_shader.h"
@@ -12,8 +11,6 @@
 
 typedef struct _font_backend_vulkan
 {
-	VkDevice device;
-
 	VkBuffer buffer;
 	VkDeviceMemory memory;
 
@@ -135,6 +132,17 @@ VkResult _pixelchar_upload_data_to_buffer(_renderer_backend_vulkan* backend, voi
 
 			memcpy(backend->staging_buffer_host_handle, (size_t)data + staging_offset, chunk_size);
 
+			if (backend->staging_memory_flags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT == 0)
+			{
+				VkMappedMemoryRange mapped_memory_range = { 0 };
+				mapped_memory_range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+				mapped_memory_range.memory = backend->staging_memory;
+				mapped_memory_range.offset = 0;
+				mapped_memory_range.size = chunk_size;
+				
+				vkFlushMappedMemoryRanges(backend->device, 1, &mapped_memory_range);
+			}
+
 			result = vkResetCommandBuffer(backend->cmd, 0);
 			if (result != VK_SUCCESS) return result;
 
@@ -179,6 +187,146 @@ VkResult _pixelchar_upload_data_to_buffer(_renderer_backend_vulkan* backend, voi
 	return VK_SUCCESS;
 }
 
+PixelcharResult _font_backend_vulkan_add_reference(PixelcharRenderer renderer, uint32_t font_index)
+{
+	_renderer_backend_vulkan* renderer_backend = renderer->backends[PIXELCHAR_BACKEND_VULKAN];
+
+	if (renderer->fonts[font_index]->backends_reference_count[PIXELCHAR_BACKEND_VULKAN] == 0)
+	{
+		_font_backend_vulkan* font_backend = malloc(sizeof(_font_backend_vulkan));
+		if (font_backend == NULL) return PIXELCHAR_ERROR_OUT_OF_MEMORY;
+
+		memset(font_backend, 0, sizeof(_font_backend_vulkan));
+
+		VkBufferCreateInfo buffer_info = { 0 };
+		buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+		buffer_info.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+		buffer_info.size = renderer->fonts[font_index]->bitmaps_count * renderer->fonts[font_index]->resolution * renderer->fonts[font_index]->resolution / 8;
+		buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+		if (vkCreateBuffer(renderer_backend->device, &buffer_info, 0, &font_backend->buffer) != VK_SUCCESS)
+		{
+			free(font_backend);
+			return PIXELCHAR_ERROR_OTHER;
+		}
+
+		VkMemoryRequirements memory_requirements;
+		vkGetBufferMemoryRequirements(renderer_backend->device, font_backend->buffer, &memory_requirements);
+		VkPhysicalDeviceMemoryProperties memory_properties;
+		vkGetPhysicalDeviceMemoryProperties(renderer_backend->physical_device, &memory_properties);
+
+		VkMemoryPropertyFlags preference_flags[] = {
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+			0
+		};
+
+		VkMemoryPropertyFlags exclude_flags[] = {
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+			0,
+			0,
+		};
+
+		VkMemoryPropertyFlags memory_flags;
+		void* buffer_host_handle = NULL;
+
+		if (
+			_allocate_best_memory(
+				renderer_backend->device,
+				&memory_properties,
+				memory_requirements.size,
+				memory_requirements.memoryTypeBits,
+				preference_flags,
+				exclude_flags,
+				3,
+				&font_backend->memory,
+				&memory_flags
+			) != VK_SUCCESS
+		)
+		{
+			vkDestroyBuffer(renderer_backend->device, font_backend->buffer, 0);
+			free(font_backend);
+			return PIXELCHAR_ERROR_OTHER;
+		}
+
+		if (vkBindBufferMemory(renderer_backend->device, font_backend->buffer, font_backend->memory, 0) != VK_SUCCESS)
+		{
+			vkDestroyBuffer(renderer_backend->device, font_backend->buffer, 0);
+			vkFreeMemory(renderer_backend->device, font_backend->memory, 0);
+			free(font_backend);
+			return PIXELCHAR_ERROR_OTHER;
+		}
+
+		if ((memory_flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) && (memory_flags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT))
+		{
+			if (vkMapMemory(renderer_backend->device, font_backend->memory, 0, buffer_info.size, 0, &buffer_host_handle) != VK_SUCCESS)
+				memory_flags &= (~VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+		}
+
+		if (
+			_pixelchar_upload_data_to_buffer(
+				renderer_backend,
+				renderer->fonts[font_index]->bitmaps,
+				buffer_info.size,
+				font_backend->buffer,
+				0,
+				buffer_host_handle,
+				memory_flags
+			) != VK_SUCCESS
+		)
+		{
+			vkUnmapMemory(renderer_backend->device, font_backend->memory);
+			vkDestroyBuffer(renderer_backend->device, font_backend->buffer, 0);
+			vkFreeMemory(renderer_backend->device, font_backend->memory, 0);
+			free(font_backend);
+			return PIXELCHAR_ERROR_OTHER;
+		}
+
+		if ((memory_flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) && (memory_flags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT))
+			vkUnmapMemory(renderer_backend->device, font_backend->memory);
+
+		renderer->fonts[font_index]->backends[PIXELCHAR_BACKEND_VULKAN] = font_backend;
+	}
+
+	_font_backend_vulkan* font_backend = renderer->fonts[font_index]->backends[PIXELCHAR_BACKEND_VULKAN];
+
+	VkDescriptorBufferInfo buffer_info = { 0 };
+	buffer_info.buffer = font_backend->buffer;
+	buffer_info.range = VK_WHOLE_SIZE;
+
+	VkWriteDescriptorSet buffer_write = { 0 };
+	buffer_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	buffer_write.dstSet = renderer_backend->descriptor_set;
+	buffer_write.pBufferInfo = &buffer_info;
+	buffer_write.dstBinding = font_index;
+	buffer_write.descriptorCount = 1;
+	buffer_write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+
+	vkUpdateDescriptorSets(renderer_backend->device, 1, &buffer_write, 0, 0);
+
+	renderer->fonts[font_index]->backends_reference_count[PIXELCHAR_BACKEND_VULKAN]++;
+
+	return PIXELCHAR_SUCCESS;
+}
+
+void _font_backend_vulkan_sub_reference(PixelcharRenderer renderer, uint32_t font_index)
+{
+	_renderer_backend_vulkan* renderer_backend = renderer->backends[PIXELCHAR_BACKEND_VULKAN];
+	_font_backend_vulkan* font_backend = renderer->fonts[font_index]->backends[PIXELCHAR_BACKEND_VULKAN];
+
+	if (renderer->fonts[font_index]->backends_reference_count[PIXELCHAR_BACKEND_VULKAN] == 1)
+	{
+		vkDeviceWaitIdle(renderer_backend->device);
+
+		vkDestroyBuffer(renderer_backend->device, font_backend->buffer, 0);
+		vkFreeMemory(renderer_backend->device, font_backend->memory, 0);
+
+		free(font_backend);
+	}
+
+	renderer->fonts[font_index]->backends_reference_count[PIXELCHAR_BACKEND_VULKAN]--;
+}
+
 PixelcharResult pixelcharRendererBackendVulkanInitialize(
 	PixelcharRenderer renderer,
 	VkDevice device,
@@ -196,6 +344,10 @@ PixelcharResult pixelcharRendererBackendVulkanInitialize(
 	if (renderer->backends[PIXELCHAR_BACKEND_VULKAN] != NULL) return PIXELCHAR_ERROR_BACKEND_ALREADY_INITIALIZED;
 
 	_renderer_backend_vulkan* backend = malloc(sizeof(_renderer_backend_vulkan));
+	if (backend == NULL) return PIXELCHAR_ERROR_OUT_OF_MEMORY;
+
+	memset(backend, 0, sizeof(_renderer_backend_vulkan));
+
 	backend->device = device;
 	backend->physical_device = physicalDevice;
 	backend->queue = queue;
@@ -242,7 +394,7 @@ PixelcharResult pixelcharRendererBackendVulkanInitialize(
 
 	VkMemoryPropertyFlags vertex_index_preference_flags[] = {
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 		0
 	};
 
@@ -729,20 +881,7 @@ PixelcharResult pixelcharRendererBackendVulkanInitialize(
 	{
 		if (vkMapMemory(backend->device, backend->vertex_index_memory, 0, vertex_index_buffer_size, 0, &backend->vertex_index_buffer_host_handle) != VK_SUCCESS)
 		{
-			vkUnmapMemory(backend->device, backend->staging_memory);
-			vkDestroyFence(backend->device, backend->fence, 0);
-			vkDestroyDescriptorPool(backend->device, backend->descriptor_pool, 0);
-			vkFreeCommandBuffers(backend->device, backend->cmd_pool, 1, &backend->cmd);
-			vkDestroyCommandPool(backend->device, backend->cmd_pool, 0);
-			vkDestroyPipeline(backend->device, backend->pipeline, 0);
-			vkDestroyPipelineLayout(backend->device, backend->pipe_layout, 0);
-			vkDestroyDescriptorSetLayout(backend->device, backend->set_layout, 0);
-			vkDestroyBuffer(backend->device, backend->staging_buffer, 0);
-			vkDestroyBuffer(backend->device, backend->vertex_index_buffer, 0);
-			vkFreeMemory(backend->device, backend->staging_memory, 0);
-			vkFreeMemory(backend->device, backend->vertex_index_memory, 0);
-			free(backend);
-			return PIXELCHAR_ERROR_OTHER;
+			backend->vertex_index_memory_flags &= (~VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 		}
 	}
 
@@ -784,7 +923,8 @@ PixelcharResult pixelcharRendererBackendVulkanInitialize(
 	{
 		if (renderer->fonts[i] != NULL)
 		{
-
+			if (_font_backend_vulkan_add_reference(renderer, i) == PIXELCHAR_SUCCESS)
+				renderer->font_backends_referenced[i][PIXELCHAR_BACKEND_VULKAN] = true;
 		}
 	}
 
@@ -793,14 +933,17 @@ PixelcharResult pixelcharRendererBackendVulkanInitialize(
 
 void pixelcharRendererBackendVulkanDeinitialize(PixelcharRenderer renderer)
 {
-	if (renderer == NULL) return PIXELCHAR_ERROR_INVALID_ARGUMENTS;
-	if (renderer->backends[PIXELCHAR_BACKEND_VULKAN] == NULL) return PIXELCHAR_ERROR_BACKEND_NOT_INITIALIZED;
+	if (renderer == NULL) return;
+	if (renderer->backends[PIXELCHAR_BACKEND_VULKAN] == NULL) return;
 
 	_renderer_backend_vulkan* backend = renderer->backends[PIXELCHAR_BACKEND_VULKAN];
 
+	vkDeviceWaitIdle(backend->device);
+
 	for (uint32_t i = 0; i < PIXELCHAR_RENDERER_MAX_FONT_COUNT; i++)
 	{
-		if (renderer->fonts[i] != NULL && renderer->font_backends_referenced[i][PIXELCHAR_BACKEND_VULKAN] == true);
+		if (renderer->fonts[i] != NULL && renderer->font_backends_referenced[i][PIXELCHAR_BACKEND_VULKAN] == true)
+			_font_backend_vulkan_sub_reference(renderer, i);
 	}
 
 	if ((backend->vertex_index_memory_flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) && (backend->vertex_index_memory_flags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT))
@@ -817,22 +960,14 @@ void pixelcharRendererBackendVulkanDeinitialize(PixelcharRenderer renderer)
 	vkDestroyBuffer(backend->device, backend->vertex_index_buffer, 0);
 	vkFreeMemory(backend->device, backend->staging_memory, 0);
 	vkFreeMemory(backend->device, backend->vertex_index_memory, 0);
+
+	free(backend);
+	renderer->backends[PIXELCHAR_BACKEND_VULKAN] = NULL;
 }
 
-PixelcharResult pixelcharRendererBackendVulkanRender(
-	PixelcharRenderer renderer,
-	VkCommandBuffer commandBuffer,
-	uint32_t width,
-	uint32_t height,
-	float shadowDevisorR,
-	float shadowDevisorG,
-	float shadowDevisorB,
-	float shadowDevisorA
-)
+PixelcharResult pixelcharRendererBackendVulkanUpdateRenderingData(PixelcharRenderer renderer, VkCommandBuffer commandBuffer)
 {
 	if (renderer == NULL) return PIXELCHAR_ERROR_INVALID_ARGUMENTS;
-	if (width == 0) return PIXELCHAR_ERROR_INVALID_ARGUMENTS;
-	if (height == 0) return PIXELCHAR_ERROR_INVALID_ARGUMENTS;
 
 	if (renderer->queue_filled_length == 0) return;
 
@@ -855,7 +990,7 @@ PixelcharResult pixelcharRendererBackendVulkanRender(
 		copy_region.dstOffset = 0;
 		copy_region.size = sizeof(Pixelchar) * renderer->queue_filled_length;
 
-		vkCmdCopyBuffer(backend->cmd, backend->staging_buffer, backend->vertex_index_buffer, 1, &copy_region);
+		vkCmdCopyBuffer(commandBuffer, backend->staging_buffer, backend->vertex_index_buffer, 1, &copy_region);
 
 		VkBufferMemoryBarrier barrier = {
 			.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
@@ -868,15 +1003,38 @@ PixelcharResult pixelcharRendererBackendVulkanRender(
 			.size = VK_WHOLE_SIZE,
 		};
 
-		vkCmdPipelineBarrier(
+		/*vkCmdPipelineBarrier(
 			commandBuffer,
 			VK_PIPELINE_STAGE_TRANSFER_BIT,
 			VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
 			0,
 			0, NULL,
 			1, &barrier,
-			0, NULL);
+			0, NULL
+		);*/
 	}
+}
+
+PixelcharResult pixelcharRendererBackendVulkanRender(
+	PixelcharRenderer renderer,
+	VkCommandBuffer commandBuffer,
+	uint32_t width,
+	uint32_t height,
+	float shadowDevisorR,
+	float shadowDevisorG,
+	float shadowDevisorB,
+	float shadowDevisorA
+)
+{
+	if (renderer == NULL) return PIXELCHAR_ERROR_INVALID_ARGUMENTS;
+	if (width == 0) return PIXELCHAR_ERROR_INVALID_ARGUMENTS;
+	if (height == 0) return PIXELCHAR_ERROR_INVALID_ARGUMENTS;
+
+	if (renderer->queue_filled_length == 0) return;
+
+	if (renderer->backends[PIXELCHAR_BACKEND_VULKAN] == NULL) return PIXELCHAR_ERROR_BACKEND_NOT_INITIALIZED;
+
+	_renderer_backend_vulkan* backend = renderer->backends[PIXELCHAR_BACKEND_VULKAN];
 
 	vkCmdBindDescriptorSets(
 		commandBuffer,

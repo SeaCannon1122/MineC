@@ -18,7 +18,7 @@ struct renderer_state
 		
 	} backend;
 
-	struct pixelchar_renderer pixelchar_renderer;
+	PixelcharRenderer pixelchar_renderer;
 };
 
 struct minec_client;
