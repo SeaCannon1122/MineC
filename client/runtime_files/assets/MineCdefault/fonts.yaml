@@ -1,1 +1,2 @@
 default: fonts/default.pixelfont
+smooth: fonts/smooth.pixelfont

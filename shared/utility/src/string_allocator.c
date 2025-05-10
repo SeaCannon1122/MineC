@@ -1,8 +1,10 @@
 #include "string_allocator.h"
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+#include <stdarg.h>
 
 #define _STRING_ALLOCATOR_ARENAS_PER_EXTENSION 32
 
@@ -25,7 +27,7 @@ struct string_allocator
 	size_t min_arena_size;
 };
 
-void* string_allocator_new(size_t min_arena_size)
+void* s_allocator_new(size_t min_arena_size)
 {
 	struct string_allocator* string_allocator = (struct string_allocator*)malloc(sizeof(struct string_allocator));
 
@@ -38,15 +40,17 @@ void* string_allocator_new(size_t min_arena_size)
 	return string_allocator;
 }
 
-void* string_allocate(void* allocator, size_t size)
+void* s_alloc(void* allocator, size_t size)
 {
+	size = (size + 7) / 8 * 8;
+
 	struct string_allocator* string_allocator = (struct string_allocator*)allocator;
 
 	for (uint32_t i = 0; i < string_allocator->arena_count; i++)
 	{
 		if (string_allocator->arenas[i].allocated == false)
 		{
-			size_t new_arena_size = (string_allocator->min_arena_size > size ? string_allocator->min_arena_size : size);
+			size_t new_arena_size = ((string_allocator->min_arena_size > size ? string_allocator->min_arena_size : size) + 7) / 8 * 8;
 
 			string_allocator->arenas[i].memory_pointer = (void*)malloc(new_arena_size);
 			if (string_allocator->arenas[i].memory_pointer == NULL) return NULL;
@@ -86,24 +90,41 @@ void* string_allocate(void* allocator, size_t size)
 		new_arenas[arena_count + i].free_index = 0;
 	}
 
-	return string_allocate(allocator, size);
+	return s_alloc(allocator, size);
 }
 
-uint8_t* string_allocate_string(void* allocator, uint8_t* string)
+uint8_t* s_alloc_string(void* allocator, uint8_t* string, ...)
 {
-	size_t str_len = strlen(string);
-	uint8_t* str_ptr = string_allocate(allocator, str_len + 1);
-	memcpy(str_ptr, string, str_len + 1);
+	va_list args;
+	va_start(args, string);
+	int str_len = vsnprintf(NULL, 0, string, args);
+	va_end(args);
+
+	if (str_len < 0) return NULL;
+	
+	uint8_t* str_ptr = s_alloc(allocator, str_len + 1);
+	if (str_ptr == NULL) return NULL;
+
+	va_start(args, string);
+	int written = vsnprintf(str_ptr, str_len + 1, string, args);
+	va_end(args);
+
+	if (written < 0)
+	{
+		s_free(allocator, str_ptr);
+		return NULL;
+	}
 
 	return str_ptr;
 }
 
-uint8_t* string_allocate_joined_string(void* allocator, uint8_t** strings, uint32_t string_count)
+uint8_t* s_alloc_joined_string(void* allocator, uint8_t** strings, uint32_t string_count)
 {
 	size_t joined_string_length = 0;
 	for (uint32_t i = 0; i < string_count; i++) joined_string_length += strlen(strings[i]);
 
-	uint8_t* joined_string = string_allocate(allocator, joined_string_length + 1);
+	uint8_t* joined_string = s_alloc(allocator, joined_string_length + 1);
+	if (joined_string == NULL) return NULL;
 
 	size_t offset = 0;
 	for (uint32_t i = 0; i < string_count; i++)
@@ -118,7 +139,7 @@ uint8_t* string_allocate_joined_string(void* allocator, uint8_t** strings, uint3
 	return joined_string;
 }
 
-uint32_t string_free(void* allocator, void* memory_handle)
+void s_free(void* allocator, void* memory_handle)
 {
 	struct string_allocator* string_allocator = (struct string_allocator*)allocator;
 
@@ -137,14 +158,12 @@ uint32_t string_free(void* allocator, void* memory_handle)
 				string_allocator->arenas[i].allocated = false;
 				free(string_allocator->arenas[i].memory_pointer);
 			}
-			return 0;
+			return;
 		}	
 	}
-
-	return 1;
 }
 
-void string_allocator_delete(void* allocator)
+void s_allocator_delete(void* allocator)
 {
 	struct string_allocator* string_allocator = (struct string_allocator*)allocator;
 

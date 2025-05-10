@@ -2,17 +2,17 @@ cmake_minimum_required(VERSION 3.15)
 
 project(MineC_Client)
 
-set(MINEC_CLIENT_SOURCE_FILES
 
+
+add_executable(minec_client 
     ${CMAKE_CURRENT_SOURCE_DIR}/src/main.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/minec_client.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/logging.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/application_window/application_window.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/settings/settings.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/resources/resources.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/renderer.c
 )
-
-add_executable(minec_client ${MINEC_CLIENT_SOURCE_FILES})
 
 target_include_directories(minec_client
     PRIVATE
@@ -24,28 +24,60 @@ target_link_libraries(minec_client
     PRIVATE window pixelchar utility networking
 )
 
+target_compile_definitions(minec_client PRIVATE MINEC_CLIENT_DEBUG=1)
+
+add_library(minec_client_renderer_backend SHARED 
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/logging.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/backend/backend.c
+)
+
+target_include_directories(minec_client_renderer_backend PRIVATE 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
+
+target_link_libraries(minec_client_renderer_backend 
+    PRIVATE window pixelchar utility
+)
+
+target_compile_definitions(minec_client_renderer_backend PRIVATE MINEC_CLIENT_DEBUG=1)
+
+add_executable(minec_client_renderer_backend_dummy ${CMAKE_CURRENT_SOURCE_DIR}/src/dummy_main.c)
+target_link_libraries(minec_client_renderer_backend_dummy PRIVATE minec_client_renderer_backend )
+
+
+target_sources(minec_client_renderer_backend PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/backend/vulkan/base.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/backend/vulkan/device.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/backend/vulkan/pipelines.c
+)
+
+target_compile_definitions(minec_client_renderer_backend
+    PRIVATE _MINEC_CLIENT_RENDERER_BACKEND_VULKAN=1
+)
+
+
+
+
 if(WIN32)
+    message(STATUS "Compiling for Windows")
 
+    target_compile_definitions(minec_client_renderer_backend
+        PRIVATE MINEC_CLIENT_VULKAN_LIBRARY_NAME="vulkan-1.dll"
+    )
 
-elseif(UNIX)
+elseif(UNIX AND NOT APPLE)
+    message(STATUS "Compiling for Linux")
+
     target_link_libraries(minec_client 
         PRIVATE pthread m
     )
-   
-endif()
 
-find_package(Vulkan)
-if (Vulkan_FOUND)
-
-    set(MINEC_CLIENT_RENDERER_BACKEND_VULKAN_SOURCE_FILES
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/backend/_vulkan/vulkan_backend.c
-    )
-    add_library(minec_client_renderer_backend_vulkan ${MINEC_CLIENT_RENDERER_BACKEND_VULKAN_SOURCE_FILES})
-
-    target_compile_definitions(minec_client_renderer_backend_vulkan
-        PUBLIC _MINEC_CLIENT_RENDERER_BACKEND_VULKAN=1
+    target_compile_definitions(minec_client_renderer_backend
+        PRIVATE MINEC_CLIENT_VULKAN_LIBRARY_NAME="libvulkan.so"
     )
 
+else()
+    message(FATAL_ERROR "Unsupported platform!")
 endif()
 
 add_custom_target(minec_copy_runtime_files ALL
@@ -56,3 +88,4 @@ add_custom_target(minec_copy_runtime_files ALL
 )
 
 add_dependencies(minec_client minec_copy_runtime_files)
+add_dependencies(minec_client_renderer_backend minec_copy_runtime_files)

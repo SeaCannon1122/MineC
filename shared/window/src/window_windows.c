@@ -31,11 +31,20 @@ struct window_data_windows
 	uint32_t last_event_queue_index;
 };
 
+bool init_with_external_context = false;
+
 void _window_event_queue_add(struct window_data_windows* window_data, struct window_event* event)
 {
 	if ((window_data->free_event_queue_index + 1) % window_data->event_queue_length == window_data->last_event_queue_index)
 	{
-		window_data->event_queue = realloc(window_data->event_queue, (window_data->event_queue_length + _WINDOW_QUEUE_EXTENSION_EVENTS_COUNT) * sizeof(struct window_event));
+		void* new_event_queue = realloc(window_data->event_queue, (window_data->event_queue_length + _WINDOW_QUEUE_EXTENSION_EVENTS_COUNT) * sizeof(struct window_event));
+		if (new_event_queue == NULL)
+		{
+			window_data->event_queue[window_data->last_event_queue_index].type = WINDOW_EVENT_DESTROY;
+			return;
+		}
+
+		window_data->event_queue = new_event_queue;
 
 		if (window_data->free_event_queue_index != window_data->event_queue_length - 1)
 		{
@@ -229,40 +238,64 @@ LRESULT CALLBACK window_WinProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 	return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 }
 
-void window_init_system()
+uint32_t window_init_context(void* context)
 {
-	WNDCLASSW wc = {
-		CS_HREDRAW | CS_VREDRAW | CS_CLASSDC,
-		window_WinProc,
-		0,
-		0,
-		GetModuleHandleW(NULL),
-		NULL,
-		LoadCursorW(NULL, IDC_ARROW),
-		NULL,
-		NULL,
-		L"window_window_class"
-	};
+	if (context == NULL)
+	{
+		WNDCLASSW wc = {
+			CS_HREDRAW | CS_VREDRAW | CS_CLASSDC,
+			window_WinProc,
+			0,
+			0,
+			GetModuleHandleW(NULL),
+			NULL,
+			LoadCursorW(NULL, IDC_ARROW),
+			NULL,
+			NULL,
+			L"window_window_class"
+		};
 
-	RegisterClassW(&wc);
+		if (RegisterClassW(&wc) == 0) return 1;
+	}
+	else
+		init_with_external_context = true;
+
+	return 0;
 }
 
-void window_deinit_system()
+void window_deinit_context()
 {
-	UnregisterClassW(L"window_window_class", GetModuleHandleW(NULL));
+	if (init_with_external_context == false) UnregisterClassW(L"window_window_class", GetModuleHandleW(NULL));
+	init_with_external_context = false;
+}
+
+void* window_get_context()
+{
+	return (void*)42069;
 }
 
 void* window_create(int32_t posx, int32_t posy, uint32_t width, uint32_t height, uint8_t* name, bool visible)
 {
 	struct window_data_windows* window_data = malloc(sizeof(struct window_data_windows));
+	if (window_data == NULL) return NULL;
 	
 	window_data->event_queue_length = _WINDOW_QUEUE_EXTENSION_EVENTS_COUNT;
 	window_data->event_queue = malloc(_WINDOW_QUEUE_EXTENSION_EVENTS_COUNT * sizeof(struct window_event));
+	if (window_data->event_queue == NULL)
+	{
+		free(window_data);
+		return NULL;
+	}
 	window_data->free_event_queue_index = 0;
 	window_data->last_event_queue_index = 0;
 
 	uint32_t name_length = strlen(name) + 1;
 	USHORT* wide_name = malloc(name_length * sizeof(USHORT));
+	if (wide_name == NULL)
+	{
+		free(window_data->event_queue);
+		free(window_data);
+	}
 	for (int32_t i = 0; i < name_length; i++) wide_name[i] = name[i];
 
 	HWND hwnd = CreateWindowExW(
@@ -277,7 +310,7 @@ void* window_create(int32_t posx, int32_t posy, uint32_t width, uint32_t height,
 		NULL,
 		NULL,
 		GetModuleHandleA(NULL),
-		(LONG_PTR)window_data
+		(LPVOID)window_data
 	);
 
 	free(wide_name);
@@ -388,19 +421,22 @@ HWND window_windows_get_hwnd(void* window)
 
 #ifdef _WINDOW_SUPPORT_VULKAN
 
-VkResult window_vkCreateSurfaceKHR(void* window, VkInstance instance, VkSurfaceKHR* surface)
+VkResult window_vkCreateSurfaceKHR(void* window, VkInstance instance, PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr_func, VkSurfaceKHR* surface)
 {
 	struct window_data_windows* window_data = window;
+
+	PFN_vkCreateWin32SurfaceKHR vkCreateWin32SurfaceKHR_func = (PFN_vkCreateWin32SurfaceKHR) vkGetInstanceProcAddr_func(instance, "vkCreateWin32SurfaceKHR");
+	if (vkCreateWin32SurfaceKHR_func == NULL) return VK_ERROR_INITIALIZATION_FAILED;
 
 	VkWin32SurfaceCreateInfoKHR create_info = { 0 };
 	create_info.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
 	create_info.hwnd = window_data->hwnd;
 	create_info.hinstance = GetModuleHandleW(NULL);
 
-	return vkCreateWin32SurfaceKHR(instance, &create_info, NULL, surface);
+	return vkCreateWin32SurfaceKHR_func(instance, &create_info, NULL, surface);
 }
 
-uint8_t* window_get_vk_khr_surface_extension_name()
+uint8_t* window_get_VK_KHR_PLATFORM_SURFACE_EXTENSION_NAME()
 {
 	return VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
 }
@@ -410,7 +446,7 @@ uint8_t* window_get_vk_khr_surface_extension_name()
 #include <GL/gl.h>
 #include "wgl.h"
 
-bool window_opengl_context_create(void* window, int32_t version_major, int32_t version_minor, void* share_window)
+bool window_glCreateContext(void* window, int32_t version_major, int32_t version_minor, void* share_window)
 {
 	struct window_data_windows* window_data = window;
 	struct window_data_windows* share_window_data = share_window;
@@ -418,8 +454,12 @@ bool window_opengl_context_create(void* window, int32_t version_major, int32_t v
 	PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribsARB;
 	PFNWGLCHOOSEPIXELFORMATARBPROC wglChoosePixelFormatARB;
 
+	HWND dummy_hwnd;
+	HDC dummy_hdc;
+	HGLRC dummy_hglrc;
+
 	{
-		HWND dummy_hwnd = CreateWindowExW(
+		dummy_hwnd = CreateWindowExW(
 			0,
 			L"window_window_class",
 			L"dummy_window",
@@ -434,7 +474,7 @@ bool window_opengl_context_create(void* window, int32_t version_major, int32_t v
 			0
 		);
 
-		HDC dummy_hdc = GetDC(dummy_hwnd);
+		dummy_hdc = GetDC(dummy_hwnd);
 
 		PIXELFORMATDESCRIPTOR pfd =
 		{
@@ -459,17 +499,13 @@ bool window_opengl_context_create(void* window, int32_t version_major, int32_t v
 		int dummy_pixelFormat = ChoosePixelFormat(dummy_hdc, &pfd);
 		SetPixelFormat(dummy_hdc, dummy_pixelFormat, &pfd);
 
-		HGLRC dummy_hglrc = wglCreateContext(dummy_hdc);
+		dummy_hglrc = wglCreateContext(dummy_hdc);
 		wglMakeCurrent(dummy_hdc, dummy_hglrc);
 
 		wglCreateContextAttribsARB = wglGetProcAddress("wglCreateContextAttribsARB");
 		wglChoosePixelFormatARB = wglGetProcAddress("wglChoosePixelFormatARB");
 
 		wglMakeCurrent(NULL, NULL);
-		wglDeleteContext(dummy_hglrc);
-		ReleaseDC(dummy_hwnd, dummy_hdc);
-
-		DestroyWindow(dummy_hwnd);
 	}
 
 	window_data->hdc = GetDC(window_data->hwnd);
@@ -503,9 +539,16 @@ bool window_opengl_context_create(void* window, int32_t version_major, int32_t v
 	};
 
 	window_data->hglrc = wglCreateContextAttribsARB(window_data->hdc, share_window_data ? share_window_data->hglrc : 0, attribs);
+
+	{
+		wglDeleteContext(dummy_hglrc);
+		ReleaseDC(dummy_hwnd, dummy_hdc);
+
+		DestroyWindow(dummy_hwnd);
+	}
 }
 
-void window_opengl_context_destroy(void* window)
+void window_glDeleteContext(void* window)
 {
 	struct window_data_windows* window_data = window;
 
@@ -514,7 +557,7 @@ void window_opengl_context_destroy(void* window)
 	ReleaseDC(window_data->hwnd, window_data->hdc);
 }
 
-void window_opengl_context_make_current(void* window)
+void window_glMakeCurrent(void* window)
 {
 	struct window_data_windows* window_data = window;
 
@@ -524,16 +567,19 @@ void window_opengl_context_make_current(void* window)
 		wglMakeCurrent(window_data->hdc, window_data->hglrc);
 }
 
-void window_opengl_set_vsync(bool vsync)
+void window_glSwapInterval(int interval)
 {
-	PFNWGLSWAPINTERVALEXTPROC wglSwapIntervalEXT = wglGetProcAddress("wglSwapIntervalEXT");
-
-	wglSwapIntervalEXT(vsync ? 1 : 0);
+	PFNWGLSWAPINTERVALEXTPROC wglSwapIntervalEXT;
+	
+	if ((wglSwapIntervalEXT = wglGetProcAddress("wglSwapIntervalEXT")) != NULL) wglSwapIntervalEXT(interval);
 }
 
-void window_opengl_swap_buffers(void* window)
+void (*window_glGetProcAddress(uint8_t* name)) (void)
 {
-	struct window_data_windows* window_data = window;
+	return wglGetProcAddress(name);
+}
 
-	wglSwapBuffers(window_data->hdc);
+void window_glSwapBuffers(void* window)
+{
+	wglSwapBuffers(((struct window_data_windows*)(window))->hdc);
 }

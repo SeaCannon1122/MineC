@@ -45,5 +45,6 @@ void hashmap_iterator_start(struct hashmap_iterator* iterator, void* hashmap);
 struct hashmap_multi_type* hashmap_iterator_next_key_value_pair(struct hashmap_iterator* iterator, uint8_t** key);
 
 void hashmap_read_yaml(void* hashmap, uint8_t* yaml_data, size_t yaml_data_size);
+void* hashmap_write_yaml(void* hashmap, size_t* yaml_data_size);
 
 #endif // !HASHMAP_H

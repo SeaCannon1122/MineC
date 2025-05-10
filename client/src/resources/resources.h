@@ -37,7 +37,7 @@ struct resources_shader
 	bool in_use;
 };
 
-struct resources_state
+struct resources_index
 {
 	struct resources_texture* textures;
 	uint32_t texture_count;
@@ -46,6 +46,10 @@ struct resources_state
 	struct resources_pixelchar_font* pixelchar_fonts;
 	uint32_t pixelchar_font_count;
 	void* pixelchar_font_token_id_hashmap;
+
+	void** language_hashmaps;
+	uint32_t language_hashmap_count;
+	void* language_hashmap_id_hashmap;
 };
 
 struct minec_client;

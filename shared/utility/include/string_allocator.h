@@ -6,15 +6,15 @@
 #include <stdint.h>
 #include <stddef.h>
 
-void* string_allocator_new(size_t min_arena_size);
+void* s_allocator_new(size_t min_arena_size);
 
-void* string_allocate(void* allocator, size_t size);
+void* s_alloc(void* allocator, size_t size);
 
-uint8_t* string_allocate_string(void* allocator, uint8_t* string);
-uint8_t* string_allocate_joined_string(void* allocator, uint8_t** strings, uint32_t string_count);
+uint8_t* s_alloc_string(void* allocator, uint8_t* string, ...);
+uint8_t* s_alloc_joined_string(void* allocator, uint8_t** strings, uint32_t string_count);
 
-uint32_t string_free(void* allocator, void* memory_handle);
+void s_free(void* allocator, void* memory_handle);
 
-void string_allocator_delete(void* allocator);
+void s_allocator_delete(void* allocator);
 
 #endif // !STRING_ALLOCATOR_H

@@ -23,7 +23,7 @@ int compare_resource_pack_declaration_priority(
 void _resources_load_paths_of_resource_type(struct minec_client* client, void* paths_hashmap, uint8_t* resource_pack_path, uint8_t* sub_layout_file_path)
 {
 	uint8_t* layout_file_path_components[] = { resource_pack_path, sub_layout_file_path };
-	uint8_t* layout_file_path = string_allocate_joined_string(client->string_allocator, layout_file_path_components, 2);
+	uint8_t* layout_file_path = s_alloc_joined_string(client->dynamic_alloc, layout_file_path_components, 2);
 
 	size_t file_length;
 	void* file_data = minec_client_load_file(layout_file_path, &file_length);
@@ -45,28 +45,28 @@ void _resources_load_paths_of_resource_type(struct minec_client* client, void* p
 		while (val = hashmap_iterator_next_key_value_pair(&it, &key)) if (val->type == HASHMAP_VALUE_STRING)
 		{
 			uint8_t* resource_path_components[] = { resource_pack_path, val->data._string };
-			uint8_t* resource_path = string_allocate_joined_string(client->string_allocator, resource_path_components, 2);
+			uint8_t* resource_path = s_alloc_joined_string(client->dynamic_alloc, resource_path_components, 2);
 
 			hashmap_set_value(paths_hashmap, key, resource_path, HASHMAP_VALUE_STRING);
 
-			string_free(client->string_allocator, resource_path);
+			s_free(client->dynamic_alloc, resource_path);
 		}
 
 		hashmap_delete(pack_paths_hashmap);
 	}
 	else printf("[RESOURCES] failed to open %s\n", layout_file_path);
 
-	string_free(client->string_allocator, layout_file_path);
+	s_free(client->dynamic_alloc, layout_file_path);
 }
 
 void resources_create(struct minec_client* client) {
 
-	uint32_t resource_packs_count = hashmap_get_key_count(client->settings_state.resource_pack_paths_hashmap);
-	struct resource_pack_declaration* paths = string_allocate(client->string_allocator, sizeof(struct resource_pack_declaration) * resource_packs_count);
+	uint32_t resource_packs_count = hashmap_get_key_count(client->settings.resource_pack_paths_hashmap);
+	struct resource_pack_declaration* paths = s_alloc(client->dynamic_alloc, sizeof(struct resource_pack_declaration) * resource_packs_count);
 
 	{
 		struct hashmap_iterator it;
-		hashmap_iterator_start(&it, client->settings_state.resource_pack_paths_hashmap);
+		hashmap_iterator_start(&it, client->settings.resource_pack_paths_hashmap);
 
 		struct hashmap_multi_type* val;
 		uint8_t* key;
@@ -81,22 +81,24 @@ void resources_create(struct minec_client* client) {
 	qsort(paths, resource_packs_count, sizeof(struct resource_pack_declaration), compare_resource_pack_declaration_priority);
 
 	void* texture_paths_hashmap = hashmap_new(1024, 2);
-	void* font_paths_hashmap = hashmap_new(1024, 2);
+	void* font_paths_hashmap = hashmap_new(16, 2);
+	void* language_paths_hashmap = hashmap_new(16, 2);
 
 	for (uint32_t i = 0; i < resource_packs_count; i++)
 	{
 		_resources_load_paths_of_resource_type(client, texture_paths_hashmap, paths[i].path, RESOURCE_PACK_TEXTURES_FILE_PATH);
 		_resources_load_paths_of_resource_type(client, font_paths_hashmap, paths[i].path, RESOURCE_PACK_FONTS_FILE_PATH);
+		_resources_load_paths_of_resource_type(client, language_paths_hashmap, paths[i].path, RESOURCE_PACK_LANGUAGES_FILE_PATH);
 	}
 
 	//textures
 	{
-		client->resources_state.texture_count = 0;
+		client->resources_index.texture_count = 0;
 		uint32_t texture_declaration_count = hashmap_get_key_count(texture_paths_hashmap);
 
-		client->resources_state.textures = malloc(sizeof(struct resources_texture) * texture_declaration_count + 8);
+		client->resources_index.textures = malloc(sizeof(struct resources_texture) * texture_declaration_count + 8);
 
-		client->resources_state.texture_token_id_hashmap = hashmap_new((uint32_t)((float)texture_declaration_count * 1.2f) + 1, 2);
+		client->resources_index.texture_token_id_hashmap = hashmap_new((uint32_t)((float)texture_declaration_count * 1.2f) + 1, 2);
 
 		struct hashmap_iterator it;
 		hashmap_iterator_start(&it, texture_paths_hashmap);
@@ -113,12 +115,12 @@ void resources_create(struct minec_client* client) {
 
 			if (data = stbi_load(val->data._string, &width, &height, &comp, 4))
 			{
-				client->resources_state.textures[client->resources_state.texture_count].data = data;
-				client->resources_state.textures[client->resources_state.texture_count].width = width;
-				client->resources_state.textures[client->resources_state.texture_count].height = height;
+				client->resources_index.textures[client->resources_index.texture_count].data = data;
+				client->resources_index.textures[client->resources_index.texture_count].width = width;
+				client->resources_index.textures[client->resources_index.texture_count].height = height;
 
-				hashmap_set_value(client->resources_state.texture_token_id_hashmap, key, &client->resources_state.texture_count, HASHMAP_VALUE_INT);
-				client->resources_state.texture_count++;
+				hashmap_set_value(client->resources_index.texture_token_id_hashmap, key, &client->resources_index.texture_count, HASHMAP_VALUE_INT);
+				client->resources_index.texture_count++;
 			}
 			else printf("[RESOURCES] failed to load %s\n", val->data._string);
 		}
@@ -126,12 +128,12 @@ void resources_create(struct minec_client* client) {
 
 	//fonts
 	{
-		client->resources_state.pixelchar_font_count = 0;
+		client->resources_index.pixelchar_font_count = 0;
 		uint32_t font_declaration_count = hashmap_get_key_count(font_paths_hashmap);
 
-		client->resources_state.pixelchar_fonts = malloc(sizeof(struct resources_pixelchar_font) * font_declaration_count + 8);
+		client->resources_index.pixelchar_fonts = malloc(sizeof(struct resources_pixelchar_font) * font_declaration_count + 8);
 
-		client->resources_state.pixelchar_font_token_id_hashmap = hashmap_new((uint32_t)((float)font_declaration_count * 1.2f) + 1, 2);
+		client->resources_index.pixelchar_font_token_id_hashmap = hashmap_new((uint32_t)((float)font_declaration_count * 1.2f) + 1, 2);
 
 		struct hashmap_iterator it;
 		hashmap_iterator_start(&it, font_paths_hashmap);
@@ -146,11 +148,46 @@ void resources_create(struct minec_client* client) {
 
 			if (data = minec_client_load_file(val->data._string, &size))
 			{
-				client->resources_state.pixelchar_fonts[client->resources_state.pixelchar_font_count].font_file_data = data;
-				client->resources_state.pixelchar_fonts[client->resources_state.pixelchar_font_count].font_file_data_size = size;
+				client->resources_index.pixelchar_fonts[client->resources_index.pixelchar_font_count].font_file_data = data;
+				client->resources_index.pixelchar_fonts[client->resources_index.pixelchar_font_count].font_file_data_size = size;
 
-				hashmap_set_value(client->resources_state.pixelchar_font_token_id_hashmap, key, &client->resources_state.pixelchar_font_count, HASHMAP_VALUE_INT);
-				client->resources_state.pixelchar_font_count++;
+				hashmap_set_value(client->resources_index.pixelchar_font_token_id_hashmap, key, &client->resources_index.pixelchar_font_count, HASHMAP_VALUE_INT);
+				client->resources_index.pixelchar_font_count++;
+			}
+			else printf("[RESOURCES] failed to load %s\n", val->data._string);
+		}
+	}
+
+	//languages
+	{
+		client->resources_index.language_hashmap_count = 0;
+		uint32_t language_declaration_count = hashmap_get_key_count(language_paths_hashmap);
+
+		client->resources_index.language_hashmaps = malloc(sizeof(void*) * language_declaration_count + 8);
+
+		client->resources_index.language_hashmap_id_hashmap = hashmap_new((uint32_t)((float)language_declaration_count * 1.2f) + 1, 2);
+
+		struct hashmap_iterator it;
+		hashmap_iterator_start(&it, language_paths_hashmap);
+
+		struct hashmap_multi_type* val;
+		uint8_t* key;
+
+		while (val = hashmap_iterator_next_key_value_pair(&it, &key)) if (val->type == HASHMAP_VALUE_STRING)
+		{
+			size_t size;
+			void* data;
+
+			if (data = minec_client_load_file(val->data._string, &size))
+			{
+				client->resources_index.language_hashmaps[client->resources_index.language_hashmap_count] = hashmap_new(1024, 2);
+
+				hashmap_read_yaml(client->resources_index.language_hashmaps[client->resources_index.language_hashmap_count], data, size);
+
+				hashmap_set_value(client->resources_index.language_hashmap_id_hashmap, key, &client->resources_index.language_hashmap_count, HASHMAP_VALUE_INT);
+				client->resources_index.language_hashmap_count++;
+
+				free(data);
 			}
 			else printf("[RESOURCES] failed to load %s\n", val->data._string);
 		}
@@ -159,18 +196,23 @@ void resources_create(struct minec_client* client) {
 
 	hashmap_delete(texture_paths_hashmap);
 	hashmap_delete(font_paths_hashmap);
+	hashmap_delete(language_paths_hashmap);
 
-	string_free(client->string_allocator, paths);
+	s_free(client->dynamic_alloc, paths);
 }
 
 
 void resources_destroy(struct minec_client* client) {
 
-	for (uint32_t i = 0; i < client->resources_state.texture_count; i++) free(client->resources_state.textures[i].data);
-	free(client->resources_state.textures);
-	hashmap_delete(client->resources_state.texture_token_id_hashmap);
+	for (uint32_t i = 0; i < client->resources_index.texture_count; i++) free(client->resources_index.textures[i].data);
+	free(client->resources_index.textures);
+	hashmap_delete(client->resources_index.texture_token_id_hashmap);
 
-	for (uint32_t i = 0; i < client->resources_state.pixelchar_font_count; i++) free(client->resources_state.pixelchar_fonts[i].font_file_data);
-	free(client->resources_state.pixelchar_fonts);
-	hashmap_delete(client->resources_state.pixelchar_font_token_id_hashmap);
+	for (uint32_t i = 0; i < client->resources_index.pixelchar_font_count; i++) free(client->resources_index.pixelchar_fonts[i].font_file_data);
+	free(client->resources_index.pixelchar_fonts);
+	hashmap_delete(client->resources_index.pixelchar_font_token_id_hashmap);
+
+	for (uint32_t i = 0; i < client->resources_index.language_hashmap_count; i++) hashmap_delete(client->resources_index.language_hashmaps[i]);
+	free(client->resources_index.language_hashmaps);
+	hashmap_delete(client->resources_index.language_hashmap_id_hashmap);
 }

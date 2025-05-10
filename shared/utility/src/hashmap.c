@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <stdio.h>
+#include <stdarg.h>
 
 #include "string_allocator.h"
 
@@ -62,7 +64,7 @@ void _hashmap_key_get_empty_space(struct _hashmap* map, uint8_t* key, uint32_t i
 		if (map->sub_arrays[index].entries[i].in_use == false)
 		{
 			map->sub_arrays[index].entries[i].in_use = true;
-			map->sub_arrays[index].entries[i].key = string_allocate_string(map->string_allocator, key);
+			map->sub_arrays[index].entries[i].key = s_alloc_string(map->string_allocator, key);
 			*sub_index = i;
 			return;
 		}
@@ -72,19 +74,19 @@ void _hashmap_key_get_empty_space(struct _hashmap* map, uint8_t* key, uint32_t i
 	map->sub_arrays[index].entry_count += map->subarray_extension_mappings_count;
 
 	if (old_entry_count == 0)
-		map->sub_arrays[index].entries = string_allocate(map->string_allocator, sizeof(struct _hashmap_entry) * map->sub_arrays[index].entry_count);
+		map->sub_arrays[index].entries = s_alloc(map->string_allocator, sizeof(struct _hashmap_entry) * map->sub_arrays[index].entry_count);
 	else
 	{
 		struct _hashmap_entry* old_entries = map->sub_arrays[index].entries;
-		map->sub_arrays[index].entries = string_allocate(map->string_allocator, sizeof(struct _hashmap_entry) * map->sub_arrays[index].entry_count);
+		map->sub_arrays[index].entries = s_alloc(map->string_allocator, sizeof(struct _hashmap_entry) * map->sub_arrays[index].entry_count);
 		memcpy(map->sub_arrays[index].entries, old_entries, sizeof(struct _hashmap_entry) * old_entry_count);
-		string_free(map->string_allocator, old_entries);
+		s_free(map->string_allocator, old_entries);
 	}
 
 	memset((void*)((size_t)map->sub_arrays[index].entries + sizeof(struct _hashmap_entry) * old_entry_count), 0, sizeof(struct _hashmap_entry) * map->subarray_extension_mappings_count);
 
 	map->sub_arrays[index].entries[old_entry_count].in_use = true;
-	map->sub_arrays[index].entries[old_entry_count].key = string_allocate_string(map->string_allocator, key);
+	map->sub_arrays[index].entries[old_entry_count].key = s_alloc_string(map->string_allocator, key);
 	*sub_index = old_entry_count;
 
 	return;
@@ -99,7 +101,7 @@ void* hashmap_new(uint32_t sub_array_count, uint32_t subarray_extension_mappings
 	map->sub_array_count = sub_array_count;
 	map->subarray_extension_mappings_count = subarray_extension_mappings_count;
 	memset(map->sub_arrays, 0, sizeof(struct _hashmap_subarray) * sub_array_count);
-	map->string_allocator = string_allocator_new(16384);
+	map->string_allocator = s_allocator_new(16384);
 	map->key_count = 0;
 
 	return map;
@@ -109,7 +111,7 @@ void hashmap_delete(void* hashmap)
 {
 	struct _hashmap* map = hashmap;
 
-	string_allocator_delete(map->string_allocator);
+	s_allocator_delete(map->string_allocator);
 	free(map);
 }
 
@@ -123,7 +125,7 @@ void hashmap_set_value(void* hashmap, uint8_t* key, void* value, uint32_t value_
 	switch (value_type)
 	{
 	case HASHMAP_VALUE_STRING: {
-		resolved_value.data._string = string_allocate_string(map->string_allocator, value);
+		resolved_value.data._string = s_alloc_string(map->string_allocator, value);
 	} break;
 	
 	case HASHMAP_VALUE_FLOAT : {
@@ -143,7 +145,7 @@ void hashmap_set_value(void* hashmap, uint8_t* key, void* value, uint32_t value_
 	if (_hashmap_key_exists(map, key, index, &sub_index))
 	{
 		if (map->sub_arrays[index].entries[sub_index].value.type == HASHMAP_VALUE_STRING)
-			string_free(map->string_allocator, map->sub_arrays[index].entries[sub_index].value.data._string);
+			s_free(map->string_allocator, map->sub_arrays[index].entries[sub_index].value.data._string);
 	}
 	else
 	{
@@ -176,9 +178,9 @@ void hashmap_delete_key(void* hashmap, uint8_t* key)
 	if (_hashmap_key_exists(map, key, index, &sub_index))
 	{
 		if (map->sub_arrays[index].entries[sub_index].value.type == HASHMAP_VALUE_STRING)
-			string_free(map->string_allocator, map->sub_arrays[index].entries[sub_index].value.data._string);
+			s_free(map->string_allocator, map->sub_arrays[index].entries[sub_index].value.data._string);
 
-		string_free(map->string_allocator, map->sub_arrays[index].entries[sub_index].key);
+		s_free(map->string_allocator, map->sub_arrays[index].entries[sub_index].key);
 		map->sub_arrays[index].entries[sub_index].in_use = false;
 
 		map->key_count--;
@@ -316,4 +318,60 @@ void hashmap_read_yaml(void* hashmap, uint8_t* yaml_data, size_t yaml_data_size)
 	}
 
 	free(data);
+}
+
+#define _HAHSMAP_WRITE_DATA_BUFFER_EXTENSION_SIZE 4096
+
+void _hashmap_buffer_write(void** buffer, size_t* buffer_size, size_t* buffer_filled_size, uint8_t* format, ...) {
+	va_list args;
+	va_start(args, format);
+
+	int required_size = vsnprintf(NULL, 0, format, args);
+	va_end(args);
+
+	if (required_size > *buffer_size - *buffer_filled_size) {
+		*buffer_size += (required_size > _HAHSMAP_WRITE_DATA_BUFFER_EXTENSION_SIZE ? required_size : _HAHSMAP_WRITE_DATA_BUFFER_EXTENSION_SIZE);
+		*buffer = realloc(*buffer, *buffer_size);
+	}
+
+	va_start(args, format);
+	*buffer_filled_size += vsnprintf(buffer[*buffer_filled_size], *buffer_size - *buffer_filled_size, format, args);
+	va_end(args);
+}
+
+void* hashmap_write_yaml(void* hashmap, size_t* yaml_data_size)
+{
+	void* buffer = malloc(_HAHSMAP_WRITE_DATA_BUFFER_EXTENSION_SIZE);
+	size_t buffer_size = _HAHSMAP_WRITE_DATA_BUFFER_EXTENSION_SIZE;
+	size_t buffer_filled_size = 0;
+
+	struct hashmap_iterator iterator;
+	hashmap_iterator_start(&iterator, hashmap);
+
+	uint8_t* key;
+	struct hashmap_multi_type* value;
+
+	while (value = hashmap_iterator_next_key_value_pair(&iterator, &key))
+	{
+		switch (value->type)
+		{
+		case HASHMAP_VALUE_STRING: {
+			_hashmap_buffer_write(&buffer, &buffer_size, &buffer_filled_size, "%s: \"%s\"\n", key, value->data._string);
+		} break;
+
+		case HASHMAP_VALUE_FLOAT: {
+			_hashmap_buffer_write(&buffer, &buffer_size, &buffer_filled_size, "%s: \"%f\"\n", key, value->data._float);
+		} break;
+
+		case HASHMAP_VALUE_INT: {
+			_hashmap_buffer_write(&buffer, &buffer_size, &buffer_filled_size, "%s: \"%d\"\n", key, value->data._int);
+		} break;
+
+		}
+	}
+
+	_hashmap_buffer_write(&buffer, &buffer_size, &buffer_filled_size, " ");
+
+	*yaml_data_size = buffer_filled_size;
+	return buffer;
 }

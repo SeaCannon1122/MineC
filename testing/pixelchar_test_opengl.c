@@ -52,7 +52,7 @@ int main(int argc, char* argv[]) {
 	window_init_system();
 
 	void* window = window_create(100, 100, 200, 200, "window for test", true, NULL);
-	window_opengl_context_create(window, 4, 6, NULL);
+	window_opengl_context_create(window, 4, 3, NULL);
 	window_opengl_context_make_current(window);
 
 	window_opengl_set_vsync(true);

@@ -1,32 +1,36 @@
-#include "application_window.h"
+#include <minec_client.h>
 
-#include <string.h>
-
-uint32_t application_window_create(struct application_window* window, uint32_t posx, uint32_t posy, uint32_t width, uint32_t height, uint8_t* name)
+uint32_t application_window_create(struct minec_client* client, uint32_t posx, uint32_t posy, uint32_t width, uint32_t height, uint8_t* name)
 {
-	window->window_handle = window_create(posx, posy, width, height, name, true, NULL);
+	if (window_init_context(NULL) != 0) return MINEC_CLIENT_ERROR;
 
-	uint32_t position_x, position_y;
-	window_get_dimensions(window->window_handle, &window->width, &window->height, &position_x, &position_y);
+	client->window.window_handle = window_create(posx, posy, width, height, name, true, NULL);
+	if (client->window.window_handle == NULL)
+	{
+		minec_client_log(client, "[APPLICATION WINDOW] Error creating window");
+		return MINEC_CLIENT_ERROR;
+	}
 
-	window->last_render_width = window->width;
-	window->last_render_height = window->height;
+	atomic_init(&client->window.width);
+	atomic_init(&client->window.height);
 
-	memset(&window->input, 0, sizeof(window->input));
+	atomic_store_(uint32_t, &client->window.width, &width);
+	atomic_store_(uint32_t, &client->window.height, &height);
+
+	memset(&client->window.input, 0, sizeof(client->window.input));
 
 	return 0;
 }
 
-uint32_t application_window_handle_events(struct application_window* window)
+uint32_t application_window_handle_events(struct minec_client* client)
 {
-	window->frame_flags = 0;
-	window->input.character_count = 0;
-	window->input.mouse_scroll_steps = 0;
+	client->window.input.character_count = 0;
+	client->window.input.mouse_scroll_steps = 0;
 
-	for (uint32_t i = 0; i < WINDOW_KEY_TOTAL_COUNT; i++) window->input.keyboard[i] &= ~KEY_CHANGE_MASK;
+	for (uint32_t i = 0; i < WINDOW_KEY_TOTAL_COUNT; i++) client->window.input.keyboard[i] &= ~KEY_CHANGE_MASK;
 
 	struct window_event* event;
-	while (event = window_next_event(window->window_handle)) {
+	while (event = window_next_event(client->window.window_handle)) {
 
 		switch (event->type) {
 
@@ -36,40 +40,29 @@ uint32_t application_window_handle_events(struct application_window* window)
 
 		case WINDOW_EVENT_MOVE_SIZE: {
 
-			window->width = event->info.move_size.width;
-			window->height = event->info.move_size.height;
-
-			if (window->width != 0 && window->height != 0) {
-
-				if (
-					window->last_render_width != event->info.move_size.width ||
-					window->last_render_height != event->info.move_size.height
-					) window->frame_flags |= FRAME_FLAG_RESIZE;
-
-				window->last_render_width = event->info.move_size.width;
-				window->last_render_height = event->info.move_size.height;
-			}
+			atomic_store_(uint32_t, &client->window.width, &event->info.move_size.width);
+			atomic_store_(uint32_t, &client->window.height, &event->info.move_size.height);
 
 		} break;
 
 		case WINDOW_EVENT_CHARACTER: {
-			if (window->input.character_count < MAX_FRAME_CHAR_INPUTS) {
-				window->input.characters[window->input.character_count] = event->info.character.code_point;
+			if (client->window.input.character_count < MAX_FRAME_CHAR_INPUTS) {
+				client->window.input.characters[client->window.input.character_count] = event->info.character.code_point;
 			}
-			window->input.character_count++;
+			client->window.input.character_count++;
 		} break;
 
 		case WINDOW_EVENT_KEY_DOWN: {
-			if (!(window->input.keyboard[event->info.key_down.key] & KEY_DOWN_MASK))
-				window->input.keyboard[event->info.key_down.key] = KEY_CHANGE_MASK | KEY_DOWN_MASK;
+			if (!(client->window.input.keyboard[event->info.key_down.key] & KEY_DOWN_MASK))
+				client->window.input.keyboard[event->info.key_down.key] = KEY_CHANGE_MASK | KEY_DOWN_MASK;
 		} break;
 
 		case WINDOW_EVENT_KEY_UP: {
-			window->input.keyboard[event->info.key_up.key] = KEY_CHANGE_MASK;
+			client->window.input.keyboard[event->info.key_up.key] = KEY_CHANGE_MASK;
 		} break;
 
 		case WINDOW_EVENT_MOUSE_SCROLL: {
-			window->input.mouse_scroll_steps = event->info.mouse_scroll.scroll_steps;
+			client->window.input.mouse_scroll_steps = event->info.mouse_scroll.scroll_steps;
 		} break;
 
 		default:
@@ -78,16 +71,19 @@ uint32_t application_window_handle_events(struct application_window* window)
 
 	}
 
-	if (window->width != 0 && window->height != 0) window->frame_flags |= FRAME_FLAG_RENDERABLE;
-
-	window_get_mouse_cursor_position(window->window_handle, &window->input.mouse_x, &window->input.mouse_y);
+	window_get_mouse_cursor_position(client->window.window_handle, &client->window.input.mouse_x, &client->window.input.mouse_y);
 
 	return 0;
 }
 
-uint32_t application_window_destroy(struct application_window* window)
+uint32_t application_window_destroy(struct minec_client* client)
 {
-	window_destroy(window->window_handle);
+	atomic_deinit(&client->window.width);
+	atomic_deinit(&client->window.height);
+
+	window_destroy(client->window.window_handle);
+
+	window_deinit_context();
 
 	return 0;
 }

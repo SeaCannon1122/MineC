@@ -8,6 +8,7 @@ extern "C" {
 #endif
 
 #include <stdint.h>
+#include <stddef.h>
 #include <stdbool.h>
 
 #define PIXELCHAR_RENDERER_MAX_FONT_COUNT 8

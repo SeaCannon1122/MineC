@@ -5,6 +5,7 @@
 #include <malloc.h>
 #include <stdio.h>
 #include <math.h>
+#include <mutex.h>
 
 #if defined(_WIN32)
 
@@ -504,8 +505,9 @@ int main()
 			VKCall(vkWaitForFences(device, 1, &queue_fence, VK_TRUE, UINT64_MAX));
 
 			uint32_t swapchain_image_index;
-			if (vkAcquireNextImageKHR(device, swapchain, 0, aquire_semaphore, 0, &swapchain_image_index) != VK_SUCCESS) {
-				printf("[RENDERER BACKEND] Error aquireing next swapchain image\n");
+			VkResult res = vkAcquireNextImageKHR(device, swapchain, 0, aquire_semaphore, 0, &swapchain_image_index);
+			if (res != VK_SUCCESS) {
+				printf("[RENDERER BACKEND] Error aquireing next swapchain image, error %d\n", res);
 
 				continue;
 			}

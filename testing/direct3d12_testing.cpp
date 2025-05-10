@@ -121,8 +121,8 @@ void flush()
 
 int main(int argc, char* argv[]) {
 
-	window_init_system();
-	void* window = window_create(100, 100, 200, 200, (uint8_t*)"window for test", true, NULL);
+	window_init_context(NULL);
+	void* window = window_create(100, 100, 200, 200, (uint8_t*)"window for test", true);
 
 	int32_t x;
 	int32_t y;
@@ -545,7 +545,7 @@ int main(int argc, char* argv[]) {
 	d3d12debug->Release();
 
 	window_destroy(window);
-	window_deinit_system();
+	window_deinit_context();
 
 	return 0;
 }

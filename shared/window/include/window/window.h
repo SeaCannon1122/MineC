@@ -126,15 +126,11 @@ struct window_event {
 	} info;
 };
 
-struct window_opengL_format_description
-{
-	int a;
-};
+uint32_t window_init_context(void* context);
+void window_deinit_context();
+void* window_get_context();
 
-void window_init_system();
-void window_deinit_system();
-
-void* window_create(int32_t posx, int32_t posy, uint32_t width, uint32_t height, uint8_t* name, bool visible, struct window_opengL_format_description* opengl_format_description);
+void* window_create(int32_t posx, int32_t posy, uint32_t width, uint32_t height, uint8_t* name, bool visible);
 
 void window_destroy(void* window);
 
@@ -160,23 +156,25 @@ HWND window_windows_get_hwnd(void* window);
 
 #include <vulkan/vulkan.h>
 
-VkResult window_vkCreateSurfaceKHR(void* window, VkInstance instance, VkSurfaceKHR* surface);
+VkResult window_vkCreateSurfaceKHR(void* window, VkInstance instance, PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr_func, VkSurfaceKHR* surface);
 
-uint8_t* window_get_vk_khr_surface_extension_name();
+uint8_t* window_get_VK_KHR_PLATFORM_SURFACE_EXTENSION_NAME();
 
 #endif 
 	
 #ifdef _WINDOW_SUPPORT_OPENGL
 
-bool window_opengl_context_create(void* window, int32_t version_major, int32_t version_minor, void* share_window);
+bool window_glCreateContext(void* window, int32_t version_major, int32_t version_minor, void* share_window);
 
-void window_opengl_context_destroy(void* window);
+void window_glDeleteContext(void* window);
 
-void window_opengl_context_make_current(void* window);
+void window_glMakeCurrent(void* window);
 
-void window_opengl_set_vsync(bool vsync);
+void window_glSwapInterval(int interval);
 
-void window_opengl_swap_buffers(void* window);
+void (*window_glGetProcAddress(uint8_t* name)) (void);
+
+void window_glSwapBuffers(void* window);
 
 #endif
 

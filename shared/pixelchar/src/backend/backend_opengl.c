@@ -53,7 +53,7 @@ PixelcharResult _font_backend_opengl_add_reference(PixelcharRenderer renderer, u
 
 void _font_backend_opengl_sub_reference(PixelcharRenderer renderer, uint32_t font_index)
 {
-	_renderer_backend_opengl* renderer_backend = renderer->backends[PIXELCHAR_BACKEND_OPENGL];
+	_renderer_backend_opengl* renderer_backend = renderer->backends[PIXELCHAR_BACKEND_OPENGL]; 
 	_font_backend_opengl* font_backend = renderer->fonts[font_index]->backends[PIXELCHAR_BACKEND_OPENGL];
 
 	if (renderer->fonts[font_index]->backends_reference_count[PIXELCHAR_BACKEND_OPENGL] == 1)

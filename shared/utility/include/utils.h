@@ -4,18 +4,19 @@
 #define PLATFORM_UTILS_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #if defined(_WIN32)
 
 #define DEBUG_BREAK() __debugbreak()
 #define RESTRICT __restrict
-#define DLL_EXPORT __declspec(dllexport)
+#define EXPORT __declspec(dllexport)
 
 #elif defined(__linux__)
 #include <signal.h>
 #define DEBUG_BREAK() raise(SIGTRAP)
 #define RESTRICT restrict
-#define DLL_EXPORT __attribute__((visibility("default")))
+#define EXPORT __attribute__((visibility("default")))
 
 #elif defined(__APPLE__)
 
@@ -24,7 +25,7 @@
 
 #endif
 
-void* dynamic_library_load(uint8_t* src);
+void* dynamic_library_load(uint8_t* library_name, bool name_explicit);
 void (*dynamic_library_get_function(void* library_handle, uint8_t* function_name)) (void);
 void dynamic_library_unload(void* library_handle);
 

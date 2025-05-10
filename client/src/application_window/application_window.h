@@ -11,27 +11,14 @@
 #define KEY_CHANGE_MASK 0b10
 #define KEY_DOWN_MASK  0b01
 
-enum frame_flags
-{
-	FRAME_FLAG_WINDOW_SELECTED = 1,
-	FRAME_FLAG_RENDERABLE = 2,
-	FRAME_FLAG_RESIZE = 4,
-	FRAME_FLAG_MOUSE_MOVE = 8,
-};
-
 struct application_window
 {
 	void* window_handle;
 
 	void* rendering_backend_handle;
 
-	uint32_t width;
-	uint32_t height;
-
-	uint32_t last_render_width;
-	uint32_t last_render_height;
-
-	uint32_t frame_flags;
+	atomic_(uint32_t) width;
+	atomic_(uint32_t) height;
 
 	struct application_window_input {
 		uint32_t characters[MAX_FRAME_CHAR_INPUTS];
@@ -47,10 +34,12 @@ struct application_window
 	} input;
 };
 
-uint32_t application_window_create(struct application_window* window, uint32_t posx, uint32_t posy, uint32_t width, uint32_t height, uint8_t* name);
+struct minec_client;
 
-uint32_t application_window_handle_events(struct application_window* window);
+uint32_t application_window_create(struct minec_client* client, uint32_t posx, uint32_t posy, uint32_t width, uint32_t height, uint8_t* name);
 
-uint32_t application_window_destroy(struct application_window* window);
+uint32_t application_window_handle_events(struct minec_client* client);
+
+uint32_t application_window_destroy(struct minec_client* client);
 
 #endif // !APPLICATION_WINDOW

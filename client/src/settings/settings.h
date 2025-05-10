@@ -1,22 +1,29 @@
 #pragma once
 
-#ifndef SETTINGS_H
-#define SETTINGS_H
+#ifndef MINEC_CLIENT_SETTINGS_SETTINGS_SETTINGS_H
+#define MINEC_CLIENT_SETTINGS_SETTINGS_SETTINGS_H
 
 #include <stdint.h>
 
-struct settings_state {
+struct settings {
 
 	struct
 	{
-		struct
-		{
-			uint32_t gui_scale;
-			uint32_t fov;
+		uint32_t gui_scale;
+		uint32_t fov;
 
-		} video_settings;
+		struct {
+			uint32_t backend_index;
+			uint8_t** backend_names;
+			uint32_t backend_count;
+			uint32_t device_index;
+			uint8_t** device_infos;
+			uint32_t device_count;
 
-	} game_settings;
+			uint32_t fps;
+		} graphics;
+
+	} video;
 
 	void* resource_pack_paths_hashmap;
 };
