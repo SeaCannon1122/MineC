@@ -45,4 +45,7 @@ void* create_thread(void (address) (void*), void* args);
 
 void join_thread(void* thread_handle);
 
+uint32_t file_copy(uint8_t* source_path, uint8_t* dest_path);
+void* file_load(uint8_t* path, size_t* size);
+
 #endif

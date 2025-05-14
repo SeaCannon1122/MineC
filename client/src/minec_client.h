@@ -39,7 +39,7 @@ struct minec_client
 	size_t runtime_files_path_length;
 
 	struct application_window window;
-	
+
 	struct settings settings;
 
 	struct resources_index resources_index;
@@ -47,8 +47,6 @@ struct minec_client
 	struct renderer renderer;
 
 };
-
-void* minec_client_load_file(uint8_t* path, size_t* size);
 
 uint32_t minec_client_run(struct minec_client* client, uint8_t* runtime_files_path);
 

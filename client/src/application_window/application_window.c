@@ -7,7 +7,7 @@ uint32_t application_window_create(struct minec_client* client, uint32_t posx, u
 	client->window.window_handle = window_create(posx, posy, width, height, name, true, NULL);
 	if (client->window.window_handle == NULL)
 	{
-		minec_client_log(client, "[APPLICATION WINDOW] Error creating window");
+		minec_client_log(client, "[APPLICATION WINDOW]", "Error creating window");
 		return MINEC_CLIENT_ERROR;
 	}
 

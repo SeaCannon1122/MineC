@@ -1,5 +1,7 @@
 #include <utils.h>
 
+#include <stdio.h>
+
 #ifdef WIN32
 
 #include <windows.h>
@@ -190,3 +192,65 @@ void join_thread(void* thread_handle)
 }
 
 #endif
+
+
+uint32_t file_copy(uint8_t* source_path, uint8_t* dest_path)
+{
+	FILE* source = fopen(source_path, "rb");
+	if (source == NULL) {
+		return 1;
+	}
+
+	FILE* dest = fopen(dest_path, "wb");
+	if (dest == NULL) {
+		fclose(source);
+		return 1;
+	}
+
+	char buffer[4096];
+	size_t bytes;
+
+	while ((bytes = fread(buffer, 1, sizeof(buffer), source)) > 0) {
+		if (fwrite(buffer, 1, bytes, dest) != bytes) {
+			fclose(source);
+			fclose(dest);
+			return 1;
+		}
+	}
+
+	fclose(source);
+	fclose(dest);
+	return 0;
+}
+
+void* file_load(uint8_t* path, size_t* size)
+{
+
+	FILE* file = fopen(path, "rb");
+
+	if (file == NULL) return NULL;
+
+	fseek(file, 0, SEEK_END);
+	long fileSize = ftell(file);
+	rewind(file);
+
+	void* buffer = malloc(fileSize);
+	if (buffer == NULL) {
+		fclose(file);
+		return NULL;
+	}
+
+	size_t read = fread(buffer, 1, fileSize, file);
+
+	fclose(file);
+
+	if (read != fileSize)
+	{
+		free(buffer);
+		return NULL;
+	}
+
+	*size = read;
+
+	return buffer;
+}

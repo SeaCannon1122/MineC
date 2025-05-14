@@ -43,12 +43,14 @@ target_compile_definitions(minec_client_renderer_backend PRIVATE MINEC_CLIENT_DE
 
 add_executable(minec_client_renderer_backend_dummy ${CMAKE_CURRENT_SOURCE_DIR}/src/dummy_main.c)
 target_link_libraries(minec_client_renderer_backend_dummy PRIVATE minec_client_renderer_backend )
+target_link_libraries(minec_client PRIVATE minec_client_renderer_backend )
 
 
 target_sources(minec_client_renderer_backend PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/backend/vulkan/base.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/backend/vulkan/device.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/backend/vulkan/pipelines.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/backend/vulkan/pipelines_resources.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/backend/vulkan/render.c
 )
 
 target_compile_definitions(minec_client_renderer_backend
@@ -61,6 +63,9 @@ target_compile_definitions(minec_client_renderer_backend
 if(WIN32)
     message(STATUS "Compiling for Windows")
 
+    target_compile_definitions(minec_client
+        PRIVATE MINEC_CLIENT_RENDERER_BACKEND_LIBRARY_NAME="minec_client_renderer_backend.dll"
+    )
     target_compile_definitions(minec_client_renderer_backend
         PRIVATE MINEC_CLIENT_VULKAN_LIBRARY_NAME="vulkan-1.dll"
     )
@@ -72,6 +77,9 @@ elseif(UNIX AND NOT APPLE)
         PRIVATE pthread m
     )
 
+    target_compile_definitions(minec_client
+        PRIVATE MINEC_CLIENT_RENDERER_BACKEND_LIBRARY_NAME="libminec_client_renderer_backend.so"
+    )
     target_compile_definitions(minec_client_renderer_backend
         PRIVATE MINEC_CLIENT_VULKAN_LIBRARY_NAME="libvulkan.so"
     )

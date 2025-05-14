@@ -1,36 +1,5 @@
 #include "minec_client.h"
 
-void* minec_client_load_file(uint8_t* path, size_t* size) {
-
-	FILE* file = fopen(path, "rb");
-
-	if (file == NULL) return NULL;
-
-	fseek(file, 0, SEEK_END);
-	long fileSize = ftell(file);
-	rewind(file);
-
-	void* buffer = malloc(fileSize);
-	if (buffer == NULL) {
-		fclose(file);
-		return NULL;
-	}
-
-	size_t read = fread(buffer, 1, fileSize, file);
-
-	fclose(file);
-
-	if (read != fileSize)
-	{
-		free(buffer);
-		return NULL;
-	}
-
-	*size = read;
-
-	return buffer;
-}
-
 uint32_t minec_client_run(struct minec_client* client, uint8_t* runtime_files_path)
 {
 	uint32_t return_value = MINEC_CLIENT_SUCCESS;

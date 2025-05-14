@@ -5,15 +5,15 @@
 
 #include "../backend_internal.h"
 
-static void renderer_backend_vulkan_log(struct minec_client* client, uint8_t* string, ...)
+static void renderer_backend_vulkan_log(struct minec_client* client, uint8_t* message, ...)
 {
 	va_list args;
-	va_start(args, string);
-	minec_client_log_v(client, "[RENDERER][VULKAN] %s", args);
+	va_start(args, message);
+	minec_client_log_v(client, "[RENDERER][VULKAN]", message, args);
 	va_end(args);
 }
 
-struct renderer_backend_vulkan
+struct renderer_backend_vulkan_base
 {
 	struct
 	{
@@ -39,8 +39,6 @@ struct renderer_backend_vulkan
 
 	} func;
 
-	//instance level
-
 	VkInstance instance;
 #ifdef MINEC_CLIENT_DEBUG
 	VkDebugUtilsMessengerEXT debug_messenger;
@@ -50,7 +48,17 @@ struct renderer_backend_vulkan
 	uint8_t** backend_device_infos;
 	uint32_t physical_device_count;
 
-	//device level
+	VkSurfaceKHR surface;
+	VkSurfaceCapabilitiesKHR surface_capabilities;
+};
+
+struct renderer_backend_vulkan_device
+{
+	struct
+	{
+		int a;
+	} func;
+
 	VkDevice device;
 	VkPhysicalDevice physical_device;
 	uint32_t physical_device_index;
@@ -58,12 +66,15 @@ struct renderer_backend_vulkan
 	VkQueue queue;
 	uint32_t queue_index;
 
-	VkSurfaceKHR surface;
-	VkSurfaceCapabilitiesKHR surface_capabilities;
 	VkSurfaceFormatKHR surface_format;
 
 	VkSwapchainKHR swapchain;
 	uint32_t swapchain_length;
+};
+
+struct renderer_backend_vulkan_pipelines_resources
+{
+	int a;
 };
 
 #endif

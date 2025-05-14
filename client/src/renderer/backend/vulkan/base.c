@@ -10,7 +10,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vulkan_debug_callback(
     return 0;
 }
 
-uint32_t renderer_backend_vulkan_base_create(struct minec_client* client, uint32_t slot_index, uint32_t* device_count, uint8_t*** device_infos)
+uint32_t renderer_backend_vulkan_base_create(struct minec_client* client, void** base, uint32_t* device_count, uint8_t*** device_infos)
 {
     uint32_t return_value = MINEC_CLIENT_SUCCESS;
 
@@ -31,9 +31,9 @@ uint32_t renderer_backend_vulkan_base_create(struct minec_client* client, uint32
 
     window_init_context(renderer_backend_get_window_context());
 
-    struct renderer_backend_vulkan* backend;
+    struct renderer_backend_vulkan_base* backend;
 
-    if ((backend = s_alloc(client->static_alloc, sizeof(struct renderer_backend_vulkan))) == NULL)
+    if ((backend = s_alloc(client->static_alloc, sizeof(struct renderer_backend_vulkan_base))) == NULL)
         return_value = MINEC_CLIENT_ERROR_OUT_OF_MEMORY;
     else 
         backend_memory = true;
@@ -325,6 +325,7 @@ uint32_t renderer_backend_vulkan_base_create(struct minec_client* client, uint32
     {
         *device_count = backend->physical_device_count;
         *device_infos = backend->backend_device_infos;
+        *base = backend;
     }
 
     if (return_value != MINEC_CLIENT_SUCCESS && device_properties_memory) s_free(client->static_alloc, backend->physical_device_properties);
@@ -339,14 +340,12 @@ uint32_t renderer_backend_vulkan_base_create(struct minec_client* client, uint32
     if (return_value != MINEC_CLIENT_SUCCESS && library_loaded) dynamic_library_unload(backend->func.libarary_handle);
     if (return_value != MINEC_CLIENT_SUCCESS && backend_memory) s_free(client->static_alloc, backend);
 
-    if (return_value == MINEC_CLIENT_SUCCESS) client->renderer.backend[slot_index] = backend;
-
     return return_value;
 }
 
-uint32_t renderer_backend_vulkan_base_destroy(struct minec_client* client, uint32_t slot_index)
+void renderer_backend_vulkan_base_destroy(struct minec_client* client, void** base)
 {
-    struct renderer_backend_vulkan* backend = client->renderer.backend[slot_index];
+    struct renderer_backend_vulkan_base* backend = *base;
 
     for (uint32_t i = 0; i < backend->physical_device_count; i++) s_free(client->static_alloc, backend->backend_device_infos[i]);
     s_free(client->static_alloc, backend->backend_device_infos);
