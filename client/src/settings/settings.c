@@ -30,7 +30,7 @@ void settings_load(struct minec_client* client)
 		uint8_t* path_components[] = { client->runtime_files_path, GAME_SETTINGS_FILE_PATH };
 		uint8_t* path = s_alloc_joined_string(client->dynamic_alloc, path_components, 2);
 
-		void* file_data = minec_client_load_file(path, &file_length);
+		void* file_data = file_load(path, &file_length);
 		
 
 		if (file_data != NULL)
@@ -63,7 +63,7 @@ void settings_load(struct minec_client* client)
 		uint8_t* path_components[] = { client->runtime_files_path, RESOURCE_PACKS_FILE_PATH };
 		uint8_t* path = s_alloc_joined_string(client->dynamic_alloc, path_components, 2);
 
-		void* file_data = minec_client_load_file(path, &file_length);
+		void* file_data = file_load(path, &file_length);
 		
 
 		if (file_data != NULL)

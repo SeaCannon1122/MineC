@@ -12,7 +12,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <dlfcn.h>
-#include <malloc.h>
 
 #ifdef _WINDOW_SUPPORT_OPENGL
 

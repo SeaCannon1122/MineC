@@ -15,19 +15,48 @@ static void renderer_log(struct minec_client* client, uint8_t* message, ...)
 	va_end(args);
 }
 
-struct renderer
+struct renderer_backend_global_state
 {
-	uint32_t backend_index;
-	void* backend_base;
-	void* backend_device;
-	void* backend_pipelines_resources;
-
-	void* backend_líbrary_handle;
-	uint32_t backend_library_load_index;
-	struct renderer_backend_interface* backend_interfaces;
+	void* líbrary_handle;
+	struct renderer_backend_interface* interfaces;
 	uint32_t backend_count;
+	uint8_t** backend_names;
+	uint32_t backend_index;
+};
+
+struct renderer_backend_base_state
+{
+	void* base;
+
+	uint8_t** device_infos;
+	uint32_t device_index;
+	uint32_t device_count;
+};
+
+struct renderer_backend_device_state
+{
+	void* device;
 
 	uint32_t fps;
+};
+
+struct renderer_backend_pipelines_resources_state
+{
+	void* pipelines_resources;
+};
+
+struct renderer
+{
+
+	struct
+	{
+		struct renderer_backend_global_state global;
+		struct renderer_backend_base_state base;
+		struct renderer_backend_device_state device;
+		struct renderer_backend_pipelines_resources_state pipelines_resources;
+	} backend;
+	
+	uint32_t backend_library_load_index;
 
 	PixelcharRenderer pixelchar_renderer;
 	PixelcharFont pixelchar_fonts[PIXELCHAR_RENDERER_MAX_FONT_COUNT];
@@ -35,10 +64,29 @@ struct renderer
 
 struct minec_client;
 
-uint32_t renderer_create(struct minec_client* client);
+uint32_t renderer_create(
+	struct minec_client* client,
+	uint32_t* backend_index,
+	uint32_t* backend_count,
+	uint8_t*** backend_names,
+	uint32_t* device_index,
+	uint32_t* device_count,
+	uint8_t*** device_infos,
+	uint32_t fps
+);
+
 void renderer_destroy(struct minec_client* client);
 
-uint32_t renderer_reload_backend(struct minec_client* client);
+uint32_t renderer_reload_backend(
+	struct minec_client* client,
+	uint32_t* backend_index,
+	uint32_t* backend_count,
+	uint8_t*** backend_names,
+	uint32_t* device_index,
+	uint32_t* device_count,
+	uint8_t*** device_infos
+);
+
 uint32_t renderer_switch_backend(struct minec_client* client, uint32_t backend_index);
 uint32_t renderer_switch_backend_device(struct minec_client* client, uint32_t device);
 void renderer_set_target_fps(struct minec_client* client, uint32_t fps);

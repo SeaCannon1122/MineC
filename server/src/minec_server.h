@@ -4,7 +4,6 @@
 #define GAME_SERVER_H
 
 #include <stdio.h>
-#include <malloc.h>
 #include <string.h>
 #include <time.h>
 #include <math.h>

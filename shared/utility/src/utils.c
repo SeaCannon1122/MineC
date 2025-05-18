@@ -42,7 +42,6 @@ void dynamic_library_unload(void* library_handle)
 
 #else
 
-#include <malloc.h>
 #include <dlfcn.h>
 #include <unistd.h>
 #include <pthread.h>

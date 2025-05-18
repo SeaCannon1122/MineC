@@ -96,12 +96,14 @@ void* hashmap_new(uint32_t sub_array_count, uint32_t subarray_extension_mappings
 {
 	if (sub_array_count == 0 || subarray_extension_mappings_count == 0) return NULL;
 
-	struct _hashmap* map = malloc(sizeof(struct _hashmap) + sizeof(struct _hashmap_subarray) * sub_array_count);
+	void* allocator = s_allocator_new(16384);
+
+	struct _hashmap* map = s_alloc(allocator, sizeof(struct _hashmap) + sizeof(struct _hashmap_subarray) * sub_array_count);
 
 	map->sub_array_count = sub_array_count;
 	map->subarray_extension_mappings_count = subarray_extension_mappings_count;
 	memset(map->sub_arrays, 0, sizeof(struct _hashmap_subarray) * sub_array_count);
-	map->string_allocator = s_allocator_new(16384);
+	map->string_allocator = allocator;
 	map->key_count = 0;
 
 	return map;
@@ -110,9 +112,24 @@ void* hashmap_new(uint32_t sub_array_count, uint32_t subarray_extension_mappings
 void hashmap_delete(void* hashmap)
 {
 	struct _hashmap* map = hashmap;
+	void* allocator = map->string_allocator;
 
-	s_allocator_delete(map->string_allocator);
-	free(map);
+	for (uint32_t i = 0; i < map->sub_array_count; i++)
+	{
+		for (uint32_t j = 0; j < map->sub_arrays[i].entry_count; j++)
+		{
+			if (map->sub_arrays[i].entries[j].in_use)
+			{
+				s_free(allocator, map->sub_arrays[i].entries[j].key);
+				if (map->sub_arrays[i].entries[j].value.type == HASHMAP_VALUE_STRING) s_free(allocator, map->sub_arrays[i].entries[j].value.data._string);
+			}
+		}
+		s_free(allocator, map->sub_arrays[i].entries);
+	}
+
+	s_free(allocator, map);
+
+	s_allocator_delete(allocator);
 }
 
 void hashmap_set_value(void* hashmap, uint8_t* key, void* value, uint32_t value_type)

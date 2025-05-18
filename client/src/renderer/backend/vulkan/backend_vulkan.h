@@ -20,6 +20,7 @@ struct renderer_backend_vulkan_base
 		void* libarary_handle;
 
 		PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr;
+		PFN_vkGetDeviceProcAddr vkGetDeviceProcAddr;
 
 		PFN_vkEnumerateInstanceExtensionProperties vkEnumerateInstanceExtensionProperties;
 		PFN_vkEnumerateInstanceLayerProperties vkEnumerateInstanceLayerProperties;
@@ -33,6 +34,12 @@ struct renderer_backend_vulkan_base
 
 		PFN_vkEnumeratePhysicalDevices vkEnumeratePhysicalDevices;
 		PFN_vkGetPhysicalDeviceProperties vkGetPhysicalDeviceProperties;
+		PFN_vkGetPhysicalDeviceSurfaceFormatsKHR vkGetPhysicalDeviceSurfaceFormatsKHR;
+		PFN_vkGetPhysicalDeviceQueueFamilyProperties vkGetPhysicalDeviceQueueFamilyProperties;
+		PFN_vkGetPhysicalDeviceSurfaceSupportKHR vkGetPhysicalDeviceSurfaceSupportKHR;
+		PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR vkGetPhysicalDeviceSurfaceCapabilitiesKHR;
+		PFN_vkEnumerateDeviceExtensionProperties vkEnumerateDeviceExtensionProperties;
+
 		PFN_vkDestroySurfaceKHR vkDestroySurfaceKHR;
 		PFN_vkCreateDevice vkCreateDevice;
 		PFN_vkDestroyDevice vkDestroyDevice;
@@ -49,24 +56,25 @@ struct renderer_backend_vulkan_base
 	uint32_t physical_device_count;
 
 	VkSurfaceKHR surface;
-	VkSurfaceCapabilitiesKHR surface_capabilities;
 };
 
 struct renderer_backend_vulkan_device
 {
 	struct
 	{
-		int a;
+		PFN_vkGetDeviceQueue vkGetDeviceQueue;
 	} func;
 
-	VkDevice device;
-	VkPhysicalDevice physical_device;
 	uint32_t physical_device_index;
 
-	VkQueue queue;
-	uint32_t queue_index;
-
 	VkSurfaceFormatKHR surface_format;
+	VkSurfaceCapabilitiesKHR surface_capabilities;
+
+	VkDevice device;
+
+	VkQueue queue;
+	uint32_t queue_family_index;
+	VkQueueFamilyProperties* queue_family_properties;
 
 	VkSwapchainKHR swapchain;
 	uint32_t swapchain_length;

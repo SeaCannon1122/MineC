@@ -10,13 +10,13 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vulkan_debug_callback(
     return 0;
 }
 
-uint32_t renderer_backend_vulkan_base_create(struct minec_client* client, void** base, uint32_t* device_count, uint8_t*** device_infos)
+uint32_t renderer_backend_vulkan_base_create(struct minec_client* client, void** backend_base, uint32_t* device_count, uint8_t*** device_infos)
 {
     uint32_t return_value = MINEC_CLIENT_SUCCESS;
 
     bool 
         window_context_initialized = false,
-        backend_memory = false, 
+        base_memory = false, 
         library_loaded = false,
         extensions_memory = false,
 #ifdef MINEC_CLIENT_DEBUG
@@ -31,16 +31,16 @@ uint32_t renderer_backend_vulkan_base_create(struct minec_client* client, void**
 
     window_init_context(renderer_backend_get_window_context());
 
-    struct renderer_backend_vulkan_base* backend;
+    struct renderer_backend_vulkan_base* base;
 
-    if ((backend = s_alloc(client->static_alloc, sizeof(struct renderer_backend_vulkan_base))) == NULL)
+    if ((base = s_alloc(client->static_alloc, sizeof(struct renderer_backend_vulkan_base))) == NULL)
         return_value = MINEC_CLIENT_ERROR_OUT_OF_MEMORY;
     else 
-        backend_memory = true;
+        base_memory = true;
 
     if (return_value == MINEC_CLIENT_SUCCESS)
     {
-        if ((backend->func.libarary_handle = dynamic_library_load(MINEC_CLIENT_VULKAN_LIBRARY_NAME, true)) == NULL)
+        if ((base->func.libarary_handle = dynamic_library_load(MINEC_CLIENT_VULKAN_LIBRARY_NAME, true)) == NULL)
         {
             renderer_backend_vulkan_log(client, "Failed to load '%s'", MINEC_CLIENT_VULKAN_LIBRARY_NAME);
             return_value = MINEC_CLIENT_ERROR;
@@ -51,37 +51,27 @@ uint32_t renderer_backend_vulkan_base_create(struct minec_client* client, void**
 
     if (return_value == MINEC_CLIENT_SUCCESS) {
 
-        if ((backend->func.vkGetInstanceProcAddr = (PFN_vkGetInstanceProcAddr)dynamic_library_get_function(backend->func.libarary_handle, "vkGetInstanceProcAddr")) == NULL)
+        if ((base->func.vkGetInstanceProcAddr = (PFN_vkGetInstanceProcAddr)dynamic_library_get_function(base->func.libarary_handle, "vkGetInstanceProcAddr")) == NULL)
         {
             renderer_backend_vulkan_log(client, "Failed to retrieve 'vkGetInstanceProcAddr'");
             return_value = MINEC_CLIENT_ERROR;
         }
 
         void** functions[] = {
-            (void**) &backend->func.vkEnumerateInstanceExtensionProperties,
-            (void**) &backend->func.vkEnumerateInstanceLayerProperties,
-#ifdef MINEC_CLIENT_DEBUG
-            (void**) &backend->func.vkCreateDebugUtilsMessengerEXT,
-            (void**) &backend->func.vkDestroyDebugUtilsMessengerEXT,
-#endif
-            (void**) &backend->func.vkCreateInstance,
-            (void**) &backend->func.vkDestroyInstance,
+            (void**) &base->func.vkEnumerateInstanceExtensionProperties,
+            (void**) &base->func.vkEnumerateInstanceLayerProperties,
+            (void**) &base->func.vkCreateInstance,
         };
 
         uint8_t* function_names[] = {
             "vkEnumerateInstanceExtensionProperties",
             "vkEnumerateInstanceLayerProperties",
-#ifdef MINEC_CLIENT_DEBUG
-            "vkCreateDebugUtilsMessengerEXT",
-            "vkDestroyDebugUtilsMessengerEXT",
-#endif
             "vkCreateInstance",
-            "vkDestroyInstance",
         };
 
         for (uint32_t i = 0; i < sizeof(functions) / sizeof(functions[0]) && return_value == MINEC_CLIENT_SUCCESS; i++)
         {
-            if ((*functions[i] = backend->func.vkGetInstanceProcAddr(NULL, function_names[i])) == NULL)
+            if ((*functions[i] = base->func.vkGetInstanceProcAddr(NULL, function_names[i])) == NULL)
             {
                 renderer_backend_vulkan_log(client, "Failed to retrieve '%s'", function_names[i]);
                 return_value = MINEC_CLIENT_ERROR;
@@ -99,7 +89,7 @@ uint32_t renderer_backend_vulkan_base_create(struct minec_client* client, void**
     uint32_t extension_count;
     VkExtensionProperties* extensions;
 
-    if (return_value == MINEC_CLIENT_SUCCESS) if (backend->func.vkEnumerateInstanceExtensionProperties(NULL, &extension_count, NULL) != VK_SUCCESS)
+    if (return_value == MINEC_CLIENT_SUCCESS) if (base->func.vkEnumerateInstanceExtensionProperties(NULL, &extension_count, NULL) != VK_SUCCESS)
     {
         renderer_backend_vulkan_log(client, "vkEnumerateInstanceExtensionProperties failed");
         return_value = MINEC_CLIENT_ERROR;
@@ -113,7 +103,7 @@ uint32_t renderer_backend_vulkan_base_create(struct minec_client* client, void**
             extensions_memory = true;
     }
 
-    if (return_value == MINEC_CLIENT_SUCCESS) if (backend->func.vkEnumerateInstanceExtensionProperties(NULL, &extension_count, extensions) != VK_SUCCESS)
+    if (return_value == MINEC_CLIENT_SUCCESS) if (base->func.vkEnumerateInstanceExtensionProperties(NULL, &extension_count, extensions) != VK_SUCCESS)
     {
         renderer_backend_vulkan_log(client, "vkEnumerateInstanceExtensionProperties failed");
         return_value = MINEC_CLIENT_ERROR;
@@ -144,7 +134,7 @@ uint32_t renderer_backend_vulkan_base_create(struct minec_client* client, void**
     uint32_t layer_count;
     VkLayerProperties* layers;
 
-    if (return_value == MINEC_CLIENT_SUCCESS) if (backend->func.vkEnumerateInstanceLayerProperties(&layer_count, NULL) != VK_SUCCESS)
+    if (return_value == MINEC_CLIENT_SUCCESS) if (base->func.vkEnumerateInstanceLayerProperties(&layer_count, NULL) != VK_SUCCESS)
     {
         renderer_backend_vulkan_log(client, "vkEnumerateInstanceLayerProperties failed");
         return_value = MINEC_CLIENT_ERROR;
@@ -158,7 +148,7 @@ uint32_t renderer_backend_vulkan_base_create(struct minec_client* client, void**
             layers_memory = true;
     }
 
-    if (return_value == MINEC_CLIENT_SUCCESS) if (backend->func.vkEnumerateInstanceLayerProperties(&layer_count, layers) != VK_SUCCESS)
+    if (return_value == MINEC_CLIENT_SUCCESS) if (base->func.vkEnumerateInstanceLayerProperties(&layer_count, layers) != VK_SUCCESS)
     {
         renderer_backend_vulkan_log(client, "vkEnumerateInstanceLayerProperties failed");
         return_value = MINEC_CLIENT_ERROR;
@@ -180,24 +170,25 @@ uint32_t renderer_backend_vulkan_base_create(struct minec_client* client, void**
     }
 #endif
 
-
-    VkApplicationInfo app_info = { 0 };
-    app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    app_info.pApplicationName = "MineC";
-    app_info.pEngineName = "MineC_Engine";
-
-    VkInstanceCreateInfo instance_info = { 0 };
-    instance_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    instance_info.pApplicationInfo = &app_info;
-    instance_info.ppEnabledExtensionNames = (const char* const*)instance_extensions;
-    instance_info.enabledExtensionCount = 4;
-#ifdef MINEC_CLIENT_DEBUG
-    instance_info.ppEnabledLayerNames = (const char* const*)instance_layers;
-    instance_info.enabledLayerCount = 1;
-#endif
     if (return_value == MINEC_CLIENT_SUCCESS)
     {
-        if (backend->func.vkCreateInstance(&instance_info, 0, &backend->instance) != VK_SUCCESS)
+        VkApplicationInfo app_info = { 0 };
+        app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+        app_info.pApplicationName = "MineC";
+        app_info.pEngineName = "MineC_Engine";
+        app_info.apiVersion = VK_API_VERSION_1_0;
+
+        VkInstanceCreateInfo instance_info = { 0 };
+        instance_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+        instance_info.pApplicationInfo = &app_info;
+        instance_info.ppEnabledExtensionNames = (const char* const*)instance_extensions;
+        instance_info.enabledExtensionCount = 4;
+#ifdef MINEC_CLIENT_DEBUG
+        instance_info.ppEnabledLayerNames = (const char* const*)instance_layers;
+        instance_info.enabledLayerCount = 1;
+#endif
+
+        if (base->func.vkCreateInstance(&instance_info, 0, &base->instance) != VK_SUCCESS)
         {
             renderer_backend_vulkan_log(client, "vkCreateInstance failed");
             return_value = MINEC_CLIENT_ERROR;
@@ -205,17 +196,66 @@ uint32_t renderer_backend_vulkan_base_create(struct minec_client* client, void**
         else 
             instance_created = true;
     }
-    
+
+    {
+        void** functions[] = {
+            (void**) &base->func.vkGetDeviceProcAddr,
+            (void**) &base->func.vkDestroyInstance,
+            (void**) &base->func.vkEnumeratePhysicalDevices,
+            (void**) &base->func.vkGetPhysicalDeviceProperties,
+            (void**) &base->func.vkGetPhysicalDeviceSurfaceFormatsKHR,
+            (void**) &base->func.vkGetPhysicalDeviceQueueFamilyProperties,
+            (void**) &base->func.vkGetPhysicalDeviceSurfaceSupportKHR,
+            (void**) &base->func.vkGetPhysicalDeviceSurfaceCapabilitiesKHR,
+            (void**) &base->func.vkEnumerateDeviceExtensionProperties,
+            (void**) &base->func.vkDestroySurfaceKHR,
+            (void**) &base->func.vkCreateDevice,
+            (void**) &base->func.vkDestroyDevice,
+#ifdef MINEC_CLIENT_DEBUG
+            (void**) &base->func.vkCreateDebugUtilsMessengerEXT,
+            (void**) &base->func.vkDestroyDebugUtilsMessengerEXT,
+#endif
+        };
+
+        uint8_t* function_names[] = {
+            "vkGetDeviceProcAddr",
+            "vkDestroyInstance",
+            "vkEnumeratePhysicalDevices",
+            "vkGetPhysicalDeviceProperties",
+            "vkGetPhysicalDeviceSurfaceFormatsKHR",
+            "vkGetPhysicalDeviceQueueFamilyProperties",
+            "vkGetPhysicalDeviceSurfaceSupportKHR",
+            "vkGetPhysicalDeviceSurfaceCapabilitiesKHR",
+            "vkEnumerateDeviceExtensionProperties",
+            "vkDestroySurfaceKHR",
+            "vkCreateDevice",
+            "vkDestroyDevice",
+#ifdef MINEC_CLIENT_DEBUG
+            "vkCreateDebugUtilsMessengerEXT",
+            "vkDestroyDebugUtilsMessengerEXT",
+#endif
+        };
+
+        for (uint32_t i = 0; i < sizeof(functions) / sizeof(functions[0]) && return_value == MINEC_CLIENT_SUCCESS; i++)
+        {
+            if ((*functions[i] = base->func.vkGetInstanceProcAddr(base->instance, function_names[i])) == NULL)
+            {
+                renderer_backend_vulkan_log(client, "Failed to retrieve '%s'", function_names[i]);
+                return_value = MINEC_CLIENT_ERROR;
+            }
+        }
+    }
 
 #ifdef MINEC_CLIENT_DEBUG
-    VkDebugUtilsMessengerCreateInfoEXT debug_info = { 0 };
-    debug_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-    debug_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT;
-    debug_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
-    debug_info.pfnUserCallback = vulkan_debug_callback;
 
     if (return_value == MINEC_CLIENT_SUCCESS) {
-        if (backend->func.vkCreateDebugUtilsMessengerEXT(backend->instance, &debug_info, 0, &backend->debug_messenger) != VK_SUCCESS)
+        VkDebugUtilsMessengerCreateInfoEXT debug_info = { 0 };
+        debug_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+        debug_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT;
+        debug_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
+        debug_info.pfnUserCallback = vulkan_debug_callback;
+
+        if (base->func.vkCreateDebugUtilsMessengerEXT(base->instance, &debug_info, 0, &base->debug_messenger) != VK_SUCCESS)
         {
             renderer_backend_vulkan_log(client, "vkCreateDebugUtilsMessengerEXT failed");
             return_value = MINEC_CLIENT_ERROR;
@@ -225,36 +265,9 @@ uint32_t renderer_backend_vulkan_base_create(struct minec_client* client, void**
     }
 #endif
 
-    {
-        void** functions[] = {
-            (void**) &backend->func.vkEnumeratePhysicalDevices,
-            (void**) &backend->func.vkGetPhysicalDeviceProperties,
-            (void**) &backend->func.vkDestroySurfaceKHR,
-            (void**) &backend->func.vkCreateDevice,
-            (void**) &backend->func.vkDestroyDevice,
-        };
-
-        uint8_t* function_names[] = {
-            "vkEnumeratePhysicalDevices",
-            "vkGetPhysicalDeviceProperties",
-            "vkDestroySurfaceKHR",
-            "vkCreateDevice",
-            "vkDestroyDevice"
-        };
-
-        for (uint32_t i = 0; i < sizeof(functions) / sizeof(functions[0]) && return_value == MINEC_CLIENT_SUCCESS; i++)
-        {
-            if ((*functions[i] = backend->func.vkGetInstanceProcAddr(backend->instance, function_names[i])) == NULL)
-            {
-                renderer_backend_vulkan_log(client, "Failed to retrieve '%s'", function_names[i]);
-                return_value = MINEC_CLIENT_ERROR;
-            }
-        }
-    }
-
     if (return_value == MINEC_CLIENT_SUCCESS)
     {
-        if (window_vkCreateSurfaceKHR(client->window.window_handle, backend->instance, backend->func.vkGetInstanceProcAddr, &backend->surface) != VK_SUCCESS)
+        if (window_vkCreateSurfaceKHR(client->window.window_handle, base->instance, base->func.vkGetInstanceProcAddr, &base->surface) != VK_SUCCESS)
         {
             renderer_backend_vulkan_log(client, "vkCreateSurfaceKHR failed");
             return_value = MINEC_CLIENT_ERROR;
@@ -263,27 +276,21 @@ uint32_t renderer_backend_vulkan_base_create(struct minec_client* client, void**
             surface_created = true;
     }
 
-    if (return_value == MINEC_CLIENT_SUCCESS) if (backend->func.vkEnumeratePhysicalDevices(backend->instance, &backend->physical_device_count, 0) != VK_SUCCESS)
+    if (return_value == MINEC_CLIENT_SUCCESS) if (base->func.vkEnumeratePhysicalDevices(base->instance, &base->physical_device_count, 0) != VK_SUCCESS)
     {
         renderer_backend_vulkan_log(client, "vkEnumeratePhysicalDevices failed");
         return_value = MINEC_CLIENT_ERROR;
     }
 
-    if (backend->physical_device_count == 0)
-    {
-        renderer_backend_vulkan_log(client, "No VkPhysicalDevice found");
-        return_value = MINEC_CLIENT_ERROR;
-    }
-
     if (return_value == MINEC_CLIENT_SUCCESS)
     {
-        if ((backend->physical_devices = s_alloc(client->static_alloc, sizeof(VkPhysicalDevice) * backend->physical_device_count)) == NULL)
+        if ((base->physical_devices = s_alloc(client->static_alloc, sizeof(VkPhysicalDevice) * base->physical_device_count)) == NULL)
             return_value = MINEC_CLIENT_ERROR_OUT_OF_MEMORY;
         else
             device_memory = true;
     }
 
-    if (return_value == MINEC_CLIENT_SUCCESS) if (backend->func.vkEnumeratePhysicalDevices(backend->instance, &backend->physical_device_count, backend->physical_devices) != VK_SUCCESS)
+    if (return_value == MINEC_CLIENT_SUCCESS) if (base->func.vkEnumeratePhysicalDevices(base->instance, &base->physical_device_count, base->physical_devices) != VK_SUCCESS)
     {
         renderer_backend_vulkan_log(client, "vkEnumeratePhysicalDevices failed");
         return_value = MINEC_CLIENT_ERROR;
@@ -291,7 +298,7 @@ uint32_t renderer_backend_vulkan_base_create(struct minec_client* client, void**
 
     if (return_value == MINEC_CLIENT_SUCCESS)
     {
-        if ((backend->physical_device_properties = s_alloc(client->static_alloc, sizeof(VkPhysicalDeviceProperties) * backend->physical_device_count)) == NULL)
+        if ((base->physical_device_properties = s_alloc(client->static_alloc, sizeof(VkPhysicalDeviceProperties) * base->physical_device_count)) == NULL)
             return_value = MINEC_CLIENT_ERROR_OUT_OF_MEMORY;
         else
             device_properties_memory = true;
@@ -300,20 +307,20 @@ uint32_t renderer_backend_vulkan_base_create(struct minec_client* client, void**
     if (return_value == MINEC_CLIENT_SUCCESS) 
     {
 
-        if ((backend->backend_device_infos = s_alloc(client->static_alloc, sizeof(uint8_t*) * backend->physical_device_count)) == NULL)
+        if ((base->backend_device_infos = s_alloc(client->static_alloc, sizeof(uint8_t*) * base->physical_device_count)) == NULL)
             return_value = MINEC_CLIENT_ERROR_OUT_OF_MEMORY;
         else
         {
-            for (uint32_t i = 0; i < backend->physical_device_count; i++)
+            for (uint32_t i = 0; i < base->physical_device_count; i++)
             {
-                backend->func.vkGetPhysicalDeviceProperties(backend->physical_devices[i], &backend->physical_device_properties[i]);
+                base->func.vkGetPhysicalDeviceProperties(base->physical_devices[i], &base->physical_device_properties[i]);
 
-                if ((backend->backend_device_infos[i] = s_alloc_string(client->static_alloc, "%s", backend->physical_device_properties[i].deviceName)) == NULL)
+                if ((base->backend_device_infos[i] = s_alloc_string(client->static_alloc, "%s", base->physical_device_properties[i].deviceName)) == NULL)
                 {
                     return_value = MINEC_CLIENT_ERROR_OUT_OF_MEMORY;
 
-                    for (uint32_t j = 0; j < i; j++) s_free(client->static_alloc, backend->backend_device_infos[j]);
-                    s_free(client->static_alloc, backend->backend_device_infos);
+                    for (uint32_t j = 0; j < i; j++) s_free(client->static_alloc, base->backend_device_infos[j]);
+                    s_free(client->static_alloc, base->backend_device_infos);
 
                     break;
                 }
@@ -323,46 +330,46 @@ uint32_t renderer_backend_vulkan_base_create(struct minec_client* client, void**
 
     if (return_value == MINEC_CLIENT_SUCCESS)
     {
-        *device_count = backend->physical_device_count;
-        *device_infos = backend->backend_device_infos;
-        *base = backend;
+        *device_count = base->physical_device_count;
+        *device_infos = base->backend_device_infos;
+        *backend_base = base;
     }
 
-    if (return_value != MINEC_CLIENT_SUCCESS && device_properties_memory) s_free(client->static_alloc, backend->physical_device_properties);
-    if (return_value != MINEC_CLIENT_SUCCESS && device_memory) s_free(client->static_alloc, backend->physical_devices);
-    if (return_value != MINEC_CLIENT_SUCCESS && surface_created) backend->func.vkDestroySurfaceKHR(backend->instance, backend->surface, 0);
+    if (return_value != MINEC_CLIENT_SUCCESS && device_properties_memory) s_free(client->static_alloc, base->physical_device_properties);
+    if (return_value != MINEC_CLIENT_SUCCESS && device_memory) s_free(client->static_alloc, base->physical_devices);
+    if (return_value != MINEC_CLIENT_SUCCESS && surface_created) base->func.vkDestroySurfaceKHR(base->instance, base->surface, 0);
 #ifdef MINEC_CLIENT_DEBUG
-    if (return_value != MINEC_CLIENT_SUCCESS && debug_messenger_created) backend->func.vkDestroyDebugUtilsMessengerEXT(backend->instance, backend->debug_messenger, 0);
+    if (return_value != MINEC_CLIENT_SUCCESS && debug_messenger_created) base->func.vkDestroyDebugUtilsMessengerEXT(base->instance, base->debug_messenger, 0);
     if (layers_memory) s_free(client->dynamic_alloc, layers);
 #endif
-    if (return_value != MINEC_CLIENT_SUCCESS && instance_created) backend->func.vkDestroyInstance(backend->instance, 0);
+    if (return_value != MINEC_CLIENT_SUCCESS && instance_created) base->func.vkDestroyInstance(base->instance, 0);
     if (extensions_memory) s_free(client->dynamic_alloc, extensions);
-    if (return_value != MINEC_CLIENT_SUCCESS && library_loaded) dynamic_library_unload(backend->func.libarary_handle);
-    if (return_value != MINEC_CLIENT_SUCCESS && backend_memory) s_free(client->static_alloc, backend);
+    if (return_value != MINEC_CLIENT_SUCCESS && library_loaded) dynamic_library_unload(base->func.libarary_handle);
+    if (return_value != MINEC_CLIENT_SUCCESS && base_memory) s_free(client->static_alloc, base);
 
     return return_value;
 }
 
-void renderer_backend_vulkan_base_destroy(struct minec_client* client, void** base)
+void renderer_backend_vulkan_base_destroy(struct minec_client* client, void** backend_base)
 {
-    struct renderer_backend_vulkan_base* backend = *base;
+    struct renderer_backend_vulkan_base* base = *backend_base;
 
-    for (uint32_t i = 0; i < backend->physical_device_count; i++) s_free(client->static_alloc, backend->backend_device_infos[i]);
-    s_free(client->static_alloc, backend->backend_device_infos);
+    for (uint32_t i = 0; i < base->physical_device_count; i++) s_free(client->static_alloc, base->backend_device_infos[i]);
+    s_free(client->static_alloc, base->backend_device_infos);
 
-    backend->func.vkDestroySurfaceKHR(backend->instance, backend->surface, 0);
+    base->func.vkDestroySurfaceKHR(base->instance, base->surface, 0);
 
-    s_free(client->static_alloc, backend->physical_device_properties);
-    s_free(client->static_alloc, backend->physical_devices);
+    s_free(client->static_alloc, base->physical_device_properties);
+    s_free(client->static_alloc, base->physical_devices);
 
 #ifdef MINEC_CLIENT_DEBUG
-    backend->func.vkDestroyDebugUtilsMessengerEXT(backend->instance, backend->debug_messenger, 0);
+    base->func.vkDestroyDebugUtilsMessengerEXT(base->instance, base->debug_messenger, 0);
 #endif
 
-    backend->func.vkDestroyInstance(backend->instance, 0);
+    base->func.vkDestroyInstance(base->instance, 0);
 
-    dynamic_library_unload(backend->func.libarary_handle);
-    s_free(client->static_alloc, backend);
+    dynamic_library_unload(base->func.libarary_handle);
+    s_free(client->static_alloc, base);
 
     window_deinit_context();
 }

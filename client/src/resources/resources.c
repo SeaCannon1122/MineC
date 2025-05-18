@@ -26,7 +26,7 @@ void _resources_load_paths_of_resource_type(struct minec_client* client, void* p
 	uint8_t* layout_file_path = s_alloc_joined_string(client->dynamic_alloc, layout_file_path_components, 2);
 
 	size_t file_length;
-	void* file_data = minec_client_load_file(layout_file_path, &file_length);
+	void* file_data = file_load(layout_file_path, &file_length);
 
 
 	if (file_data != NULL)
@@ -146,7 +146,7 @@ void resources_create(struct minec_client* client) {
 			size_t size;
 			void* data;
 
-			if (data = minec_client_load_file(val->data._string, &size))
+			if (data = file_load(val->data._string, &size))
 			{
 				client->resources_index.pixelchar_fonts[client->resources_index.pixelchar_font_count].font_file_data = data;
 				client->resources_index.pixelchar_fonts[client->resources_index.pixelchar_font_count].font_file_data_size = size;
@@ -178,7 +178,7 @@ void resources_create(struct minec_client* client) {
 			size_t size;
 			void* data;
 
-			if (data = minec_client_load_file(val->data._string, &size))
+			if (data = file_load(val->data._string, &size))
 			{
 				client->resources_index.language_hashmaps[client->resources_index.language_hashmap_count] = hashmap_new(1024, 2);
 

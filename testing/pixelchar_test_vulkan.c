@@ -2,7 +2,6 @@
 #include <pixelchar/backend/backend_vulkan.h>
 #include <window/window.h>
 
-#include <malloc.h>
 #include <stdio.h>
 #include <math.h>
 #include <mutex.h>
@@ -177,7 +176,7 @@ void vulkan_device_create()
 
 		uint32_t format_count = 0;
 		VKCall(vkGetPhysicalDeviceSurfaceFormatsKHR(gpus[i], surface, &format_count, 0));
-		VkSurfaceFormatKHR* surface_formats = alloca(format_count * sizeof(VkSurfaceFormatKHR));
+		VkSurfaceFormatKHR* surface_formats = malloc(format_count * sizeof(VkSurfaceFormatKHR));
 		VKCall(vkGetPhysicalDeviceSurfaceFormatsKHR(gpus[i], surface, &format_count, surface_formats));
 
 		uint32_t found_format = 0;

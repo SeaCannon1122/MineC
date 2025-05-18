@@ -23,7 +23,16 @@ uint32_t minec_client_run(struct minec_client* client, uint8_t* runtime_files_pa
 
 	resources_create(client);
 
-	if ((return_value = renderer_create(client)) != MINEC_CLIENT_SUCCESS) goto _renderer_create_failed;
+	if ((return_value = renderer_create(
+		client, 
+		&client->settings.video.graphics.backend_index,
+		&client->settings.video.graphics.backend_count,
+		&client->settings.video.graphics.backend_names,
+		&client->settings.video.graphics.device_index,
+		&client->settings.video.graphics.device_count,
+		&client->settings.video.graphics.device_infos,
+		&client->settings.video.graphics.fps
+	)) != MINEC_CLIENT_SUCCESS) goto _renderer_create_failed;
 
 	/*gui_menus_create(client);
 	renderer_create(client);

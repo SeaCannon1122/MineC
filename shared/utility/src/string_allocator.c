@@ -167,8 +167,16 @@ void s_allocator_delete(void* allocator)
 {
 	struct string_allocator* string_allocator = (struct string_allocator*)allocator;
 
-	for (uint32_t i = 0; i < string_allocator->arena_count; i++) if (string_allocator->arenas[i].allocated) free(string_allocator->arenas[i].memory_pointer);
+	for (uint32_t i = 0; i < string_allocator->arena_count; i++) if (string_allocator->arenas[i].allocated)
+	{
+		free(string_allocator->arenas[i].memory_pointer);
+		printf("[STRING ALLOCATOR] s_allocator_delete: MEMORY LEAK\n");
+	}
 
-	if (string_allocator->arena_count > 0) free(string_allocator->arenas);
+	if (string_allocator->arena_count > 0)
+	{
+		free(string_allocator->arenas);
+	}
+		
 	free(string_allocator);
 }
