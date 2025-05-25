@@ -60,6 +60,7 @@ PixelcharResult pixelcharRendererCreate(uint32_t charQueueLength, PixelcharRende
 void pixelcharRendererDestroy(PixelcharRenderer renderer);
 PixelcharResult pixelcharRendererBindFont(PixelcharRenderer renderer, PixelcharFont font, uint32_t bindingIndex);
 PixelcharResult pixelcharRendererEnqueCharacters(PixelcharRenderer renderer, Pixelchar* characters, uint32_t characterCount);
+void pixelcharRendererResetQueue(PixelcharRenderer renderer);
 
 uint32_t pixelcharGetCharacterRenderingWidth(PixelcharRenderer renderer, Pixelchar* character);
 uint32_t pixelcharGetCharacterRenderingSpacing(PixelcharRenderer renderer, Pixelchar* character0, Pixelchar* character1);

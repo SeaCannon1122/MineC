@@ -201,6 +201,11 @@ PixelcharResult pixelcharRendererEnqueCharacters(PixelcharRenderer renderer, Pix
 	else return PIXELCHAR_ERROR_FULL_QUEUE;
 }
 
+void pixelcharRendererResetQueue(PixelcharRenderer renderer)
+{
+	renderer->queue_filled_length = 0;
+}
+
 uint32_t pixelcharGetCharacterRenderingWidth(PixelcharRenderer renderer, Pixelchar* character)
 {
 	if (renderer == NULL) return 0;

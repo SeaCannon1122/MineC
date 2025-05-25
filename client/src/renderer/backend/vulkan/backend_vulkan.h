@@ -13,6 +13,8 @@ static void renderer_backend_vulkan_log(struct minec_client* client, uint8_t* me
 	va_end(args);
 }
 
+#define VULKAN_SWAPCHAIN_IMAGE_COUNT 2
+
 struct renderer_backend_vulkan_base
 {
 	struct
@@ -38,6 +40,7 @@ struct renderer_backend_vulkan_base
 		PFN_vkGetPhysicalDeviceQueueFamilyProperties vkGetPhysicalDeviceQueueFamilyProperties;
 		PFN_vkGetPhysicalDeviceSurfaceSupportKHR vkGetPhysicalDeviceSurfaceSupportKHR;
 		PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR vkGetPhysicalDeviceSurfaceCapabilitiesKHR;
+		PFN_vkGetPhysicalDeviceSurfacePresentModesKHR vkGetPhysicalDeviceSurfacePresentModesKHR;
 		PFN_vkEnumerateDeviceExtensionProperties vkEnumerateDeviceExtensionProperties;
 
 		PFN_vkDestroySurfaceKHR vkDestroySurfaceKHR;
@@ -51,38 +54,69 @@ struct renderer_backend_vulkan_base
 	VkDebugUtilsMessengerEXT debug_messenger;
 #endif
 	VkPhysicalDevice* physical_devices;
-	VkPhysicalDeviceProperties* physical_device_properties;
 	uint8_t** backend_device_infos;
 	uint32_t physical_device_count;
 
 	VkSurfaceKHR surface;
 };
 
+
+
 struct renderer_backend_vulkan_device
 {
 	struct
 	{
+		PFN_vkDeviceWaitIdle vkDeviceWaitIdle;
+
 		PFN_vkGetDeviceQueue vkGetDeviceQueue;
+		PFN_vkQueueWaitIdle vkQueueWaitIdle;
+
+		PFN_vkCreateSwapchainKHR vkCreateSwapchainKHR;
+		PFN_vkDestroySwapchainKHR vkDestroySwapchainKHR;
+		PFN_vkGetSwapchainImagesKHR vkGetSwapchainImagesKHR;
+
+		PFN_vkCreateImageView vkCreateImageView;
+		PFN_vkDestroyImageView vkDestroyImageView;
+		PFN_vkCreateImage vkCreateImage;
+		PFN_vkDestroyImage vkDestroyImage;
+		PFN_vkCreateFramebuffer vkCreateFramebuffer;
+		PFN_vkDestroyFramebuffer vkDestroyFramebuffer;
+
 	} func;
 
+	VkDevice device;
 	uint32_t physical_device_index;
+	VkPhysicalDeviceProperties physical_device_properties;
 
 	VkSurfaceFormatKHR surface_format;
 	VkSurfaceCapabilitiesKHR surface_capabilities;
 
-	VkDevice device;
+	VkQueue graphics_queue;
+	uint32_t graphics_queue_family_index;
+	VkQueue transfer_queue;
+	uint32_t transfer_queue_family_index;
 
-	VkQueue queue;
-	uint32_t queue_family_index;
-	VkQueueFamilyProperties* queue_family_properties;
+	struct
+	{
+		bool created;
 
-	VkSwapchainKHR swapchain;
-	uint32_t swapchain_length;
+		bool immediate_support;
+		bool mailbox_support;
+
+		VkSwapchainKHR swapchain;
+		VkPresentModeKHR present_mode;
+
+		VkImage images[VULKAN_SWAPCHAIN_IMAGE_COUNT];
+		VkImageView image_views[VULKAN_SWAPCHAIN_IMAGE_COUNT];
+	} swapchain;
 };
 
 struct renderer_backend_vulkan_pipelines_resources
 {
-	int a;
+	struct
+	{
+		bool usable;
+	} pixelchar_renderer;
 };
 
 #endif

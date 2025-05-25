@@ -18,22 +18,12 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 
 endif()
 
-find_package(Vulkan)
-if (Vulkan_FOUND)
-
-    target_compile_definitions(window
-        PUBLIC _WINDOW_SUPPORT_VULKAN=1
-    )
-
-    target_include_directories(window 
-        PUBLIC  ${Vulkan_INCLUDE_DIRS}
-    )
-
-    target_link_libraries(window 
-        PUBLIC ${Vulkan_LIBRARIES}
-    )
-
-endif()
+target_compile_definitions(window
+    PUBLIC _WINDOW_SUPPORT_VULKAN=1
+)
+target_include_directories(window 
+    PUBLIC ${CMAKE_SOURCE_DIR}/dependencies/Vulkan-Headers/include
+)
 
 find_package(OpenGL)
 if (OpenGL_FOUND)

@@ -12,6 +12,7 @@ add_executable(minec_client
     ${CMAKE_CURRENT_SOURCE_DIR}/src/settings/settings.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/resources/resources.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/renderer.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/rendering_thread.c
 )
 
 target_include_directories(minec_client
@@ -57,9 +58,6 @@ target_compile_definitions(minec_client_renderer_backend
     PRIVATE _MINEC_CLIENT_RENDERER_BACKEND_VULKAN=1
 )
 
-
-
-
 if(WIN32)
     message(STATUS "Compiling for Windows")
 
@@ -88,12 +86,14 @@ else()
     message(FATAL_ERROR "Unsupported platform!")
 endif()
 
-add_custom_target(minec_copy_runtime_files ALL
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-    "${CMAKE_CURRENT_SOURCE_DIR}/runtime_files"
-    "${CMAKE_CURRENT_BINARY_DIR}/runtime_files"
+add_custom_target(minec_client_copy_runtime_files ALL
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/runtime_files" "${CMAKE_CURRENT_BINARY_DIR}/runtime_files"
     COMMENT "Copying runtime files..."
 )
+add_custom_target(minec_client_copy_renderer_backend ALL
+    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:minec_client_renderer_backend> "${CMAKE_CURRENT_BINARY_DIR}/runtime_files"
+    COMMENT "Copying renderer backend ..."
+)
 
-add_dependencies(minec_client minec_copy_runtime_files)
-add_dependencies(minec_client_renderer_backend minec_copy_runtime_files)
+add_dependencies(minec_client minec_client_copy_runtime_files minec_client_copy_renderer_backend)
+add_dependencies(minec_client_renderer_backend minec_client_copy_runtime_files)

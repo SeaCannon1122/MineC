@@ -43,6 +43,7 @@ struct renderer_backend_device_state
 struct renderer_backend_pipelines_resources_state
 {
 	void* pipelines_resources;
+	bool created;
 };
 
 struct renderer
@@ -60,6 +61,10 @@ struct renderer
 
 	PixelcharRenderer pixelchar_renderer;
 	PixelcharFont pixelchar_fonts[PIXELCHAR_RENDERER_MAX_FONT_COUNT];
+
+	void* thread_handle;
+	mutex_t thread_mutex;
+	atomic_(bool) thread_should_close;
 };
 
 struct minec_client;
@@ -87,8 +92,15 @@ uint32_t renderer_reload_backend(
 	uint8_t*** device_infos
 );
 
-uint32_t renderer_switch_backend(struct minec_client* client, uint32_t backend_index);
+uint32_t renderer_switch_backend(
+	struct minec_client* client,
+	uint32_t backend_index,
+	uint32_t* device_index,
+	uint32_t* device_count,
+	uint8_t*** device_infos
+);
+
 uint32_t renderer_switch_backend_device(struct minec_client* client, uint32_t device);
-void renderer_set_target_fps(struct minec_client* client, uint32_t fps);
+uint32_t renderer_set_target_fps(struct minec_client* client, uint32_t fps);
 
 #endif

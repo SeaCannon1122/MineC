@@ -18,6 +18,7 @@ PixelcharResult pixelcharRendererBackendVulkanInitialize(
 	VkQueue queue,
 	uint32_t queueIndex,
 	VkRenderPass renderPass,
+	PFN_vkGetDeviceProcAddr pfnvkGetDeviceProcAddr,
 	uint8_t* vertex_shader_custom,
 	uint32_t vertex_shader_custom_length,
 	uint8_t* fragment_shader_custom,

@@ -124,7 +124,7 @@ void hashmap_delete(void* hashmap)
 				if (map->sub_arrays[i].entries[j].value.type == HASHMAP_VALUE_STRING) s_free(allocator, map->sub_arrays[i].entries[j].value.data._string);
 			}
 		}
-		s_free(allocator, map->sub_arrays[i].entries);
+		if (map->sub_arrays[i].entry_count > 0) s_free(allocator, map->sub_arrays[i].entries);
 	}
 
 	s_free(allocator, map);

@@ -1,7 +1,7 @@
 #include <pixelchar_internal.h>
 #include <pixelchar/backend/backend_opengl.h>
 
-#include <glad/glad.h>
+#include <GL/glcorearb.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>

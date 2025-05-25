@@ -48,13 +48,13 @@ void* loadFile(uint8_t* src, size_t* size) {
 
 int main(int argc, char* argv[]) {
 
-	window_init_system();
+	window_init_context(NULL);
 
 	void* window = window_create(100, 100, 200, 200, "window for test", true, NULL);
-	window_opengl_context_create(window, 4, 3, NULL);
-	window_opengl_context_make_current(window);
+	window_glCreateContext(window, 4, 3, NULL);
+	window_glMakeCurrent(window);
 
-	window_opengl_set_vsync(true);
+	window_glSwapInterval(1);
 
 	gladLoadGL();
 
@@ -179,18 +179,18 @@ int main(int argc, char* argv[]) {
 
 		pixelcharRendererBackendOpenGLRender(pcr, width, height, 4.f, 4.f, 4.f, 1.4f);
 
-		window_opengl_swap_buffers(window);
+		window_glSwapBuffers(window);
 	}
 
 	pixelcharRendererBackendOpenGLDeinitialize(pcr);
 	pixelcharRendererDestroy(pcr);
 
-	window_opengl_context_make_current(NULL);
+	window_glMakeCurrent(NULL);
 
-	window_opengl_context_destroy(window);
+	window_glDeleteContext(window);
 	window_destroy(window);
 
-	window_deinit_system();
+	window_deinit_context();
 
 	return 0;
 }

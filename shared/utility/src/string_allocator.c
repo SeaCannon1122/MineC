@@ -150,6 +150,12 @@ void s_free(void* allocator, void* memory_handle)
 		
 		if ((size_t)memory_handle >= begin && (size_t)memory_handle < end)
 		{
+			if (string_allocator->arenas[i].allocations_count == 0)
+			{
+				printf("[STRING ALLOCATOR] s_free: allocation count already 0zero\n");
+				return;
+			}
+
 			string_allocator->arenas[i].allocations_count--;
 
 			if (string_allocator->arenas[i].allocations_count == 0)
@@ -161,6 +167,8 @@ void s_free(void* allocator, void* memory_handle)
 			return;
 		}	
 	}
+
+	printf("[STRING ALLOCATOR] s_free: allocation not from this allocator\n");
 }
 
 void s_allocator_delete(void* allocator)
