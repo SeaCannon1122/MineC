@@ -11,6 +11,7 @@ extern "C" {
 
 PixelcharResult pixelcharRendererBackendOpenGLInitialize(
 	PixelcharRenderer renderer,
+	void* (*pfnglGetProcAddress)(uint8_t*),
 	uint8_t* vertex_shader_custom,
 	uint32_t vertex_shader_custom_length,
 	uint8_t* fragment_shader_custom,

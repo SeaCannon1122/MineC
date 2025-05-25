@@ -64,9 +64,6 @@ if(WIN32)
     target_compile_definitions(minec_client
         PRIVATE MINEC_CLIENT_RENDERER_BACKEND_LIBRARY_NAME="minec_client_renderer_backend.dll"
     )
-    target_compile_definitions(minec_client_renderer_backend
-        PRIVATE MINEC_CLIENT_VULKAN_LIBRARY_NAME="vulkan-1.dll"
-    )
 
 elseif(UNIX AND NOT APPLE)
     message(STATUS "Compiling for Linux")

@@ -25,23 +25,9 @@ target_include_directories(window
     PUBLIC ${CMAKE_SOURCE_DIR}/dependencies/Vulkan-Headers/include
 )
 
-find_package(OpenGL)
-if (OpenGL_FOUND)
-
-    target_compile_definitions(window
-        PUBLIC _WINDOW_SUPPORT_OPENGL=1
-    )
-
-    target_link_libraries(window 
-        PUBLIC OpenGL::GL
-    )
-
-    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    
-        target_link_libraries(window 
-            PUBLIC GLX
-        )
-
-    endif()
-
-endif()
+target_compile_definitions(window
+    PUBLIC _WINDOW_SUPPORT_OPENGL=1
+)
+target_include_directories(window 
+    PUBLIC ${CMAKE_SOURCE_DIR}/dependencies/OpenGL-Registry/api
+)

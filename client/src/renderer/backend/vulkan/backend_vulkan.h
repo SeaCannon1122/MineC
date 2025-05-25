@@ -19,8 +19,6 @@ struct renderer_backend_vulkan_base
 {
 	struct
 	{
-		void* libarary_handle;
-
 		PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr;
 		PFN_vkGetDeviceProcAddr vkGetDeviceProcAddr;
 

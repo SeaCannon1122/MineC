@@ -1,8 +1,9 @@
 #define VK_USE_PLATFORM_WIN32_KHR
 
+#include <GL/glcorearb.h>
+#include <GL/wgl.h>
 #include <window/window.h>
 
-#include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -31,7 +32,32 @@ struct window_data_windows
 	uint32_t last_event_queue_index;
 };
 
-bool init_with_external_context = false;
+struct window_windows_context
+{
+	struct
+	{
+		HMODULE library;
+		struct
+		{
+			PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr;
+		} func;
+	} vulkan;
+
+	struct
+	{
+		HMODULE library;
+		struct
+		{
+			PFNWGLCREATECONTEXTPROC wglCreateContext;
+			PFNWGLDELETECONTEXTPROC wglDeleteContext;
+			PFNWGLMAKECURRENTPROC wglMakeCurrent;
+			PFNWGLGETPROCADDRESSPROC wglGetProcAddress;
+		} func;
+	} opengl;
+};
+
+struct window_windows_context context_memory;
+struct window_windows_context* context;
 
 void _window_event_queue_add(struct window_data_windows* window_data, struct window_event* event)
 {
@@ -238,9 +264,9 @@ LRESULT CALLBACK window_WinProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 	return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 }
 
-uint32_t window_init_context(void* context)
+uint32_t window_init_context(void* transfered_context)
 {
-	if (context == NULL)
+	if (transfered_context == NULL)
 	{
 		WNDCLASSW wc = {
 			CS_HREDRAW | CS_VREDRAW | CS_CLASSDC,
@@ -256,22 +282,23 @@ uint32_t window_init_context(void* context)
 		};
 
 		if (RegisterClassW(&wc) == 0) return 1;
+
+		context = &context_memory;
 	}
 	else
-		init_with_external_context = true;
+		context = transfered_context;
 
 	return 0;
 }
 
 void window_deinit_context()
 {
-	if (init_with_external_context == false) UnregisterClassW(L"window_window_class", GetModuleHandleW(NULL));
-	init_with_external_context = false;
+	UnregisterClassW(L"window_window_class", GetModuleHandleW(NULL));
 }
 
 void* window_get_context()
 {
-	return (void*)42069;
+	return context;
 }
 
 void* window_create(int32_t posx, int32_t posy, uint32_t width, uint32_t height, uint8_t* name, bool visible)
@@ -419,13 +446,37 @@ HWND window_windows_get_hwnd(void* window)
 	return window_data->hwnd;
 }
 
-#ifdef _WINDOW_SUPPORT_VULKAN
 
-VkResult window_vkCreateSurfaceKHR(void* window, VkInstance instance, PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr_func, VkSurfaceKHR* surface)
+//vulkan
+bool window_vulkan_load()
+{
+	context->vulkan.library = LoadLibraryA("vulkan-1.dll");
+	if (context->vulkan.library == NULL) return false;
+	
+	if ((context->vulkan.func.vkGetInstanceProcAddr = GetProcAddress(context->vulkan.library, "vkGetInstanceProcAddr")) == NULL)
+	{
+		FreeLibrary(context->vulkan.library);
+		return false;
+	}
+
+	return true;
+}
+
+void window_vulkan_unload()
+{
+	FreeLibrary(context->vulkan.library);
+}
+
+PFN_vkGetInstanceProcAddr window_get_vkGetInstanceProcAddr()
+{
+	return context->vulkan.func.vkGetInstanceProcAddr;
+}
+
+VkResult window_vkCreateSurfaceKHR(void* window, VkInstance instance, VkSurfaceKHR* surface)
 {
 	struct window_data_windows* window_data = window;
 
-	PFN_vkCreateWin32SurfaceKHR vkCreateWin32SurfaceKHR_func = (PFN_vkCreateWin32SurfaceKHR) vkGetInstanceProcAddr_func(instance, "vkCreateWin32SurfaceKHR");
+	PFN_vkCreateWin32SurfaceKHR vkCreateWin32SurfaceKHR_func = (PFN_vkCreateWin32SurfaceKHR)context->vulkan.func.vkGetInstanceProcAddr(instance, "vkCreateWin32SurfaceKHR");
 	if (vkCreateWin32SurfaceKHR_func == NULL) return VK_ERROR_INITIALIZATION_FAILED;
 
 	VkWin32SurfaceCreateInfoKHR create_info = { 0 };
@@ -441,10 +492,36 @@ uint8_t* window_get_VK_KHR_PLATFORM_SURFACE_EXTENSION_NAME()
 	return VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
 }
 
-#endif 
+//opengl
 
-#include <GL/gl.h>
-#include "wgl.h"
+bool window_opengl_load()
+{
+	context->opengl.library = LoadLibraryA("opengl32.dll");
+	if (context->opengl.library == NULL) return false;
+
+	context->opengl.func.wglCreateContext = GetProcAddress(context->opengl.library, "wglCreateContext");
+	context->opengl.func.wglDeleteContext = GetProcAddress(context->opengl.library, "wglDeleteContext");
+	context->opengl.func.wglMakeCurrent = GetProcAddress(context->opengl.library, "wglMakeCurrent");
+	context->opengl.func.wglGetProcAddress = GetProcAddress(context->opengl.library, "wglGetProcAddress");
+
+	if (
+		context->opengl.func.wglCreateContext == NULL ||
+		context->opengl.func.wglDeleteContext == NULL ||
+		context->opengl.func.wglMakeCurrent == NULL ||
+		context->opengl.func.wglGetProcAddress == NULL
+	)
+	{
+		FreeLibrary(context->opengl.library);
+		return false;
+	}
+
+	return true;
+}
+
+void window_opengl_unload()
+{
+	FreeLibrary(context->opengl.library);
+}
 
 bool window_glCreateContext(void* window, int32_t version_major, int32_t version_minor, void* share_window)
 {
@@ -499,13 +576,13 @@ bool window_glCreateContext(void* window, int32_t version_major, int32_t version
 		int dummy_pixelFormat = ChoosePixelFormat(dummy_hdc, &pfd);
 		SetPixelFormat(dummy_hdc, dummy_pixelFormat, &pfd);
 
-		dummy_hglrc = wglCreateContext(dummy_hdc);
-		wglMakeCurrent(dummy_hdc, dummy_hglrc);
+		dummy_hglrc = context->opengl.func.wglCreateContext(dummy_hdc);
+		context->opengl.func.wglMakeCurrent(dummy_hdc, dummy_hglrc);
 
-		wglCreateContextAttribsARB = wglGetProcAddress("wglCreateContextAttribsARB");
-		wglChoosePixelFormatARB = wglGetProcAddress("wglChoosePixelFormatARB");
+		wglCreateContextAttribsARB = context->opengl.func.wglGetProcAddress("wglCreateContextAttribsARB");
+		wglChoosePixelFormatARB = context->opengl.func.wglGetProcAddress("wglChoosePixelFormatARB");
 
-		wglMakeCurrent(NULL, NULL);
+		context->opengl.func.wglMakeCurrent(NULL, NULL);
 	}
 
 	window_data->hdc = GetDC(window_data->hwnd);
@@ -541,7 +618,7 @@ bool window_glCreateContext(void* window, int32_t version_major, int32_t version
 	window_data->hglrc = wglCreateContextAttribsARB(window_data->hdc, share_window_data ? share_window_data->hglrc : 0, attribs);
 
 	{
-		wglDeleteContext(dummy_hglrc);
+		context->opengl.func.wglDeleteContext(dummy_hglrc);
 		ReleaseDC(dummy_hwnd, dummy_hdc);
 
 		DestroyWindow(dummy_hwnd);
@@ -552,34 +629,49 @@ void window_glDeleteContext(void* window)
 {
 	struct window_data_windows* window_data = window;
 
-	wglMakeCurrent(NULL, NULL);
-	wglDeleteContext(window_data->hglrc);
+	context->opengl.func.wglMakeCurrent(NULL, NULL);
+	context->opengl.func.wglDeleteContext(window_data->hglrc);
 	ReleaseDC(window_data->hwnd, window_data->hdc);
 }
 
-void window_glMakeCurrent(void* window)
+bool window_glMakeCurrent(void* window)
 {
 	struct window_data_windows* window_data = window;
 
 	if (window_data == NULL)
-		wglMakeCurrent(NULL, NULL);
+		return context->opengl.func.wglMakeCurrent(NULL, NULL);
 	else
-		wglMakeCurrent(window_data->hdc, window_data->hglrc);
+		return context->opengl.func.wglMakeCurrent(window_data->hdc, window_data->hglrc);
 }
 
-void window_glSwapInterval(int interval)
+bool window_glSwapInterval(int interval)
 {
 	PFNWGLSWAPINTERVALEXTPROC wglSwapIntervalEXT;
-	
-	if ((wglSwapIntervalEXT = wglGetProcAddress("wglSwapIntervalEXT")) != NULL) wglSwapIntervalEXT(interval);
+	if ((wglSwapIntervalEXT = context->opengl.func.wglGetProcAddress("wglSwapIntervalEXT")) != NULL) return wglSwapIntervalEXT(interval);
+	else return false;
 }
+
+uint8_t* library_opengl_funtions[] =
+{
+	"glEnable",
+	"glGetString",
+	"glBlendFunc",
+	"glClearColor",
+	"glViewport",
+	"glClear",
+	"glGetError"
+};
 
 void (*window_glGetProcAddress(uint8_t* name)) (void)
 {
-	return wglGetProcAddress(name);
+	for (uint32_t i = 0; i < sizeof(library_opengl_funtions) / sizeof(library_opengl_funtions[0]); i++)
+	{
+		if (strcmp(name, library_opengl_funtions[i]) == 0) return GetProcAddress(context->opengl.library, name);
+	}
+	return context->opengl.func.wglGetProcAddress(name);
 }
 
-void window_glSwapBuffers(void* window)
+bool window_glSwapBuffers(void* window)
 {
-	wglSwapBuffers(((struct window_data_windows*)(window))->hdc);
+	return SwapBuffers(((struct window_data_windows*)(window))->hdc);
 }

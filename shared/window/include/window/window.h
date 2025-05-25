@@ -152,31 +152,35 @@ HWND window_windows_get_hwnd(void* window);
 
 #endif
 
-#ifdef _WINDOW_SUPPORT_VULKAN
 
+//vulkan
 #include <vulkan/vulkan.h>
 
-VkResult window_vkCreateSurfaceKHR(void* window, VkInstance instance, PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr_func, VkSurfaceKHR* surface);
+bool window_vulkan_load();
+void window_vulkan_unload();
+
+PFN_vkGetInstanceProcAddr window_get_vkGetInstanceProcAddr();
+
+VkResult window_vkCreateSurfaceKHR(void* window, VkInstance instance, VkSurfaceKHR* surface);
 
 uint8_t* window_get_VK_KHR_PLATFORM_SURFACE_EXTENSION_NAME();
 
-#endif 
-	
-#ifdef _WINDOW_SUPPORT_OPENGL
+
+//opengl
+bool window_opengl_load();
+void window_opengl_unload();
 
 bool window_glCreateContext(void* window, int32_t version_major, int32_t version_minor, void* share_window);
 
 void window_glDeleteContext(void* window);
 
-void window_glMakeCurrent(void* window);
+bool window_glMakeCurrent(void* window);
 
-void window_glSwapInterval(int interval);
+bool window_glSwapInterval(int interval);
 
 void (*window_glGetProcAddress(uint8_t* name)) (void);
 
-void window_glSwapBuffers(void* window);
-
-#endif
+bool window_glSwapBuffers(void* window);
 
 #ifdef __cplusplus
 }

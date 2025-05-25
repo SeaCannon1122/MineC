@@ -2,11 +2,11 @@
 #include <string.h>
 
 #include <window/window.h>
-#include <glad/glad.h>
+#include <GL/glcorearb.h>
 #include <pixelchar/pixelchar.h>
 #include <pixelchar/backend/backend_opengl.h>
 
-void GLAPIENTRY DebugCallback(GLenum source, GLenum type, GLuint id, GLenum severity,
+void DebugCallback(GLenum source, GLenum type, GLuint id, GLenum severity,
 	GLsizei length, const GLchar* message, const void* userParam) {
 	// Output all debug messages (info, warnings, errors)
 	printf("\n\n----OpenGl-Debug-Message-----------------\n");
@@ -49,14 +49,22 @@ void* loadFile(uint8_t* src, size_t* size) {
 int main(int argc, char* argv[]) {
 
 	window_init_context(NULL);
+	window_opengl_load();
 
 	void* window = window_create(100, 100, 200, 200, "window for test", true, NULL);
-	window_glCreateContext(window, 4, 3, NULL);
+	window_glCreateContext(window, 4, 6, NULL);
 	window_glMakeCurrent(window);
 
 	window_glSwapInterval(1);
 
-	gladLoadGL();
+	PFNGLENABLEPROC glEnable = window_glGetProcAddress("glEnable");
+	PFNGLDEBUGMESSAGECALLBACKPROC glDebugMessageCallback = window_glGetProcAddress("glDebugMessageCallback");
+	PFNGLDEBUGMESSAGECONTROLPROC glDebugMessageControl = window_glGetProcAddress("glDebugMessageControl");
+	PFNGLGETSTRINGPROC glGetString = window_glGetProcAddress("glGetString");
+	PFNGLBLENDFUNCPROC glBlendFunc = window_glGetProcAddress("glBlendFunc");
+	PFNGLCLEARCOLORPROC glClearColor = window_glGetProcAddress("glClearColor");
+	PFNGLVIEWPORTPROC glViewport = window_glGetProcAddress("glViewport");
+	PFNGLCLEARPROC glClear = window_glGetProcAddress("glClear");
 
 	glEnable(GL_DEBUG_OUTPUT);
 	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
@@ -95,7 +103,7 @@ int main(int argc, char* argv[]) {
 
 	PixelcharRenderer pcr;
 	res = pixelcharRendererCreate(100, &pcr);
-	res = pixelcharRendererBackendOpenGLInitialize(pcr, 0, 0, 0, 0);
+	res = pixelcharRendererBackendOpenGLInitialize(pcr, window_glGetProcAddress, 0, 0, 0, 0);
 	res = pixelcharRendererBindFont(pcr, default_font, 0);
 	res = pixelcharRendererBindFont(pcr, smooth_font, 1);
 
@@ -190,6 +198,7 @@ int main(int argc, char* argv[]) {
 	window_glDeleteContext(window);
 	window_destroy(window);
 
+	window_opengl_unload();
 	window_deinit_context();
 
 	return 0;

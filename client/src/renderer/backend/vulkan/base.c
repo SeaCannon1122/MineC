@@ -17,7 +17,7 @@ uint32_t renderer_backend_vulkan_base_create(struct minec_client* client, void**
     bool 
         window_context_initialized = false,
         base_memory = false, 
-        library_loaded = false,
+        vulkan_loaded = false,
         extensions_memory = false,
 #ifdef MINEC_CLIENT_DEBUG
         layers_memory = false,
@@ -40,22 +40,18 @@ uint32_t renderer_backend_vulkan_base_create(struct minec_client* client, void**
 
     if (result == MINEC_CLIENT_SUCCESS)
     {
-        if ((base->func.libarary_handle = dynamic_library_load(MINEC_CLIENT_VULKAN_LIBRARY_NAME, true)) == NULL)
+        if (window_vulkan_load() == false)
         {
-            renderer_backend_vulkan_log(client, "Failed to load '%s'", MINEC_CLIENT_VULKAN_LIBRARY_NAME);
+            renderer_backend_vulkan_log(client, "Failed to load vulkan");
             result = MINEC_CLIENT_ERROR;
         }
         else 
-            library_loaded = true;
+            vulkan_loaded = true;
     }
 
     if (result == MINEC_CLIENT_SUCCESS) {
 
-        if ((base->func.vkGetInstanceProcAddr = (PFN_vkGetInstanceProcAddr)dynamic_library_get_function(base->func.libarary_handle, "vkGetInstanceProcAddr")) == NULL)
-        {
-            renderer_backend_vulkan_log(client, "Failed to retrieve 'vkGetInstanceProcAddr'");
-            result = MINEC_CLIENT_ERROR;
-        }
+        base->func.vkGetInstanceProcAddr = (PFN_vkGetInstanceProcAddr)window_get_vkGetInstanceProcAddr();
 
         void** functions[] = {
             (void**) &base->func.vkEnumerateInstanceExtensionProperties,
@@ -269,7 +265,7 @@ uint32_t renderer_backend_vulkan_base_create(struct minec_client* client, void**
 
     if (result == MINEC_CLIENT_SUCCESS)
     {
-        if (window_vkCreateSurfaceKHR(client->window.window_handle, base->instance, base->func.vkGetInstanceProcAddr, &base->surface) != VK_SUCCESS)
+        if (window_vkCreateSurfaceKHR(client->window.window_handle, base->instance, &base->surface) != VK_SUCCESS)
         {
             renderer_backend_vulkan_log(client, "vkCreateSurfaceKHR failed");
             result = MINEC_CLIENT_ERROR;
@@ -348,7 +344,7 @@ uint32_t renderer_backend_vulkan_base_create(struct minec_client* client, void**
 #endif
     if (result != MINEC_CLIENT_SUCCESS && instance_created) base->func.vkDestroyInstance(base->instance, 0);
     if (extensions_memory) s_free(client->dynamic_alloc, extensions);
-    if (result != MINEC_CLIENT_SUCCESS && library_loaded) dynamic_library_unload(base->func.libarary_handle);
+    if (result != MINEC_CLIENT_SUCCESS && vulkan_loaded) window_vulkan_unload();
     if (result != MINEC_CLIENT_SUCCESS && base_memory) s_free(client->static_alloc, base);
 
     return result;
@@ -371,8 +367,6 @@ void renderer_backend_vulkan_base_destroy(struct minec_client* client, void** ba
 
     base->func.vkDestroyInstance(base->instance, 0);
 
-    dynamic_library_unload(base->func.libarary_handle);
+    window_vulkan_unload();
     s_free(client->static_alloc, base);
-
-    window_deinit_context();
 }
