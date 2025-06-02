@@ -74,21 +74,18 @@ uint32_t _renderer_backend_load_base_device_create(
 		library_loaded = false
 	;
 
-	uint8_t backend_library_temp_name[sizeof("tempx_") + sizeof(MINEC_CLIENT_RENDERER_BACKEND_LIBRARY_NAME) - 1];
-	snprintf(backend_library_temp_name, sizeof(backend_library_temp_name), (client->renderer.backend_library_load_index % 2 ? "temp1_%s" : "temp0_%s"), MINEC_CLIENT_RENDERER_BACKEND_LIBRARY_NAME);
-
-	if (file_copy(MINEC_CLIENT_RENDERER_BACKEND_LIBRARY_NAME, backend_library_temp_name) != 0)
+	if (file_copy(client->renderer.backend_library_paths[2], client->renderer.backend_library_paths[client->renderer.backend_library_load_index % 2]) != 0)
 	{
-		renderer_log(client, "Could not copy %s", MINEC_CLIENT_RENDERER_BACKEND_LIBRARY_NAME);
+		renderer_log(client, "Could not copy %s", client->renderer.backend_library_paths[2]);
 		result = MINEC_CLIENT_ERROR;
 	}
 	else file_copied = true;
 
 	if (result == MINEC_CLIENT_SUCCESS)
 	{
-		if ((global->líbrary_handle = dynamic_library_load(backend_library_temp_name, true)) == NULL)
+		if ((global->líbrary_handle = dynamic_library_load(client->renderer.backend_library_paths[client->renderer.backend_library_load_index % 2], true)) == NULL)
 		{
-			renderer_log(client, "Could not open %s", backend_library_temp_name);
+			renderer_log(client, "Could not open %s", client->renderer.backend_library_paths[client->renderer.backend_library_load_index % 2]);
 			result = MINEC_CLIENT_ERROR;
 		}
 		else library_loaded = true;
@@ -134,7 +131,7 @@ uint32_t _renderer_backend_load_base_device_create(
 	}
 
 	if (result != MINEC_CLIENT_SUCCESS && library_loaded) dynamic_library_unload(global->líbrary_handle);
-	if (result != MINEC_CLIENT_SUCCESS && file_copied) remove(backend_library_temp_name);
+	if (result != MINEC_CLIENT_SUCCESS && file_copied) remove(client->renderer.backend_library_paths[client->renderer.backend_library_load_index % 2]);
 
 	return result;
 }
@@ -144,10 +141,7 @@ void _renderer_backend_unload_base_device_destroy(struct minec_client* client)
 	_renderer_backend_base_device_destroy(client);
 
 	dynamic_library_unload(client->renderer.backend.global.líbrary_handle);
-
-	uint8_t backend_library_temp_name[sizeof("tempx_") + sizeof(MINEC_CLIENT_RENDERER_BACKEND_LIBRARY_NAME) - 1];
-	snprintf(backend_library_temp_name, sizeof(backend_library_temp_name), ((client->renderer.backend_library_load_index + 1) % 2 ? "temp1_%s" : "temp0_%s"), MINEC_CLIENT_RENDERER_BACKEND_LIBRARY_NAME);
-	remove(backend_library_temp_name);
+	remove(client->renderer.backend_library_paths[(client->renderer.backend_library_load_index + 1) % 2]);
 }
 
 uint32_t renderer_create(
@@ -164,17 +158,56 @@ uint32_t renderer_create(
 	uint32_t result = MINEC_CLIENT_SUCCESS;
 
 	bool
+		backend_library_names_memory = false,
 		pixelchar_renderer_create = false,
 		backend_base_device_create = false,
 		backend_pipelines_resources_create = false
 	;
 
-	if ((result = pixelcharRendererCreate(4096, &client->renderer.pixelchar_renderer)) != PIXELCHAR_SUCCESS)
+	uint8_t* backend_library_path_parts[] = {
+		client->runtime_files_path,
+		"temp0_",
+		MINEC_CLIENT_RENDERER_BACKEND_LIBRARY_NAME
+	};
+
+	if (result == MINEC_CLIENT_SUCCESS)
 	{
-		if (result == PIXELCHAR_ERROR_OUT_OF_MEMORY) result = MINEC_CLIENT_ERROR_OUT_OF_MEMORY;
-		else result = MINEC_CLIENT_ERROR;
+		if ((client->renderer.backend_library_paths[0] = s_alloc_joined_string(client->static_alloc, backend_library_path_parts, 3)) == NULL) result = PIXELCHAR_ERROR_OUT_OF_MEMORY;
+		else
+		{
+			backend_library_path_parts[1] = "temp1_";
+			if ((client->renderer.backend_library_paths[1] = s_alloc_joined_string(client->static_alloc, backend_library_path_parts, 3)) == NULL)
+			{
+				s_free(client->static_alloc, client->renderer.backend_library_paths[0]);
+				result = PIXELCHAR_ERROR_OUT_OF_MEMORY;
+			}
+			else
+			{
+				backend_library_path_parts[1] = MINEC_CLIENT_RENDERER_BACKEND_LIBRARY_NAME;
+				if ((client->renderer.backend_library_paths[2] = s_alloc_joined_string(client->static_alloc, backend_library_path_parts, 2)) == NULL)
+				{
+					s_free(client->static_alloc, client->renderer.backend_library_paths[0]);
+					s_free(client->static_alloc, client->renderer.backend_library_paths[1]);
+					result = PIXELCHAR_ERROR_OUT_OF_MEMORY;
+				}
+				else backend_library_names_memory = true;
+			}
+		}		
 	}
-	else pixelchar_renderer_create = true;
+
+	if (result == MINEC_CLIENT_SUCCESS)
+	{
+		if ((result = pixelcharRendererCreate(4096, &client->renderer.pixelchar_renderer)) != PIXELCHAR_SUCCESS)
+		{
+			if (result == PIXELCHAR_ERROR_OUT_OF_MEMORY) result = MINEC_CLIENT_ERROR_OUT_OF_MEMORY;
+			else result = MINEC_CLIENT_ERROR;
+		}
+		else
+		{
+			result = MINEC_CLIENT_SUCCESS;
+			pixelchar_renderer_create = true;
+		}
+	}
 	
 	if (result == MINEC_CLIENT_SUCCESS)
 	{
@@ -217,6 +250,7 @@ uint32_t renderer_create(
 	if (result != MINEC_CLIENT_SUCCESS && backend_pipelines_resources_create) client->renderer.backend.global.interfaces[client->renderer.backend.global.backend_index].pipelines_resources_destroy(client);
 	if (result != MINEC_CLIENT_SUCCESS && backend_base_device_create) _renderer_backend_unload_base_device_destroy(client);
 	if (result != MINEC_CLIENT_SUCCESS && pixelchar_renderer_create) pixelcharRendererDestroy(client->renderer.pixelchar_renderer);
+	if (result != MINEC_CLIENT_SUCCESS && backend_library_names_memory) for (uint32_t i = 0; i < 3; i++) s_free(client->static_alloc, client->renderer.backend_library_paths[i]);
 
 	return result;
 }
@@ -233,6 +267,8 @@ void renderer_destroy(struct minec_client* client)
 	_renderer_backend_unload_base_device_destroy(client);
 
 	pixelcharRendererDestroy(client->renderer.pixelchar_renderer);
+
+	for (uint32_t i = 0; i < 3; i++) s_free(client->static_alloc, client->renderer.backend_library_paths[i]);
 }
 
 uint32_t renderer_reload_backend(
@@ -373,9 +409,5 @@ uint32_t renderer_switch_backend_device(struct minec_client* client, uint32_t de
 
 uint32_t renderer_set_target_fps(struct minec_client* client, uint32_t fps)
 {
-	mutex_lock(&client->renderer.thread_mutex);
-	uint32_t result = client->renderer.backend.global.interfaces[client->renderer.backend.global.backend_index].set_fps(client, fps);
-	mutex_unlock(&client->renderer.thread_mutex);
-
-	return result;
+	return client->renderer.backend.global.interfaces[client->renderer.backend.global.backend_index].set_fps(client, fps);
 }

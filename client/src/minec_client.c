@@ -17,11 +17,13 @@ uint32_t minec_client_run(struct minec_client* client, uint8_t* runtime_files_pa
 		500,
 		"MineC"
 	)) != MINEC_CLIENT_SUCCESS) goto _application_window_create_failed;
+	minec_client_log(client, "[GLOBAL]", "Window created");
 
 	settings_create(client);
 	settings_load(client);
 
 	resources_create(client);
+	minec_client_log(client, "[GLOBAL]", "Resources created");
 
 	if ((return_value = renderer_create(
 		client, 
@@ -33,6 +35,7 @@ uint32_t minec_client_run(struct minec_client* client, uint8_t* runtime_files_pa
 		&client->settings.video.graphics.device_infos,
 		&client->settings.video.graphics.fps
 	)) != MINEC_CLIENT_SUCCESS) goto _renderer_create_failed;
+	minec_client_log(client, "[GLOBAL]", "Renderer created");
 
 	/*gui_menus_create(client);
 	renderer_create(client);
@@ -53,7 +56,7 @@ uint32_t minec_client_run(struct minec_client* client, uint8_t* runtime_files_pa
 
 		//renderer_render(client);
 
-		sleep_for_ms(16);
+		sleep_for_ms(100);
 	}
 
 	/*networker_stop(client);
@@ -63,11 +66,14 @@ uint32_t minec_client_run(struct minec_client* client, uint8_t* runtime_files_pa
 	gui_menus_destroy(client);*/
 
 	renderer_destroy(client);
+	minec_client_log(client, "[GLOBAL]", "Renderer destroyed");
 
 _renderer_create_failed:
 	resources_destroy(client);
+	minec_client_log(client, "[GLOBAL]", "Resources destroyed");
 
 	settings_destroy(client);
+	minec_client_log(client, "[GLOBAL]", "Window destroyed");
 
 	application_window_destroy(client);
 

@@ -96,7 +96,7 @@ void resources_create(struct minec_client* client) {
 		client->resources_index.texture_count = 0;
 		uint32_t texture_declaration_count = hashmap_get_key_count(texture_paths_hashmap);
 
-		client->resources_index.textures = malloc(sizeof(struct resources_texture) * texture_declaration_count + 8);
+		client->resources_index.textures = s_alloc(client->static_alloc, sizeof(struct resources_texture) * texture_declaration_count + 8);
 
 		client->resources_index.texture_token_id_hashmap = hashmap_new((uint32_t)((float)texture_declaration_count * 1.2f) + 1, 2);
 
@@ -131,7 +131,7 @@ void resources_create(struct minec_client* client) {
 		client->resources_index.pixelchar_font_count = 0;
 		uint32_t font_declaration_count = hashmap_get_key_count(font_paths_hashmap);
 
-		client->resources_index.pixelchar_fonts = malloc(sizeof(struct resources_pixelchar_font) * font_declaration_count + 8);
+		client->resources_index.pixelchar_fonts = s_alloc(client->static_alloc, sizeof(struct resources_pixelchar_font) * font_declaration_count + 8);
 
 		client->resources_index.pixelchar_font_token_id_hashmap = hashmap_new((uint32_t)((float)font_declaration_count * 1.2f) + 1, 2);
 
@@ -163,7 +163,7 @@ void resources_create(struct minec_client* client) {
 		client->resources_index.language_hashmap_count = 0;
 		uint32_t language_declaration_count = hashmap_get_key_count(language_paths_hashmap);
 
-		client->resources_index.language_hashmaps = malloc(sizeof(void*) * language_declaration_count + 8);
+		client->resources_index.language_hashmaps = s_alloc(client->static_alloc, sizeof(void*) * language_declaration_count + 8);
 
 		client->resources_index.language_hashmap_id_hashmap = hashmap_new((uint32_t)((float)language_declaration_count * 1.2f) + 1, 2);
 
@@ -205,14 +205,14 @@ void resources_create(struct minec_client* client) {
 void resources_destroy(struct minec_client* client) {
 
 	for (uint32_t i = 0; i < client->resources_index.texture_count; i++) free(client->resources_index.textures[i].data);
-	free(client->resources_index.textures);
+	s_free(client->static_alloc, client->resources_index.textures);
 	hashmap_delete(client->resources_index.texture_token_id_hashmap);
 
 	for (uint32_t i = 0; i < client->resources_index.pixelchar_font_count; i++) free(client->resources_index.pixelchar_fonts[i].font_file_data);
-	free(client->resources_index.pixelchar_fonts);
+	s_free(client->static_alloc, client->resources_index.pixelchar_fonts);
 	hashmap_delete(client->resources_index.pixelchar_font_token_id_hashmap);
 
 	for (uint32_t i = 0; i < client->resources_index.language_hashmap_count; i++) hashmap_delete(client->resources_index.language_hashmaps[i]);
-	free(client->resources_index.language_hashmaps);
+	s_free(client->static_alloc, client->resources_index.language_hashmaps);
 	hashmap_delete(client->resources_index.language_hashmap_id_hashmap);
 }

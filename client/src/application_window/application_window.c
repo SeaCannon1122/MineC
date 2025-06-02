@@ -7,7 +7,7 @@ uint32_t application_window_create(struct minec_client* client, uint32_t posx, u
 	client->window.window_handle = window_create(posx, posy, width, height, name, true, NULL);
 	if (client->window.window_handle == NULL)
 	{
-		minec_client_log(client, "[APPLICATION WINDOW]", "Error creating window");
+		minec_client_log(client, "[WINDOW]", "Error creating window");
 		return MINEC_CLIENT_ERROR;
 	}
 
@@ -19,7 +19,7 @@ uint32_t application_window_create(struct minec_client* client, uint32_t posx, u
 
 	memset(&client->window.input, 0, sizeof(client->window.input));
 
-	return 0;
+	return MINEC_CLIENT_SUCCESS;
 }
 
 uint32_t application_window_handle_events(struct minec_client* client)
@@ -73,7 +73,7 @@ uint32_t application_window_handle_events(struct minec_client* client)
 
 	window_get_mouse_cursor_position(client->window.window_handle, &client->window.input.mouse_x, &client->window.input.mouse_y);
 
-	return 0;
+	return MINEC_CLIENT_SUCCESS;
 }
 
 uint32_t application_window_destroy(struct minec_client* client)

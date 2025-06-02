@@ -58,6 +58,7 @@ struct renderer
 	} backend;
 	
 	uint32_t backend_library_load_index;
+	uint8_t* backend_library_paths[3];
 
 	PixelcharRenderer pixelchar_renderer;
 	PixelcharFont pixelchar_fonts[PIXELCHAR_RENDERER_MAX_FONT_COUNT];

@@ -70,6 +70,7 @@ typedef struct _renderer_backend_vulkan
 	VkQueue queue;
 	uint32_t queue_index;
 	VkRenderPass render_pass;
+	uint32_t subpass;
 
 	VkDescriptorSetLayout set_layout;
 	VkDescriptorSet descriptor_set;
@@ -381,6 +382,7 @@ PixelcharResult pixelcharRendererBackendVulkanInitialize(
 	VkQueue queue,
 	uint32_t queueIndex,
 	VkRenderPass renderPass,
+	uint32_t subpass,
 	PFN_vkGetDeviceProcAddr pfnvkGetDeviceProcAddr,
 	uint8_t* vertex_shader_custom,
 	uint32_t vertex_shader_custom_length,
@@ -401,6 +403,7 @@ PixelcharResult pixelcharRendererBackendVulkanInitialize(
 	backend->queue = queue;
 	backend->queue_index = queueIndex;
 	backend->render_pass = renderPass;
+	backend->subpass = subpass;
 
 	{
 		void** functions[] =
@@ -884,6 +887,7 @@ PixelcharResult pixelcharRendererBackendVulkanInitialize(
 	pipe_info.pStages = shader_stages;
 	pipe_info.layout = backend->pipe_layout;
 	pipe_info.renderPass = backend->render_pass;
+	pipe_info.subpass = backend->subpass;
 	pipe_info.stageCount = 2;
 	pipe_info.pRasterizationState = &rasterization_state;
 	pipe_info.pViewportState = &viewport_state;
@@ -1122,7 +1126,7 @@ PixelcharResult pixelcharRendererBackendVulkanUpdateRenderingData(PixelcharRende
 {
 	if (renderer == NULL) return PIXELCHAR_ERROR_INVALID_ARGUMENTS;
 
-	if (renderer->queue_filled_length == 0) return;
+	if (renderer->queue_filled_length == 0) return PIXELCHAR_SUCCESS;
 
 	if (renderer->backends[PIXELCHAR_BACKEND_VULKAN] == NULL) return PIXELCHAR_ERROR_BACKEND_NOT_INITIALIZED;
 
@@ -1166,6 +1170,8 @@ PixelcharResult pixelcharRendererBackendVulkanUpdateRenderingData(PixelcharRende
 			0, NULL
 		);*/
 	}
+
+	return PIXELCHAR_SUCCESS;
 }
 
 PixelcharResult pixelcharRendererBackendVulkanRender(
@@ -1183,7 +1189,7 @@ PixelcharResult pixelcharRendererBackendVulkanRender(
 	if (width == 0) return PIXELCHAR_ERROR_INVALID_ARGUMENTS;
 	if (height == 0) return PIXELCHAR_ERROR_INVALID_ARGUMENTS;
 
-	if (renderer->queue_filled_length == 0) return;
+	if (renderer->queue_filled_length == 0) return PIXELCHAR_SUCCESS;
 
 	if (renderer->backends[PIXELCHAR_BACKEND_VULKAN] == NULL) return PIXELCHAR_ERROR_BACKEND_NOT_INITIALIZED;
 
@@ -1230,5 +1236,5 @@ PixelcharResult pixelcharRendererBackendVulkanRender(
 		backend->func.vkCmdDrawIndexed(commandBuffer, 6, renderer->queue_filled_length, 0, 0, 0);
 	}
 
-	renderer->queue_filled_length = 0;
+	return PIXELCHAR_SUCCESS;
 }

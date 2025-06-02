@@ -119,36 +119,36 @@ PixelcharResult pixelcharRendererBackendOpenGLInitialize(
 
 	void** functions[] =
 	{
-		&backend->func.glGenBuffers,
-		&backend->func.glBindBuffer,
-		&backend->func.glBufferData,
-		&backend->func.glDeleteBuffers,
-		&backend->func.glGetError,
-		&backend->func.glGenVertexArrays,
-		&backend->func.glBindVertexArray,
-		&backend->func.glEnableVertexAttribArray,
-		&backend->func.glVertexAttribIPointer,
-		&backend->func.glVertexAttribPointer,
-		&backend->func.glVertexAttribDivisor,
-		&backend->func.glCreateShader,
-		&backend->func.glShaderSource,
-		&backend->func.glCompileShader,
-		&backend->func.glCreateProgram,
-		&backend->func.glAttachShader,
-		&backend->func.glLinkProgram,
-		&backend->func.glGetProgramiv,
-		&backend->func.glGetProgramInfoLog,
-		&backend->func.glDeleteShader,
-		&backend->func.glGetUniformLocation,
-		&backend->func.glDeleteProgram,
-		&backend->func.glDeleteVertexArrays,
-		&backend->func.glUseProgram,
-		&backend->func.glBindBufferBase,
-		&backend->func.glBufferSubData,
-		&backend->func.glUniform2i,
-		&backend->func.glUniform4f,
-		&backend->func.glUniform1ui,
-		&backend->func.glDrawElementsInstanced
+		(void**)&backend->func.glGenBuffers,
+		(void**)&backend->func.glBindBuffer,
+		(void**)&backend->func.glBufferData,
+		(void**)&backend->func.glDeleteBuffers,
+		(void**)&backend->func.glGetError,
+		(void**)&backend->func.glGenVertexArrays,
+		(void**)&backend->func.glBindVertexArray,
+		(void**)&backend->func.glEnableVertexAttribArray,
+		(void**)&backend->func.glVertexAttribIPointer,
+		(void**)&backend->func.glVertexAttribPointer,
+		(void**)&backend->func.glVertexAttribDivisor,
+		(void**)&backend->func.glCreateShader,
+		(void**)&backend->func.glShaderSource,
+		(void**)&backend->func.glCompileShader,
+		(void**)&backend->func.glCreateProgram,
+		(void**)&backend->func.glAttachShader,
+		(void**)&backend->func.glLinkProgram,
+		(void**)&backend->func.glGetProgramiv,
+		(void**)&backend->func.glGetProgramInfoLog,
+		(void**)&backend->func.glDeleteShader,
+		(void**)&backend->func.glGetUniformLocation,
+		(void**)&backend->func.glDeleteProgram,
+		(void**)&backend->func.glDeleteVertexArrays,
+		(void**)&backend->func.glUseProgram,
+		(void**)&backend->func.glBindBufferBase,
+		(void**)&backend->func.glBufferSubData,
+		(void**)&backend->func.glUniform2i,
+		(void**)&backend->func.glUniform4f,
+		(void**)&backend->func.glUniform1ui,
+		(void**)&backend->func.glDrawElementsInstanced
 	};
 
 	uint8_t* function_names[] =
@@ -185,7 +185,7 @@ PixelcharResult pixelcharRendererBackendOpenGLInitialize(
 		"glDrawElementsInstanced"
 	};
 
-	for (uint32_t i = 0; i < sizeof(function_names) / sizeof(function_names[0]); i++) *(functions[i]) = pfnglGetProcAddress(function_names[i]);
+	for (uint32_t i = 0; i < sizeof(function_names) / sizeof(function_names[0]); i++) *(functions[i]) = (void**)pfnglGetProcAddress(function_names[i]);
 
 	while (backend->func.glGetError() != GL_NO_ERROR);
 
@@ -332,7 +332,7 @@ PixelcharResult pixelcharRendererBackendOpenGLRender(
 	if (width == 0) return PIXELCHAR_ERROR_INVALID_ARGUMENTS;
 	if (height == 0) return PIXELCHAR_ERROR_INVALID_ARGUMENTS;
 
-	if (renderer->queue_filled_length == 0) return;
+	if (renderer->queue_filled_length == 0) return PIXELCHAR_SUCCESS;
 
 	if (renderer->backends[PIXELCHAR_BACKEND_OPENGL] == NULL) return PIXELCHAR_ERROR_BACKEND_NOT_INITIALIZED;
 
@@ -347,10 +347,11 @@ PixelcharResult pixelcharRendererBackendOpenGLRender(
 		if (renderer->fonts[i]) if (renderer->font_backends_referenced[i][PIXELCHAR_BACKEND_OPENGL] == true) backend->func.glBindBufferBase(GL_SHADER_STORAGE_BUFFER, i, ((_font_backend_opengl*)renderer->fonts[i]->backends[PIXELCHAR_BACKEND_OPENGL])->buffer);
 	}
 
-	backend->func.glBindVertexArray(backend->vao);
-
 	backend->func.glBindBuffer(GL_ARRAY_BUFFER, backend->vbo);
 	backend->func.glBufferSubData(GL_ARRAY_BUFFER, 0, renderer->queue_filled_length * sizeof(_pixelchar_renderer_char), renderer->queue);
+	backend->func.glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	backend->func.glBindVertexArray(backend->vao);
 
 	backend->func.glUniform2i(backend->uniform_location_screen_size, width, height);
 	backend->func.glUniform4f(backend->uniform_location_shadow_color_devisor, shadowDevisorR, shadowDevisorG, shadowDevisorB, shadowDevisorA);
@@ -362,5 +363,5 @@ PixelcharResult pixelcharRendererBackendOpenGLRender(
 		backend->func.glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0, renderer->queue_filled_length);
 	}
 
-	renderer->queue_filled_length = 0;
+	return PIXELCHAR_SUCCESS;
 }

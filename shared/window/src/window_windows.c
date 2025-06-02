@@ -15,6 +15,7 @@ struct window_data_windows
 
 	HDC hdc;
 	HGLRC hglrc;
+	PFNWGLSWAPINTERVALEXTPROC wglSwapIntervalEXT;
 
 	struct window_event dispatched_event;
 	bool move_size;
@@ -32,7 +33,7 @@ struct window_data_windows
 	uint32_t last_event_queue_index;
 };
 
-struct window_windows_context
+struct window_context_windows
 {
 	struct
 	{
@@ -53,11 +54,13 @@ struct window_windows_context
 			PFNWGLMAKECURRENTPROC wglMakeCurrent;
 			PFNWGLGETPROCADDRESSPROC wglGetProcAddress;
 		} func;
+
+		struct window_data_windows* current_window;
 	} opengl;
 };
 
-struct window_windows_context context_memory;
-struct window_windows_context* context;
+struct window_context_windows context_memory;
+struct window_context_windows* context = &context_memory;
 
 void _window_event_queue_add(struct window_data_windows* window_data, struct window_event* event)
 {
@@ -190,35 +193,41 @@ LRESULT CALLBACK window_WinProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 
 		if (uMsg == WM_SIZE || uMsg == WM_MOVE) {
 			RECT rect;
-			GetClientRect(hwnd, &rect);
+			if (GetClientRect(hwnd, &rect))
+			{
+				window_data->width = rect.right - rect.left;
+				window_data->height = rect.bottom - rect.top;
+				window_data->position_x = rect.left;
+				window_data->position_y = rect.top;
 
-			window_data->width = rect.right - rect.left;
-			window_data->height = rect.bottom - rect.top;
-			window_data->position_x = rect.left;
-			window_data->position_y = rect.top;
-
-			window_data->move_size = true;
+				window_data->move_size = true;
+			}
+			return 0;
 		}
 		else if (uMsg == WM_CLOSE)
 		{
 			event.type = WINDOW_EVENT_DESTROY;
 			_window_event_queue_add(window_data, &event);
+			return 0;
 		}
 		else if (uMsg == WM_SETFOCUS)
 		{
 			event.type = WINDOW_EVENT_FOCUS;
 			_window_event_queue_add(window_data, &event);
+			return 0;
 		}
 		else if (uMsg == WM_KILLFOCUS)
 		{
 			event.type = WINDOW_EVENT_UNFOCUS;
 			_window_event_queue_add(window_data, &event);
+			return 0;
 		}
 		else if (uMsg == WM_MOUSEWHEEL)
 		{
 			event.type = WINDOW_EVENT_MOUSE_SCROLL;
 			event.info.mouse_scroll.scroll_steps = GET_WHEEL_DELTA_WPARAM(wParam) / 120;
 			_window_event_queue_add(window_data, &event);
+			return 0;
 		}
 		else if (uMsg == WM_KEYDOWN || uMsg == WM_LBUTTONDOWN || uMsg == WM_MBUTTONDOWN || uMsg == WM_RBUTTONDOWN)
 		{
@@ -229,13 +238,14 @@ LRESULT CALLBACK window_WinProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 			else if (uMsg == WM_MBUTTONDOWN) key_code = VK_MBUTTON;
 			else if (uMsg == WM_RBUTTONDOWN) key_code = VK_RBUTTON;
 
-			uint32_t key = _map_key(key_code);
+			int32_t key = _map_key(key_code);
 			if (key != -1)
 			{
 				event.type = WINDOW_EVENT_KEY_DOWN;
 				event.info.key_down.key = key;
 				_window_event_queue_add(window_data, &event);
 			}
+			return 0;
 		}
 		else if (uMsg == WM_KEYUP || uMsg == WM_LBUTTONUP || uMsg == WM_MBUTTONUP || uMsg == WM_RBUTTONUP)
 		{
@@ -246,18 +256,20 @@ LRESULT CALLBACK window_WinProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 			else if (uMsg == WM_MBUTTONUP) key_code = VK_MBUTTON;
 			else if (uMsg == WM_RBUTTONUP) key_code = VK_RBUTTON;
 
-			uint32_t key = _map_key(key_code);
+			int32_t key = _map_key(key_code);
 			if (key != -1)
 			{
 				event.type = WINDOW_EVENT_KEY_UP;
 				event.info.key_down.key = key;
 				_window_event_queue_add(window_data, &event);
 			}
+			return 0;
 		}
 		else if (uMsg == WM_CHAR) {
 			event.type = WINDOW_EVENT_CHARACTER;
 			event.info.character.code_point = wParam;
 			_window_event_queue_add(window_data, &event);
+			return 0;
 		}
 	}
 
@@ -282,8 +294,6 @@ uint32_t window_init_context(void* transfered_context)
 		};
 
 		if (RegisterClassW(&wc) == 0) return 1;
-
-		context = &context_memory;
 	}
 	else
 		context = transfered_context;
@@ -535,59 +545,81 @@ bool window_glCreateContext(void* window, int32_t version_major, int32_t version
 	HDC dummy_hdc;
 	HGLRC dummy_hglrc;
 
+	bool result = true;
+
+	bool
+		created_dummy_hwnd = false,
+		got_dummy_hdc = false,
+		created_dummy_hglrc = false,
+		got_hdc = false,
+		created_hglrc = false
+	;
+
+	if ((dummy_hwnd = CreateWindowExW(
+		0,
+		L"window_window_class",
+		L"dummy_window",
+		NULL,
+		0,
+		0,
+		0 + 16,
+		0 + 39,
+		NULL,
+		NULL,
+		GetModuleHandleA(NULL),
+		0
+	)) == NULL) result = false;
+	else created_dummy_hwnd = true;
+
+	if (result == true)
 	{
-		dummy_hwnd = CreateWindowExW(
-			0,
-			L"window_window_class",
-			L"dummy_window",
-			NULL,
-			0,
-			0,
-			0 + 16,
-			0 + 39,
-			NULL,
-			NULL,
-			GetModuleHandleA(NULL),
-			0
-		);
-
-		dummy_hdc = GetDC(dummy_hwnd);
-
-		PIXELFORMATDESCRIPTOR pfd =
-		{
-			sizeof(PIXELFORMATDESCRIPTOR),
-			1,
-			PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,
-			PFD_TYPE_RGBA,
-			32,
-			0, 0, 0, 0, 0, 0,
-			0,
-			0,
-			0,
-			0, 0, 0, 0,
-			24,
-			8,
-			0,
-			PFD_MAIN_PLANE,
-			0,
-			0, 0, 0
-		};
-
-		int dummy_pixelFormat = ChoosePixelFormat(dummy_hdc, &pfd);
-		SetPixelFormat(dummy_hdc, dummy_pixelFormat, &pfd);
-
-		dummy_hglrc = context->opengl.func.wglCreateContext(dummy_hdc);
-		context->opengl.func.wglMakeCurrent(dummy_hdc, dummy_hglrc);
-
-		wglCreateContextAttribsARB = context->opengl.func.wglGetProcAddress("wglCreateContextAttribsARB");
-		wglChoosePixelFormatARB = context->opengl.func.wglGetProcAddress("wglChoosePixelFormatARB");
-
-		context->opengl.func.wglMakeCurrent(NULL, NULL);
+		if ((dummy_hdc = GetDC(dummy_hwnd)) == NULL) result = false;
+		else got_dummy_hdc = true;
 	}
 
-	window_data->hdc = GetDC(window_data->hwnd);
+	PIXELFORMATDESCRIPTOR dummy_pfd =
+	{
+		sizeof(PIXELFORMATDESCRIPTOR),
+		1,
+		PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,
+		PFD_TYPE_RGBA,
+		32,
+		0, 0, 0, 0, 0, 0,
+		0,
+		0,
+		0,
+		0, 0, 0, 0,
+		24,
+		8,
+		0,
+		PFD_MAIN_PLANE,
+		0,
+		0, 0, 0
+	};
 
-	int pixel_format_attribs[] = {
+	int dummy_pixelFormat;
+	if (result == true) if ((dummy_pixelFormat = ChoosePixelFormat(dummy_hdc, &dummy_pfd)) == 0) result = false;
+	if (result == true) if (SetPixelFormat(dummy_hdc, dummy_pixelFormat, &dummy_pfd) == FALSE) result = false;
+	if (result == true)
+	{
+		if ((dummy_hglrc = context->opengl.func.wglCreateContext(dummy_hdc)) == NULL) result = false;
+		else created_dummy_hglrc = true;
+	}
+	if (result == true) if (context->opengl.func.wglMakeCurrent(dummy_hdc, dummy_hglrc) == FALSE) result = false;
+
+	if (result == true) if (
+		(wglCreateContextAttribsARB = context->opengl.func.wglGetProcAddress("wglCreateContextAttribsARB")) == NULL ||
+		(wglChoosePixelFormatARB = context->opengl.func.wglGetProcAddress("wglChoosePixelFormatARB")) == NULL
+	) result = false;
+
+	if (result == true)
+	{
+		if ((window_data->hdc = GetDC(window_data->hwnd)) == NULL) result = false;
+		else got_hdc = true;
+	}
+
+	int pixel_format_attribs[] =
+	{
 		WGL_DRAW_TO_WINDOW_ARB,     GL_TRUE,
 		WGL_SUPPORT_OPENGL_ARB,     GL_TRUE,
 		WGL_DOUBLE_BUFFER_ARB,      GL_TRUE,
@@ -601,12 +633,11 @@ bool window_glCreateContext(void* window, int32_t version_major, int32_t version
 
 	int pixel_format;
 	UINT num_formats;
-	wglChoosePixelFormatARB(window_data->hdc, pixel_format_attribs, 0, 1, &pixel_format, &num_formats);
-
+	if (result == true) if (wglChoosePixelFormatARB(window_data->hdc, pixel_format_attribs, 0, 1, &pixel_format, &num_formats) == FALSE) result = false;
 
 	PIXELFORMATDESCRIPTOR pfd;
-	DescribePixelFormat(window_data->hdc, pixel_format, sizeof(pfd), &pfd);
-	SetPixelFormat(window_data->hdc, pixel_format, &pfd);
+	if (result == true) if (DescribePixelFormat(window_data->hdc, pixel_format, sizeof(pfd), &pfd) == 0) result = false;
+	if (result == true) if (SetPixelFormat(window_data->hdc, pixel_format, &pfd) == FALSE) result = false;
 
 	const int attribs[] = {
 		WGL_CONTEXT_MAJOR_VERSION_ARB, version_major,
@@ -615,14 +646,26 @@ bool window_glCreateContext(void* window, int32_t version_major, int32_t version
 		0
 	};
 
-	window_data->hglrc = wglCreateContextAttribsARB(window_data->hdc, share_window_data ? share_window_data->hglrc : 0, attribs);
-
+	if (result == true)
 	{
-		context->opengl.func.wglDeleteContext(dummy_hglrc);
-		ReleaseDC(dummy_hwnd, dummy_hdc);
-
-		DestroyWindow(dummy_hwnd);
+		if ((window_data->hglrc = wglCreateContextAttribsARB(window_data->hdc, share_window_data ? share_window_data->hglrc : 0, attribs)) == NULL) result = false;
+		else created_hglrc = true;
 	}
+
+	if (result == true) if (context->opengl.func.wglMakeCurrent(window_data->hdc, window_data->hglrc) == FALSE) result = false;
+
+	if (result == true) if ((window_data->wglSwapIntervalEXT = context->opengl.func.wglGetProcAddress("wglSwapIntervalEXT")) == NULL) result = false;
+
+	context->opengl.func.wglMakeCurrent(NULL, NULL);
+
+	if (result == false && created_hglrc == true) context->opengl.func.wglDeleteContext(window_data->hglrc);
+	if (result == false && got_hdc == true) ReleaseDC(window_data->hwnd, window_data->hdc);
+	
+	if (created_dummy_hglrc == true) context->opengl.func.wglDeleteContext(dummy_hglrc);
+	if (got_dummy_hdc == true) ReleaseDC(dummy_hwnd, dummy_hdc);
+	if (created_dummy_hwnd == true) DestroyWindow(dummy_hwnd);
+
+	return result;
 }
 
 void window_glDeleteContext(void* window)
@@ -638,40 +681,27 @@ bool window_glMakeCurrent(void* window)
 {
 	struct window_data_windows* window_data = window;
 
-	if (window_data == NULL)
-		return context->opengl.func.wglMakeCurrent(NULL, NULL);
-	else
-		return context->opengl.func.wglMakeCurrent(window_data->hdc, window_data->hglrc);
+	bool result = true;
+
+	if (window_data == NULL) context->opengl.func.wglMakeCurrent(NULL, NULL);
+	else if ((result = (context->opengl.func.wglMakeCurrent(window_data->hdc, window_data->hglrc) == TRUE)) == true) context->opengl.current_window = window;
+	return result;
 }
 
 bool window_glSwapInterval(int interval)
 {
-	PFNWGLSWAPINTERVALEXTPROC wglSwapIntervalEXT;
-	if ((wglSwapIntervalEXT = context->opengl.func.wglGetProcAddress("wglSwapIntervalEXT")) != NULL) return wglSwapIntervalEXT(interval);
-	else return false;
+	return (context->opengl.current_window->wglSwapIntervalEXT(interval) == TRUE);
 }
-
-uint8_t* library_opengl_funtions[] =
-{
-	"glEnable",
-	"glGetString",
-	"glBlendFunc",
-	"glClearColor",
-	"glViewport",
-	"glClear",
-	"glGetError"
-};
 
 void (*window_glGetProcAddress(uint8_t* name)) (void)
 {
-	for (uint32_t i = 0; i < sizeof(library_opengl_funtions) / sizeof(library_opengl_funtions[0]); i++)
-	{
-		if (strcmp(name, library_opengl_funtions[i]) == 0) return GetProcAddress(context->opengl.library, name);
-	}
-	return context->opengl.func.wglGetProcAddress(name);
+	void (*function)(void);
+
+	if ((function = context->opengl.func.wglGetProcAddress(name)) != NULL) return function;
+	else return GetProcAddress(context->opengl.library, name);
 }
 
 bool window_glSwapBuffers(void* window)
 {
-	return SwapBuffers(((struct window_data_windows*)(window))->hdc);
+	return (SwapBuffers(((struct window_data_windows*)(window))->hdc) == TRUE);
 }

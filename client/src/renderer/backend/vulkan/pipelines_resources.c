@@ -10,7 +10,7 @@ uint32_t renderer_backend_vulkan_pipelines_resources_create(struct minec_client*
     struct renderer_backend_vulkan_device* device = client->renderer.backend.device.device;
     struct renderer_backend_vulkan_pipelines_resources* pipelines_resources;
 
-    if ((client->renderer.backend.pipelines_resources.pipelines_resources = s_alloc(client->static_alloc, sizeof(struct renderer_backend_vulkan_pipelines_resources))) == NULL) return;
+    if ((client->renderer.backend.pipelines_resources.pipelines_resources = s_alloc(client->static_alloc, sizeof(struct renderer_backend_vulkan_pipelines_resources))) == NULL) return MINEC_CLIENT_ERROR_OUT_OF_MEMORY;
 
     pipelines_resources = client->renderer.backend.pipelines_resources.pipelines_resources;
 
@@ -33,8 +33,6 @@ void renderer_backend_vulkan_pipelines_resources_destroy(struct minec_client* cl
     struct renderer_backend_vulkan_base* base = client->renderer.backend.base.base;
     struct renderer_backend_vulkan_device* device = client->renderer.backend.device.device;
     struct renderer_backend_vulkan_pipelines_resources* pipelines_resources = client->renderer.backend.pipelines_resources.pipelines_resources;
-
-    if (pipelines_resources == NULL) return;
 
     s_free(client->static_alloc, pipelines_resources);
 }

@@ -51,8 +51,8 @@ int main(int argc, char* argv[]) {
 	window_init_context(NULL);
 	window_opengl_load();
 
-	void* window = window_create(100, 100, 200, 200, "window for test", true, NULL);
-	window_glCreateContext(window, 4, 6, NULL);
+	void* window = window_create(100, 100, 200, 200, "window for test", true);
+	if (window_glCreateContext(window, 4, 6, NULL) == false) printf("failed to create opengl context\n");
 	window_glMakeCurrent(window);
 
 	window_glSwapInterval(1);
@@ -76,7 +76,7 @@ int main(int argc, char* argv[]) {
 	glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_LOW, 0, NULL, GL_FALSE);
 	glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_NOTIFICATION, 0, NULL, GL_FALSE);
 
-	printf("%s\n",glGetString(GL_RENDERER));
+	printf("%s\n", glGetString(GL_RENDERER));
 	printf("%s\n", glGetString(GL_VENDOR));
 	printf("%s\n", glGetString(GL_VERSION));
 
@@ -183,6 +183,7 @@ int main(int argc, char* argv[]) {
 
 		glClear(GL_COLOR_BUFFER_BIT);
 
+		pixelcharRendererResetQueue(pcr);
 		pixelcharRendererEnqueCharacters(pcr, c, str_len);
 
 		pixelcharRendererBackendOpenGLRender(pcr, width, height, 4.f, 4.f, 4.f, 1.4f);
