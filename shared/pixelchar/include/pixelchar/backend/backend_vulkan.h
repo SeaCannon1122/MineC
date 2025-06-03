@@ -12,7 +12,8 @@ extern "C" {
 #include <vulkan/vulkan.h>
 
 PixelcharResult pixelcharRendererBackendVulkanInitialize(
-	PixelcharRenderer renderer, 
+	PixelcharRenderer renderer,
+	uint32_t backendSlotIndex,
 	VkDevice device,
 	VkPhysicalDevice physicalDevice,
 	VkQueue queue,
@@ -26,12 +27,13 @@ PixelcharResult pixelcharRendererBackendVulkanInitialize(
 	uint32_t fragment_shader_custom_length
 );
 
-void pixelcharRendererBackendVulkanDeinitialize(PixelcharRenderer renderer);
+void pixelcharRendererBackendVulkanDeinitialize(PixelcharRenderer renderer, uint32_t backendSlotIndex);
 
-PixelcharResult pixelcharRendererBackendVulkanUpdateRenderingData(PixelcharRenderer renderer, VkCommandBuffer commandBuffer);
+PixelcharResult pixelcharRendererBackendVulkanUpdateRenderingData(PixelcharRenderer renderer, uint32_t backendSlotIndex, VkCommandBuffer commandBuffer);
 
 PixelcharResult pixelcharRendererBackendVulkanRender(
 	PixelcharRenderer renderer,
+	uint32_t backendSlotIndex,
 	VkCommandBuffer commandBuffer,
 	uint32_t width,
 	uint32_t height,

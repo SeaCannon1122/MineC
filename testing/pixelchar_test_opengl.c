@@ -103,7 +103,7 @@ int main(int argc, char* argv[]) {
 
 	PixelcharRenderer pcr;
 	res = pixelcharRendererCreate(100, &pcr);
-	res = pixelcharRendererBackendOpenGLInitialize(pcr, window_glGetProcAddress, 0, 0, 0, 0);
+	res = pixelcharRendererBackendOpenGLInitialize(pcr, 0, 3, window_glGetProcAddress, 0, 0, 0, 0);
 	res = pixelcharRendererBindFont(pcr, default_font, 0);
 	res = pixelcharRendererBindFont(pcr, smooth_font, 1);
 
@@ -186,12 +186,12 @@ int main(int argc, char* argv[]) {
 		pixelcharRendererResetQueue(pcr);
 		pixelcharRendererEnqueCharacters(pcr, c, str_len);
 
-		pixelcharRendererBackendOpenGLRender(pcr, width, height, 4.f, 4.f, 4.f, 1.4f);
+		pixelcharRendererBackendOpenGLRender(pcr, 0, 0, width, height, 4.f, 4.f, 4.f, 1.4f);
 
 		window_glSwapBuffers(window);
 	}
 
-	pixelcharRendererBackendOpenGLDeinitialize(pcr);
+	pixelcharRendererBackendOpenGLDeinitialize(pcr, 0);
 	pixelcharRendererDestroy(pcr);
 
 	window_glMakeCurrent(NULL);

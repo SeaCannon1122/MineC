@@ -12,6 +12,7 @@ extern "C" {
 #include <stdbool.h>
 
 #define PIXELCHAR_RENDERER_MAX_FONT_COUNT 8
+#define PIXELCHAR_RENDERER_MAX_BACKEND_COUNT 16
 
 typedef void (*PIXELCHAR_DEBUG_CALLBACK_FUNCTION)(uint32_t type, uint8_t* message);
 
@@ -22,9 +23,9 @@ typedef enum PixelcharResult
 	PIXELCHAR_ERROR_INVALID_ARGUMENTS,
 	PIXELCHAR_ERROR_FULL_QUEUE,
 	PIXELCHAR_ERROR_INVALID_FONT_DATA,
-	PIXELCHAR_ERROR_BACKEND_ALREADY_INITIALIZED,
-	PIXELCHAR_ERROR_BACKEND_NOT_INITIALIZED,
-	PIXELCHAR_ERROR_OTHER
+	PIXELCHAR_ERROR_BACKEND_SLOT_ALREADY_IN_USED,
+	PIXELCHAR_ERROR_BACKEND_SLOT_NOT_IN_USED,
+	PIXELCHAR_ERROR_BACKEND_API
 } PixelcharResult;
 
 typedef enum PixelcharFlagBits
@@ -58,7 +59,9 @@ void pixelcharFontDestroy(PixelcharFont font);
 
 PixelcharResult pixelcharRendererCreate(uint32_t charQueueLength, PixelcharRenderer* pRenderer);
 void pixelcharRendererDestroy(PixelcharRenderer renderer);
+
 PixelcharResult pixelcharRendererBindFont(PixelcharRenderer renderer, PixelcharFont font, uint32_t bindingIndex);
+
 PixelcharResult pixelcharRendererEnqueCharacters(PixelcharRenderer renderer, Pixelchar* characters, uint32_t characterCount);
 void pixelcharRendererResetQueue(PixelcharRenderer renderer);
 

@@ -144,18 +144,22 @@ void window_set_mouse_cursor_position(void* window, int32_t x, int32_t y);
 
 struct window_event* window_next_event(void* window);
 
-#ifdef _WIN32
+#ifdef WINDOW_IMPLEMENTATION_WINDOWS
 
 #include <Windows.h>
-
 HWND window_windows_get_hwnd(void* window);
 
 #endif
 
+#ifdef WINDOW_IMPLEMENTATION_X11
+
+
+#endif
 
 //vulkan
-#include <vulkan/vulkan.h>
+#ifdef WINDOW_GRAPHICS_VULKAN
 
+#include <vulkan/vulkan.h>
 bool window_vulkan_load();
 void window_vulkan_unload();
 
@@ -165,8 +169,12 @@ VkResult window_vkCreateSurfaceKHR(void* window, VkInstance instance, VkSurfaceK
 
 uint8_t* window_get_VK_KHR_PLATFORM_SURFACE_EXTENSION_NAME();
 
+#endif
 
 //opengl
+#ifdef WINDOW_GRAPHICS_OPENGL
+#include <GL/glcorearb.h>
+
 bool window_opengl_load();
 void window_opengl_unload();
 
@@ -181,6 +189,8 @@ bool window_glSwapInterval(int interval);
 void (*window_glGetProcAddress(uint8_t* name)) (void);
 
 bool window_glSwapBuffers(void* window);
+
+#endif
 
 #ifdef __cplusplus
 }

@@ -17,6 +17,7 @@ static void renderer_backend_opengl_log(struct minec_client* client, uint8_t* me
 }
 
 #define OPENGL_FRAME_COUNT 3
+#define OPENGL_MENU_GUI_QUAD_COUNT 128
 
 struct renderer_backend_opengl_base
 {
@@ -119,22 +120,22 @@ struct renderer_backend_opengl_base
 
 	struct
 	{
-		GLuint fbo;
+		struct
+		{
+			GLuint vao;
+			GLuint vbo[OPENGL_FRAME_COUNT];
+		} pass;
 	} menu_gui;
 
-	struct
-	{
-		GLuint a;
-	} game_gui;
-
-	struct
-	{
-		GLuint a;
-	} ;
 };
 
 struct renderer_backend_opengl_pipelines_resources
 {
+	struct {
+		uint32_t (*handles)[2];
+		GLuint textures;
+	} textures;
+
 	struct
 	{
 		bool usable;
@@ -142,9 +143,13 @@ struct renderer_backend_opengl_pipelines_resources
 
 	struct
 	{
-		GLuint vao;
-		GLuint vbo[OPENGL_FRAME_COUNT];
-	} basic_triangles;
+		struct
+		{
+			GLuint program;
+			bool usable;
+		} pass;
+	} menu_gui;
+
 };
 
 static uint32_t gl_error_check_log(struct minec_client* client, struct renderer_backend_opengl_base* base, uint8_t* message)

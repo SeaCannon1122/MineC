@@ -9,8 +9,12 @@ extern "C" {
 
 #include <pixelchar/pixelchar.h>
 
+#define PIXELCHAR_BACKEND_OPENGL_MAX_RESOURCE_FRAME_COUNT 4
+
 PixelcharResult pixelcharRendererBackendOpenGLInitialize(
 	PixelcharRenderer renderer,
+	uint32_t backendSlotIndex,
+	uint32_t resourceFrameCount,
 	void* (*pfnglGetProcAddress)(uint8_t*),
 	uint8_t* vertex_shader_custom,
 	uint32_t vertex_shader_custom_length,
@@ -18,10 +22,12 @@ PixelcharResult pixelcharRendererBackendOpenGLInitialize(
 	uint32_t fragment_shader_custom_length
 );
 
-void pixelcharRendererBackendOpenGLDeinitialize(PixelcharRenderer renderer);
+void pixelcharRendererBackendOpenGLDeinitialize(PixelcharRenderer renderer, uint32_t backendSlotIndex);
 
 PixelcharResult pixelcharRendererBackendOpenGLRender(
 	PixelcharRenderer renderer,
+	uint32_t backendSlotIndex,
+	uint32_t resourceFrameIndex,
 	uint32_t width,
 	uint32_t height,
 	float shadowDevisorR,

@@ -188,21 +188,17 @@ VkResult _pixelchar_upload_data_to_buffer(_renderer_backend_vulkan* backend, voi
 				mapped_memory_range.offset = 0;
 				mapped_memory_range.size = chunk_size;
 				
-				backend->func.vkFlushMappedMemoryRanges(backend->device, 1, &mapped_memory_range);
+				if ((result = backend->func.vkFlushMappedMemoryRanges(backend->device, 1, &mapped_memory_range)) != VK_SUCCESS) return result;
 			}
 
-			result = backend->func.vkResetCommandBuffer(backend->cmd, 0);
-			if (result != VK_SUCCESS) return result;
-
-			result = backend->func.vkResetFences(backend->device, 1, &backend->fence);
-			if (result != VK_SUCCESS) return result;
+			if ((result = backend->func.vkResetCommandBuffer(backend->cmd, 0)) != VK_SUCCESS) return result;
+			if ((result = backend->func.vkResetFences(backend->device, 1, &backend->fence)) != VK_SUCCESS) return result;
 
 			VkCommandBufferBeginInfo begin_info = { 0 };
 			begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 			begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-			result = backend->func.vkBeginCommandBuffer(backend->cmd, &begin_info);
-			if (result != VK_SUCCESS) return result;
+			if ((result = backend->func.vkBeginCommandBuffer(backend->cmd, &begin_info)) != VK_SUCCESS) return result;
 
 			VkBufferCopy copy_region = { 0 };
 			copy_region.srcOffset = 0;
@@ -211,22 +207,16 @@ VkResult _pixelchar_upload_data_to_buffer(_renderer_backend_vulkan* backend, voi
 
 			backend->func.vkCmdCopyBuffer(backend->cmd, backend->staging_buffer, buffer, 1, &copy_region);
 
-			result = backend->func.vkEndCommandBuffer(backend->cmd);
-			if (result != VK_SUCCESS) return result;
-
-			result = backend->func.vkQueueWaitIdle(backend->queue);
-			if (result != VK_SUCCESS) return result;
+			if ((result = backend->func.vkEndCommandBuffer(backend->cmd)) != VK_SUCCESS) return result;
+			if ((result = backend->func.vkQueueWaitIdle(backend->queue)) != VK_SUCCESS) return result;
 
 			VkSubmitInfo submit_info = { 0 };
 			submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 			submit_info.commandBufferCount = 1;
 			submit_info.pCommandBuffers = &backend->cmd;
 
-			result = backend->func.vkQueueSubmit(backend->queue, 1, &submit_info, backend->fence);
-			if (result != VK_SUCCESS) return result;
-
-			result = backend->func.vkWaitForFences(backend->device, 1, &backend->fence, 1, 10000000000);
-			if (result != VK_SUCCESS) return result;
+			if ((result = backend->func.vkQueueSubmit(backend->queue, 1, &submit_info, backend->fence)) != VK_SUCCESS) return result;
+			if ((result = backend->func.vkWaitForFences(backend->device, 1, &backend->fence, 1, 10000000000)) != VK_SUCCESS) return result;
 
 			staging_offset += chunk_size;
 		}
@@ -235,16 +225,14 @@ VkResult _pixelchar_upload_data_to_buffer(_renderer_backend_vulkan* backend, voi
 	return VK_SUCCESS;
 }
 
-PixelcharResult _font_backend_vulkan_add_reference(PixelcharRenderer renderer, uint32_t font_index)
+PixelcharResult _font_backend_vulkan_add_reference(PixelcharRenderer renderer, uint32_t font_index, uint32_t backend_slot_index)
 {
-	_renderer_backend_vulkan* renderer_backend = renderer->backends[PIXELCHAR_BACKEND_VULKAN];
+	_renderer_backend_vulkan* renderer_backend = renderer->backends[backend_slot_index].data;
 
-	if (renderer->fonts[font_index]->backends_reference_count[PIXELCHAR_BACKEND_VULKAN] == 0)
+	if (renderer->fonts[font_index]->backends_reference_count[backend_slot_index] == 0)
 	{
-		_font_backend_vulkan* font_backend = malloc(sizeof(_font_backend_vulkan));
+		_font_backend_vulkan* font_backend = calloc(1, sizeof(_font_backend_vulkan));
 		if (font_backend == NULL) return PIXELCHAR_ERROR_OUT_OF_MEMORY;
-
-		memset(font_backend, 0, sizeof(_font_backend_vulkan));
 
 		VkBufferCreateInfo buffer_info = { 0 };
 		buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -255,7 +243,7 @@ PixelcharResult _font_backend_vulkan_add_reference(PixelcharRenderer renderer, u
 		if (renderer_backend->func.vkCreateBuffer(renderer_backend->device, &buffer_info, 0, &font_backend->buffer) != VK_SUCCESS)
 		{
 			free(font_backend);
-			return PIXELCHAR_ERROR_OTHER;
+			return PIXELCHAR_ERROR_BACKEND_API;
 		}
 
 		VkMemoryRequirements memory_requirements;
@@ -294,7 +282,7 @@ PixelcharResult _font_backend_vulkan_add_reference(PixelcharRenderer renderer, u
 		{
 			renderer_backend->func.vkDestroyBuffer(renderer_backend->device, font_backend->buffer, 0);
 			free(font_backend);
-			return PIXELCHAR_ERROR_OTHER;
+			return PIXELCHAR_ERROR_BACKEND_API;
 		}
 
 		if (renderer_backend->func.vkBindBufferMemory(renderer_backend->device, font_backend->buffer, font_backend->memory, 0) != VK_SUCCESS)
@@ -302,7 +290,7 @@ PixelcharResult _font_backend_vulkan_add_reference(PixelcharRenderer renderer, u
 			renderer_backend->func.vkDestroyBuffer(renderer_backend->device, font_backend->buffer, 0);
 			renderer_backend->func.vkFreeMemory(renderer_backend->device, font_backend->memory, 0);
 			free(font_backend);
-			return PIXELCHAR_ERROR_OTHER;
+			return PIXELCHAR_ERROR_BACKEND_API;
 		}
 
 		if ((memory_flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) && (memory_flags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT))
@@ -327,16 +315,16 @@ PixelcharResult _font_backend_vulkan_add_reference(PixelcharRenderer renderer, u
 			renderer_backend->func.vkDestroyBuffer(renderer_backend->device, font_backend->buffer, 0);
 			renderer_backend->func.vkFreeMemory(renderer_backend->device, font_backend->memory, 0);
 			free(font_backend);
-			return PIXELCHAR_ERROR_OTHER;
+			return PIXELCHAR_ERROR_BACKEND_API;
 		}
 
 		if ((memory_flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) && (memory_flags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT))
 			renderer_backend->func.vkUnmapMemory(renderer_backend->device, font_backend->memory);
 
-		renderer->fonts[font_index]->backends[PIXELCHAR_BACKEND_VULKAN] = font_backend;
+		renderer->fonts[font_index]->backends[backend_slot_index] = font_backend;
 	}
 
-	_font_backend_vulkan* font_backend = renderer->fonts[font_index]->backends[PIXELCHAR_BACKEND_VULKAN];
+	_font_backend_vulkan* font_backend = renderer->fonts[font_index]->backends[backend_slot_index];
 
 	VkDescriptorBufferInfo buffer_info = { 0 };
 	buffer_info.buffer = font_backend->buffer;
@@ -352,31 +340,32 @@ PixelcharResult _font_backend_vulkan_add_reference(PixelcharRenderer renderer, u
 
 	renderer_backend->func.vkUpdateDescriptorSets(renderer_backend->device, 1, &buffer_write, 0, 0);
 
-	renderer->fonts[font_index]->backends_reference_count[PIXELCHAR_BACKEND_VULKAN]++;
+	renderer->fonts[font_index]->backends_reference_count[backend_slot_index]++;
 
 	return PIXELCHAR_SUCCESS;
 }
 
-void _font_backend_vulkan_sub_reference(PixelcharRenderer renderer, uint32_t font_index)
+void _font_backend_vulkan_sub_reference(PixelcharRenderer renderer, uint32_t font_index, uint32_t backend_slot_index)
 {
-	_renderer_backend_vulkan* renderer_backend = renderer->backends[PIXELCHAR_BACKEND_VULKAN];
-	_font_backend_vulkan* font_backend = renderer->fonts[font_index]->backends[PIXELCHAR_BACKEND_VULKAN];
+	_renderer_backend_vulkan* renderer_backend = renderer->backends[backend_slot_index].data;
+	_font_backend_vulkan* font_backend = renderer->fonts[font_index]->backends[backend_slot_index];
 
-	if (renderer->fonts[font_index]->backends_reference_count[PIXELCHAR_BACKEND_VULKAN] == 1)
+	if (renderer->fonts[font_index]->backends_reference_count[backend_slot_index] == 1)
 	{
-		renderer_backend->func.vkDeviceWaitIdle(renderer_backend->device);
-
-		renderer_backend->func.vkDestroyBuffer(renderer_backend->device, font_backend->buffer, 0);
-		renderer_backend->func.vkFreeMemory(renderer_backend->device, font_backend->memory, 0);
-
+		if (renderer_backend->func.vkDeviceWaitIdle(renderer_backend->device) == VK_SUCCESS)
+		{
+			renderer_backend->func.vkDestroyBuffer(renderer_backend->device, font_backend->buffer, 0);
+			renderer_backend->func.vkFreeMemory(renderer_backend->device, font_backend->memory, 0);
+		}
 		free(font_backend);
 	}
 
-	renderer->fonts[font_index]->backends_reference_count[PIXELCHAR_BACKEND_VULKAN]--;
+	renderer->fonts[font_index]->backends_reference_count[backend_slot_index]--;
 }
 
 PixelcharResult pixelcharRendererBackendVulkanInitialize(
-	PixelcharRenderer renderer, 
+	PixelcharRenderer renderer,
+	uint32_t backendSlotIndex,
 	VkDevice device,
 	VkPhysicalDevice physicalDevice,
 	VkQueue queue,
@@ -391,126 +380,152 @@ PixelcharResult pixelcharRendererBackendVulkanInitialize(
 )
 {
 	if (renderer == NULL) return PIXELCHAR_ERROR_INVALID_ARGUMENTS;
-	if (renderer->backends[PIXELCHAR_BACKEND_VULKAN] != NULL) return PIXELCHAR_ERROR_BACKEND_ALREADY_INITIALIZED;
+	if (backendSlotIndex >= PIXELCHAR_RENDERER_MAX_BACKEND_COUNT) return PIXELCHAR_ERROR_INVALID_ARGUMENTS;
+	if (pfnvkGetDeviceProcAddr == NULL) return PIXELCHAR_ERROR_INVALID_ARGUMENTS;
+	if (renderer->backends[backendSlotIndex].data != NULL) return PIXELCHAR_ERROR_BACKEND_SLOT_ALREADY_IN_USED;
 
-	_renderer_backend_vulkan* backend = malloc(sizeof(_renderer_backend_vulkan));
-	if (backend == NULL) return PIXELCHAR_ERROR_OUT_OF_MEMORY;
+	PixelcharResult result = PIXELCHAR_SUCCESS;
 
-	memset(backend, 0, sizeof(_renderer_backend_vulkan));
+	bool
+		backend_memory_allocated = false,
+		vertex_index_buffer_created = false,
+		staging_buffer_created = false,
+		vertex_index_memory_allocated = false,
+		staging_memory_allocated = false,
+		vertex_shader_module_created = false,
+		fragment_shader_module_created = false,
+		descriptor_set_layout_created = false,
+		pipeline_layout_created = false,
+		pipeline_created = false,
+		command_pool_created = false,
+		command_buffers_allocated = false,
+		descriptor_pool_created = false,
+		fence_created = false,
+		staging_memory_mapped = false,
+		vertex_index_memory_mapped = false
+	;
 
-	backend->device = device;
-	backend->physical_device = physicalDevice;
-	backend->queue = queue;
-	backend->queue_index = queueIndex;
-	backend->render_pass = renderPass;
-	backend->subpass = subpass;
+	_renderer_backend_vulkan* backend; 
+	
+	if ((backend = malloc(sizeof(_renderer_backend_vulkan))) == NULL) result = PIXELCHAR_ERROR_OUT_OF_MEMORY;
+	else backend_memory_allocated = true;
 
+	if (result == PIXELCHAR_SUCCESS)
 	{
-		void** functions[] =
-		{
-			(void**)&backend->func.vkDeviceWaitIdle,
-			(void**)&backend->func.vkQueueWaitIdle,
-			(void**)&backend->func.vkQueueSubmit,
-			(void**)&backend->func.vkCreateBuffer,
-			(void**)&backend->func.vkDestroyBuffer,
-			(void**)&backend->func.vkAllocateMemory,
-			(void**)&backend->func.vkFreeMemory,
-			(void**)&backend->func.vkBindBufferMemory,
-			(void**)&backend->func.vkGetPhysicalDeviceMemoryProperties,
-			(void**)&backend->func.vkGetBufferMemoryRequirements,
-			(void**)&backend->func.vkMapMemory,
-			(void**)&backend->func.vkUnmapMemory,
-			(void**)&backend->func.vkFlushMappedMemoryRanges,
-			(void**)&backend->func.vkCreateShaderModule,
-			(void**)&backend->func.vkDestroyShaderModule,
-			(void**)&backend->func.vkCreateDescriptorSetLayout,
-			(void**)&backend->func.vkDestroyDescriptorSetLayout,
-			(void**)&backend->func.vkCreatePipelineLayout,
-			(void**)&backend->func.vkDestroyPipelineLayout,
-			(void**)&backend->func.vkCreateGraphicsPipelines,
-			(void**)&backend->func.vkDestroyPipeline,
-			(void**)&backend->func.vkCreateCommandPool,
-			(void**)&backend->func.vkDestroyCommandPool,
-			(void**)&backend->func.vkAllocateCommandBuffers,
-			(void**)&backend->func.vkFreeCommandBuffers,
-			(void**)&backend->func.vkResetCommandBuffer,
-			(void**)&backend->func.vkBeginCommandBuffer,
-			(void**)&backend->func.vkEndCommandBuffer,
-			(void**)&backend->func.vkCreateDescriptorPool,
-			(void**)&backend->func.vkDestroyDescriptorPool,
-			(void**)&backend->func.vkAllocateDescriptorSets,
-			(void**)&backend->func.vkUpdateDescriptorSets,
-			(void**)&backend->func.vkCreateFence,
-			(void**)&backend->func.vkDestroyFence,
-			(void**)&backend->func.vkResetFences,
-			(void**)&backend->func.vkWaitForFences,
-			(void**)&backend->func.vkCmdCopyBuffer,
-			(void**)&backend->func.vkCmdBindDescriptorSets,
-			(void**)&backend->func.vkCmdBindPipeline,
-			(void**)&backend->func.vkCmdBindVertexBuffers,
-			(void**)&backend->func.vkCmdBindIndexBuffer,
-			(void**)&backend->func.vkCmdPushConstants,
-			(void**)&backend->func.vkCmdDrawIndexed
-		};
+		memset(backend, 0, sizeof(_renderer_backend_vulkan));
 
-		uint8_t* function_names[] =
-		{
-			"vkDeviceWaitIdle",
-			"vkQueueWaitIdle",
-			"vkQueueSubmit",
-			"vkCreateBuffer",
-			"vkDestroyBuffer",
-			"vkAllocateMemory",
-			"vkFreeMemory",
-			"vkBindBufferMemory",
-			"vkGetPhysicalDeviceMemoryProperties",
-			"vkGetBufferMemoryRequirements",
-			"vkMapMemory",
-			"vkUnmapMemory",
-			"vkFlushMappedMemoryRanges",
-			"vkCreateShaderModule",
-			"vkDestroyShaderModule",
-			"vkCreateDescriptorSetLayout",
-			"vkDestroyDescriptorSetLayout",
-			"vkCreatePipelineLayout",
-			"vkDestroyPipelineLayout",
-			"vkCreateGraphicsPipelines",
-			"vkDestroyPipeline",
-			"vkCreateCommandPool",
-			"vkDestroyCommandPool",
-			"vkAllocateCommandBuffers",
-			"vkFreeCommandBuffers",
-			"vkResetCommandBuffer",
-			"vkBeginCommandBuffer",
-			"vkEndCommandBuffer",
-			"vkCreateDescriptorPool",
-			"vkDestroyDescriptorPool",
-			"vkAllocateDescriptorSets",
-			"vkUpdateDescriptorSets",
-			"vkCreateFence",
-			"vkDestroyFence",
-			"vkResetFences",
-			"vkWaitForFences",
-			"vkCmdCopyBuffer",
-			"vkCmdBindDescriptorSets",
-			"vkCmdBindPipeline",
-			"vkCmdBindVertexBuffers",
-			"vkCmdBindIndexBuffer",
-			"vkCmdPushConstants",
-			"vkCmdDrawIndexed"
-		};
+		backend->device = device;
+		backend->physical_device = physicalDevice;
+		backend->queue = queue;
+		backend->queue_index = queueIndex;
+		backend->render_pass = renderPass;
+		backend->subpass = subpass;
 
-		for (uint32_t i = 0; i < sizeof(function_names) / sizeof(function_names[0]); i++)
 		{
-			if ((*functions[i] = (void*)pfnvkGetDeviceProcAddr(backend->device, function_names[i])) == NULL)
+			void** functions[] =
 			{
-				free(backend);
-				return PIXELCHAR_ERROR_OTHER;
+				(void**)&backend->func.vkDeviceWaitIdle,
+				(void**)&backend->func.vkQueueWaitIdle,
+				(void**)&backend->func.vkQueueSubmit,
+				(void**)&backend->func.vkCreateBuffer,
+				(void**)&backend->func.vkDestroyBuffer,
+				(void**)&backend->func.vkAllocateMemory,
+				(void**)&backend->func.vkFreeMemory,
+				(void**)&backend->func.vkBindBufferMemory,
+				(void**)&backend->func.vkGetPhysicalDeviceMemoryProperties,
+				(void**)&backend->func.vkGetBufferMemoryRequirements,
+				(void**)&backend->func.vkMapMemory,
+				(void**)&backend->func.vkUnmapMemory,
+				(void**)&backend->func.vkFlushMappedMemoryRanges,
+				(void**)&backend->func.vkCreateShaderModule,
+				(void**)&backend->func.vkDestroyShaderModule,
+				(void**)&backend->func.vkCreateDescriptorSetLayout,
+				(void**)&backend->func.vkDestroyDescriptorSetLayout,
+				(void**)&backend->func.vkCreatePipelineLayout,
+				(void**)&backend->func.vkDestroyPipelineLayout,
+				(void**)&backend->func.vkCreateGraphicsPipelines,
+				(void**)&backend->func.vkDestroyPipeline,
+				(void**)&backend->func.vkCreateCommandPool,
+				(void**)&backend->func.vkDestroyCommandPool,
+				(void**)&backend->func.vkAllocateCommandBuffers,
+				(void**)&backend->func.vkFreeCommandBuffers,
+				(void**)&backend->func.vkResetCommandBuffer,
+				(void**)&backend->func.vkBeginCommandBuffer,
+				(void**)&backend->func.vkEndCommandBuffer,
+				(void**)&backend->func.vkCreateDescriptorPool,
+				(void**)&backend->func.vkDestroyDescriptorPool,
+				(void**)&backend->func.vkAllocateDescriptorSets,
+				(void**)&backend->func.vkUpdateDescriptorSets,
+				(void**)&backend->func.vkCreateFence,
+				(void**)&backend->func.vkDestroyFence,
+				(void**)&backend->func.vkResetFences,
+				(void**)&backend->func.vkWaitForFences,
+				(void**)&backend->func.vkCmdCopyBuffer,
+				(void**)&backend->func.vkCmdBindDescriptorSets,
+				(void**)&backend->func.vkCmdBindPipeline,
+				(void**)&backend->func.vkCmdBindVertexBuffers,
+				(void**)&backend->func.vkCmdBindIndexBuffer,
+				(void**)&backend->func.vkCmdPushConstants,
+				(void**)&backend->func.vkCmdDrawIndexed
+			};
+
+			uint8_t* function_names[] =
+			{
+				"vkDeviceWaitIdle",
+				"vkQueueWaitIdle",
+				"vkQueueSubmit",
+				"vkCreateBuffer",
+				"vkDestroyBuffer",
+				"vkAllocateMemory",
+				"vkFreeMemory",
+				"vkBindBufferMemory",
+				"vkGetPhysicalDeviceMemoryProperties",
+				"vkGetBufferMemoryRequirements",
+				"vkMapMemory",
+				"vkUnmapMemory",
+				"vkFlushMappedMemoryRanges",
+				"vkCreateShaderModule",
+				"vkDestroyShaderModule",
+				"vkCreateDescriptorSetLayout",
+				"vkDestroyDescriptorSetLayout",
+				"vkCreatePipelineLayout",
+				"vkDestroyPipelineLayout",
+				"vkCreateGraphicsPipelines",
+				"vkDestroyPipeline",
+				"vkCreateCommandPool",
+				"vkDestroyCommandPool",
+				"vkAllocateCommandBuffers",
+				"vkFreeCommandBuffers",
+				"vkResetCommandBuffer",
+				"vkBeginCommandBuffer",
+				"vkEndCommandBuffer",
+				"vkCreateDescriptorPool",
+				"vkDestroyDescriptorPool",
+				"vkAllocateDescriptorSets",
+				"vkUpdateDescriptorSets",
+				"vkCreateFence",
+				"vkDestroyFence",
+				"vkResetFences",
+				"vkWaitForFences",
+				"vkCmdCopyBuffer",
+				"vkCmdBindDescriptorSets",
+				"vkCmdBindPipeline",
+				"vkCmdBindVertexBuffers",
+				"vkCmdBindIndexBuffer",
+				"vkCmdPushConstants",
+				"vkCmdDrawIndexed"
+			};
+
+			for (uint32_t i = 0; i < sizeof(function_names) / sizeof(function_names[0]); i++)
+			{
+				if ((*functions[i] = (void*)pfnvkGetDeviceProcAddr(backend->device, function_names[i])) == NULL)
+				{
+					result = PIXELCHAR_ERROR_BACKEND_API;
+					break;
+				}
 			}
 		}
 	}
-
-	backend->func.vkDeviceWaitIdle(device);
 
 	size_t vertex_index_buffer_size = PIXELCHAR_PAD(renderer->queue_total_length * sizeof(Pixelchar), 32) + PIXELCHAR_PAD(sizeof(uint32_t) * 6, 32);
 	size_t staging_buffer_size = (STAGING_BUFFER_SIZE > renderer->queue_total_length * sizeof(Pixelchar) ? STAGING_BUFFER_SIZE : renderer->queue_total_length * sizeof(Pixelchar));
@@ -523,30 +538,29 @@ PixelcharResult pixelcharRendererBackendVulkanInitialize(
 	buffer_info.size = vertex_index_buffer_size;
 	buffer_info.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
 
-	if (backend->func.vkCreateBuffer(backend->device, &buffer_info, 0, &backend->vertex_index_buffer) != VK_SUCCESS)
+	if (result == PIXELCHAR_SUCCESS)
 	{
-		free(backend);
-		return PIXELCHAR_ERROR_OTHER;
-	}
+		backend->func.vkDeviceWaitIdle(device);
 
+		if (backend->func.vkCreateBuffer(backend->device, &buffer_info, 0, &backend->vertex_index_buffer) != VK_SUCCESS) result = PIXELCHAR_ERROR_BACKEND_API;
+		else vertex_index_buffer_created = true;
+	}
 	//staging buffer
 	buffer_info.size = staging_buffer_size;
 	buffer_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 
-	if (backend->func.vkCreateBuffer(backend->device, &buffer_info, 0, &backend->staging_buffer) != VK_SUCCESS)
+	if (result == PIXELCHAR_SUCCESS)
 	{
-		backend->func.vkDestroyBuffer(backend->device, backend->vertex_index_buffer, 0);
-		free(backend);
-		return PIXELCHAR_ERROR_OTHER;
+		if (backend->func.vkCreateBuffer(backend->device, &buffer_info, 0, &backend->staging_buffer) != VK_SUCCESS) result = PIXELCHAR_ERROR_BACKEND_API;
+		else staging_buffer_created = true;
 	}
-
 	
 	VkPhysicalDeviceMemoryProperties memory_properties;
-	backend->func.vkGetPhysicalDeviceMemoryProperties(backend->physical_device, &memory_properties);
+	if (result == PIXELCHAR_SUCCESS) backend->func.vkGetPhysicalDeviceMemoryProperties(backend->physical_device, &memory_properties);
 
 	//vertex index memory
 	VkMemoryRequirements vertex_index_memory_requirements;
-	backend->func.vkGetBufferMemoryRequirements(backend->device, backend->vertex_index_buffer, &vertex_index_memory_requirements);
+	if (result == PIXELCHAR_SUCCESS) backend->func.vkGetBufferMemoryRequirements(backend->device, backend->vertex_index_buffer, &vertex_index_memory_requirements);
 
 	VkMemoryPropertyFlags vertex_index_preference_flags[] = {
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -559,30 +573,27 @@ PixelcharResult pixelcharRendererBackendVulkanInitialize(
 		0,
 		0,
 	};
-
-	if (
-		_allocate_best_memory(
-			backend,
-			&memory_properties,
-			vertex_index_memory_requirements.size,
-			vertex_index_memory_requirements.memoryTypeBits,
-			vertex_index_preference_flags,
-			vertex_index_exclude_flags,
-			3,
-			&backend->vertex_index_memory,
-			&backend->vertex_index_memory_flags
-		) != VK_SUCCESS
-	)
+	if (result == PIXELCHAR_SUCCESS)
 	{
-		backend->func.vkDestroyBuffer(backend->device, backend->staging_buffer, 0);
-		backend->func.vkDestroyBuffer(backend->device, backend->vertex_index_buffer, 0);
-		free(backend);
-		return PIXELCHAR_ERROR_OTHER;
+		if (
+			_allocate_best_memory(
+				backend,
+				&memory_properties,
+				vertex_index_memory_requirements.size,
+				vertex_index_memory_requirements.memoryTypeBits,
+				vertex_index_preference_flags,
+				vertex_index_exclude_flags,
+				3,
+				&backend->vertex_index_memory,
+				&backend->vertex_index_memory_flags
+			) != VK_SUCCESS
+		) result = PIXELCHAR_ERROR_BACKEND_API;
+		else vertex_index_memory_allocated = true;
 	}
 
 	//staging memory
 	VkMemoryRequirements staging_memory_requirements;
-	backend->func.vkGetBufferMemoryRequirements(backend->device, backend->staging_buffer, &staging_memory_requirements);
+	if (result == PIXELCHAR_SUCCESS) backend->func.vkGetBufferMemoryRequirements(backend->device, backend->staging_buffer, &staging_memory_requirements);
 
 	VkMemoryPropertyFlags staging_preference_flags[] = {
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -594,48 +605,28 @@ PixelcharResult pixelcharRendererBackendVulkanInitialize(
 		0,
 	};
 
-	if (
-		_allocate_best_memory(
-			backend,
-			&memory_properties,
-			staging_memory_requirements.size,
-			staging_memory_requirements.memoryTypeBits,
-			staging_preference_flags,
-			staging_exclude_flags,
-			4,
-			&backend->staging_memory,
-			&backend->staging_memory_flags
-		) != VK_SUCCESS
-		)
+	if (result == PIXELCHAR_SUCCESS)
 	{
-		backend->func.vkFreeMemory(backend->device, backend->vertex_index_memory, 0);
-		backend->func.vkDestroyBuffer(backend->device, backend->staging_buffer, 0);
-		backend->func.vkDestroyBuffer(backend->device, backend->vertex_index_buffer, 0);
-		free(backend);
-		return PIXELCHAR_ERROR_OTHER;
+		if (
+			_allocate_best_memory(
+				backend,
+				&memory_properties,
+				staging_memory_requirements.size,
+				staging_memory_requirements.memoryTypeBits,
+				staging_preference_flags,
+				staging_exclude_flags,
+				4,
+				&backend->staging_memory,
+				&backend->staging_memory_flags
+			) != VK_SUCCESS
+		) result = PIXELCHAR_ERROR_BACKEND_API;
+		else staging_memory_allocated = true;
 	}
 
 	backend->staging_buffer_size = staging_memory_requirements.size;
 
-	if (backend->func.vkBindBufferMemory(backend->device, backend->vertex_index_buffer, backend->vertex_index_memory, 0) != VK_SUCCESS)
-	{
-		backend->func.vkDestroyBuffer(backend->device, backend->staging_buffer, 0);
-		backend->func.vkDestroyBuffer(backend->device, backend->vertex_index_buffer, 0);
-		backend->func.vkFreeMemory(backend->device, backend->staging_memory, 0);
-		backend->func.vkFreeMemory(backend->device, backend->vertex_index_memory, 0);
-		free(backend);
-		return PIXELCHAR_ERROR_OTHER;
-	}
-
-	if (backend->func.vkBindBufferMemory(backend->device, backend->staging_buffer, backend->staging_memory, 0) != VK_SUCCESS)
-	{
-		backend->func.vkDestroyBuffer(backend->device, backend->staging_buffer, 0);
-		backend->func.vkDestroyBuffer(backend->device, backend->vertex_index_buffer, 0);
-		backend->func.vkFreeMemory(backend->device, backend->staging_memory, 0);
-		backend->func.vkFreeMemory(backend->device, backend->vertex_index_memory, 0);
-		free(backend);
-		return PIXELCHAR_ERROR_OTHER;
-	}
+	if (result == PIXELCHAR_SUCCESS) if (backend->func.vkBindBufferMemory(backend->device, backend->vertex_index_buffer, backend->vertex_index_memory, 0) != VK_SUCCESS) result = PIXELCHAR_ERROR_BACKEND_API;
+	if (result == PIXELCHAR_SUCCESS) if (backend->func.vkBindBufferMemory(backend->device, backend->staging_buffer, backend->staging_memory, 0) != VK_SUCCESS) result = PIXELCHAR_ERROR_BACKEND_API;
 
 	VkShaderModule vertex_shader, fragment_shader;
 
@@ -645,462 +636,374 @@ PixelcharResult pixelcharRendererBackendVulkanInitialize(
 	shader_info.pCode = (vertex_shader_custom == 0 ? vertex_shader_code : vertex_shader_custom);
 	shader_info.codeSize = (vertex_shader_custom == 0 ? vertex_shader_code_len : vertex_shader_custom_length);
 
-	if (backend->func.vkCreateShaderModule(backend->device, &shader_info, 0, &vertex_shader) != VK_SUCCESS)
+	if (result == PIXELCHAR_SUCCESS)
 	{
-		backend->func.vkDestroyBuffer(backend->device, backend->staging_buffer, 0);
-		backend->func.vkDestroyBuffer(backend->device, backend->vertex_index_buffer, 0);
-		backend->func.vkFreeMemory(backend->device, backend->staging_memory, 0);
-		backend->func.vkFreeMemory(backend->device, backend->vertex_index_memory, 0);
-		free(backend);
-		return PIXELCHAR_ERROR_OTHER;
+		if (backend->func.vkCreateShaderModule(backend->device, &shader_info, 0, &vertex_shader) != VK_SUCCESS) result = PIXELCHAR_ERROR_BACKEND_API;
+		else vertex_shader_module_created = true;
 	}
 
 	shader_info.pCode = (fragment_shader_custom == 0 ? fragment_shader_code : fragment_shader_custom);
 	shader_info.codeSize = (fragment_shader_custom == 0 ? fragment_shader_code_len : fragment_shader_custom_length);
 
-	if (backend->func.vkCreateShaderModule(backend->device, &shader_info, 0, &fragment_shader) != VK_SUCCESS)
+	if (result == PIXELCHAR_SUCCESS)
 	{
-		backend->func.vkDestroyShaderModule(backend->device, vertex_shader, 0);
-		backend->func.vkDestroyBuffer(backend->device, backend->staging_buffer, 0);
-		backend->func.vkDestroyBuffer(backend->device, backend->vertex_index_buffer, 0);
-		backend->func.vkFreeMemory(backend->device, backend->staging_memory, 0);
-		backend->func.vkFreeMemory(backend->device, backend->vertex_index_memory, 0);
-		free(backend);
-		return PIXELCHAR_ERROR_OTHER;
+		if (backend->func.vkCreateShaderModule(backend->device, &shader_info, 0, &fragment_shader) != VK_SUCCESS) result = PIXELCHAR_ERROR_BACKEND_API;
+		else fragment_shader_module_created = true;
 	}
 
-	VkDescriptorSetLayoutBinding pixelfont_buffer_binding = { 0 };
-	pixelfont_buffer_binding.descriptorCount = 1;
-	pixelfont_buffer_binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-	pixelfont_buffer_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-	VkDescriptorSetLayoutBinding bindings[PIXELCHAR_RENDERER_MAX_FONT_COUNT];
-	for (int32_t i = 0; i < PIXELCHAR_RENDERER_MAX_FONT_COUNT; i++)
+	if (result == PIXELCHAR_SUCCESS)
 	{
-		pixelfont_buffer_binding.binding = i;
-		bindings[i] = pixelfont_buffer_binding;
-	}
+		VkDescriptorSetLayoutBinding pixelfont_buffer_binding = { 0 };
+		pixelfont_buffer_binding.descriptorCount = 1;
+		pixelfont_buffer_binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		pixelfont_buffer_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-	VkDescriptorSetLayoutCreateInfo set_layout_info = { 0 };
-	set_layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	set_layout_info.bindingCount = PIXELCHAR_RENDERER_MAX_FONT_COUNT;
-	set_layout_info.pBindings = bindings;
-
-	if (backend->func.vkCreateDescriptorSetLayout(backend->device, &set_layout_info, 0, &backend->set_layout) != VK_SUCCESS)
-	{
-		backend->func.vkDestroyShaderModule(backend->device, fragment_shader, 0);
-		backend->func.vkDestroyShaderModule(backend->device, vertex_shader, 0);
-		backend->func.vkDestroyBuffer(backend->device, backend->staging_buffer, 0);
-		backend->func.vkDestroyBuffer(backend->device, backend->vertex_index_buffer, 0);
-		backend->func.vkFreeMemory(backend->device, backend->staging_memory, 0);
-		backend->func.vkFreeMemory(backend->device, backend->vertex_index_memory, 0);
-		free(backend);
-		return PIXELCHAR_ERROR_OTHER;
-	}
-
-	VkPushConstantRange push_constant_range = { 0 };
-	push_constant_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-	push_constant_range.offset = 0;
-	push_constant_range.size = sizeof(_push_constants);
-
-	VkPipelineLayoutCreateInfo pipeline_layout_info = { 0 };
-	pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-	pipeline_layout_info.setLayoutCount = 1;
-	pipeline_layout_info.pSetLayouts = &backend->set_layout;
-	pipeline_layout_info.pushConstantRangeCount = 1;
-	pipeline_layout_info.pPushConstantRanges = &push_constant_range;
-
-	if (backend->func.vkCreatePipelineLayout(backend->device, &pipeline_layout_info, 0, &backend->pipe_layout) != VK_SUCCESS)
-	{
-		backend->func.vkDestroyDescriptorSetLayout(backend->device, backend->set_layout, 0);
-		backend->func.vkDestroyShaderModule(backend->device, fragment_shader, 0);
-		backend->func.vkDestroyShaderModule(backend->device, vertex_shader, 0);
-		backend->func.vkDestroyBuffer(backend->device, backend->staging_buffer, 0);
-		backend->func.vkDestroyBuffer(backend->device, backend->vertex_index_buffer, 0);
-		backend->func.vkFreeMemory(backend->device, backend->staging_memory, 0);
-		backend->func.vkFreeMemory(backend->device, backend->vertex_index_memory, 0);
-		free(backend);
-		return PIXELCHAR_ERROR_OTHER;
-	}
-
-	VkVertexInputBindingDescription vertex_binding_description = { 0 };
-	vertex_binding_description.binding = 0;
-	vertex_binding_description.stride = sizeof(_pixelchar_renderer_char);
-	vertex_binding_description.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
-
-	VkVertexInputAttributeDescription vertex_attribute_descriptions[] =
-	{
+		VkDescriptorSetLayoutBinding bindings[PIXELCHAR_RENDERER_MAX_FONT_COUNT];
+		for (int32_t i = 0; i < PIXELCHAR_RENDERER_MAX_FONT_COUNT; i++)
 		{
-			.binding = 0,
-			.location = 0,
-			.format = VK_FORMAT_R32_UINT,
-			.offset = offsetof(_pixelchar_renderer_char, bitmapIndex)
-		},
-
-		{
-			.binding = 0,
-			.location = 1,
-			.format = VK_FORMAT_R32_UINT,
-			.offset = offsetof(_pixelchar_renderer_char, flags)
-		},
-
-		{
-			.binding = 0,
-			.location = 2,
-			.format = VK_FORMAT_R16_UINT,
-			.offset = offsetof(_pixelchar_renderer_char, fontIndex)
-		},
-
-		{
-			.binding = 0,
-			.location = 3,
-			.format = VK_FORMAT_R16_UINT,
-			.offset = offsetof(_pixelchar_renderer_char, fontResolution)
-		},
-
-		{
-			.binding = 0,
-			.location = 4,
-			.format = VK_FORMAT_R16_UINT,
-			.offset = offsetof(_pixelchar_renderer_char, scale)
-		},
-
-		{
-			.binding = 0,
-			.location = 5,
-			.format = VK_FORMAT_R16_UINT,
-			.offset = offsetof(_pixelchar_renderer_char, bitmapWidth)
-		},
-
-		{
-			.binding = 0,
-			.location = 6,
-			.format = VK_FORMAT_R32G32_SINT,
-			.offset = offsetof(_pixelchar_renderer_char, position)
-		},
-
-		{
-			.binding = 0,
-			.location = 7,
-			.format = VK_FORMAT_R8G8B8A8_UNORM,
-			.offset = offsetof(_pixelchar_renderer_char, color)
-		},
-
-		{
-			.binding = 0,
-			.location = 8,
-			.format = VK_FORMAT_R8G8B8A8_UNORM,
-			.offset = offsetof(_pixelchar_renderer_char, backgroundColor)
-		},
-
-	};
-
-
-	VkPipelineVertexInputStateCreateInfo vertex_input_stage = { 0 };
-	vertex_input_stage.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-	vertex_input_stage.vertexBindingDescriptionCount = 1;
-	vertex_input_stage.pVertexBindingDescriptions = &vertex_binding_description;
-	vertex_input_stage.vertexAttributeDescriptionCount = sizeof(vertex_attribute_descriptions) / sizeof(vertex_attribute_descriptions[0]);
-	vertex_input_stage.pVertexAttributeDescriptions = vertex_attribute_descriptions;
-
-
-	VkPipelineColorBlendAttachmentState color_blend_attachment = { 0 };
-	color_blend_attachment.blendEnable = VK_TRUE;
-	color_blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-	color_blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-	color_blend_attachment.colorBlendOp = VK_BLEND_OP_ADD;
-	color_blend_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-	color_blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-	color_blend_attachment.alphaBlendOp = VK_BLEND_OP_ADD;
-	color_blend_attachment.colorWriteMask =
-		VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-		VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-
-	VkPipelineColorBlendStateCreateInfo color_blend_state = { 0 };
-	color_blend_state.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-	color_blend_state.logicOpEnable = VK_FALSE;
-	color_blend_state.logicOp = VK_LOGIC_OP_COPY;
-	color_blend_state.attachmentCount = 1;
-	color_blend_state.pAttachments = &color_blend_attachment;
-	color_blend_state.blendConstants[0] = 0.0f;
-	color_blend_state.blendConstants[1] = 0.0f;
-	color_blend_state.blendConstants[2] = 0.0f;
-	color_blend_state.blendConstants[3] = 0.0f;
-
-	VkPipelineInputAssemblyStateCreateInfo input_assembly = { 0 };
-	input_assembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-	input_assembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-
-	VkRect2D initial_scissor = { 0 };
-	VkViewport initial_viewport = { 0 };
-	initial_viewport.maxDepth = 1.0f;
-
-	VkPipelineViewportStateCreateInfo viewport_state = { 0 };
-	viewport_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-	viewport_state.scissorCount = 1;
-	viewport_state.pScissors = &initial_scissor;
-	viewport_state.viewportCount = 1;
-	viewport_state.pViewports = &initial_viewport;
-
-	VkPipelineRasterizationStateCreateInfo rasterization_state = { 0 };
-	rasterization_state.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-	rasterization_state.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-	rasterization_state.cullMode = VK_CULL_MODE_BACK_BIT;
-	rasterization_state.polygonMode = VK_POLYGON_MODE_FILL;
-	rasterization_state.lineWidth = 1.0f;
-
-	VkPipelineMultisampleStateCreateInfo multi_sample_state = { 0 };
-	multi_sample_state.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-	multi_sample_state.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-
-	VkPipelineShaderStageCreateInfo vertex_shader_stage = { 0 };
-	vertex_shader_stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-	vertex_shader_stage.pName = "main";
-	vertex_shader_stage.stage = VK_SHADER_STAGE_VERTEX_BIT;
-	vertex_shader_stage.module = vertex_shader;
-
-	VkPipelineShaderStageCreateInfo fragment_shader_stage = { 0 };
-	fragment_shader_stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-	fragment_shader_stage.pName = "main";
-	fragment_shader_stage.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-	fragment_shader_stage.module = fragment_shader;
-
-	VkPipelineShaderStageCreateInfo shader_stages[] = {
-		vertex_shader_stage,
-		fragment_shader_stage
-	};
-
-	VkDynamicState dynamic_states[] = {
-		VK_DYNAMIC_STATE_SCISSOR,
-		VK_DYNAMIC_STATE_VIEWPORT
-	};
-
-	VkPipelineDynamicStateCreateInfo dynamic_state = { 0 };
-	dynamic_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-	dynamic_state.pDynamicStates = dynamic_states;
-	dynamic_state.dynamicStateCount = 2;
-
-	VkGraphicsPipelineCreateInfo pipe_info = { 0 };
-	pipe_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-	pipe_info.pVertexInputState = &vertex_input_stage;
-	pipe_info.pColorBlendState = &color_blend_state;
-	pipe_info.pStages = shader_stages;
-	pipe_info.layout = backend->pipe_layout;
-	pipe_info.renderPass = backend->render_pass;
-	pipe_info.subpass = backend->subpass;
-	pipe_info.stageCount = 2;
-	pipe_info.pRasterizationState = &rasterization_state;
-	pipe_info.pViewportState = &viewport_state;
-	pipe_info.pDynamicState = &dynamic_state;
-	pipe_info.pMultisampleState = &multi_sample_state;
-	pipe_info.pInputAssemblyState = &input_assembly;
-
-	if (backend->func.vkCreateGraphicsPipelines(backend->device, 0, 1, &pipe_info, 0, &backend->pipeline) != VK_SUCCESS)
-	{
-		backend->func.vkDestroyPipelineLayout(backend->device, backend->pipe_layout, 0);
-		backend->func.vkDestroyDescriptorSetLayout(backend->device, backend->set_layout, 0);
-		backend->func.vkDestroyShaderModule(backend->device, fragment_shader, 0);
-		backend->func.vkDestroyShaderModule(backend->device, vertex_shader, 0);
-		backend->func.vkDestroyBuffer(backend->device, backend->staging_buffer, 0);
-		backend->func.vkDestroyBuffer(backend->device, backend->vertex_index_buffer, 0);
-		backend->func.vkFreeMemory(backend->device, backend->staging_memory, 0);
-		backend->func.vkFreeMemory(backend->device, backend->vertex_index_memory, 0);
-		free(backend);
-		return PIXELCHAR_ERROR_OTHER;
-	}
-
-	backend->func.vkDestroyShaderModule(backend->device, vertex_shader, 0);
-	backend->func.vkDestroyShaderModule(backend->device, fragment_shader, 0);
-
-	VkCommandPoolCreateInfo pool_info = { 0 };
-	pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-	pool_info.queueFamilyIndex = backend->queue_index;
-	pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-
-	if (backend->func.vkCreateCommandPool(backend->device, &pool_info, 0, &backend->cmd_pool) != VK_SUCCESS)
-	{
-		backend->func.vkDestroyPipeline(backend->device, backend->pipeline, 0);
-		backend->func.vkDestroyPipelineLayout(backend->device, backend->pipe_layout, 0);
-		backend->func.vkDestroyDescriptorSetLayout(backend->device, backend->set_layout, 0);
-		backend->func.vkDestroyBuffer(backend->device, backend->staging_buffer, 0);
-		backend->func.vkDestroyBuffer(backend->device, backend->vertex_index_buffer, 0);
-		backend->func.vkFreeMemory(backend->device, backend->staging_memory, 0);
-		backend->func.vkFreeMemory(backend->device, backend->vertex_index_memory, 0);
-		free(backend);
-		return PIXELCHAR_ERROR_OTHER;
-	}
-
-	VkCommandBufferAllocateInfo cmd_alloc_info = { 0 };
-	cmd_alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	cmd_alloc_info.commandBufferCount = 1;
-	cmd_alloc_info.commandPool = backend->cmd_pool;
-	cmd_alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-
-	if (backend->func.vkAllocateCommandBuffers(backend->device, &cmd_alloc_info, &backend->cmd) != VK_SUCCESS)
-	{
-		backend->func.vkDestroyCommandPool(backend->device, backend->cmd_pool, 0);
-		backend->func.vkDestroyPipeline(backend->device, backend->pipeline, 0);
-		backend->func.vkDestroyPipelineLayout(backend->device, backend->pipe_layout, 0);
-		backend->func.vkDestroyDescriptorSetLayout(backend->device, backend->set_layout, 0);
-		backend->func.vkDestroyBuffer(backend->device, backend->staging_buffer, 0);
-		backend->func.vkDestroyBuffer(backend->device, backend->vertex_index_buffer, 0);
-		backend->func.vkFreeMemory(backend->device, backend->staging_memory, 0);
-		backend->func.vkFreeMemory(backend->device, backend->vertex_index_memory, 0);
-		free(backend);
-		return PIXELCHAR_ERROR_OTHER;
-	}
-	
-	VkDescriptorPoolSize pool_size = { 0 };
-	pool_size.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-	pool_size.descriptorCount = PIXELCHAR_RENDERER_MAX_FONT_COUNT;
-
-	VkDescriptorPoolCreateInfo descriptor_pool_info = { 0 };
-	descriptor_pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	descriptor_pool_info.maxSets = 1;
-	descriptor_pool_info.poolSizeCount = 1;
-	descriptor_pool_info.pPoolSizes = &pool_size;
-
-	if (backend->func.vkCreateDescriptorPool(backend->device, &descriptor_pool_info, 0, &backend->descriptor_pool) != VK_SUCCESS)
-	{
-		backend->func.vkFreeCommandBuffers(backend->device, backend->cmd_pool, 1, &backend->cmd);
-		backend->func.vkDestroyCommandPool(backend->device, backend->cmd_pool, 0);
-		backend->func.vkDestroyPipeline(backend->device, backend->pipeline, 0);
-		backend->func.vkDestroyPipelineLayout(backend->device, backend->pipe_layout, 0);
-		backend->func.vkDestroyDescriptorSetLayout(backend->device, backend->set_layout, 0);
-		backend->func.vkDestroyBuffer(backend->device, backend->staging_buffer, 0);
-		backend->func.vkDestroyBuffer(backend->device, backend->vertex_index_buffer, 0);
-		backend->func.vkFreeMemory(backend->device, backend->staging_memory, 0);
-		backend->func.vkFreeMemory(backend->device, backend->vertex_index_memory, 0);
-		free(backend);
-		return PIXELCHAR_ERROR_OTHER;
-	}
-
-	VkDescriptorSetAllocateInfo descriptor_set_info = { 0 };
-	descriptor_set_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	descriptor_set_info.pSetLayouts = &backend->set_layout;
-	descriptor_set_info.descriptorSetCount = 1;
-	descriptor_set_info.descriptorPool = backend->descriptor_pool;
-
-	if (backend->func.vkAllocateDescriptorSets(backend->device, &descriptor_set_info, &backend->descriptor_set) != VK_SUCCESS)
-	{
-		backend->func.vkDestroyDescriptorPool(backend->device, backend->descriptor_pool, 0);
-		backend->func.vkFreeCommandBuffers(backend->device, backend->cmd_pool, 1, &backend->cmd);
-		backend->func.vkDestroyCommandPool(backend->device, backend->cmd_pool, 0);
-		backend->func.vkDestroyPipeline(backend->device, backend->pipeline, 0);
-		backend->func.vkDestroyPipelineLayout(backend->device, backend->pipe_layout, 0);
-		backend->func.vkDestroyDescriptorSetLayout(backend->device, backend->set_layout, 0);
-		backend->func.vkDestroyBuffer(backend->device, backend->staging_buffer, 0);
-		backend->func.vkDestroyBuffer(backend->device, backend->vertex_index_buffer, 0);
-		backend->func.vkFreeMemory(backend->device, backend->staging_memory, 0);
-		backend->func.vkFreeMemory(backend->device, backend->vertex_index_memory, 0);
-		free(backend);
-		return PIXELCHAR_ERROR_OTHER;
-	}
-
-	VkFenceCreateInfo fence_info = { 0 };
-	fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-	fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-	
-	if (backend->func.vkCreateFence(backend->device, &fence_info, 0, &backend->fence) != VK_SUCCESS)
-	{
-		backend->func.vkDestroyDescriptorPool(backend->device, backend->descriptor_pool, 0);
-		backend->func.vkFreeCommandBuffers(backend->device, backend->cmd_pool, 1, &backend->cmd);
-		backend->func.vkDestroyCommandPool(backend->device, backend->cmd_pool, 0);
-		backend->func.vkDestroyPipeline(backend->device, backend->pipeline, 0);
-		backend->func.vkDestroyPipelineLayout(backend->device, backend->pipe_layout, 0);
-		backend->func.vkDestroyDescriptorSetLayout(backend->device, backend->set_layout, 0);
-		backend->func.vkDestroyBuffer(backend->device, backend->staging_buffer, 0);
-		backend->func.vkDestroyBuffer(backend->device, backend->vertex_index_buffer, 0);
-		backend->func.vkFreeMemory(backend->device, backend->staging_memory, 0);
-		backend->func.vkFreeMemory(backend->device, backend->vertex_index_memory, 0);
-		free(backend);
-		return PIXELCHAR_ERROR_OTHER;
-	}
-
-	if (backend->func.vkMapMemory(backend->device, backend->staging_memory, 0, staging_buffer_size, 0, &backend->staging_buffer_host_handle) != VK_SUCCESS)
-	{
-		backend->func.vkDestroyFence(backend->device, backend->fence, 0);
-		backend->func.vkDestroyDescriptorPool(backend->device, backend->descriptor_pool, 0);
-		backend->func.vkFreeCommandBuffers(backend->device, backend->cmd_pool, 1, &backend->cmd);
-		backend->func.vkDestroyCommandPool(backend->device, backend->cmd_pool, 0);
-		backend->func.vkDestroyPipeline(backend->device, backend->pipeline, 0);
-		backend->func.vkDestroyPipelineLayout(backend->device, backend->pipe_layout, 0);
-		backend->func.vkDestroyDescriptorSetLayout(backend->device, backend->set_layout, 0);
-		backend->func.vkDestroyBuffer(backend->device, backend->staging_buffer, 0);
-		backend->func.vkDestroyBuffer(backend->device, backend->vertex_index_buffer, 0);
-		backend->func.vkFreeMemory(backend->device, backend->staging_memory, 0);
-		backend->func.vkFreeMemory(backend->device, backend->vertex_index_memory, 0);
-		free(backend);
-		return PIXELCHAR_ERROR_OTHER;
-	}
-
-	if ((backend->vertex_index_memory_flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) && (backend->vertex_index_memory_flags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT))
-	{
-		if (backend->func.vkMapMemory(backend->device, backend->vertex_index_memory, 0, vertex_index_buffer_size, 0, &backend->vertex_index_buffer_host_handle) != VK_SUCCESS)
-		{
-			backend->vertex_index_memory_flags &= (~VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+			pixelfont_buffer_binding.binding = i;
+			bindings[i] = pixelfont_buffer_binding;
 		}
+
+		VkDescriptorSetLayoutCreateInfo set_layout_info = { 0 };
+		set_layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		set_layout_info.bindingCount = PIXELCHAR_RENDERER_MAX_FONT_COUNT;
+		set_layout_info.pBindings = bindings;
+
+		if (backend->func.vkCreateDescriptorSetLayout(backend->device, &set_layout_info, 0, &backend->set_layout) != VK_SUCCESS) result = PIXELCHAR_ERROR_BACKEND_API;
+		else descriptor_set_layout_created = true;
+	}
+
+	if (result == PIXELCHAR_SUCCESS)
+	{
+		VkPushConstantRange push_constant_range = { 0 };
+		push_constant_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+		push_constant_range.offset = 0;
+		push_constant_range.size = sizeof(_push_constants);
+
+		VkPipelineLayoutCreateInfo pipeline_layout_info = { 0 };
+		pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+		pipeline_layout_info.setLayoutCount = 1;
+		pipeline_layout_info.pSetLayouts = &backend->set_layout;
+		pipeline_layout_info.pushConstantRangeCount = 1;
+		pipeline_layout_info.pPushConstantRanges = &push_constant_range;
+
+		if (backend->func.vkCreatePipelineLayout(backend->device, &pipeline_layout_info, 0, &backend->pipe_layout) != VK_SUCCESS) result = PIXELCHAR_ERROR_BACKEND_API;
+		else pipeline_layout_created = true;
+	}
+
+	if (result == PIXELCHAR_SUCCESS)
+	{
+		VkVertexInputBindingDescription vertex_binding_description = { 0 };
+		vertex_binding_description.binding = 0;
+		vertex_binding_description.stride = sizeof(_pixelchar_renderer_char);
+		vertex_binding_description.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
+
+		VkVertexInputAttributeDescription vertex_attribute_descriptions[] =
+		{
+			{
+				.binding = 0,
+				.location = 0,
+				.format = VK_FORMAT_R32_UINT,
+				.offset = offsetof(_pixelchar_renderer_char, bitmapIndex)
+			},
+
+			{
+				.binding = 0,
+				.location = 1,
+				.format = VK_FORMAT_R32_UINT,
+				.offset = offsetof(_pixelchar_renderer_char, flags)
+			},
+
+			{
+				.binding = 0,
+				.location = 2,
+				.format = VK_FORMAT_R16_UINT,
+				.offset = offsetof(_pixelchar_renderer_char, fontIndex)
+			},
+
+			{
+				.binding = 0,
+				.location = 3,
+				.format = VK_FORMAT_R16_UINT,
+				.offset = offsetof(_pixelchar_renderer_char, fontResolution)
+			},
+
+			{
+				.binding = 0,
+				.location = 4,
+				.format = VK_FORMAT_R16_UINT,
+				.offset = offsetof(_pixelchar_renderer_char, scale)
+			},
+
+			{
+				.binding = 0,
+				.location = 5,
+				.format = VK_FORMAT_R16_UINT,
+				.offset = offsetof(_pixelchar_renderer_char, bitmapWidth)
+			},
+
+			{
+				.binding = 0,
+				.location = 6,
+				.format = VK_FORMAT_R32G32_SINT,
+				.offset = offsetof(_pixelchar_renderer_char, position)
+			},
+
+			{
+				.binding = 0,
+				.location = 7,
+				.format = VK_FORMAT_R8G8B8A8_UNORM,
+				.offset = offsetof(_pixelchar_renderer_char, color)
+			},
+
+			{
+				.binding = 0,
+				.location = 8,
+				.format = VK_FORMAT_R8G8B8A8_UNORM,
+				.offset = offsetof(_pixelchar_renderer_char, backgroundColor)
+			},
+
+		};
+
+
+		VkPipelineVertexInputStateCreateInfo vertex_input_stage = { 0 };
+		vertex_input_stage.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+		vertex_input_stage.vertexBindingDescriptionCount = 1;
+		vertex_input_stage.pVertexBindingDescriptions = &vertex_binding_description;
+		vertex_input_stage.vertexAttributeDescriptionCount = sizeof(vertex_attribute_descriptions) / sizeof(vertex_attribute_descriptions[0]);
+		vertex_input_stage.pVertexAttributeDescriptions = vertex_attribute_descriptions;
+
+
+		VkPipelineColorBlendAttachmentState color_blend_attachment = { 0 };
+		color_blend_attachment.blendEnable = VK_TRUE;
+		color_blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+		color_blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+		color_blend_attachment.colorBlendOp = VK_BLEND_OP_ADD;
+		color_blend_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+		color_blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+		color_blend_attachment.alphaBlendOp = VK_BLEND_OP_ADD;
+		color_blend_attachment.colorWriteMask =
+			VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
+			VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+
+		VkPipelineColorBlendStateCreateInfo color_blend_state = { 0 };
+		color_blend_state.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+		color_blend_state.logicOpEnable = VK_FALSE;
+		color_blend_state.logicOp = VK_LOGIC_OP_COPY;
+		color_blend_state.attachmentCount = 1;
+		color_blend_state.pAttachments = &color_blend_attachment;
+		color_blend_state.blendConstants[0] = 0.0f;
+		color_blend_state.blendConstants[1] = 0.0f;
+		color_blend_state.blendConstants[2] = 0.0f;
+		color_blend_state.blendConstants[3] = 0.0f;
+
+		VkPipelineInputAssemblyStateCreateInfo input_assembly = { 0 };
+		input_assembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+		input_assembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+
+		VkRect2D initial_scissor = { 0 };
+		VkViewport initial_viewport = { 0 };
+		initial_viewport.maxDepth = 1.0f;
+
+		VkPipelineViewportStateCreateInfo viewport_state = { 0 };
+		viewport_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+		viewport_state.scissorCount = 1;
+		viewport_state.pScissors = &initial_scissor;
+		viewport_state.viewportCount = 1;
+		viewport_state.pViewports = &initial_viewport;
+
+		VkPipelineRasterizationStateCreateInfo rasterization_state = { 0 };
+		rasterization_state.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+		rasterization_state.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+		rasterization_state.cullMode = VK_CULL_MODE_BACK_BIT;
+		rasterization_state.polygonMode = VK_POLYGON_MODE_FILL;
+		rasterization_state.lineWidth = 1.0f;
+
+		VkPipelineMultisampleStateCreateInfo multi_sample_state = { 0 };
+		multi_sample_state.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+		multi_sample_state.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+
+		VkPipelineShaderStageCreateInfo vertex_shader_stage = { 0 };
+		vertex_shader_stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+		vertex_shader_stage.pName = "main";
+		vertex_shader_stage.stage = VK_SHADER_STAGE_VERTEX_BIT;
+		vertex_shader_stage.module = vertex_shader;
+
+		VkPipelineShaderStageCreateInfo fragment_shader_stage = { 0 };
+		fragment_shader_stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+		fragment_shader_stage.pName = "main";
+		fragment_shader_stage.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+		fragment_shader_stage.module = fragment_shader;
+
+		VkPipelineShaderStageCreateInfo shader_stages[] = {
+			vertex_shader_stage,
+			fragment_shader_stage
+		};
+
+		VkDynamicState dynamic_states[] = {
+			VK_DYNAMIC_STATE_SCISSOR,
+			VK_DYNAMIC_STATE_VIEWPORT
+		};
+
+		VkPipelineDynamicStateCreateInfo dynamic_state = { 0 };
+		dynamic_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+		dynamic_state.pDynamicStates = dynamic_states;
+		dynamic_state.dynamicStateCount = 2;
+
+		VkGraphicsPipelineCreateInfo pipe_info = { 0 };
+		pipe_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+		pipe_info.pVertexInputState = &vertex_input_stage;
+		pipe_info.pColorBlendState = &color_blend_state;
+		pipe_info.pStages = shader_stages;
+		pipe_info.layout = backend->pipe_layout;
+		pipe_info.renderPass = backend->render_pass;
+		pipe_info.subpass = backend->subpass;
+		pipe_info.stageCount = 2;
+		pipe_info.pRasterizationState = &rasterization_state;
+		pipe_info.pViewportState = &viewport_state;
+		pipe_info.pDynamicState = &dynamic_state;
+		pipe_info.pMultisampleState = &multi_sample_state;
+		pipe_info.pInputAssemblyState = &input_assembly;
+
+		if (backend->func.vkCreateGraphicsPipelines(backend->device, 0, 1, &pipe_info, 0, &backend->pipeline) != VK_SUCCESS) result = PIXELCHAR_ERROR_BACKEND_API;
+		else pipeline_created = true;
+	}
+
+	if (result == PIXELCHAR_SUCCESS)
+	{
+		VkCommandPoolCreateInfo pool_info = { 0 };
+		pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+		pool_info.queueFamilyIndex = backend->queue_index;
+		pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+
+		if (backend->func.vkCreateCommandPool(backend->device, &pool_info, 0, &backend->cmd_pool) != VK_SUCCESS) result = PIXELCHAR_ERROR_BACKEND_API;
+		else command_pool_created = true;
+
+	}
+
+	if (result == PIXELCHAR_SUCCESS)
+	{
+		VkCommandBufferAllocateInfo cmd_alloc_info = { 0 };
+		cmd_alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		cmd_alloc_info.commandBufferCount = 1;
+		cmd_alloc_info.commandPool = backend->cmd_pool;
+		cmd_alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+
+		if (backend->func.vkAllocateCommandBuffers(backend->device, &cmd_alloc_info, &backend->cmd) != VK_SUCCESS) result = PIXELCHAR_ERROR_BACKEND_API;
+		else command_buffers_allocated;
+	}
+	
+	if (result == PIXELCHAR_SUCCESS)
+	{
+		VkDescriptorPoolSize pool_size = { 0 };
+		pool_size.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		pool_size.descriptorCount = PIXELCHAR_RENDERER_MAX_FONT_COUNT;
+
+		VkDescriptorPoolCreateInfo descriptor_pool_info = { 0 };
+		descriptor_pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		descriptor_pool_info.maxSets = 1;
+		descriptor_pool_info.poolSizeCount = 1;
+		descriptor_pool_info.pPoolSizes = &pool_size;
+
+		if (backend->func.vkCreateDescriptorPool(backend->device, &descriptor_pool_info, 0, &backend->descriptor_pool) != VK_SUCCESS) result = PIXELCHAR_ERROR_BACKEND_API;
+		else descriptor_pool_created = true;
+	}
+
+	if (result == PIXELCHAR_SUCCESS)
+	{
+		VkDescriptorSetAllocateInfo descriptor_set_info = { 0 };
+		descriptor_set_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		descriptor_set_info.pSetLayouts = &backend->set_layout;
+		descriptor_set_info.descriptorSetCount = 1;
+		descriptor_set_info.descriptorPool = backend->descriptor_pool;
+
+		if (backend->func.vkAllocateDescriptorSets(backend->device, &descriptor_set_info, &backend->descriptor_set) != VK_SUCCESS) result = PIXELCHAR_ERROR_BACKEND_API;
+	}
+
+	if (result == PIXELCHAR_SUCCESS)
+	{
+		VkFenceCreateInfo fence_info = { 0 };
+		fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+		fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+	
+		if (backend->func.vkCreateFence(backend->device, &fence_info, 0, &backend->fence) != VK_SUCCESS) result = PIXELCHAR_ERROR_BACKEND_API;
+		else fence_created = true;
+	}
+
+	if (result == PIXELCHAR_SUCCESS)
+	{
+		if (backend->func.vkMapMemory(backend->device, backend->staging_memory, 0, staging_buffer_size, 0, &backend->staging_buffer_host_handle) != VK_SUCCESS) result = PIXELCHAR_ERROR_BACKEND_API;
+		else staging_memory_mapped = true;
+	}
+
+	if (result == PIXELCHAR_SUCCESS) if ((backend->vertex_index_memory_flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) && (backend->vertex_index_memory_flags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT))
+	{
+		if (backend->func.vkMapMemory(backend->device, backend->vertex_index_memory, 0, vertex_index_buffer_size, 0, &backend->vertex_index_buffer_host_handle) != VK_SUCCESS) backend->vertex_index_memory_flags &= (~VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+		else vertex_index_memory_mapped = true;
 	}
 
 	uint32_t index_data[] = {0, 1, 2, 1, 3, 2};
 
-	if (
-		_pixelchar_upload_data_to_buffer(
-			backend,
-			index_data,
-			sizeof(index_data),
-			backend->vertex_index_buffer,
-			PIXELCHAR_PAD(renderer->queue_total_length * sizeof(Pixelchar), 32),
-			backend->vertex_index_buffer_host_handle,
-			backend->vertex_index_memory_flags
-		) != VK_SUCCESS
-	)
+	if (result == PIXELCHAR_SUCCESS)
 	{
-		if ((backend->vertex_index_memory_flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) && (backend->vertex_index_memory_flags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT))
-			backend->func.vkUnmapMemory(backend->device, backend->vertex_index_memory);
-		backend->func.vkUnmapMemory(backend->device, backend->staging_memory);
-		backend->func.vkDestroyFence(backend->device, backend->fence, 0);
-		backend->func.vkDestroyDescriptorPool(backend->device, backend->descriptor_pool, 0);
-		backend->func.vkFreeCommandBuffers(backend->device, backend->cmd_pool, 1, &backend->cmd);
-		backend->func.vkDestroyCommandPool(backend->device, backend->cmd_pool, 0);
-		backend->func.vkDestroyPipeline(backend->device, backend->pipeline, 0);
-		backend->func.vkDestroyPipelineLayout(backend->device, backend->pipe_layout, 0);
-		backend->func.vkDestroyDescriptorSetLayout(backend->device, backend->set_layout, 0);
-		backend->func.vkDestroyBuffer(backend->device, backend->staging_buffer, 0);
-		backend->func.vkDestroyBuffer(backend->device, backend->vertex_index_buffer, 0);
-		backend->func.vkFreeMemory(backend->device, backend->staging_memory, 0);
-		backend->func.vkFreeMemory(backend->device, backend->vertex_index_memory, 0);
-		free(backend);
-		return PIXELCHAR_ERROR_OTHER;
+		if (
+			_pixelchar_upload_data_to_buffer(
+				backend,
+				index_data,
+				sizeof(index_data),
+				backend->vertex_index_buffer,
+				PIXELCHAR_PAD(renderer->queue_total_length * sizeof(Pixelchar), 32),
+				backend->vertex_index_buffer_host_handle,
+				backend->vertex_index_memory_flags
+			) != VK_SUCCESS
+		) result = PIXELCHAR_ERROR_BACKEND_API;
 	}
 
-	renderer->backends[PIXELCHAR_BACKEND_VULKAN] = backend;
+	if (result != PIXELCHAR_SUCCESS && vertex_index_memory_mapped) backend->func.vkUnmapMemory(backend->device, backend->vertex_index_memory);
+	if (result != PIXELCHAR_SUCCESS && staging_memory_mapped) backend->func.vkUnmapMemory(backend->device, backend->staging_memory);
+	if (result != PIXELCHAR_SUCCESS && fence_created) backend->func.vkDestroyFence(backend->device, backend->fence, 0);
+	if (result != PIXELCHAR_SUCCESS && descriptor_pool_created) backend->func.vkDestroyDescriptorPool(backend->device, backend->descriptor_pool, 0);
+	if (result != PIXELCHAR_SUCCESS && command_buffers_allocated) backend->func.vkFreeCommandBuffers(backend->device, backend->cmd_pool, 1, &backend->cmd);
+	if (result != PIXELCHAR_SUCCESS && command_pool_created) backend->func.vkDestroyCommandPool(backend->device, backend->cmd_pool, 0);
+	if (result != PIXELCHAR_SUCCESS && pipeline_created) backend->func.vkDestroyPipeline(backend->device, backend->pipeline, 0);
+	if (result != PIXELCHAR_SUCCESS && pipeline_layout_created) backend->func.vkDestroyPipelineLayout(backend->device, backend->pipe_layout, 0);
+	if (result != PIXELCHAR_SUCCESS && descriptor_set_layout_created) backend->func.vkDestroyDescriptorSetLayout(backend->device, backend->set_layout, 0);
+	if (fragment_shader_module_created) backend->func.vkDestroyShaderModule(backend->device, fragment_shader, 0);
+	if (vertex_shader_module_created) backend->func.vkDestroyShaderModule(backend->device, vertex_shader, 0);
+	if (result != PIXELCHAR_SUCCESS && staging_buffer_created) backend->func.vkDestroyBuffer(backend->device, backend->staging_buffer, 0);
+	if (result != PIXELCHAR_SUCCESS && vertex_index_buffer_created) backend->func.vkDestroyBuffer(backend->device, backend->vertex_index_buffer, 0);
+	if (result != PIXELCHAR_SUCCESS && staging_memory_allocated) backend->func.vkFreeMemory(backend->device, backend->staging_memory, 0);
+	if (result != PIXELCHAR_SUCCESS && vertex_index_memory_allocated) backend->func.vkFreeMemory(backend->device, backend->vertex_index_memory, 0);
+	if (result != PIXELCHAR_SUCCESS && backend_memory_allocated) free(backend);
+
+	renderer->backends[backendSlotIndex].data = backend;
 
 	for (uint32_t i = 0; i < PIXELCHAR_RENDERER_MAX_FONT_COUNT; i++)
 	{
 		if (renderer->fonts[i] != NULL)
 		{
-			if (_font_backend_vulkan_add_reference(renderer, i) == PIXELCHAR_SUCCESS)
-				renderer->font_backends_referenced[i][PIXELCHAR_BACKEND_VULKAN] = true;
+			if (_font_backend_vulkan_add_reference(renderer, i, backendSlotIndex) == PIXELCHAR_SUCCESS)
+				renderer->font_backends_referenced[i][backendSlotIndex] = true;
 		}
 	}
 
 	return PIXELCHAR_SUCCESS;
 }
 
-void pixelcharRendererBackendVulkanDeinitialize(PixelcharRenderer renderer)
+void pixelcharRendererBackendVulkanDeinitialize(PixelcharRenderer renderer, uint32_t backendSlotIndex)
 {
 	if (renderer == NULL) return;
-	if (renderer->backends[PIXELCHAR_BACKEND_VULKAN] == NULL) return;
+	if (renderer->backends[backendSlotIndex].data == NULL) return;
 
-	_renderer_backend_vulkan* backend = renderer->backends[PIXELCHAR_BACKEND_VULKAN];
+	_renderer_backend_vulkan* backend = renderer->backends[backendSlotIndex].data;
 
 	backend->func.vkDeviceWaitIdle(backend->device);
 
 	for (uint32_t i = 0; i < PIXELCHAR_RENDERER_MAX_FONT_COUNT; i++)
 	{
-		if (renderer->fonts[i] != NULL && renderer->font_backends_referenced[i][PIXELCHAR_BACKEND_VULKAN] == true)
-			_font_backend_vulkan_sub_reference(renderer, i);
+		if (renderer->fonts[i] != NULL && renderer->font_backends_referenced[i][backendSlotIndex] == true)
+			_font_backend_vulkan_sub_reference(renderer, i, backendSlotIndex);
 	}
 
 	if ((backend->vertex_index_memory_flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) && (backend->vertex_index_memory_flags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT))
@@ -1119,20 +1022,18 @@ void pixelcharRendererBackendVulkanDeinitialize(PixelcharRenderer renderer)
 	backend->func.vkFreeMemory(backend->device, backend->vertex_index_memory, 0);
 
 	free(backend);
-	renderer->backends[PIXELCHAR_BACKEND_VULKAN] = NULL;
+	renderer->backends[backendSlotIndex].data = NULL;
 }
 
-PixelcharResult pixelcharRendererBackendVulkanUpdateRenderingData(PixelcharRenderer renderer, VkCommandBuffer commandBuffer)
+PixelcharResult pixelcharRendererBackendVulkanUpdateRenderingData(PixelcharRenderer renderer, uint32_t backendSlotIndex, VkCommandBuffer commandBuffer)
 {
 	if (renderer == NULL) return PIXELCHAR_ERROR_INVALID_ARGUMENTS;
-
 	if (renderer->queue_filled_length == 0) return PIXELCHAR_SUCCESS;
+	if (renderer->backends[backendSlotIndex].data == NULL) return PIXELCHAR_ERROR_BACKEND_SLOT_NOT_IN_USED;
 
-	if (renderer->backends[PIXELCHAR_BACKEND_VULKAN] == NULL) return PIXELCHAR_ERROR_BACKEND_NOT_INITIALIZED;
+	_renderer_backend_vulkan* backend = renderer->backends[backendSlotIndex].data;
 
-	_renderer_backend_vulkan* backend = renderer->backends[PIXELCHAR_BACKEND_VULKAN];
-
-	_pixelchar_renderer_convert_queue(renderer, PIXELCHAR_BACKEND_VULKAN);
+	_pixelchar_renderer_convert_queue(renderer, backendSlotIndex);
 
 	if ((backend->vertex_index_memory_flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) && (backend->vertex_index_memory_flags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT))
 	{
@@ -1176,6 +1077,7 @@ PixelcharResult pixelcharRendererBackendVulkanUpdateRenderingData(PixelcharRende
 
 PixelcharResult pixelcharRendererBackendVulkanRender(
 	PixelcharRenderer renderer,
+	uint32_t backendSlotIndex,
 	VkCommandBuffer commandBuffer,
 	uint32_t width,
 	uint32_t height,
@@ -1188,12 +1090,10 @@ PixelcharResult pixelcharRendererBackendVulkanRender(
 	if (renderer == NULL) return PIXELCHAR_ERROR_INVALID_ARGUMENTS;
 	if (width == 0) return PIXELCHAR_ERROR_INVALID_ARGUMENTS;
 	if (height == 0) return PIXELCHAR_ERROR_INVALID_ARGUMENTS;
-
 	if (renderer->queue_filled_length == 0) return PIXELCHAR_SUCCESS;
+	if (renderer->backends[backendSlotIndex].data == NULL) return PIXELCHAR_ERROR_BACKEND_SLOT_NOT_IN_USED;
 
-	if (renderer->backends[PIXELCHAR_BACKEND_VULKAN] == NULL) return PIXELCHAR_ERROR_BACKEND_NOT_INITIALIZED;
-
-	_renderer_backend_vulkan* backend = renderer->backends[PIXELCHAR_BACKEND_VULKAN];
+	_renderer_backend_vulkan* backend = renderer->backends[backendSlotIndex].data;
 
 	backend->func.vkCmdBindDescriptorSets(
 		commandBuffer,

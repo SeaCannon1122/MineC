@@ -11,15 +11,5 @@
 #elif defined(WINDOW_IMPLEMENTATION_MACOS)
 #include "window_macos.c"
 
-#else
-
-#if defined(_WIN32)
-#include "window_windows.c"
-
-#elif defined(__linux__)
-#include "window_x11.c"
-
-#endif
-
 #endif
 

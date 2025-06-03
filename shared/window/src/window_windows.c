@@ -1,8 +1,7 @@
 #define VK_USE_PLATFORM_WIN32_KHR
 
-#include <GL/glcorearb.h>
-#include <GL/wgl.h>
 #include <window/window.h>
+#include <GL/wgl.h>
 
 #include <stdio.h>
 #include <stdlib.h>

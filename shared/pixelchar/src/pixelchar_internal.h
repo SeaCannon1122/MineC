@@ -1,4 +1,4 @@
-#pragma once
+  #pragma once
 
 #ifndef PIXLECHAR_INTERNAL_H
 #define PIXELCHAR_INTERNAL_H
@@ -8,7 +8,6 @@ extern "C" {
 #endif
 
 #include <pixelchar/pixelchar.h>
-#include <backend/backend.h>
 
 #define PIXELFONT_INVALID 255
 
@@ -28,8 +27,8 @@ typedef struct _pixelchar_renderer_char {
 
 typedef struct PixelcharFont_T
 {
-	void* backends[PIXELCHAR_BACKEND_s_COUNT];
-	uint32_t backends_reference_count[PIXELCHAR_BACKEND_s_COUNT];
+	void* backends[PIXELCHAR_RENDERER_MAX_BACKEND_COUNT];
+	uint32_t backends_reference_count[PIXELCHAR_RENDERER_MAX_BACKEND_COUNT];
 
 	uint32_t resolution;
 
@@ -47,10 +46,16 @@ typedef struct PixelcharFont_T
 
 typedef struct PixelcharRenderer_T
 {
-	void* backends[PIXELCHAR_BACKEND_s_COUNT];
+	struct
+	{
+		void* data;
+		void (*deinitialize_function)(PixelcharRenderer renderer, uint32_t backend_slot_index);
+		PixelcharResult(*font_backend_add_reference_function)(PixelcharRenderer renderer, uint32_t font_index, uint32_t backend_slot_index);
+		void (*font_backend_sub_reference_function)(PixelcharRenderer renderer, uint32_t font_index, uint32_t backend_slot_index);
+	} backends[PIXELCHAR_RENDERER_MAX_BACKEND_COUNT];
 
 	PixelcharFont fonts[PIXELCHAR_RENDERER_MAX_FONT_COUNT];
-	bool font_backends_referenced[PIXELCHAR_RENDERER_MAX_FONT_COUNT][PIXELCHAR_BACKEND_s_COUNT];
+	bool font_backends_referenced[PIXELCHAR_RENDERER_MAX_FONT_COUNT][PIXELCHAR_RENDERER_MAX_BACKEND_COUNT];
 
 	uint32_t queue_total_length;
 	uint32_t queue_filled_length;
