@@ -366,10 +366,11 @@ void _font_backend_vulkan_sub_reference(PixelcharRenderer renderer, uint32_t fon
 PixelcharResult pixelcharRendererBackendVulkanInitialize(
 	PixelcharRenderer renderer,
 	uint32_t backendSlotIndex,
+	uint32_t resourceFrameCount,
 	VkDevice device,
 	VkPhysicalDevice physicalDevice,
-	VkQueue queue,
-	uint32_t queueIndex,
+	VkQueue transferQueue,
+	uint32_t transferQueueFamilyIndex,
 	VkRenderPass renderPass,
 	uint32_t subpass,
 	PFN_vkGetDeviceProcAddr pfnvkGetDeviceProcAddr,
@@ -407,17 +408,15 @@ PixelcharResult pixelcharRendererBackendVulkanInitialize(
 
 	_renderer_backend_vulkan* backend; 
 	
-	if ((backend = malloc(sizeof(_renderer_backend_vulkan))) == NULL) result = PIXELCHAR_ERROR_OUT_OF_MEMORY;
+	if ((backend = calloc(1, sizeof(_renderer_backend_vulkan))) == NULL) result = PIXELCHAR_ERROR_OUT_OF_MEMORY;
 	else backend_memory_allocated = true;
 
 	if (result == PIXELCHAR_SUCCESS)
 	{
-		memset(backend, 0, sizeof(_renderer_backend_vulkan));
-
 		backend->device = device;
 		backend->physical_device = physicalDevice;
-		backend->queue = queue;
-		backend->queue_index = queueIndex;
+		backend->queue = transferQueue;
+		backend->queue_index = transferQueueFamilyIndex;
 		backend->render_pass = renderPass;
 		backend->subpass = subpass;
 
@@ -623,7 +622,7 @@ PixelcharResult pixelcharRendererBackendVulkanInitialize(
 		else staging_memory_allocated = true;
 	}
 
-	backend->staging_buffer_size = staging_memory_requirements.size;
+	if (result == PIXELCHAR_SUCCESS) backend->staging_buffer_size = staging_memory_requirements.size;
 
 	if (result == PIXELCHAR_SUCCESS) if (backend->func.vkBindBufferMemory(backend->device, backend->vertex_index_buffer, backend->vertex_index_memory, 0) != VK_SUCCESS) result = PIXELCHAR_ERROR_BACKEND_API;
 	if (result == PIXELCHAR_SUCCESS) if (backend->func.vkBindBufferMemory(backend->device, backend->staging_buffer, backend->staging_memory, 0) != VK_SUCCESS) result = PIXELCHAR_ERROR_BACKEND_API;
@@ -977,18 +976,24 @@ PixelcharResult pixelcharRendererBackendVulkanInitialize(
 	if (result != PIXELCHAR_SUCCESS && vertex_index_memory_allocated) backend->func.vkFreeMemory(backend->device, backend->vertex_index_memory, 0);
 	if (result != PIXELCHAR_SUCCESS && backend_memory_allocated) free(backend);
 
-	renderer->backends[backendSlotIndex].data = backend;
-
-	for (uint32_t i = 0; i < PIXELCHAR_RENDERER_MAX_FONT_COUNT; i++)
+	if (result == PIXELCHAR_SUCCESS)
 	{
-		if (renderer->fonts[i] != NULL)
+		renderer->backends[backendSlotIndex].data = backend;
+		renderer->backends[backendSlotIndex].deinitialize_function = pixelcharRendererBackendVulkanDeinitialize;
+		renderer->backends[backendSlotIndex].font_backend_add_reference_function = _font_backend_vulkan_add_reference;
+		renderer->backends[backendSlotIndex].font_backend_sub_reference_function = _font_backend_vulkan_sub_reference;
+
+		for (uint32_t i = 0; i < PIXELCHAR_RENDERER_MAX_FONT_COUNT; i++)
 		{
-			if (_font_backend_vulkan_add_reference(renderer, i, backendSlotIndex) == PIXELCHAR_SUCCESS)
-				renderer->font_backends_referenced[i][backendSlotIndex] = true;
+			if (renderer->fonts[i] != NULL)
+			{
+				if (_font_backend_vulkan_add_reference(renderer, i, backendSlotIndex) == PIXELCHAR_SUCCESS)
+					renderer->font_backends_referenced[i][backendSlotIndex] = true;
+			}
 		}
 	}
 
-	return PIXELCHAR_SUCCESS;
+	return result;
 }
 
 void pixelcharRendererBackendVulkanDeinitialize(PixelcharRenderer renderer, uint32_t backendSlotIndex)
@@ -1025,7 +1030,7 @@ void pixelcharRendererBackendVulkanDeinitialize(PixelcharRenderer renderer, uint
 	renderer->backends[backendSlotIndex].data = NULL;
 }
 
-PixelcharResult pixelcharRendererBackendVulkanUpdateRenderingData(PixelcharRenderer renderer, uint32_t backendSlotIndex, VkCommandBuffer commandBuffer)
+PixelcharResult pixelcharRendererBackendVulkanUpdateRenderingData(PixelcharRenderer renderer, uint32_t backendSlotIndex, uint32_t resourceFrameIndex, VkCommandBuffer commandBuffer)
 {
 	if (renderer == NULL) return PIXELCHAR_ERROR_INVALID_ARGUMENTS;
 	if (renderer->queue_filled_length == 0) return PIXELCHAR_SUCCESS;
@@ -1058,7 +1063,7 @@ PixelcharResult pixelcharRendererBackendVulkanUpdateRenderingData(PixelcharRende
 			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 			.buffer = backend->vertex_index_buffer,
 			.offset = 0,
-			.size = VK_WHOLE_SIZE,
+			.size = VK_WHOLE_SIZE
 		};
 
 		/*vkCmdPipelineBarrier(

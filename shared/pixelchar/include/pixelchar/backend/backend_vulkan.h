@@ -14,10 +14,11 @@ extern "C" {
 PixelcharResult pixelcharRendererBackendVulkanInitialize(
 	PixelcharRenderer renderer,
 	uint32_t backendSlotIndex,
+	uint32_t resourceFrameCount,
 	VkDevice device,
 	VkPhysicalDevice physicalDevice,
-	VkQueue queue,
-	uint32_t queueIndex,
+	VkQueue transferQueue,
+	uint32_t transferQueueFamilyIndex,
 	VkRenderPass renderPass,
 	uint32_t subpass,
 	PFN_vkGetDeviceProcAddr pfnvkGetDeviceProcAddr,
@@ -29,7 +30,7 @@ PixelcharResult pixelcharRendererBackendVulkanInitialize(
 
 void pixelcharRendererBackendVulkanDeinitialize(PixelcharRenderer renderer, uint32_t backendSlotIndex);
 
-PixelcharResult pixelcharRendererBackendVulkanUpdateRenderingData(PixelcharRenderer renderer, uint32_t backendSlotIndex, VkCommandBuffer commandBuffer);
+PixelcharResult pixelcharRendererBackendVulkanUpdateRenderingData(PixelcharRenderer renderer, uint32_t backendSlotIndex, uint32_t resourceFrameIndex, VkCommandBuffer commandBuffer);
 
 PixelcharResult pixelcharRendererBackendVulkanRender(
 	PixelcharRenderer renderer,

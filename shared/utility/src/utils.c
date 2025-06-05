@@ -49,18 +49,18 @@ void dynamic_library_unload(void* library_handle)
 #include <stdlib.h>
 #include <stdio.h>
 
-void* dynamic_library_load(uint8_t* src)
+void* dynamic_library_load(uint8_t* library_name, bool name_explicit)
 {
 
 	int32_t src_length = 0;
-	for (; src[src_length] != 0; src_length++);
+	for (; library_name[src_length] != 0; src_length++);
 
 	char* src_platform = alloca(sizeof("lib") - 1 + src_length + sizeof(".so"));
 
 	src_platform[0] = 'l';
 	src_platform[1] = 'i';
 	src_platform[2] = 'b';
-	for (int32_t i = 3; i < src_length + 3; i++) src_platform[i] = src[i - 3];
+	for (int32_t i = 3; i < src_length + 3; i++) src_platform[i] = library_name[i - 3];
 	src_platform[src_length + 3] = '.';
 	src_platform[src_length + 4] = 's';
 	src_platform[src_length + 5] = 'o';

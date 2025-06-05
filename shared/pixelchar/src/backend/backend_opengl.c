@@ -428,16 +428,22 @@ PixelcharResult pixelcharRendererBackendOpenGLInitialize(
 		_get_status(backend);
 	}
 
+	if (result != PIXELCHAR_SUCCESS && program_created) backend->func.glDeleteProgram(backend->shader_program);
+	if (fragment_shader_created) backend->func.glDeleteShader(fragment_shader);
+	if (vertex_shader_created) backend->func.glDeleteShader(vertex_shader);
+	if (result != PIXELCHAR_SUCCESS && vbos_created) backend->func.glDeleteBuffers(backend->resource_frame_count, backend->vbos);
+	if (result != PIXELCHAR_SUCCESS && vao_created) backend->func.glDeleteVertexArrays(1, &backend->vao);
+	if (result != PIXELCHAR_SUCCESS && ebo_created) backend->func.glDeleteBuffers(1, &backend->ebo);
+	if (functions_retrieved) _get_status(backend);
+	if (result != PIXELCHAR_SUCCESS && backend_memory_allocated) free(backend);
+
 	if (result == PIXELCHAR_SUCCESS)
 	{
 		renderer->backends[backendSlotIndex].data = backend;
 		renderer->backends[backendSlotIndex].deinitialize_function = pixelcharRendererBackendOpenGLDeinitialize;
 		renderer->backends[backendSlotIndex].font_backend_add_reference_function = _font_backend_opengl_add_reference;
 		renderer->backends[backendSlotIndex].font_backend_sub_reference_function = _font_backend_opengl_sub_reference;
-	}
-	
-	if (result == PIXELCHAR_SUCCESS)
-	{
+
 		for (uint32_t i = 0; i < PIXELCHAR_RENDERER_MAX_FONT_COUNT; i++)
 		{
 			if (renderer->fonts[i] != NULL)
@@ -447,15 +453,6 @@ PixelcharResult pixelcharRendererBackendOpenGLInitialize(
 			}
 		}
 	}
-
-	if (result != PIXELCHAR_SUCCESS && program_created) backend->func.glDeleteProgram(backend->shader_program);
-	if (fragment_shader_created) backend->func.glDeleteShader(fragment_shader);
-	if (vertex_shader_created) backend->func.glDeleteShader(vertex_shader);
-	if (result != PIXELCHAR_SUCCESS && vbos_created) backend->func.glDeleteBuffers(backend->resource_frame_count, backend->vbos);
-	if (result != PIXELCHAR_SUCCESS && vao_created) backend->func.glDeleteVertexArrays(1, &backend->vao);
-	if (result != PIXELCHAR_SUCCESS && ebo_created) backend->func.glDeleteBuffers(1, &backend->ebo);
-	if (functions_retrieved) _get_status(backend);
-	if (result != PIXELCHAR_SUCCESS && backend_memory_allocated) free(backend);
 
 	return result;
 }

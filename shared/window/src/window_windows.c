@@ -275,7 +275,7 @@ LRESULT CALLBACK window_WinProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 	return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 }
 
-uint32_t window_init_context(void* transfered_context)
+bool window_init_context(void* transfered_context)
 {
 	if (transfered_context == NULL)
 	{
@@ -302,7 +302,7 @@ uint32_t window_init_context(void* transfered_context)
 
 void window_deinit_context()
 {
-	UnregisterClassW(L"window_window_class", GetModuleHandleW(NULL));
+	if (context == &context_memory) UnregisterClassW(L"window_window_class", GetModuleHandleW(NULL));
 }
 
 void* window_get_context()
@@ -459,8 +459,7 @@ HWND window_windows_get_hwnd(void* window)
 //vulkan
 bool window_vulkan_load()
 {
-	context->vulkan.library = LoadLibraryA("vulkan-1.dll");
-	if (context->vulkan.library == NULL) return false;
+	if ((context->vulkan.library = LoadLibraryA("vulkan-1.dll")) == NULL) return false;
 	
 	if ((context->vulkan.func.vkGetInstanceProcAddr = GetProcAddress(context->vulkan.library, "vkGetInstanceProcAddr")) == NULL)
 	{
@@ -505,8 +504,7 @@ uint8_t* window_get_VK_KHR_PLATFORM_SURFACE_EXTENSION_NAME()
 
 bool window_opengl_load()
 {
-	context->opengl.library = LoadLibraryA("opengl32.dll");
-	if (context->opengl.library == NULL) return false;
+	if ((context->opengl.library = LoadLibraryA("opengl32.dll")) == NULL) return false;
 
 	context->opengl.func.wglCreateContext = GetProcAddress(context->opengl.library, "wglCreateContext");
 	context->opengl.func.wglDeleteContext = GetProcAddress(context->opengl.library, "wglDeleteContext");

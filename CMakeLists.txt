@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.15)
 
 project(MineC)
 
+include_directories(dependencies/graphics_headers)
+
 add_subdirectory(shared/window)
 add_subdirectory(shared/pixelchar)
 add_subdirectory(shared/utility)

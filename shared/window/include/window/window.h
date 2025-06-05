@@ -126,7 +126,7 @@ struct window_event {
 	} info;
 };
 
-uint32_t window_init_context(void* context);
+bool window_init_context(void* context);
 void window_deinit_context();
 void* window_get_context();
 

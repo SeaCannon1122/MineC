@@ -11,11 +11,6 @@ target_include_directories(pixelchar
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-
-
-target_include_directories(pixelchar 
-    PUBLIC ${CMAKE_SOURCE_DIR}/dependencies/Vulkan-Headers/include
-)
 target_sources(pixelchar PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/backend/backend_vulkan.c
 )
@@ -23,11 +18,6 @@ target_compile_definitions(pixelchar
     PUBLIC _PIXELCHAR_BACKEND_VULKAN=1
 )
 
-
-
-target_include_directories(pixelchar
-    PUBLIC ${CMAKE_SOURCE_DIR}/dependencies/OpenGL-Registry/api
-)
 target_sources(pixelchar PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/backend/backend_opengl.c
 )

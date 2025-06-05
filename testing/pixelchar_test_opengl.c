@@ -189,6 +189,8 @@ int main(int argc, char* argv[]) {
 		pixelcharRendererBackendOpenGLRender(pcr, 0, 0, width, height, 4.f, 4.f, 4.f, 1.4f);
 
 		window_glSwapBuffers(window);
+
+		printf("frame\n");
 	}
 
 	pixelcharRendererBackendOpenGLDeinitialize(pcr, 0);
