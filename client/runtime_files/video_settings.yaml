@@ -1,3 +1,6 @@
+gui_scale: 2
+fov: 80
+
 backend_index: 0
-device_index: 0
-fps: 100
+backend_device_index: 0
+fps: 0

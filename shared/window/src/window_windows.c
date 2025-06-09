@@ -665,7 +665,7 @@ bool window_glCreateContext(void* window, int32_t version_major, int32_t version
 	return result;
 }
 
-void window_glDeleteContext(void* window)
+void window_glDestroyContext(void* window)
 {
 	struct window_data_windows* window_data = window;
 
@@ -680,7 +680,7 @@ bool window_glMakeCurrent(void* window)
 
 	bool result = true;
 
-	if (window_data == NULL) context->opengl.func.wglMakeCurrent(NULL, NULL);
+	if (window_data == NULL) result = (context->opengl.func.wglMakeCurrent(NULL, NULL) == TRUE);
 	else if ((result = (context->opengl.func.wglMakeCurrent(window_data->hdc, window_data->hglrc) == TRUE)) == true) context->opengl.current_window = window;
 	return result;
 }

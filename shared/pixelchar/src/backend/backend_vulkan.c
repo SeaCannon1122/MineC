@@ -420,108 +420,62 @@ PixelcharResult pixelcharRendererBackendVulkanInitialize(
 		backend->render_pass = renderPass;
 		backend->subpass = subpass;
 
+		struct load_entry { void** load_dst; uint8_t* func_name; };
+#define LOAD_FUNC_ENTRY(func_name) {(void**)&backend->func.func_name, #func_name}
+
+		struct load_entry load_entries[] =
 		{
-			void** functions[] =
-			{
-				(void**)&backend->func.vkDeviceWaitIdle,
-				(void**)&backend->func.vkQueueWaitIdle,
-				(void**)&backend->func.vkQueueSubmit,
-				(void**)&backend->func.vkCreateBuffer,
-				(void**)&backend->func.vkDestroyBuffer,
-				(void**)&backend->func.vkAllocateMemory,
-				(void**)&backend->func.vkFreeMemory,
-				(void**)&backend->func.vkBindBufferMemory,
-				(void**)&backend->func.vkGetPhysicalDeviceMemoryProperties,
-				(void**)&backend->func.vkGetBufferMemoryRequirements,
-				(void**)&backend->func.vkMapMemory,
-				(void**)&backend->func.vkUnmapMemory,
-				(void**)&backend->func.vkFlushMappedMemoryRanges,
-				(void**)&backend->func.vkCreateShaderModule,
-				(void**)&backend->func.vkDestroyShaderModule,
-				(void**)&backend->func.vkCreateDescriptorSetLayout,
-				(void**)&backend->func.vkDestroyDescriptorSetLayout,
-				(void**)&backend->func.vkCreatePipelineLayout,
-				(void**)&backend->func.vkDestroyPipelineLayout,
-				(void**)&backend->func.vkCreateGraphicsPipelines,
-				(void**)&backend->func.vkDestroyPipeline,
-				(void**)&backend->func.vkCreateCommandPool,
-				(void**)&backend->func.vkDestroyCommandPool,
-				(void**)&backend->func.vkAllocateCommandBuffers,
-				(void**)&backend->func.vkFreeCommandBuffers,
-				(void**)&backend->func.vkResetCommandBuffer,
-				(void**)&backend->func.vkBeginCommandBuffer,
-				(void**)&backend->func.vkEndCommandBuffer,
-				(void**)&backend->func.vkCreateDescriptorPool,
-				(void**)&backend->func.vkDestroyDescriptorPool,
-				(void**)&backend->func.vkAllocateDescriptorSets,
-				(void**)&backend->func.vkUpdateDescriptorSets,
-				(void**)&backend->func.vkCreateFence,
-				(void**)&backend->func.vkDestroyFence,
-				(void**)&backend->func.vkResetFences,
-				(void**)&backend->func.vkWaitForFences,
-				(void**)&backend->func.vkCmdCopyBuffer,
-				(void**)&backend->func.vkCmdBindDescriptorSets,
-				(void**)&backend->func.vkCmdBindPipeline,
-				(void**)&backend->func.vkCmdBindVertexBuffers,
-				(void**)&backend->func.vkCmdBindIndexBuffer,
-				(void**)&backend->func.vkCmdPushConstants,
-				(void**)&backend->func.vkCmdDrawIndexed
-			};
+			LOAD_FUNC_ENTRY(vkDeviceWaitIdle),
+			LOAD_FUNC_ENTRY(vkQueueWaitIdle),
+			LOAD_FUNC_ENTRY(vkQueueSubmit),
+			LOAD_FUNC_ENTRY(vkCreateBuffer),
+			LOAD_FUNC_ENTRY(vkDestroyBuffer),
+			LOAD_FUNC_ENTRY(vkAllocateMemory),
+			LOAD_FUNC_ENTRY(vkFreeMemory),
+			LOAD_FUNC_ENTRY(vkBindBufferMemory),
+			LOAD_FUNC_ENTRY(vkGetPhysicalDeviceMemoryProperties),
+			LOAD_FUNC_ENTRY(vkGetBufferMemoryRequirements),
+			LOAD_FUNC_ENTRY(vkMapMemory),
+			LOAD_FUNC_ENTRY(vkUnmapMemory),
+			LOAD_FUNC_ENTRY(vkFlushMappedMemoryRanges),
+			LOAD_FUNC_ENTRY(vkCreateShaderModule),
+			LOAD_FUNC_ENTRY(vkDestroyShaderModule),
+			LOAD_FUNC_ENTRY(vkCreateDescriptorSetLayout),
+			LOAD_FUNC_ENTRY(vkDestroyDescriptorSetLayout),
+			LOAD_FUNC_ENTRY(vkCreatePipelineLayout),
+			LOAD_FUNC_ENTRY(vkDestroyPipelineLayout),
+			LOAD_FUNC_ENTRY(vkCreateGraphicsPipelines),
+			LOAD_FUNC_ENTRY(vkDestroyPipeline),
+			LOAD_FUNC_ENTRY(vkCreateCommandPool),
+			LOAD_FUNC_ENTRY(vkDestroyCommandPool),
+			LOAD_FUNC_ENTRY(vkAllocateCommandBuffers),
+			LOAD_FUNC_ENTRY(vkFreeCommandBuffers),
+			LOAD_FUNC_ENTRY(vkResetCommandBuffer),
+			LOAD_FUNC_ENTRY(vkBeginCommandBuffer),
+			LOAD_FUNC_ENTRY(vkEndCommandBuffer),
+			LOAD_FUNC_ENTRY(vkCreateDescriptorPool),
+			LOAD_FUNC_ENTRY(vkDestroyDescriptorPool),
+			LOAD_FUNC_ENTRY(vkAllocateDescriptorSets),
+			LOAD_FUNC_ENTRY(vkUpdateDescriptorSets),
+			LOAD_FUNC_ENTRY(vkCreateFence),
+			LOAD_FUNC_ENTRY(vkDestroyFence),
+			LOAD_FUNC_ENTRY(vkResetFences),
+			LOAD_FUNC_ENTRY(vkWaitForFences),
+			LOAD_FUNC_ENTRY(vkCmdCopyBuffer),
+			LOAD_FUNC_ENTRY(vkCmdBindDescriptorSets),
+			LOAD_FUNC_ENTRY(vkCmdBindPipeline),
+			LOAD_FUNC_ENTRY(vkCmdBindVertexBuffers),
+			LOAD_FUNC_ENTRY(vkCmdBindIndexBuffer),
+			LOAD_FUNC_ENTRY(vkCmdPushConstants),
+			LOAD_FUNC_ENTRY(vkCmdDrawIndexed)
+		};
 
-			uint8_t* function_names[] =
+		for (uint32_t i = 0; i < sizeof(load_entries) / sizeof(load_entries[0]); i++)
+		{
+			if ((*load_entries[i].load_dst = (void*)pfnvkGetDeviceProcAddr(backend->device, load_entries[i].func_name)) == NULL)
 			{
-				"vkDeviceWaitIdle",
-				"vkQueueWaitIdle",
-				"vkQueueSubmit",
-				"vkCreateBuffer",
-				"vkDestroyBuffer",
-				"vkAllocateMemory",
-				"vkFreeMemory",
-				"vkBindBufferMemory",
-				"vkGetPhysicalDeviceMemoryProperties",
-				"vkGetBufferMemoryRequirements",
-				"vkMapMemory",
-				"vkUnmapMemory",
-				"vkFlushMappedMemoryRanges",
-				"vkCreateShaderModule",
-				"vkDestroyShaderModule",
-				"vkCreateDescriptorSetLayout",
-				"vkDestroyDescriptorSetLayout",
-				"vkCreatePipelineLayout",
-				"vkDestroyPipelineLayout",
-				"vkCreateGraphicsPipelines",
-				"vkDestroyPipeline",
-				"vkCreateCommandPool",
-				"vkDestroyCommandPool",
-				"vkAllocateCommandBuffers",
-				"vkFreeCommandBuffers",
-				"vkResetCommandBuffer",
-				"vkBeginCommandBuffer",
-				"vkEndCommandBuffer",
-				"vkCreateDescriptorPool",
-				"vkDestroyDescriptorPool",
-				"vkAllocateDescriptorSets",
-				"vkUpdateDescriptorSets",
-				"vkCreateFence",
-				"vkDestroyFence",
-				"vkResetFences",
-				"vkWaitForFences",
-				"vkCmdCopyBuffer",
-				"vkCmdBindDescriptorSets",
-				"vkCmdBindPipeline",
-				"vkCmdBindVertexBuffers",
-				"vkCmdBindIndexBuffer",
-				"vkCmdPushConstants",
-				"vkCmdDrawIndexed"
-			};
-
-			for (uint32_t i = 0; i < sizeof(function_names) / sizeof(function_names[0]); i++)
-			{
-				if ((*functions[i] = (void*)pfnvkGetDeviceProcAddr(backend->device, function_names[i])) == NULL)
-				{
-					result = PIXELCHAR_ERROR_BACKEND_API;
-					break;
-				}
+				result = PIXELCHAR_ERROR_BACKEND_API;
+				break;
 			}
 		}
 	}

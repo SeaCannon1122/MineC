@@ -4,21 +4,34 @@ uint32_t renderer_backend_opengl_device_create(struct minec_client* client, void
 {
 	if (window_glMakeCurrent(client->window.window_handle) == false)
 	{
-		renderer_backend_opengl_log(client, "window_glMakeCurrent failed");
+		minec_client_log_debug_error(client, "'window_glMakeCurrent' failed");
 		return MINEC_CLIENT_ERROR;
 	}
 
 	struct renderer_backend_opengl_base* base = *backend_base;
 	uint32_t result = MINEC_CLIENT_SUCCESS;
 
-	if (window_glSwapInterval(fps == 0 ? 1 : 0) == false)
+	uint32_t swa_interval = (fps == 0 ? 1 : 0);
+
+	if (window_glSwapInterval(swa_interval) == false)
 	{
-		renderer_backend_opengl_log(client, "window_glSwapInterval failed");
+		minec_client_log_debug_error(client, "window_glSwapInterval(%d) failed", swa_interval);
 		result = MINEC_CLIENT_ERROR;
 	}
-	else base->fps = fps;
+	else
+	{
+		base->fps = fps;
+		atomic_store_(uint32_t, &base->fps_new, &fps);
+		base->last_frame_time = 0.f;
+	}
+	
+	if (window_glMakeCurrent(NULL) == false)
+	{
+		minec_client_log_error(client, "[FATAL] Failed to unset OpenGL context. Crashing ...");
+		minec_client_log_debug_error(client, "'window_glMakeCurrent(NULL)' failed");
+		minec_client_nuke_destroy_kill_crush_annihilate_process_exit(client);
+	}
 
-	window_glMakeCurrent(NULL);
 	return result;
 }
 

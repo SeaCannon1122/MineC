@@ -76,8 +76,6 @@ typedef struct _pixelchar_font_metadata
 	uint32_t resolution;
 } _pixelchar_font_metadata;
 
-extern PIXELCHAR_DEBUG_CALLBACK_FUNCTION debug_callback_function;
-
 void _pixelchar_renderer_convert_queue(PixelcharRenderer renderer, uint32_t backend_index);
 
 #ifdef __cplusplus

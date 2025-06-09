@@ -17,13 +17,13 @@ uint32_t minec_client_run(struct minec_client* client, uint8_t* runtime_files_pa
 		500,
 		"MineC"
 	)) != MINEC_CLIENT_SUCCESS) goto _application_window_create_failed;
-	minec_client_log(client, "[GLOBAL]", "Window created");
+	minec_client_log(client, "[GLOBAL STATE] Window created");
 
 	settings_create(client);
 	settings_load(client);
 
 	resources_create(client);
-	minec_client_log(client, "[GLOBAL]", "Resources created");
+	minec_client_log(client, "[GLOBAL STATE] Resources created");
 
 	if ((return_value = renderer_create(
 		client, 
@@ -33,19 +33,14 @@ uint32_t minec_client_run(struct minec_client* client, uint8_t* runtime_files_pa
 		&client->settings.video.graphics.device_index,
 		&client->settings.video.graphics.device_count,
 		&client->settings.video.graphics.device_infos,
-		&client->settings.video.graphics.fps
+		client->settings.video.graphics.fps
 	)) != MINEC_CLIENT_SUCCESS) goto _renderer_create_failed;
-	minec_client_log(client, "[GLOBAL]", "Renderer created");
+	minec_client_log(client, "[GLOBAL STATE] Renderer created");
 
 	/*gui_menus_create(client);
-	renderer_create(client);
 
 	simulator_start(client);
 	networker_start(client);*/
-
-#ifdef UNIX
-	while (get_key_state(KEY_MOUSE_LEFT) & 0b1 != 0) sleep_for_ms(1);
-#endif // UNIX
 
 	while (application_window_handle_events(client) == 0)
 	{
@@ -62,18 +57,17 @@ uint32_t minec_client_run(struct minec_client* client, uint8_t* runtime_files_pa
 	/*networker_stop(client);
 	simulator_stop(client);
 
-	renderer_destroy(client);
 	gui_menus_destroy(client);*/
 
 	renderer_destroy(client);
-	minec_client_log(client, "[GLOBAL]", "Renderer destroyed");
+	minec_client_log(client, "[GLOBAL STATE] Renderer destroyed");
 
 _renderer_create_failed:
 	resources_destroy(client);
-	minec_client_log(client, "[GLOBAL]", "Resources destroyed");
+	minec_client_log(client, "[GLOBAL STATE] Resources destroyed");
 
 	settings_destroy(client);
-	minec_client_log(client, "[GLOBAL]", "Window destroyed");
+	minec_client_log(client, "[GLOBAL STATE] Window destroyed");
 
 	application_window_destroy(client);
 

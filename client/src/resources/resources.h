@@ -37,7 +37,7 @@ struct resources_shader
 	bool in_use;
 };
 
-struct resources_index
+struct resource_index
 {
 	struct resources_texture* textures;
 	uint32_t texture_count;

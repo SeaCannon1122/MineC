@@ -15,6 +15,8 @@ static void renderer_backend_vulkan_log(struct minec_client* client, uint8_t* me
 
 #define VULKAN_SWAPCHAIN_IMAGE_COUNT 2
 
+void* renderer_backend_get_window_context();
+
 struct renderer_backend_vulkan_base
 {
 	struct

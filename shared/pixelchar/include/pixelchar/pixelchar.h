@@ -12,29 +12,29 @@ extern "C" {
 #include <stdbool.h>
 
 #define PIXELCHAR_RENDERER_MAX_FONT_COUNT 8
-#define PIXELCHAR_RENDERER_MAX_BACKEND_COUNT 16
-
-typedef void (*PIXELCHAR_DEBUG_CALLBACK_FUNCTION)(uint32_t type, uint8_t* message);
+#define PIXELCHAR_RENDERER_MAX_BACKEND_COUNT 32
 
 typedef enum PixelcharResult
 {
-	PIXELCHAR_SUCCESS = 0,
-	PIXELCHAR_ERROR_OUT_OF_MEMORY,
-	PIXELCHAR_ERROR_INVALID_ARGUMENTS,
-	PIXELCHAR_ERROR_FULL_QUEUE,
-	PIXELCHAR_ERROR_INVALID_FONT_DATA,
-	PIXELCHAR_ERROR_BACKEND_SLOT_ALREADY_IN_USED,
-	PIXELCHAR_ERROR_BACKEND_SLOT_NOT_IN_USED,
-	PIXELCHAR_ERROR_BACKEND_API
+	PIXELCHAR_SUCCESS								= 0x0000,
+	PIXELCHAR_INFO_MASK								= 0x0100,
+	PIXELCHAR_INFO_FULL_QUEUE						= 0x0101,
+	PIXELCHAR_ERROR_MASK							= 0x0200,
+	PIXELCHAR_ERROR_OUT_OF_MEMORY					= 0x0201,
+	PIXELCHAR_ERROR_INVALID_ARGUMENTS				= 0x0202,
+	PIXELCHAR_ERROR_INVALID_FONT_DATA				= 0x0203,
+	PIXELCHAR_ERROR_BACKEND_SLOT_ALREADY_IN_USED	= 0x0204,
+	PIXELCHAR_ERROR_BACKEND_SLOT_NOT_IN_USED		= 0x0205,
+	PIXELCHAR_ERROR_BACKEND_API						= 0x0206
 } PixelcharResult;
 
 typedef enum PixelcharFlagBits
 {
-	PIXELCHAR_UNDERLINE_BIT     = 0b1,
-	PIXELCHAR_ITALIC_BIT        = 0b10,
-	PIXELCHAR_SHADOW_BIT        = 0b100,
-	PIXELCHAR_BACKGROUND_BIT    = 0b1000,
-	PIXELCHAR_STRIKETHROUGH_BIT = 0b10000,
+	PIXELCHAR_UNDERLINE_BIT     =      0b1,
+	PIXELCHAR_ITALIC_BIT        =     0b10,
+	PIXELCHAR_SHADOW_BIT        =    0b100,
+	PIXELCHAR_BACKGROUND_BIT    =   0b1000,
+	PIXELCHAR_STRIKETHROUGH_BIT =  0b10000,
 	PIXELCHAR_BOLD_BIT          = 0b100000,
 } PixelcharFlagBits;
 
@@ -52,13 +52,15 @@ typedef struct Pixelchar
 typedef struct PixelcharRenderer_T* PixelcharRenderer;
 typedef struct PixelcharFont_T* PixelcharFont;
 
-void pixelcharSetDebugCallbackFunction(PIXELCHAR_DEBUG_CALLBACK_FUNCTION pCallbackFunction);
+const uint8_t* pixelcharGetResultAsString(PixelcharResult result);
 
 PixelcharResult pixelcharFontCreate(const void* fontData, size_t dataSize, PixelcharFont* pFont);
 void pixelcharFontDestroy(PixelcharFont font);
 
 PixelcharResult pixelcharRendererCreate(uint32_t charQueueLength, PixelcharRenderer* pRenderer);
 void pixelcharRendererDestroy(PixelcharRenderer renderer);
+
+void pixelcharRendererHardResetBackendSlot(PixelcharRenderer renderer, uint32_t backendSlotIndex);
 
 PixelcharResult pixelcharRendererBindFont(PixelcharRenderer renderer, PixelcharFont font, uint32_t bindingIndex);
 

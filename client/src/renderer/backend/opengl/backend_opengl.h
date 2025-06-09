@@ -3,18 +3,11 @@
 #ifndef MINEC_CLIENT_RENDERER_BACKEND_VULKAN_BACKEND_OPENGL_H
 #define MINEC_CLIENT_RENDERER_BACKEND_VULKAN_BACKEND_OPENGL_H
 
-#include "../backend_internal.h"
-
 #include <GL/glcorearb.h>
 #include <pixelchar/backend/backend_opengl.h>
+#include <minec_client.h>
 
-static void renderer_backend_opengl_log(struct minec_client* client, uint8_t* message, ...)
-{
-	va_list args;
-	va_start(args, message);
-	minec_client_log_v(client, "[RENDERER][OPENGL]", message, args);
-	va_end(args);
-}
+void* renderer_backend_get_window_context();
 
 #define OPENGL_FRAME_COUNT 3
 #define OPENGL_MENU_GUI_QUAD_COUNT 128
@@ -117,6 +110,7 @@ struct renderer_backend_opengl_base
 
 	uint32_t fps;
 	atomic_(uint32_t) fps_new;
+	float last_frame_time;
 
 	struct
 	{
@@ -133,12 +127,13 @@ struct renderer_backend_opengl_pipelines_resources
 {
 	struct {
 		uint32_t (*handles)[2];
-		GLuint textures;
+		GLuint* textures;
 	} textures;
 
 	struct
 	{
 		bool usable;
+		uint32_t backend_index;
 	} pixelchar_renderer;
 
 	struct
@@ -152,17 +147,22 @@ struct renderer_backend_opengl_pipelines_resources
 
 };
 
-static uint32_t gl_error_check_log(struct minec_client* client, struct renderer_backend_opengl_base* base, uint8_t* message)
+
+
+
+static void _minec_client_retrieve_log_opengl_errors(struct minec_client* client, struct renderer_backend_opengl_base* base, uint32_t* p_result, uint8_t* function, uint8_t* file, uint32_t line, uint8_t* action)
 {
-	uint32_t result = MINEC_CLIENT_SUCCESS;
+	if (*p_result != MINEC_CLIENT_SUCCESS) return;
 
 	GLenum error;
 	for (uint32_t error_count = 0; (error = base->func.glGetError()) != GL_NO_ERROR; error_count++)
 	{
-		if (error_count > 10)
+		*p_result = MINEC_CLIENT_ERROR;
+
+		if (error_count > 16)
 		{
-			renderer_backend_opengl_log(client, "Detected more than 10 errors. Something weird is going on");
-			return MINEC_CLIENT_ERROR;
+			_minec_client_log_debug_error(client, function, file, line, "'%s' failed with more then 16 glErrors", action);
+			return;
 		}
 
 		uint8_t* error_name = "Unknown";
@@ -171,17 +171,19 @@ static uint32_t gl_error_check_log(struct minec_client* client, struct renderer_
 		case GL_INVALID_ENUM: { error_name = "GL_INVALID_ENUM"; break; }
 		case GL_INVALID_VALUE: { error_name = "GL_INVALID_VALUE"; break; }
 		case GL_INVALID_OPERATION: { error_name = "GL_INVALID_OPERATION"; break; }
-		case GL_STACK_OVERFLOW: { error_name = "GL_STACK_OVERFLOW"; break; }
-		case GL_STACK_UNDERFLOW: { error_name = "GL_STACK_UNDERFLOW"; break; }
 		case GL_OUT_OF_MEMORY: { error_name = "GL_OUT_OF_MEMORY"; break; }
 		case GL_INVALID_FRAMEBUFFER_OPERATION: { error_name = "GL_INVALID_FRAMEBUFFER_OPERATION"; break; }
-		case GL_CONTEXT_LOST: { error_name = "GL_CONTEXT_LOST "; break; }
+		case GL_CONTEXT_LOST: { 
+			minec_client_log_error(client, "[FATAL] OpenGL Context lost. Crashing ...");
+			minec_client_nuke_destroy_kill_crush_annihilate_process_exit(client);
+		}
 		}
 
-		renderer_backend_opengl_log(client, "Error 0x%x '%s': %s", error, error_name, message);
-		result = MINEC_CLIENT_ERROR;
+		_minec_client_log_debug_error(client, function, file, line, "'%s' failed with glError 0x%x '%s'", action, error, error_name);
 	}
-	return result;
 }
+
+#define minec_client_retrieve_log_opengl_errors(client, base, p_result, action) _minec_client_retrieve_log_opengl_errors(client, base, p_result, __func__, __FILE__, __LINE__, action)
+
 
 #endif

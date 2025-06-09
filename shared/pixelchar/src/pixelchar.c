@@ -3,11 +3,21 @@
 #include <stdlib.h>
 #include <string.h>
 
-PIXELCHAR_DEBUG_CALLBACK_FUNCTION debug_callback_function = NULL;
-
-void pixelcharSetDebugCallbackFunction(PIXELCHAR_DEBUG_CALLBACK_FUNCTION pCallbackFunction)
+const uint8_t* pixelcharGetResultAsString(PixelcharResult result)
 {
-	debug_callback_function = pCallbackFunction;
+	switch (result)
+	{
+	case PIXELCHAR_SUCCESS:								return "PIXELCHAR_SUCCESS";
+	case PIXELCHAR_INFO_FULL_QUEUE:						return "PIXELCHAR_INFO_FULL_QUEUE";
+	case PIXELCHAR_ERROR_OUT_OF_MEMORY:					return "PIXELCHAR_ERROR_OUT_OF_MEMORY";
+	case PIXELCHAR_ERROR_INVALID_ARGUMENTS:				return "PIXELCHAR_ERROR_INVALID_ARGUMENTS";
+	case PIXELCHAR_ERROR_INVALID_FONT_DATA:				return "PIXELCHAR_ERROR_INVALID_FONT_DATA";
+	case PIXELCHAR_ERROR_BACKEND_SLOT_ALREADY_IN_USED:	return "PIXELCHAR_ERROR_BACKEND_SLOT_ALREADY_IN_USED";
+	case PIXELCHAR_ERROR_BACKEND_SLOT_NOT_IN_USED:		return "PIXELCHAR_ERROR_BACKEND_SLOT_NOT_IN_USED";
+	case PIXELCHAR_ERROR_BACKEND_API:					return "PIXELCHAR_ERROR_BACKEND_API";
+	}
+
+	return "PIXELCHAR_ERROR_UNKNOWN";
 }
 
 PixelcharResult pixelcharFontCreate(const void* fontData, size_t dataSize, PixelcharFont* pFont)
@@ -141,6 +151,25 @@ void pixelcharRendererDestroy(PixelcharRenderer renderer)
 	free(renderer);
 }
 
+void pixelcharRendererHardResetBackendSlot(PixelcharRenderer renderer, uint32_t backendSlotIndex)
+{
+	if (renderer == NULL) return PIXELCHAR_ERROR_INVALID_ARGUMENTS;
+	if (backendSlotIndex >= PIXELCHAR_RENDERER_MAX_BACKEND_COUNT) return;
+
+	free(renderer->backends[backendSlotIndex].data);
+	renderer->backends[backendSlotIndex].data = NULL;
+
+	for (uint32_t i = 0; i < PIXELCHAR_RENDERER_MAX_FONT_COUNT; i++)
+	{
+		if (renderer->font_backends_referenced[i][backendSlotIndex])
+		{
+			renderer->fonts[i]->backends_reference_count[backendSlotIndex]--;
+			if (renderer->fonts[i]->backends_reference_count[backendSlotIndex] == 0) free(renderer->fonts[i]->backends[backendSlotIndex]);
+			renderer->font_backends_referenced[i][backendSlotIndex] = false;
+		}
+	}
+}
+
 PixelcharResult pixelcharRendererBindFont(PixelcharRenderer renderer, PixelcharFont font, uint32_t bindingIndex)
 {
 	if (renderer == NULL) return PIXELCHAR_ERROR_INVALID_ARGUMENTS;
@@ -185,7 +214,7 @@ PixelcharResult pixelcharRendererEnqueCharacters(PixelcharRenderer renderer, Pix
 	if (characters == NULL) return PIXELCHAR_ERROR_INVALID_ARGUMENTS;
 	if (characterCount == 0) return PIXELCHAR_ERROR_INVALID_ARGUMENTS;
 
-	if (renderer->queue_total_length - renderer->queue_filled_length == 0) return PIXELCHAR_ERROR_FULL_QUEUE;
+	if (renderer->queue_total_length - renderer->queue_filled_length == 0) return PIXELCHAR_INFO_FULL_QUEUE;
 
 	uint32_t chars_to_copy_count =
 		(
@@ -198,7 +227,7 @@ PixelcharResult pixelcharRendererEnqueCharacters(PixelcharRenderer renderer, Pix
 	renderer->queue_filled_length += chars_to_copy_count;
 
 	if (chars_to_copy_count == characterCount) return PIXELCHAR_SUCCESS;
-	else return PIXELCHAR_ERROR_FULL_QUEUE;
+	else return PIXELCHAR_INFO_FULL_QUEUE;
 }
 
 void pixelcharRendererResetQueue(PixelcharRenderer renderer)

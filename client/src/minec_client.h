@@ -26,9 +26,8 @@
 
 enum minec_client_result
 {
-	MINEC_CLIENT_SUCCESS = 0,
-	MINEC_CLIENT_ERROR,
-	MINEC_CLIENT_ERROR_OUT_OF_MEMORY,
+	MINEC_CLIENT_SUCCESS,
+	MINEC_CLIENT_ERROR
 };
 
 struct minec_client
@@ -42,12 +41,18 @@ struct minec_client
 
 	struct settings settings;
 
-	struct resources_index resources_index;
+	struct resource_index resource_index;
 
 	struct renderer renderer;
 
 };
 
 uint32_t minec_client_run(struct minec_client* client, uint8_t* runtime_files_path);
+
+//should not be called unless catastrophic unrecoverable operating system failure (NOT malloc failing)
+static void minec_client_nuke_destroy_kill_crush_annihilate_process_exit(struct minec_client* client)
+{
+	exit(EXIT_FAILURE);
+}
 
 #endif

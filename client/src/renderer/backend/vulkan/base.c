@@ -34,7 +34,7 @@ uint32_t renderer_backend_vulkan_base_create(struct minec_client* client, void**
     struct renderer_backend_vulkan_base* base;
 
     if ((base = s_alloc(client->static_alloc, sizeof(struct renderer_backend_vulkan_base))) == NULL)
-        result = MINEC_CLIENT_ERROR_OUT_OF_MEMORY;
+        result = MINEC_CLIENT_CRITICAL_ERROR;
     else 
         base_memory = true;
 
@@ -94,7 +94,7 @@ uint32_t renderer_backend_vulkan_base_create(struct minec_client* client, void**
     if (result == MINEC_CLIENT_SUCCESS)
     {
         if ((extensions = s_alloc(client->dynamic_alloc, sizeof(VkExtensionProperties) * extension_count + 8)) == NULL)
-            result = MINEC_CLIENT_ERROR_OUT_OF_MEMORY;
+            result = MINEC_CLIENT_CRITICAL_ERROR;
         else 
             extensions_memory = true;
     }
@@ -139,7 +139,7 @@ uint32_t renderer_backend_vulkan_base_create(struct minec_client* client, void**
     if (result == MINEC_CLIENT_SUCCESS)
     {
         if ((layers = s_alloc(client->dynamic_alloc, sizeof(VkLayerProperties) * layer_count + 8)) == NULL)
-            result = MINEC_CLIENT_ERROR_OUT_OF_MEMORY;
+            result = MINEC_CLIENT_CRITICAL_ERROR;
         else
             layers_memory = true;
     }
@@ -194,6 +194,9 @@ uint32_t renderer_backend_vulkan_base_create(struct minec_client* client, void**
     }
 
     {
+        struct load_entry { void** load_dst; uint8_t* func_name; };
+#define LOAD_FUNC_ENTRY(func_name) {(void**)&base->func.func_name, #func_name}
+
         void** functions[] = {
             (void**) &base->func.vkGetDeviceProcAddr,
             (void**) &base->func.vkDestroyInstance,
@@ -283,7 +286,7 @@ uint32_t renderer_backend_vulkan_base_create(struct minec_client* client, void**
     if (result == MINEC_CLIENT_SUCCESS)
     {
         if ((base->physical_devices = s_alloc(client->static_alloc, sizeof(VkPhysicalDevice) * base->physical_device_count)) == NULL)
-            result = MINEC_CLIENT_ERROR_OUT_OF_MEMORY;
+            result = MINEC_CLIENT_CRITICAL_ERROR;
         else
             device_memory = true;
     }
@@ -299,7 +302,7 @@ uint32_t renderer_backend_vulkan_base_create(struct minec_client* client, void**
     if (result == MINEC_CLIENT_SUCCESS)
     {
         if ((physical_device_properties = s_alloc(client->dynamic_alloc, sizeof(VkPhysicalDeviceProperties) * base->physical_device_count)) == NULL)
-            result = MINEC_CLIENT_ERROR_OUT_OF_MEMORY;
+            result = MINEC_CLIENT_CRITICAL_ERROR;
         else
             device_properties_memory = true;
     }
@@ -308,7 +311,7 @@ uint32_t renderer_backend_vulkan_base_create(struct minec_client* client, void**
     {
 
         if ((base->backend_device_infos = s_alloc(client->static_alloc, sizeof(uint8_t*) * base->physical_device_count)) == NULL)
-            result = MINEC_CLIENT_ERROR_OUT_OF_MEMORY;
+            result = MINEC_CLIENT_CRITICAL_ERROR;
         else
         {
             for (uint32_t i = 0; i < base->physical_device_count; i++)
@@ -317,7 +320,7 @@ uint32_t renderer_backend_vulkan_base_create(struct minec_client* client, void**
 
                 if ((base->backend_device_infos[i] = s_alloc_string(client->static_alloc, "%s", physical_device_properties[i].deviceName)) == NULL)
                 {
-                    result = MINEC_CLIENT_ERROR_OUT_OF_MEMORY;
+                    result = MINEC_CLIENT_CRITICAL_ERROR;
 
                     for (uint32_t j = 0; j < i; j++) s_free(client->static_alloc, base->backend_device_infos[j]);
                     s_free(client->static_alloc, base->backend_device_infos);

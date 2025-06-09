@@ -7,17 +7,10 @@
 
 #include "backend/backend.h"
 
-static void renderer_log(struct minec_client* client, uint8_t* message, ...)
-{
-	va_list args;
-	va_start(args, message);
-	minec_client_log_v(client, "[RENDERER]", message, args);
-	va_end(args);
-}
-
 struct renderer_backend_global_state
 {
 	void* líbrary_handle;
+	uint32_t library_load_index;
 	struct renderer_backend_interface* interfaces;
 	uint32_t backend_count;
 	uint8_t** backend_names;
@@ -43,11 +36,21 @@ struct renderer_backend_device_state
 struct renderer_backend_pipelines_resources_state
 {
 	void* pipelines_resources;
-	bool created;
+
+	uint32_t pcr_backend_index;
+};
+
+enum renderer_request_flag
+{
+	RENDERER_REQUEST_RENDER,
+	RENDERER_REQUEST_CLOSE,
+	RENDERER_REQUEST_HALT
 };
 
 struct renderer
 {
+	atomic_(uint32_t) request_flag;
+	mutex_t mutex;
 
 	struct
 	{
@@ -56,16 +59,22 @@ struct renderer
 		struct renderer_backend_device_state device;
 		struct renderer_backend_pipelines_resources_state pipelines_resources;
 	} backend;
-	
-	uint32_t backend_library_load_index;
+
 	uint8_t* backend_library_paths[3];
 
 	PixelcharRenderer pixelchar_renderer;
-	PixelcharFont pixelchar_fonts[PIXELCHAR_RENDERER_MAX_FONT_COUNT];
 
-	void* thread_handle;
-	mutex_t thread_mutex;
-	atomic_(bool) thread_should_close;
+	struct rendering_thread_state
+	{
+		void* handle;
+
+		struct
+		{
+			float time;
+			uint32_t index;
+
+		} frame_info;
+	} thread_state;
 };
 
 struct minec_client;

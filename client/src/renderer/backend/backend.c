@@ -1,21 +1,25 @@
-#include "backend_internal.h"
+#include <minec_client.h>
 
-uint32_t renderer_backend_vulkan_base_create(struct minec_client* client, void** base, uint32_t* device_count, uint8_t*** device_infos);
-void renderer_backend_vulkan_base_destroy(struct minec_client* client, void** base);
-uint32_t renderer_backend_vulkan_device_create(struct minec_client* client, void** base, void** device, uint32_t device_index, uint32_t fps);
-void renderer_backend_vulkan_device_destroy(struct minec_client* client, void** base, void** device);
+uint32_t renderer_backend_vulkan_base_create(struct minec_client* client, void** backend_base, uint32_t* device_count, uint8_t*** device_infos);
+void renderer_backend_vulkan_base_destroy(struct minec_client* client, void** backend_base);
+uint32_t renderer_backend_vulkan_device_create(struct minec_client* client, void** backend_base, void** backend_device, uint32_t device_index, uint32_t fps);
+void renderer_backend_vulkan_device_destroy(struct minec_client* client, void** backend_base, void** backend_device);
 uint32_t renderer_backend_vulkan_set_fps(struct minec_client* client, uint32_t fps);
-uint32_t renderer_backend_vulkan_pipelines_resources_create(struct minec_client* client);
-void renderer_backend_vulkan_pipelines_resources_destroy(struct minec_client* client);
+uint32_t renderer_backend_vulkan_pipelines_resources_create(struct minec_client* client, void** backend_base, void** backend_device, void** backend_pipelines_resources, uint32_t pcr_backend_index);
+void renderer_backend_vulkan_pipelines_resources_destroy(struct minec_client* client, void** backend_base, void** backend_device, void** backend_pipelines_resources);
+uint32_t renderer_backend_vulkan_start_rendering(struct minec_client* client);
+void  renderer_backend_vulkan_stop_rendering(struct minec_client* client);
 uint32_t renderer_backend_vulkan_render(struct minec_client* client);
 
-uint32_t renderer_backend_opengl_base_create(struct minec_client* client, void** base, uint32_t* device_count, uint8_t*** device_infos);
-void renderer_backend_opengl_base_destroy(struct minec_client* client, void** base);
-uint32_t renderer_backend_opengl_device_create(struct minec_client* client, void** base, void** device, uint32_t device_index, uint32_t fps);
-void renderer_backend_opengl_device_destroy(struct minec_client* client, void** base, void** device);
+uint32_t renderer_backend_opengl_base_create(struct minec_client* client, void** backend_base, uint32_t* device_count, uint8_t*** device_infos);
+void renderer_backend_opengl_base_destroy(struct minec_client* client, void** backend_base);
+uint32_t renderer_backend_opengl_device_create(struct minec_client* client, void** backend_base, void** backend_device, uint32_t device_index, uint32_t fps);
+void renderer_backend_opengl_device_destroy(struct minec_client* client, void** backend_base, void** backend_device);
 uint32_t renderer_backend_opengl_set_fps(struct minec_client* client, uint32_t fps);
-uint32_t renderer_backend_opengl_pipelines_resources_create(struct minec_client* client);
-void renderer_backend_opengl_pipelines_resources_destroy(struct minec_client* client);
+uint32_t renderer_backend_opengl_pipelines_resources_create(struct minec_client* client, void** backend_base, void** backend_device, void** backend_pipelines_resources, uint32_t pcr_backend_index);
+void renderer_backend_opengl_pipelines_resources_destroy(struct minec_client* client, void** backend_base, void** backend_device, void** backend_pipelines_resources);
+uint32_t renderer_backend_opengl_start_rendering(struct minec_client* client);
+void  renderer_backend_opengl_stop_rendering(struct minec_client* client);
 uint32_t renderer_backend_opengl_render(struct minec_client* client);
 
 struct renderer_backend_interface renderer_backend_interfaces[] =
@@ -49,6 +53,8 @@ struct renderer_backend_interface renderer_backend_interfaces[] =
 		renderer_backend_opengl_pipelines_resources_create,
 		renderer_backend_opengl_pipelines_resources_destroy,
 
+		renderer_backend_opengl_start_rendering,
+		renderer_backend_opengl_stop_rendering,
 		renderer_backend_opengl_render
 	},
 #endif

@@ -16,9 +16,11 @@ struct renderer_backend_interface
 
 	uint32_t (*set_fps)(struct minec_client* client, uint32_t fps);
 
-	uint32_t (*pipelines_resources_create)(struct minec_client* client);
-	void (*pipelines_resources_destroy)(struct minec_client* client);
+	uint32_t (*pipelines_resources_create)(struct minec_client* client, void** base, void** device, void** pipelines_resources, uint32_t pcr_backend_index);
+	void (*pipelines_resources_destroy)(struct minec_client* client, void** base, void** device, void** pipelines_resources);
 
+	uint32_t (*start_rendering)(struct minec_client* client);
+	void (*stop_rendering)(struct minec_client* client);
 	uint32_t (*render)(struct minec_client* client);
 };
 

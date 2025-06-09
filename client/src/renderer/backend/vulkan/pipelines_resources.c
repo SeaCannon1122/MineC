@@ -2,7 +2,7 @@
 
 #include <pixelchar/backend/backend_vulkan.h>
 
-uint32_t renderer_backend_vulkan_pipelines_resources_create(struct minec_client* client)
+uint32_t renderer_backend_vulkan_pipelines_resources_create(struct minec_client* client, void** backend_base, void** backend_device, void** backend_pipelines_resources, uint32_t pcr_backend_index)
 {
     uint32_t result = MINEC_CLIENT_SUCCESS;
 
@@ -10,7 +10,7 @@ uint32_t renderer_backend_vulkan_pipelines_resources_create(struct minec_client*
     struct renderer_backend_vulkan_device* device = client->renderer.backend.device.device;
     struct renderer_backend_vulkan_pipelines_resources* pipelines_resources;
 
-    if ((client->renderer.backend.pipelines_resources.pipelines_resources = s_alloc(client->static_alloc, sizeof(struct renderer_backend_vulkan_pipelines_resources))) == NULL) return MINEC_CLIENT_ERROR_OUT_OF_MEMORY;
+    if ((client->renderer.backend.pipelines_resources.pipelines_resources = s_alloc(client->static_alloc, sizeof(struct renderer_backend_vulkan_pipelines_resources))) == NULL) return MINEC_CLIENT_CRITICAL_ERROR;
 
     pipelines_resources = client->renderer.backend.pipelines_resources.pipelines_resources;
 
@@ -28,7 +28,7 @@ uint32_t renderer_backend_vulkan_pipelines_resources_create(struct minec_client*
     return result;
 }
 
-void renderer_backend_vulkan_pipelines_resources_destroy(struct minec_client* client)
+void renderer_backend_vulkan_pipelines_resources_destroy(struct minec_client* client, void** backend_base, void** backend_device, void** backend_pipelines_resources)
 {
     struct renderer_backend_vulkan_base* base = client->renderer.backend.base.base;
     struct renderer_backend_vulkan_device* device = client->renderer.backend.device.device;

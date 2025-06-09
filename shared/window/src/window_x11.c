@@ -84,7 +84,7 @@ bool window_init_context(void* transfered_context)
 	if (transfered_context == NULL)
 	{
 		context->display = XOpenDisplay(NULL);
-		context->screen = context->screen;
+		context->screen = DefaultScreen(context->display);
 		context->wm_delete_window = XInternAtom(context->display, "WM_DELETE_WINDOW", False);
 		context->xim = XOpenIM(context->display, NULL, NULL, NULL);
 	}
@@ -301,7 +301,7 @@ uint8_t* window_get_VK_KHR_PLATFORM_SURFACE_EXTENSION_NAME()
 
 bool window_opengl_load()
 {
-	if ((context->opengl.library = dlopen("libGL.so.1", RTLD_NOW)) == NULL) return false;
+	if ((context->opengl.library = dlopen("libGL.so.1", RTLD_NOW | RTLD_NODELETE)) == NULL) return false;
 
 	if ((context->opengl.func.glXGetProcAddress = dlsym(context->opengl.library, "glXGetProcAddress")) == NULL)
 	{
@@ -413,7 +413,7 @@ bool window_glCreateContext(void* window, int32_t version_major, int32_t version
 	return true;
 }
 
-void window_glDeleteContext(void* window)
+void window_glDestroyContext(void* window)
 {
 	struct window_data_x11* window_data = window;
 
@@ -426,7 +426,7 @@ bool window_glMakeCurrent(void* window)
 
 	bool result = true;
 
-	if (window_data == NULL) context->opengl.func.glXMakeCurrent(context->display, None, NULL);
+	if (window_data == NULL) result = (context->opengl.func.glXMakeCurrent(context->display, None, NULL) == True);
 	else if ((result = (context->opengl.func.glXMakeCurrent(context->display, window_data->window, window_data->glx_context) == True)) == true) context->opengl.current_window = window;
 	return result;
 }

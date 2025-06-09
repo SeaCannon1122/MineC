@@ -39,7 +39,7 @@ void set_console_cursor_position(int32_t x, int32_t y);
 
 void sleep_for_ms(uint32_t time_in_milliseconds);
 
-double get_time();
+float get_time();
 
 void* create_thread(void (address) (void*), void* args);
 

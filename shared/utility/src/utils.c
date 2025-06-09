@@ -124,13 +124,13 @@ void sleep_for_ms(uint32_t time_in_milliseconds)
 	Sleep(time_in_milliseconds);
 }
 
-double get_time()
+float get_time()
 {
 	LARGE_INTEGER frequency, start;
 	QueryPerformanceFrequency(&frequency);
 	QueryPerformanceCounter(&start);
 
-	return (double)1000 * ((double)start.QuadPart / (double)frequency.QuadPart);
+	return (float)1000 * ((float)start.QuadPart / (float)frequency.QuadPart);
 }
 
 void* create_thread(void (address)(void*), void* args)
@@ -170,11 +170,11 @@ void sleep_for_ms(uint32_t time_in_milliseconds)
 	usleep(time_in_milliseconds * 1000);
 }
 
-double get_time()
+float get_time()
 {
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
-	return (double)tv.tv_sec * 1000. + (double)tv.tv_usec / 1000.;
+	return (float)tv.tv_sec * 1000. + (float)tv.tv_usec / 1000.;
 }
 
 void* create_thread(void (address)(void*), void* args)

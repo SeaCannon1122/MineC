@@ -148,81 +148,47 @@ PixelcharResult pixelcharRendererBackendOpenGLInitialize(
 	{
 		backend->resource_frame_count = resourceFrameCount;
 
-		void** functions[] =
+		struct load_entry { void** load_dst; uint8_t* func_name; };
+#define LOAD_FUNC_ENTRY(func_name) {(void**)&backend->func.func_name, #func_name}
+
+		struct load_entry load_entries[] =
 		{
-			(void**)&backend->func.glGenBuffers,
-			(void**)&backend->func.glBindBuffer,
-			(void**)&backend->func.glBufferData,
-			(void**)&backend->func.glBufferSubData,
-			(void**)&backend->func.glDeleteBuffers,
-			(void**)&backend->func.glGetError,
-			(void**)&backend->func.glGenVertexArrays,
-			(void**)&backend->func.glBindVertexArray,
-			(void**)&backend->func.glEnableVertexAttribArray,
-			(void**)&backend->func.glVertexAttribIFormat,
-			(void**)&backend->func.glVertexAttribFormat,
-			(void**)&backend->func.glVertexAttribBinding,
-			(void**)&backend->func.glVertexBindingDivisor,
-			(void**)&backend->func.glCreateShader,
-			(void**)&backend->func.glShaderSource,
-			(void**)&backend->func.glCompileShader,
-			(void**)&backend->func.glCreateProgram,
-			(void**)&backend->func.glAttachShader,
-			(void**)&backend->func.glLinkProgram,
-			(void**)&backend->func.glGetShaderiv,
-			(void**)&backend->func.glGetProgramiv,
-			(void**)&backend->func.glGetProgramInfoLog,
-			(void**)&backend->func.glDeleteShader,
-			(void**)&backend->func.glGetUniformLocation,
-			(void**)&backend->func.glDeleteProgram,
-			(void**)&backend->func.glDeleteVertexArrays,
-			(void**)&backend->func.glUseProgram,
-			(void**)&backend->func.glBindBufferBase,
-			(void**)&backend->func.glBindVertexBuffer,
-			(void**)&backend->func.glUniform2i,
-			(void**)&backend->func.glUniform4f,
-			(void**)&backend->func.glUniform1ui,
-			(void**)&backend->func.glDrawElementsInstanced
+			LOAD_FUNC_ENTRY(glGenBuffers),
+			LOAD_FUNC_ENTRY(glBindBuffer),
+			LOAD_FUNC_ENTRY(glBufferData),
+			LOAD_FUNC_ENTRY(glBufferSubData),
+			LOAD_FUNC_ENTRY(glDeleteBuffers),
+			LOAD_FUNC_ENTRY(glGetError),
+			LOAD_FUNC_ENTRY(glGenVertexArrays),
+			LOAD_FUNC_ENTRY(glBindVertexArray),
+			LOAD_FUNC_ENTRY(glEnableVertexAttribArray),
+			LOAD_FUNC_ENTRY(glVertexAttribIFormat),
+			LOAD_FUNC_ENTRY(glVertexAttribFormat),
+			LOAD_FUNC_ENTRY(glVertexAttribBinding),
+			LOAD_FUNC_ENTRY(glVertexBindingDivisor),
+			LOAD_FUNC_ENTRY(glCreateShader),
+			LOAD_FUNC_ENTRY(glShaderSource),
+			LOAD_FUNC_ENTRY(glCompileShader),
+			LOAD_FUNC_ENTRY(glCreateProgram),
+			LOAD_FUNC_ENTRY(glAttachShader),
+			LOAD_FUNC_ENTRY(glLinkProgram),
+			LOAD_FUNC_ENTRY(glGetShaderiv),
+			LOAD_FUNC_ENTRY(glGetProgramiv),
+			LOAD_FUNC_ENTRY(glGetProgramInfoLog),
+			LOAD_FUNC_ENTRY(glDeleteShader),
+			LOAD_FUNC_ENTRY(glGetUniformLocation),
+			LOAD_FUNC_ENTRY(glDeleteProgram),
+			LOAD_FUNC_ENTRY(glDeleteVertexArrays),
+			LOAD_FUNC_ENTRY(glUseProgram),
+			LOAD_FUNC_ENTRY(glBindBufferBase),
+			LOAD_FUNC_ENTRY(glBindVertexBuffer),
+			LOAD_FUNC_ENTRY(glUniform2i),
+			LOAD_FUNC_ENTRY(glUniform4f),
+			LOAD_FUNC_ENTRY(glUniform1ui),
+			LOAD_FUNC_ENTRY(glDrawElementsInstanced)
 		};
 
-		uint8_t* function_names[] =
-		{
-			"glGenBuffers",
-			"glBindBuffer",
-			"glBufferData",
-			"glBufferSubData",
-			"glDeleteBuffers",
-			"glGetError",
-			"glGenVertexArrays",
-			"glBindVertexArray",
-			"glEnableVertexAttribArray",
-			"glVertexAttribIFormat",
-			"glVertexAttribFormat",
-			"glVertexAttribBinding",
-			"glVertexBindingDivisor",
-			"glCreateShader",
-			"glShaderSource",
-			"glCompileShader",
-			"glCreateProgram",
-			"glAttachShader",
-			"glLinkProgram",
-			"glGetShaderiv",
-			"glGetProgramiv",
-			"glGetProgramInfoLog",
-			"glDeleteShader",
-			"glGetUniformLocation",
-			"glDeleteProgram",
-			"glDeleteVertexArrays",
-			"glUseProgram",
-			"glBindBufferBase",
-			"glBindVertexBuffer",
-			"glUniform2i",
-			"glUniform4f",
-			"glUniform1ui",
-			"glDrawElementsInstanced"
-		};
-
-		for (uint32_t i = 0; i < sizeof(function_names) / sizeof(function_names[0]); i++) if ((*(functions[i]) = (void**)pfnglGetProcAddress(function_names[i])) == NULL)
+		for (uint32_t i = 0; i < sizeof(load_entries) / sizeof(load_entries[0]); i++) if ((*load_entries[i].load_dst = (void**)pfnglGetProcAddress(load_entries[i].func_name)) == NULL)
 		{
 			result = PIXELCHAR_ERROR_BACKEND_API;
 			break;

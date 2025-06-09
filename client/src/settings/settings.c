@@ -24,14 +24,13 @@ void settings_destroy(struct minec_client* client)
 void settings_load(struct minec_client* client)
 {
 
-	//game settings
+	//video settings
 	{
 		size_t file_length;
-		uint8_t* path_components[] = { client->runtime_files_path, GAME_SETTINGS_FILE_PATH };
+		uint8_t* path_components[] = { client->runtime_files_path, VIDEO_SETTINGS_FILE_PATH };
 		uint8_t* path = s_alloc_joined_string(client->dynamic_alloc, path_components, 2);
 
 		void* file_data = file_load(path, &file_length);
-		
 
 		if (file_data != NULL)
 		{
@@ -48,6 +47,15 @@ void settings_load(struct minec_client* client)
 
 			if (value = hashmap_get_value(hashmap, "fov")) if (value->type == HASHMAP_VALUE_INT)
 				client->settings.video.fov = value->data._int;
+
+			if (value = hashmap_get_value(hashmap, "backend_index")) if (value->type == HASHMAP_VALUE_INT)
+				client->settings.video.graphics.backend_index = value->data._int;
+
+			if (value = hashmap_get_value(hashmap, "backend_device_index")) if (value->type == HASHMAP_VALUE_INT)
+				client->settings.video.graphics.device_index = value->data._int;
+
+			if (value = hashmap_get_value(hashmap, "fps")) if (value->type == HASHMAP_VALUE_INT)
+				client->settings.video.graphics.fps = value->data._int;
 
 
 			hashmap_delete(hashmap);

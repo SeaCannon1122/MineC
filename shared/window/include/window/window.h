@@ -180,7 +180,7 @@ void window_opengl_unload();
 
 bool window_glCreateContext(void* window, int32_t version_major, int32_t version_minor, void* share_window);
 
-void window_glDeleteContext(void* window);
+void window_glDestroyContext(void* window);
 
 bool window_glMakeCurrent(void* window);
 

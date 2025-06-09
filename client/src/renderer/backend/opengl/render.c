@@ -1,5 +1,25 @@
 #include "backend_opengl.h"
 
+uint32_t renderer_backend_opengl_start_rendering(struct minec_client* client)
+{
+	if (window_glMakeCurrent(client->window.window_handle) == false)
+	{
+		minec_client_log_debug_error(client, "'window_glMakeCurrent' failed");
+		return MINEC_CLIENT_ERROR;
+	}
+	return MINEC_CLIENT_SUCCESS;
+}
+
+void  renderer_backend_opengl_stop_rendering(struct minec_client* client)
+{
+	if (window_glMakeCurrent(NULL) == false)
+	{
+		minec_client_log_error(client, "[FATAL] Failed to unset OpenGL context. Crashing ...");
+		minec_client_log_debug_error(client, "'window_glMakeCurrent(NULL)' failed");
+		minec_client_nuke_destroy_kill_crush_annihilate_process_exit(client);
+	}
+}
+
 uint32_t renderer_backend_opengl_render(struct minec_client* client)
 {
 	uint32_t return_result = MINEC_CLIENT_SUCCESS;
@@ -7,12 +27,11 @@ uint32_t renderer_backend_opengl_render(struct minec_client* client)
 
 	struct renderer_backend_opengl_base* base = client->renderer.backend.base.base;
 	struct renderer_backend_opengl_pipelines_resources* pipelines_resources = client->renderer.backend.pipelines_resources.pipelines_resources;
-
-	if (window_glMakeCurrent(client->window.window_handle) == false)
-	{
-		renderer_backend_opengl_log(client, "window_glMakeCurrent failed");
-		return MINEC_CLIENT_ERROR;
-	}
+	 
+	float frame_time = get_time();
+	client->renderer.thread_state.frame_info.time = frame_time - base->last_frame_time;
+	if (1000.f / (float)base->fps - client->renderer.thread_state.frame_info.time > 0 && base->fps != 0) sleep_for_ms((uint32_t)(1000.f / (float)base->fps - client->renderer.thread_state.frame_info.time));
+	base->last_frame_time = get_time();
 
 	uint32_t width;
 	uint32_t height;
@@ -33,25 +52,25 @@ uint32_t renderer_backend_opengl_render(struct minec_client* client)
 		base->func.glViewport(0, 0, width, height);
 		base->func.glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
 		base->func.glClear(GL_COLOR_BUFFER_BIT);
-		result = gl_error_check_log(client, base, "Initializing frame");
 	}
+	minec_client_retrieve_log_opengl_errors(client, base, &result, "Initializing frame");
 
 	if (result == MINEC_CLIENT_SUCCESS)
 	{
 		if (pipelines_resources->pixelchar_renderer.usable == true)
-			pixelcharRendererBackendOpenGLRender(client->renderer.pixelchar_renderer, width, height, 4.f, 4.f, 4.f, 1.4f);
+		{
+			pixelcharRendererBackendOpenGLRender(client->renderer.pixelchar_renderer, pipelines_resources->pixelchar_renderer.backend_index, 0, width, height, 4.f, 4.f, 4.f, 1.4f);
+		}
 	}
 
 	if (result == MINEC_CLIENT_SUCCESS)
 	{
 		if (window_glSwapBuffers(client->window.window_handle) == false) 
 		{
-			renderer_backend_opengl_log(client, "window_glSwapBuffers failed");
+			minec_client_log_debug_error(client, "'window_glSwapBuffers' failed");
 			return_result = MINEC_CLIENT_ERROR;
 			result = MINEC_CLIENT_ERROR;
 		}
 	}
-
-	window_glMakeCurrent(NULL);
 	return return_result;
 }

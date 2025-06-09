@@ -94,7 +94,7 @@ uint32_t renderer_backend_vulkan_device_create(struct minec_client* client, void
     struct renderer_backend_vulkan_device* device;
 
     if ((device = s_alloc(client->static_alloc, sizeof(struct renderer_backend_vulkan_device))) == NULL)
-        result = MINEC_CLIENT_ERROR_OUT_OF_MEMORY;
+        result = MINEC_CLIENT_CRITICAL_ERROR;
     else
         device_memory = true;
 
@@ -139,7 +139,7 @@ uint32_t renderer_backend_vulkan_device_create(struct minec_client* client, void
         else
         {
             if ((surface_formats = s_alloc(client->dynamic_alloc, sizeof(VkSurfaceFormatKHR) * surface_format_count)) == NULL)
-                result = MINEC_CLIENT_ERROR_OUT_OF_MEMORY;
+                result = MINEC_CLIENT_CRITICAL_ERROR;
             else
             {
                 surface_formats_memory = true;
@@ -158,7 +158,7 @@ uint32_t renderer_backend_vulkan_device_create(struct minec_client* client, void
         base->func.vkGetPhysicalDeviceQueueFamilyProperties(base->physical_devices[device_index], &queue_family_properties_count, NULL);
 
         if ((queue_family_properties = s_alloc(client->dynamic_alloc, sizeof(VkQueueFamilyProperties) * queue_family_properties_count)) == NULL)
-            result = MINEC_CLIENT_ERROR_OUT_OF_MEMORY;
+            result = MINEC_CLIENT_CRITICAL_ERROR;
         else
         {
             queue_family_properties_memory = true;
@@ -176,7 +176,7 @@ uint32_t renderer_backend_vulkan_device_create(struct minec_client* client, void
         else
         {
             if ((present_modes = s_alloc(client->dynamic_alloc, sizeof(VkPresentModeKHR) * present_mode_count)) == NULL)
-                result = MINEC_CLIENT_ERROR_OUT_OF_MEMORY;
+                result = MINEC_CLIENT_CRITICAL_ERROR;
             else
             {
                 present_modes_memory = true;
@@ -308,7 +308,7 @@ uint32_t renderer_backend_vulkan_device_create(struct minec_client* client, void
         else
         {
             if ((extensions = s_alloc(client->dynamic_alloc, sizeof(VkExtensionProperties) * extension_count)) == NULL)
-                result = MINEC_CLIENT_ERROR_OUT_OF_MEMORY;
+                result = MINEC_CLIENT_CRITICAL_ERROR;
             else if (base->func.vkEnumerateDeviceExtensionProperties(base->physical_devices[device_index], NULL, &extension_count, extensions) != VK_SUCCESS)
             {
                 renderer_backend_vulkan_log(client, "vkEnumerateDeviceExtensionProperties failed");

@@ -198,7 +198,7 @@ int main(int argc, char* argv[]) {
 
 	window_glMakeCurrent(NULL);
 
-	window_glDeleteContext(window);
+	window_glDestroyContext(window);
 	window_destroy(window);
 
 	window_opengl_unload();

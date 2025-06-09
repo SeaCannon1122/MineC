@@ -26,283 +26,192 @@ uint32_t renderer_backend_opengl_base_create(struct minec_client* client, void**
         extensions_memory = false
     ;
 
+    bool currrent = false;
+
     window_init_context(renderer_backend_get_window_context());
 
     struct renderer_backend_opengl_base* base;
 
     if ((base = s_alloc(client->static_alloc, sizeof(struct renderer_backend_opengl_base))) == NULL)
-        result = MINEC_CLIENT_ERROR_OUT_OF_MEMORY;
-    else
-        base_memory = true;
+    {
+        minec_client_log_debug_error(client, "'s_alloc(client->static_alloc, sizeof(struct renderer_backend_opengl_base))' failed");
+        result = MINEC_CLIENT_ERROR;
+    }
+    else base_memory = true;
 
     if (result == MINEC_CLIENT_SUCCESS)
     {
         if (window_opengl_load() == false)
         {
-            renderer_backend_opengl_log(client, "Failed to load opengl");
+            minec_client_log_debug_error(client, "'window_opengl_load()' failed");
             result = MINEC_CLIENT_ERROR;
         }
-        else
-            opengl_loaded = true;
+        else opengl_loaded = true;
     }
-
     if (result == MINEC_CLIENT_SUCCESS)
     {
         if (window_glCreateContext(client->window.window_handle, 4, 3, NULL) == false)
         {
-            renderer_backend_opengl_log(client, "window_glCreateContext failed");
+            minec_client_log_debug_error(client, "'window_glCreateContext(client->window.window_handle, 4, 3, NULL)' failed");
             result = MINEC_CLIENT_ERROR;
         }
         else context_created = true;
     }
-
     if (result == MINEC_CLIENT_SUCCESS)
     {
         if (window_glMakeCurrent(client->window.window_handle) == false)
         {
-            renderer_backend_opengl_log(client, "window_glMakeCurrent failed");
+            minec_client_log_debug_error(client, "'window_glMakeCurrent' failed");
             result = MINEC_CLIENT_ERROR;
         }
+        else currrent = true;
     }
 
     if (result == MINEC_CLIENT_SUCCESS) {
 
-        void** functions[] =
+        struct load_entry { void** load_dst; uint8_t* func_name; };
+#define LOAD_FUNC_ENTRY(func_name) {(void**)&base->func.func_name, #func_name}
+
+        struct load_entry load_entries[] =
         {
+            //general
 #ifdef  MINEC_CLIENT_RENDERER_BACKEND_DEBUG
-            (void**)&base->func.glDebugMessageCallback,
-            (void**)&base->func.glDebugMessageControl,
+            LOAD_FUNC_ENTRY(glDebugMessageCallback),
+            LOAD_FUNC_ENTRY(glDebugMessageControl),
 #endif
-            (void**)&base->func.glEnable,
-            (void**)&base->func.glDisable,
-            (void**)&base->func.glGetError,
-            (void**)&base->func.glGetString,
-            (void**)&base->func.glGetStringi,
-            (void**)&base->func.glGetIntegerv,
+            LOAD_FUNC_ENTRY(glEnable),
+            LOAD_FUNC_ENTRY(glDisable),
+            LOAD_FUNC_ENTRY(glGetError),
+            LOAD_FUNC_ENTRY(glGetString),
+            LOAD_FUNC_ENTRY(glGetStringi),
+            LOAD_FUNC_ENTRY(glGetIntegerv),
 
-        //framebuffer
-            (void**)&base->func.glGenFramebuffers,
-            (void**)&base->func.glDeleteFramebuffers,
-            (void**)&base->func.glBindFramebuffer,
-            (void**)&base->func.glFramebufferTexture2D,
-            (void**)&base->func.glCheckFramebufferStatus,
+            //framebuffer
+            LOAD_FUNC_ENTRY(glGenFramebuffers),
+            LOAD_FUNC_ENTRY(glDeleteFramebuffers),
+            LOAD_FUNC_ENTRY(glBindFramebuffer),
+            LOAD_FUNC_ENTRY(glFramebufferTexture2D),
+            LOAD_FUNC_ENTRY(glCheckFramebufferStatus),
 
-        //textures
-            (void**)&base->func.glGenTextures,
-            (void**)&base->func.glDeleteTextures,
-            (void**)&base->func.glBindTexture,
-            (void**)&base->func.glTexImage2D,
-            (void**)&base->func.glTexParameteri,
+            //textures
+            LOAD_FUNC_ENTRY(glGenTextures),
+            LOAD_FUNC_ENTRY(glDeleteTextures),
+            LOAD_FUNC_ENTRY(glBindTexture),
+            LOAD_FUNC_ENTRY(glTexImage2D),
+            LOAD_FUNC_ENTRY(glTexParameteri),
 
-        //render buffer
-            (void**)&base->func.glGenRenderbuffers,
-            (void**)&base->func.glDeleteRenderbuffers,
-            (void**)&base->func.glBindRenderbuffer,
-            (void**)&base->func.glRenderbufferStorage,
-            (void**)&base->func.glFramebufferRenderbuffer,
+            //render buffer
+            LOAD_FUNC_ENTRY(glGenRenderbuffers),
+            LOAD_FUNC_ENTRY(glDeleteRenderbuffers),
+            LOAD_FUNC_ENTRY(glBindRenderbuffer),
+            LOAD_FUNC_ENTRY(glRenderbufferStorage),
+            LOAD_FUNC_ENTRY(glFramebufferRenderbuffer),
 
-        //shader
-            (void**)&base->func.glCreateProgram,
-            (void**)&base->func.glDeleteProgram,
-            (void**)&base->func.glCreateShader,
-            (void**)&base->func.glDeleteShader,
-            (void**)&base->func.glShaderSource,
-            (void**)&base->func.glCompileShader,
-            (void**)&base->func.glAttachShader,
-            (void**)&base->func.glLinkProgram,
-            (void**)&base->func.glUseProgram,
+            //shader
+            LOAD_FUNC_ENTRY(glCreateProgram),
+            LOAD_FUNC_ENTRY(glDeleteProgram),
+            LOAD_FUNC_ENTRY(glCreateShader),
+            LOAD_FUNC_ENTRY(glDeleteShader),
+            LOAD_FUNC_ENTRY(glShaderSource),
+            LOAD_FUNC_ENTRY(glCompileShader),
+            LOAD_FUNC_ENTRY(glAttachShader),
+            LOAD_FUNC_ENTRY(glLinkProgram),
+            LOAD_FUNC_ENTRY(glUseProgram),
 
-        //VAO
-            (void**)&base->func.glGenVertexArrays,
-            (void**)&base->func.glDeleteVertexArrays,
-            (void**)&base->func.glBindVertexArray,
-            (void**)&base->func.glVertexAttribPointer,
-            (void**)&base->func.glEnableVertexAttribArray,
-            (void**)&base->func.glDisableVertexAttribArray,
+            //VAO
+            LOAD_FUNC_ENTRY(glGenVertexArrays),
+            LOAD_FUNC_ENTRY(glDeleteVertexArrays),
+            LOAD_FUNC_ENTRY(glBindVertexArray),
+            LOAD_FUNC_ENTRY(glVertexAttribPointer),
+            LOAD_FUNC_ENTRY(glEnableVertexAttribArray),
+            LOAD_FUNC_ENTRY(glDisableVertexAttribArray),
 
+            //buffer
+            LOAD_FUNC_ENTRY(glGenBuffers),
+            LOAD_FUNC_ENTRY(glDeleteBuffers),
+            LOAD_FUNC_ENTRY(glBindBuffer),
+            LOAD_FUNC_ENTRY(glBufferData),
+            LOAD_FUNC_ENTRY(glBufferSubData),
+            LOAD_FUNC_ENTRY(glMapBuffer),
+            LOAD_FUNC_ENTRY(glMapBufferRange),
+            LOAD_FUNC_ENTRY(glUnmapBuffer),
 
-        //Buffer
-            (void**)&base->func.glGenBuffers,
-            (void**)&base->func.glDeleteBuffers,
-            (void**)&base->func.glBindBuffer,
-            (void**)&base->func.glBufferData,
-            (void**)&base->func.glBufferSubData,
-            (void**)&base->func.glMapBuffer,
-            (void**)&base->func.glMapBufferRange,
-            (void**)&base->func.glUnmapBuffer,
+            //blend
+            LOAD_FUNC_ENTRY(glBlendFunc),
+            LOAD_FUNC_ENTRY(glBlendFuncSeparate),
+            LOAD_FUNC_ENTRY(glBlendEquation),
+            LOAD_FUNC_ENTRY(glBlendEquationSeparate),
+            LOAD_FUNC_ENTRY(glBlendColor),
 
+            //stencil
+            LOAD_FUNC_ENTRY(glStencilFunc),
+            LOAD_FUNC_ENTRY(glStencilOp),
+            LOAD_FUNC_ENTRY(glStencilMask),
+            LOAD_FUNC_ENTRY(glClearStencil),
 
-        //blend
-            (void**)&base->func.glBlendFunc,
-            (void**)&base->func.glBlendFuncSeparate,
-            (void**)&base->func.glBlendEquation,
-            (void**)&base->func.glBlendEquationSeparate,
-            (void**)&base->func.glBlendColor,
+            //rendering
+            LOAD_FUNC_ENTRY(glViewport),
+            LOAD_FUNC_ENTRY(glClear),
+            LOAD_FUNC_ENTRY(glClearColor),
+            LOAD_FUNC_ENTRY(glDepthFunc),
+            LOAD_FUNC_ENTRY(glDepthMask),
+            LOAD_FUNC_ENTRY(glCullFace),
+            LOAD_FUNC_ENTRY(glFrontFace),
 
-        //stencil
-            (void**)&base->func.glStencilFunc,
-            (void**)&base->func.glStencilOp,
-            (void**)&base->func.glStencilMask,
-            (void**)&base->func.glClearStencil,
+            //draw
+            LOAD_FUNC_ENTRY(glDrawArrays),
+            LOAD_FUNC_ENTRY(glDrawElements),
+            LOAD_FUNC_ENTRY(glDrawArraysInstanced),
+            LOAD_FUNC_ENTRY(glDrawElementsInstanced),
 
-            (void**)&base->func.glViewport,
-            (void**)&base->func.glClear,
-            (void**)&base->func.glClearColor,
-            (void**)&base->func.glDepthFunc,
-            (void**)&base->func.glDepthMask,
-            (void**)&base->func.glCullFace,
-            (void**)&base->func.glFrontFace,
-
-        //draw
-            (void**)&base->func.glDrawArrays,
-            (void**)&base->func.glDrawElements,
-            (void**)&base->func.glDrawArraysInstanced,
-            (void**)&base->func.glDrawElementsInstanced
         };
 
-        uint8_t* function_names[] =
+        for (uint32_t i = 0; i < sizeof(load_entries) / sizeof(load_entries[0]) && result == MINEC_CLIENT_SUCCESS; i++)
         {
-#ifdef  MINEC_CLIENT_RENDERER_BACKEND_DEBUG
-            "glDebugMessageCallback",
-            "glDebugMessageControl",
-#endif
-            "glEnable",
-            "glDisable",
-            "glGetError",
-            "glGetString",
-            "glGetStringi",
-            "glGetIntegerv",
-
-        //framebuffer
-            "glGenFramebuffers",
-            "glDeleteFramebuffers",
-            "glBindFramebuffer",
-            "glFramebufferTexture2D",
-            "glCheckFramebufferStatus",
-
-        //textures
-            "glGenTextures",
-            "glDeleteTextures",
-            "glBindTexture",
-            "glTexImage2D",
-            "glTexParameteri",
-
-        //render buffer
-            "glGenRenderbuffers",
-            "glDeleteRenderbuffers",
-            "glBindRenderbuffer",
-            "glRenderbufferStorage",
-            "glFramebufferRenderbuffer",
-
-        //shader
-            "glCreateProgram",
-            "glDeleteProgram",
-            "glCreateShader",
-            "glDeleteShader",
-            "glShaderSource",
-            "glCompileShader",
-            "glAttachShader",
-            "glLinkProgram",
-            "glUseProgram",
-
-        //VAO
-            "glGenVertexArrays",
-            "glDeleteVertexArrays",
-            "glBindVertexArray",
-            "glVertexAttribPointer",
-            "glEnableVertexAttribArray",
-            "glDisableVertexAttribArray",
-
-
-        //Buffer
-            "glGenBuffers",
-            "glDeleteBuffers",
-            "glBindBuffer",
-            "glBufferData",
-            "glBufferSubData",
-            "glMapBuffer",
-            "glMapBufferRange",
-            "glUnmapBuffer",
-
-
-        //blend
-            "glBlendFunc",
-            "glBlendFuncSeparate",
-            "glBlendEquation",
-            "glBlendEquationSeparate",
-            "glBlendColor",
-
-        //stencil
-            "glStencilFunc",
-            "glStencilOp",
-            "glStencilMask",
-            "glClearStencil",
-
-            "glViewport",
-            "glClear",
-            "glClearColor",
-            "glDepthFunc",
-            "glDepthMask",
-            "glCullFace",
-            "glFrontFace",
-
-        //draw
-            "glDrawArrays",
-            "glDrawElements",
-            "glDrawArraysInstanced",
-            "glDrawElementsInstanced"
-        };
-
-        for (uint32_t i = 0; i < sizeof(functions) / sizeof(functions[0]) && result == MINEC_CLIENT_SUCCESS; i++)
-        {
-            if ((*functions[i] = (void*)window_glGetProcAddress(function_names[i])) == NULL)
+            if ((*load_entries[i].load_dst = (void*)window_glGetProcAddress(load_entries[i].func_name)) == NULL)
             {
-                renderer_backend_opengl_log(client, "Failed to retrieve '%s'", function_names[i]);
+                minec_client_log_debug_error(client, "'window_glGetProcAddress(\"%s\")' failed", load_entries[i].func_name);
                 result = MINEC_CLIENT_ERROR;
             }
         }
     }
-    GLenum gl_error;
-    while ((gl_error = base->func.glGetError()) != GL_NO_ERROR);
 
+    minec_client_retrieve_log_opengl_errors(client, base, &result, "Initial error reset");
 
     uint8_t** extensions;
     GLint extension_count = 0;
 
+    if (result == MINEC_CLIENT_SUCCESS) base->func.glGetIntegerv(GL_NUM_EXTENSIONS, &extension_count);
+    minec_client_retrieve_log_opengl_errors(client, base, &result, "glGetIntegerv(GL_NUM_EXTENSIONS, &extension_count)");
+
     if (result == MINEC_CLIENT_SUCCESS)
     {
-        base->func.glGetIntegerv(GL_NUM_EXTENSIONS, &extension_count);
-
-        if ((result = gl_error_check_log(client, base, "glGetIntegerv with GL_NUM_EXTENSIONS")) == MINEC_CLIENT_SUCCESS)
+        if ((extensions = s_alloc(client->dynamic_alloc, sizeof(uint8_t*) * extension_count + 8)) == NULL)
         {
-            if ((extensions = s_alloc(client->dynamic_alloc, sizeof(uint8_t*) * extension_count + 8)) != NULL)
-            {
-                extensions_memory = true;
-
-                for (GLint i = 0; i < extension_count; i++) if ((extensions[i] = base->func.glGetStringi(GL_EXTENSIONS, i)) == NULL)
-                {
-                    renderer_backend_opengl_log(client, "glGetStringi(GL_EXTENSIONS, %d) failed", i);
-                    result = MINEC_CLIENT_ERROR;
-                }
-            }
-            else result = MINEC_CLIENT_ERROR_OUT_OF_MEMORY;
+            minec_client_log_debug_error(client, "'s_alloc(client->dynamic_alloc, sizeof(uint8_t*) * extension_count(%d) + 8)' failed", extension_count);
+            result = MINEC_CLIENT_ERROR;
         }
-        else result = MINEC_CLIENT_ERROR;
+        else extensions_memory = true;
+    }
+    for (GLint i = 0; result == MINEC_CLIENT_SUCCESS && i < extension_count; i++) if ((extensions[i] = base->func.glGetStringi(GL_EXTENSIONS, i)) == NULL)
+    {
+        minec_client_log_debug_error(client, "'glGetStringi(GL_EXTENSIONS, %d)' failed", i);
+        result = MINEC_CLIENT_ERROR;
     }
 
     uint8_t* extension_names[] = {
-            "GL_ARB_bindless_texture"
+        "GL_ARB_bindless_texture"
     };
 
     for (uint32_t i = 0; i < sizeof(extension_names) / sizeof(extension_names[0]) && result == MINEC_CLIENT_SUCCESS; i++)
     {
         bool extension_support = false;
 
-        for (GLint j = 0; j < extension_count && extension_support == false; j++) if (strcmp(extension_names[i], extensions[j]) == NULL) extension_support = true;
+        for (GLint j = 0; j < extension_count && extension_support == false; j++) if (strcmp(extension_names[i], extensions[j]) == 0) extension_support = true;
 
         if (extension_support == false)
         {
-            renderer_backend_opengl_log(client, "required extension %s not supported", extension_names[i]);
+            minec_client_log_debug_error(client, "required extension %s not supported", extension_names[i]);
             result = MINEC_CLIENT_ERROR;
         }
     }
@@ -313,21 +222,15 @@ uint32_t renderer_backend_opengl_base_create(struct minec_client* client, void**
     {
         base->func.glEnable(GL_DEBUG_OUTPUT);
         base->func.glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-        result = gl_error_check_log(client, base, "Enabeling debug output");
-    }
-    if (result == MINEC_CLIENT_SUCCESS)
-    {
+
         base->func.glDebugMessageCallback(OpenGLDebugCallback, NULL);
-        result = gl_error_check_log(client, base, "Setting debug callback");
-    }
-    if (result == MINEC_CLIENT_SUCCESS)
-    {
+
         base->func.glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_HIGH, 0, NULL, GL_TRUE);
         base->func.glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_MEDIUM, 0, NULL, GL_TRUE);
         base->func.glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_LOW, 0, NULL, GL_FALSE);
         base->func.glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_NOTIFICATION, 0, NULL, GL_FALSE);
-        result = gl_error_check_log(client, base, "Configuring debug output");
     }
+    minec_client_retrieve_log_opengl_errors(client, base, &result, "Configuring OpenGL debug output");
 
 #endif
 
@@ -335,14 +238,14 @@ uint32_t renderer_backend_opengl_base_create(struct minec_client* client, void**
     {
         base->func.glEnable(GL_BLEND);
         base->func.glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        result = gl_error_check_log(client, base, "Enabeling Blending");
     }
+    minec_client_retrieve_log_opengl_errors(client, base, &result, "Configuring blending");
 
     if (result == MINEC_CLIENT_SUCCESS)
     {
         if ((device_info[0] = base->func.glGetString(GL_RENDERER)) == NULL)
         {
-            renderer_backend_opengl_log(client, "glGetString(GL_RENDERER) failed");
+            minec_client_log_debug_error(client, "'glGetString(GL_RENDERER)' failed");
             result = MINEC_CLIENT_ERROR;
         }
     }
@@ -352,11 +255,19 @@ uint32_t renderer_backend_opengl_base_create(struct minec_client* client, void**
         *device_count = 1;
         *device_infos = device_info;
         *backend_base = base;
+
+        atomic_init(&base->fps_new);
+    }
+    
+    if (currrent) if (window_glMakeCurrent(NULL) == false)
+    {
+        minec_client_log_error(client, "[FATAL] Failed to unset OpenGL context. Crashing ...");
+        minec_client_log_debug_error(client, "'window_glMakeCurrent(NULL)' failed");
+        minec_client_nuke_destroy_kill_crush_annihilate_process_exit(client);
     }
 
-    window_glMakeCurrent(NULL);
     if (extensions_memory) s_free(client->dynamic_alloc, extensions);
-    if (result != MINEC_CLIENT_SUCCESS && context_created) window_glDeleteContext(client->window.window_handle);
+    if (result != MINEC_CLIENT_SUCCESS && context_created) window_glDestroyContext(client->window.window_handle);
     if (result != MINEC_CLIENT_SUCCESS && opengl_loaded) window_opengl_unload();
     if (result != MINEC_CLIENT_SUCCESS && base_memory) s_free(client->static_alloc, base);
 
@@ -367,8 +278,9 @@ void renderer_backend_opengl_base_destroy(struct minec_client* client, void** ba
 {
     struct renderer_backend_opengl_base* base = *backend_base;
 
-    window_glMakeCurrent(NULL);
-    window_glDeleteContext(client->window.window_handle);
+    atomic_deinit(&base->fps_new);
+
+    window_glDestroyContext(client->window.window_handle);
     window_opengl_unload();
     s_free(client->static_alloc, base);
 }
