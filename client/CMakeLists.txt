@@ -2,9 +2,110 @@ cmake_minimum_required(VERSION 3.15)
 
 project(MineC_Client)
 
+message(STATUS "Building MineC_Client")
 
 
-add_executable(minec_client 
+
+set(MINEC_CLIENT_CMAKE_BUILD_DEVELOPMENT ON)
+
+if(MINEC_CLIENT_CMAKE_BUILD_DEVELOPMENT)
+    message(STATUS "Build: Development")
+    set(MINEC_CLIENT_CMAKE_DYNAMIC_RENDERER ON)
+    set(MINEC_CLIENT_CMAKE_DEBUG_LOG ON)
+
+elseif(MINEC_CLIENT_CMAKE_BUILD_DEBUG)
+    message(STATUS "Build: Debug")
+    set(MINEC_CLIENT_CMAKE_DEBUG_LOG ON)
+
+elseif(MINEC_CLIENT_CMAKE_BUILD_RELEASE)  
+    message(STATUS "Build: Release")
+
+else()
+    message(FATAL_ERROR "Build: No configuration set")
+
+endif()
+
+add_executable(MineC_Client)
+
+if(MINEC_CLIENT_CMAKE_DYNAMIC_RENDERER)
+    message(STATUS "Dynamic renderer: true")
+
+    add_library(MineC_Client_Renderer SHARED)
+    
+    target_compile_definitions(MineC_Client PRIVATE MINEC_CLIENT_DYNAMIC_RENDERER)
+    target_compile_definitions(MineC_Client_Renderer PRIVATE MINEC_CLIENT_DYNAMIC_RENDERER)
+
+    add_dependencies(MineC_Client MineC_Client_Renderer)
+
+    add_executable(MineC_Client_Renderer_build_dummy ${CMAKE_CURRENT_SOURCE_DIR}/src/dummy_main.c)
+    target_link_libraries(MineC_Client_Renderer_build_dummy PRIVATE MineC_Client_Renderer)
+
+    add_custom_target(MineC_Client_copy_renderer
+    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:MineC_Client_Renderer> "${CMAKE_CURRENT_BINARY_DIR}/runtime_files"
+    COMMENT "Copying MineC_Client_Renderer ..."
+    )
+
+    add_dependencies(MineC_Client MineC_Client_copy_renderer)
+    add_dependencies(MineC_Client_Renderer_build_dummy MineC_Client_copy_renderer)
+
+else()
+    message(STATUS "Dynamic renderer: false")
+
+    add_library(MineC_Client_Renderer STATIC)
+    target_link_libraries(MineC_Client PRIVATE MineC_Client_Renderer)
+endif()
+
+add_custom_target(MineC_Client_copy_runtime_files
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/runtime_files" "${CMAKE_CURRENT_BINARY_DIR}/runtime_files"
+    COMMENT "Copying runtime_files/ ..."
+)
+
+add_dependencies(MineC_Client MineC_Client_copy_runtime_files)
+add_dependencies(MineC_Client_Renderer MineC_Client_copy_runtime_files)
+
+if(MINEC_CLIENT_CMAKE_DEBUG_LOG)
+    message(STATUS "Debug log: true")
+
+    target_compile_definitions(MineC_Client PRIVATE MINEC_CLIENT_DEBUG_LOG)
+    target_compile_definitions(MineC_Client_Renderer PRIVATE MINEC_CLIENT_DEBUG_LOG)
+else()
+    message(STATUS "Debug log: false")
+endif()
+
+
+if(WIN32)
+    message(STATUS "Platform: Windows")
+    set(MINEC_CLIENT_CMAKE_GRAPHICS_BACKEND_VULKAN OFF)
+    set(MINEC_CLIENT_CMAKE_GRAPHICS_BACKEND_OPENGL ON)
+    set(MINEC_CLIENT_CMAKE_GRAPHICS_BACKEND_DIRECT3D11 ON)
+    set(MINEC_CLIENT_CMAKE_GRAPHICS_BACKEND_DIRECT3D12 ON)
+
+    if(MINEC_CLIENT_CMAKE_DYNAMIC_RENDERER)
+        target_compile_definitions(MineC_Client PRIVATE MINEC_CLIENT_SHARED_RENDERER_LIBRARY_NAME="MineC_Client_Renderer.dll")
+        target_link_options(MineC_Client_Renderer_build_dummy PRIVATE "/SUBSYSTEM:WINDOWS" "/ENTRY:mainCRTStartup")
+    endif()
+
+    if(NOT MINEC_CLIENT_CMAKE_DEBUG_LOG)
+        target_link_options(MineC_Client PRIVATE "/SUBSYSTEM:WINDOWS" "/ENTRY:mainCRTStartup")
+    endif()
+
+elseif(UNIX AND NOT APPLE)
+    message(STATUS "Platform: Linux")
+    set(MINEC_CLIENT_CMAKE_GRAPHICS_BACKEND_VULKAN OFF)
+    set(MINEC_CLIENT_CMAKE_GRAPHICS_BACKEND_OPENGL ON)
+
+    if(MINEC_CLIENT_CMAKE_DYNAMIC_RENDERER)
+        target_compile_definitions(MineC_Client PRIVATE MINEC_CLIENT_SHARED_RENDERER_LIBRARY_NAME="libMineC_Client_Renderer.so")
+    endif()
+
+    target_link_libraries(MineC_Client PRIVATE pthread m)
+
+else()
+    message(FATAL_ERROR "Platform: Unsupported")
+endif()
+
+
+target_sources(MineC_Client PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/main.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/minec_client.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/logging.c
@@ -12,115 +113,51 @@ add_executable(minec_client
     ${CMAKE_CURRENT_SOURCE_DIR}/src/settings/settings.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/resources/resources.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/renderer.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/rendering_thread.c
 )
 
-target_include_directories(minec_client
-    PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/src
-        ${CMAKE_SOURCE_DIR}/dependencies/stb_image/include
-)
-
-target_link_libraries(minec_client 
-    PRIVATE window pixelchar utility networking
-)
-
-target_compile_definitions(minec_client PRIVATE MINEC_CLIENT_RENDERER_BACKEND_DEBUG=1)
-
-add_library(minec_client_renderer_backend SHARED 
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/logging.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/backend/backend.c
-)
-
-target_include_directories(minec_client_renderer_backend PRIVATE 
+target_include_directories(MineC_Client PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/dependencies/stb_image/include
 )
 
-target_link_libraries(minec_client_renderer_backend 
-    PRIVATE window pixelchar utility
+target_link_libraries(MineC_Client PRIVATE window pixelchar utility networking)
+
+
+
+target_sources(MineC_Client_Renderer PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/renderer_internal.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/logging.c
 )
 
-target_compile_definitions(minec_client_renderer_backend PRIVATE MINEC_CLIENT_RENDERER_BACKEND_DEBUG=1)
+target_include_directories(MineC_Client_Renderer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-add_executable(minec_client_renderer_backend_dummy ${CMAKE_CURRENT_SOURCE_DIR}/src/dummy_main.c)
-target_link_libraries(minec_client_renderer_backend_dummy PRIVATE minec_client_renderer_backend )
-target_link_libraries(minec_client PRIVATE minec_client_renderer_backend )
+target_link_libraries(MineC_Client_Renderer PRIVATE window pixelchar utility)
 
-if(WIN32)
-    message(STATUS "MineC Client for Windows")
+if(MINEC_CLIENT_CMAKE_GRAPHICS_BACKEND_VULKAN)
+    message(STATUS "Graphics backend Vulkan: supported")
 
-    target_compile_definitions(minec_client
-        PRIVATE MINEC_CLIENT_RENDERER_BACKEND_LIBRARY_NAME="minec_client_renderer_backend.dll"
-    )
-
-    set(MINEC_CLIENT_COMPILE_WITH_VULKAN OFF)
-    set(MINEC_CLIENT_COMPILE_WITH_OPENGL ON)
-    set(MINEC_CLIENT_COMPILE_WITH_DIRECT3D11 ON)
-    set(MINEC_CLIENT_COMPILE_WITH_DIRECT3D12 ON)
-
-elseif(UNIX AND NOT APPLE)
-    message(STATUS "MineC Client for Linux")
-
-    target_link_libraries(minec_client 
-        PRIVATE pthread m
-    )
-
-    target_compile_definitions(minec_client
-        PRIVATE MINEC_CLIENT_RENDERER_BACKEND_LIBRARY_NAME="libminec_client_renderer_backend.so"
-    )
-
-    set(MINEC_CLIENT_COMPILE_WITH_VULKAN ON)
-    set(MINEC_CLIENT_COMPILE_WITH_OPENGL ON)
-
-#elseif(UNIX AND APPLE)
-#
-#    message(STATUS "MineC Client for MacOS")
-#
-#    set(MINEC_CLIENT_COMPILE_WITH_VULKAN ON)
-#    set(MINEC_CLIENT_COMPILE_WITH_METAL ON)
-
-else()
-    message(FATAL_ERROR "Unsupported platform!")
+    target_compile_definitions(MineC_Client_Renderer PRIVATE MINEC_CLIENT_GRAPHICS_BACKEND_VULKAN=1)
 endif()
 
-if (MINEC_CLIENT_COMPILE_WITH_VULKAN)
-    message(STATUS "MineC Client with Vulkan")
+if(MINEC_CLIENT_CMAKE_GRAPHICS_BACKEND_OPENGL)
+    message(STATUS "Graphics backend OpenGL: supported")
 
-    target_sources(minec_client_renderer_backend PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/backend/vulkan/base.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/backend/vulkan/device.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/backend/vulkan/pipelines_resources.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/backend/vulkan/render.c
-    )
-
-    target_compile_definitions(minec_client_renderer_backend
-        PRIVATE _MINEC_CLIENT_RENDERER_BACKEND_VULKAN=1
-    )
+    target_compile_definitions(MineC_Client_Renderer PRIVATE MINEC_CLIENT_GRAPHICS_BACKEND_OPENGL=1)
 endif()
 
-if (MINEC_CLIENT_COMPILE_WITH_OPENGL)
-    message(STATUS "MineC Client with OpenGL")
+if(MINEC_CLIENT_CMAKE_GRAPHICS_BACKEND_DIRECT3D11)
+    message(STATUS "Graphics backend Direct3D11: supported")
 
-    target_sources(minec_client_renderer_backend PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/backend/opengl/base.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/backend/opengl/device.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/backend/opengl/pipelines_resources.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/backend/opengl/render.c
-    )
-
-    target_compile_definitions(minec_client_renderer_backend
-        PRIVATE _MINEC_CLIENT_RENDERER_BACKEND_OPENGL=1
-    )
+    target_compile_definitions(MineC_Client_Renderer PRIVATE MINEC_CLIENT_GRAPHICS_BACKEND_DIRECT3D11=1)
 endif()
 
-add_custom_target(minec_client_copy_runtime_files ALL
-    COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/runtime_files" "${CMAKE_CURRENT_BINARY_DIR}/runtime_files"
-    COMMENT "Copying runtime files..."
-)
-add_custom_target(minec_client_copy_renderer_backend ALL
-    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:minec_client_renderer_backend> "${CMAKE_CURRENT_BINARY_DIR}/runtime_files"
-    COMMENT "Copying renderer backend ..."
-)
+if(MINEC_CLIENT_CMAKE_GRAPHICS_BACKEND_DIRECT3D12)
+    message(STATUS "Graphics backend Direct3D12: supported")
 
-add_dependencies(minec_client minec_client_copy_runtime_files minec_client_copy_renderer_backend)
-add_dependencies(minec_client_renderer_backend minec_client_copy_runtime_files)
+    target_compile_definitions(MineC_Client_Renderer PRIVATE MINEC_CLIENT_GRAPHICS_BACKEND_DIRECT3D12=1)
+endif()
+
+###
+target_compile_definitions(MineC_Client PRIVATE NDEBUG=1)
+target_compile_definitions(MineC_Client_Renderer PRIVATE NDEBUG=1)
+###

@@ -28,6 +28,12 @@ void rendering_thread_function(struct minec_client* client)
 			client->renderer.backend.global.interfaces[client->renderer.backend.global.backend_index].start_rendering(client);
 		}
 
+		uint32_t width, height;
+		atomic_load_(uint32_t, &client->window.width, &width);
+		atomic_load_(uint32_t, &client->window.height, &height);
+
+		
+
 		uint8_t str[32];
 		Pixelchar c[32];
 

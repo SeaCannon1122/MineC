@@ -29,8 +29,6 @@ uint32_t renderer_backend_vulkan_base_create(struct minec_client* client, void**
         surface_created = false
     ;
 
-    window_init_context(renderer_backend_get_window_context());
-
     struct renderer_backend_vulkan_base* base;
 
     if ((base = s_alloc(client->static_alloc, sizeof(struct renderer_backend_vulkan_base))) == NULL)

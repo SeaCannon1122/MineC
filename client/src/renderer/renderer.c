@@ -1,453 +1,159 @@
 #include <minec_client.h>
-#include "backend/backend.h"
 
-void rendering_thread_function(struct minec_client* client);
-
-uint32_t _renderer_backend_create(
-	struct minec_client* client,
-	uint32_t backend_index,
-	struct renderer_backend_base_state* base,
-	struct renderer_backend_device_state* device,
-	struct renderer_backend_pipelines_resources_state* pipelines_resources
-)
-{
-	uint32_t result = MINEC_CLIENT_SUCCESS;
-
-	bool
-		base_created = false,
-		device_created = false,
-		pipelines_resources_created = false
-	;
-
-	uint32_t device_index = base->device_index;
-
-	if ((result = client->renderer.backend.global.interfaces[backend_index].base_create(client, &base->base, &base->device_count, &base->device_infos)) == MINEC_CLIENT_SUCCESS) base_created = true;
-
-	for (int32_t i = -1; result == MINEC_CLIENT_SUCCESS && device_created == false; i++)
-	{
-		if (i == (int32_t)base->device_count) result = MINEC_CLIENT_ERROR;
-		else if (i == -1)
-		{
-			if (device_index < base->device_count)
-			{
-				if ((result = client->renderer.backend.global.interfaces[backend_index].device_create(client, &base->base, &device->device, device_index, device->fps)) == MINEC_CLIENT_SUCCESS) device_created = true;
-				else if (result == MINEC_CLIENT_ERROR) result = MINEC_CLIENT_SUCCESS;
-			}
-		}
-		else
-		{
-			if ((result = client->renderer.backend.global.interfaces[backend_index].device_create(client, &base->base, &device->device, (uint32_t)i, device->fps)) == MINEC_CLIENT_SUCCESS)
-			{
-				device_index = (uint32_t)i;
-				device_created = true;
-			}
-			else if (result == MINEC_CLIENT_ERROR) result = MINEC_CLIENT_SUCCESS;
-		}
-	}
-
-	if (result == MINEC_CLIENT_SUCCESS && device_created == false) result = MINEC_CLIENT_ERROR;
-	if (result == MINEC_CLIENT_SUCCESS) if ((result = client->renderer.backend.global.interfaces[backend_index].pipelines_resources_create(client, &base->base, &device->device, &pipelines_resources->pipelines_resources, pipelines_resources->pcr_backend_index)) == MINEC_CLIENT_SUCCESS) pipelines_resources_created = true;
-
-	if (result != MINEC_CLIENT_SUCCESS)
-	{
-		if (device_created) client->renderer.backend.global.interfaces[backend_index].device_destroy(client, &base->base, &device->device);
-		if (base_created) client->renderer.backend.global.interfaces[backend_index].base_destroy(client, &base->base);
-	}
-	else base->device_index = device_index;
-	
-	return MINEC_CLIENT_SUCCESS;
-}
-
-void _renderer_backend_destroy(
-	struct minec_client* client,
-	uint32_t backend_index,
-	struct renderer_backend_base_state* base,
-	struct renderer_backend_device_state* device,
-	struct renderer_backend_pipelines_resources_state* pipelines_resources
-)
-{
-	client->renderer.backend.global.interfaces[backend_index].pipelines_resources_destroy(client, &base->base, &device->device, &pipelines_resources->pipelines_resources);
-	client->renderer.backend.global.interfaces[backend_index].device_destroy(client, &base->base, &device->device);
-	client->renderer.backend.global.interfaces[backend_index].base_destroy(client, &base->base);
-}
-
-uint32_t _renderer_backend_load_create(
-	struct minec_client* client,
-	struct renderer_backend_global_state* global,
-	struct renderer_backend_base_state* base,
-	struct renderer_backend_device_state* device,
-	struct renderer_backend_pipelines_resources_state* pipelines_resources
-)
-{
-	uint32_t result = MINEC_CLIENT_SUCCESS;
-
-	bool
-		file_copied = false,
-		library_loaded = false
-	;
-
-	if (file_copy(client->renderer.backend_library_paths[2], client->renderer.backend_library_paths[global->library_load_index]) != 0)
-	{
-		minec_client_log_error(client, "[RENDERER] Could not copy %s to %s", client->renderer.backend_library_paths[2], client->renderer.backend_library_paths[global->library_load_index]);
-		minec_client_log_debug_error(client, "'file_copy(%s, %s)' failed", client->renderer.backend_library_paths[2], client->renderer.backend_library_paths[global->library_load_index]);
-		result = MINEC_CLIENT_ERROR;
-	}
-	else file_copied = true;
-
-	if (result == MINEC_CLIENT_SUCCESS)
-	{
-		if ((global->líbrary_handle = dynamic_library_load(client->renderer.backend_library_paths[global->library_load_index], true)) == NULL)
-		{
-			minec_client_log_error(client, "[RENDERER] Could not fully process dynamic library %s. May be corrupted or out of date version.", client->renderer.backend_library_paths[global->library_load_index]);
-			minec_client_log_debug_error(client, "'dynamic_library_load(%s)' failed", client->renderer.backend_library_paths[global->library_load_index]);
-			result = MINEC_CLIENT_ERROR;
-		}
-		else library_loaded = true;
-	}
-
-	struct renderer_backend_interface* (*get_interfaces_function)(void* window_context, uint32_t* count, uint8_t*** names);
-
-	if (result == MINEC_CLIENT_SUCCESS)
-	{
-		if ((get_interfaces_function = dynamic_library_get_function(global->líbrary_handle, "renderer_backend_get_interfaces")) == NULL)
-		{
-			minec_client_log_error(client, "[RENDERER] Could not fully process dynamic library %s. May be corrupted or out of date version.", client->renderer.backend_library_paths[global->library_load_index]);
-			minec_client_log_debug_error(client, "'dynamic_library_get_function(global->líbrary_handle, \"renderer_backend_get_interfaces\")' failed");
-			result = MINEC_CLIENT_ERROR;
-		}
-		global->interfaces = get_interfaces_function(window_get_context(), &global->backend_count, &global->backend_names);
-	}
-	
-	for (int32_t i = -1; result == MINEC_CLIENT_SUCCESS; i++)
-	{
-		if (i == (int32_t)global->backend_count)
-		{
-			minec_client_log_error(client, "[RENDERER] Failed to create any renderer backend sucessfully");
-			result = MINEC_CLIENT_ERROR;
-		}
-		else if (i == -1)
-		{
-			if (global->backend_index < global->backend_count)
-			{
-				if ((result = _renderer_backend_create(client, global->backend_index, base, device, pipelines_resources)) == MINEC_CLIENT_SUCCESS)
-					break;
-				else if (result == MINEC_CLIENT_ERROR) result == MINEC_CLIENT_SUCCESS;
-			}
-		}
-		else
-		{
-			if ((result = _renderer_backend_create(client, (uint32_t)i, base, device, pipelines_resources)) == MINEC_CLIENT_SUCCESS)
-			{
-				global->backend_index = (uint32_t)i;
-				break;
-			}
-			else if (result == MINEC_CLIENT_ERROR) result == MINEC_CLIENT_SUCCESS;
-		}
-	}
-
-	if (result != MINEC_CLIENT_SUCCESS && library_loaded) dynamic_library_unload(global->líbrary_handle);
-	if (result != MINEC_CLIENT_SUCCESS && file_copied) remove(client->renderer.backend_library_paths[global->library_load_index]);
-
-	return result;
-}
-
-void _renderer_backend_unload_destroy(
-	struct minec_client* client,
-	struct renderer_backend_global_state* global,
-	struct renderer_backend_base_state* base,
-	struct renderer_backend_device_state* device,
-	struct renderer_backend_pipelines_resources_state* pipelines_resources
-)
-{
-	_renderer_backend_destroy(client, global->backend_index, base, device, pipelines_resources);
-
-	dynamic_library_unload(global->líbrary_handle);
-	remove(client->renderer.backend_library_paths[global->library_load_index]);
-}
+#ifndef MINEC_CLIENT_DYNAMIC_RENDERER
+void renderer_get_internal_interface(struct renderer_internal_interface* internal_interface);
+#endif
 
 uint32_t renderer_create(
 	struct minec_client* client,
-	uint32_t* backend_index,
-	uint32_t* backend_count,
-	uint8_t*** backend_names,
-	uint32_t* device_index,
-	uint32_t* device_count,
-	uint8_t*** device_infos,
-	uint32_t fps
+	struct renderer_settings_state* request_settings_state,
+	struct renderer_info_state** info_state,
+	struct renderer_settings_state** settings_state
 )
 {
 	uint32_t result = MINEC_CLIENT_SUCCESS;
+	void (*renderer_get_internal_interface_func)(struct renderer_internal_interface* internal_interface);
+
+#ifdef MINEC_CLIENT_DYNAMIC_RENDERER
 
 	bool
-		backend_library_names_memory = false,
-		pixelchar_renderer_create = false,
-		backend_loaded_created = false
+		library_path_allocated = false,
+		library_copy_path_allocated = false,
+		library_copied = false,
+		library_loaded = false
 	;
 
-	uint8_t* backend_library_path_parts[] = {
-		client->runtime_files_path,
-		"temp0_",
-		MINEC_CLIENT_RENDERER_BACKEND_LIBRARY_NAME
-	};
+	uint8_t* library_path_components[2] = { client->runtime_files_path, MINEC_CLIENT_SHARED_RENDERER_LIBRARY_NAME };
+	uint8_t* library_copy_path_components[3] = { client->runtime_files_path, "temp_", MINEC_CLIENT_SHARED_RENDERER_LIBRARY_NAME};
 
 	if (result == MINEC_CLIENT_SUCCESS)
 	{
-		if ((client->renderer.backend_library_paths[0] = s_alloc_joined_string(client->static_alloc, backend_library_path_parts, 3)) == NULL) result = PIXELCHAR_ERROR_OUT_OF_MEMORY;
-		else
-		{
-			backend_library_path_parts[1] = "temp1_";
-			if ((client->renderer.backend_library_paths[1] = s_alloc_joined_string(client->static_alloc, backend_library_path_parts, 3)) == NULL)
-			{
-				s_free(client->static_alloc, client->renderer.backend_library_paths[0]);
-				result = PIXELCHAR_ERROR_OUT_OF_MEMORY;
-			}
-			else
-			{
-				backend_library_path_parts[1] = MINEC_CLIENT_RENDERER_BACKEND_LIBRARY_NAME;
-				if ((client->renderer.backend_library_paths[2] = s_alloc_joined_string(client->static_alloc, backend_library_path_parts, 2)) == NULL)
-				{
-					s_free(client->static_alloc, client->renderer.backend_library_paths[0]);
-					s_free(client->static_alloc, client->renderer.backend_library_paths[1]);
-					result = PIXELCHAR_ERROR_OUT_OF_MEMORY;
-				}
-				else backend_library_names_memory = true;
-			}
-		}		
+		if ((client->renderer.library_path = s_alloc_joined_string(client->static_alloc, library_path_components, 2)) != NULL) library_path_allocated = true;
+		else { result = MINEC_CLIENT_ERROR; minec_client_log_out_of_memory(client, "s_alloc_joined_string(client->static_alloc, library_path_components, 2)"); }
 	}
+	if (result == MINEC_CLIENT_SUCCESS)
+	{
+		if ((client->renderer.library_copy_path = s_alloc_joined_string(client->static_alloc, library_copy_path_components, 3)) != NULL) library_copy_path_allocated = true;
+		else { result = MINEC_CLIENT_ERROR; minec_client_log_out_of_memory(client, "s_alloc_joined_string(client->static_alloc, library_copy_path_components, 3)");}
+	}
+	if (result == MINEC_CLIENT_SUCCESS)
+	{
+		if (file_copy(client->renderer.library_path, client->renderer.library_copy_path) == 0) library_copied = true;
+		else { result = MINEC_CLIENT_ERROR; minec_client_log_error(client, "[RENDERER] Failed to copy %s to %s", client->renderer.library_path, client->renderer.library_copy_path); minec_client_log_debug_error(client, "'file_copy(client->renderer.library_path, client->renderer.library_copy_path)' failed"); }
+	}
+	if (result == MINEC_CLIENT_SUCCESS)
+	{
+		if ((client->renderer.library_handle = dynamic_library_load(client->renderer.library_copy_path, true)) != NULL) library_loaded = true;
+		else { result = MINEC_CLIENT_ERROR; minec_client_log_error(client, "[RENDERER] Failed to process dynamic library %s, may be corrupted", client->renderer.library_copy_path); minec_client_log_debug_error(client, "'dynamic_library_load(client->renderer.library_copy_path, true)' failed"); }
+	}
+	if (result == MINEC_CLIENT_SUCCESS)
+	{
+		if ((renderer_get_internal_interface_func = dynamic_library_get_function(client->renderer.library_handle, "renderer_get_internal_interface")) != NULL);
+		else { result = MINEC_CLIENT_ERROR; minec_client_log_error(client, "[RENDERER] Failed to process dynamic library %s, may be old version", client->renderer.library_copy_path); minec_client_log_debug_error(client, "'dynamic_library_get_function(client->renderer.library_handle, \"renderer_get_internal_interface\")' failed"); }
+	}
+
+#else
+	renderer_get_internal_interface_func = renderer_get_internal_interface;
+#endif
 
 	if (result == MINEC_CLIENT_SUCCESS)
 	{
-		if ((result = pixelcharRendererCreate(4096, &client->renderer.pixelchar_renderer)) != PIXELCHAR_SUCCESS) result = MINEC_CLIENT_ERROR;
-		else
-		{
-			result = MINEC_CLIENT_SUCCESS;
-			pixelchar_renderer_create = true;
-		}
+		renderer_get_internal_interface_func(&client->renderer.internal);
+
+		if (client->renderer.internal.renderer_create(client, request_settings_state, info_state, settings_state) == MINEC_CLIENT_SUCCESS);
+		else { result = MINEC_CLIENT_ERROR; }
 	}
 
-	if (result == MINEC_CLIENT_SUCCESS)
+#ifdef MINEC_CLIENT_DYNAMIC_RENDERER
+	if (result != MINEC_CLIENT_SUCCESS)
 	{
-		uint32_t pixelchar_font_count = (client->resource_index.pixelchar_font_count < PIXELCHAR_RENDERER_MAX_FONT_COUNT ? client->resource_index.pixelchar_font_count : PIXELCHAR_RENDERER_MAX_FONT_COUNT);
-
-		for (uint32_t i = 0; i < pixelchar_font_count; i++)
-		{
-			PixelcharFont font;
-			uint32_t pc_result = pixelcharFontCreate(client->resource_index.pixelchar_fonts[i].font_file_data, client->resource_index.pixelchar_fonts[i].font_file_data_size, &font);
-			if (result == PIXELCHAR_SUCCESS)
-			{
-				pixelcharRendererBindFont(client->renderer.pixelchar_renderer, font, i);
-				pixelcharFontDestroy(font);
-			}
-		}
+		if (library_loaded) dynamic_library_unload(client->renderer.library_handle);
+		if (library_copied) remove(client->renderer.library_copy_path);
+		if (library_copy_path_allocated) s_free(client->static_alloc, client->renderer.library_copy_path);
+		if (library_path_allocated) s_free(client->static_alloc, client->renderer.library_path);
 	}
-	
-	if (result == MINEC_CLIENT_SUCCESS)
-	{
-		client->renderer.backend.global.library_load_index = 0;
-		client->renderer.backend.global.backend_index = *backend_index;
-		client->renderer.backend.base.device_index = *device_index;
-		client->renderer.backend.device.fps = fps;
-		client->renderer.backend.pipelines_resources.pcr_backend_index = 0;
-
-		if ((result = _renderer_backend_load_create(client, &client->renderer.backend.global, &client->renderer.backend.base, &client->renderer.backend.device, &client->renderer.backend.pipelines_resources)) == MINEC_CLIENT_SUCCESS)
-		{
-			backend_loaded_created = true;
-		}
-	}
-
-	if (result == MINEC_CLIENT_SUCCESS)
-	{
-		*backend_index = client->renderer.backend.global.backend_index;
-		*backend_count = client->renderer.backend.global.backend_count;
-		*backend_names = client->renderer.backend.global.backend_names;
-		*device_index = client->renderer.backend.base.device_index;
-		*device_count = client->renderer.backend.base.device_count;
-		*device_infos = client->renderer.backend.base.device_infos;
-
-		client->renderer.thread_state.frame_info.time = 0.f;
-		client->renderer.thread_state.frame_info.index = 0;
-
-		atomic_init(&client->renderer.request_flag);
-		uint32_t request_flag = RENDERER_REQUEST_RENDER;
-		atomic_store_(uint32_t, &client->renderer.request_flag, &request_flag);
-
-		mutex_create(&client->renderer.mutex);
-
-		client->renderer.thread_state.handle = create_thread(rendering_thread_function, client);
-	}
-
-	if (result != MINEC_CLIENT_SUCCESS && backend_loaded_created) _renderer_backend_unload_destroy(client, &client->renderer.backend.global, &client->renderer.backend.base, &client->renderer.backend.device, &client->renderer.backend.pipelines_resources);
-	if (result != MINEC_CLIENT_SUCCESS && pixelchar_renderer_create) pixelcharRendererDestroy(client->renderer.pixelchar_renderer);
-	if (result != MINEC_CLIENT_SUCCESS && backend_library_names_memory) for (uint32_t i = 0; i < 3; i++) s_free(client->static_alloc, client->renderer.backend_library_paths[i]);
+	else client->renderer.settings_state_mirror = *settings_state;
+#endif
 
 	return result;
 }
 
 void renderer_destroy(struct minec_client* client)
 {
-	uint32_t request_flag = RENDERER_REQUEST_CLOSE;
-	atomic_store_(uint32_t, &client->renderer.request_flag, &request_flag);
-
-	join_thread(client->renderer.thread_state.handle);
-
-	mutex_destroy(&client->renderer.mutex);
-	atomic_deinit(&client->renderer.request_flag);
-
-	_renderer_backend_unload_destroy(client, &client->renderer.backend.global, &client->renderer.backend.base, &client->renderer.backend.device, &client->renderer.backend.pipelines_resources);
-
-	pixelcharRendererDestroy(client->renderer.pixelchar_renderer);
-
-	for (uint32_t i = 0; i < 3; i++) s_free(client->static_alloc, client->renderer.backend_library_paths[i]);
+	client->renderer.internal.renderer_destroy(client);
+	dynamic_library_unload(client->renderer.library_handle);
+	remove(client->renderer.library_copy_path);
+	s_free(client->static_alloc, client->renderer.library_copy_path);
+	s_free(client->static_alloc, client->renderer.library_path);
 }
 
-uint32_t renderer_reload_backend(
+#ifdef MINEC_CLIENT_DYNAMIC_RENDERER
+uint32_t renderer_reload(
 	struct minec_client* client,
-	uint32_t* backend_index,
-	uint32_t* backend_count,
-	uint8_t*** backend_names,
-	uint32_t* device_index,
-	uint32_t* device_count,
-	uint8_t*** device_infos
+	struct renderer_info_state** info_state,
+	struct renderer_settings_state** settings_state
 )
 {
-	uint32_t request_flag = RENDERER_REQUEST_HALT;
-	atomic_store_(uint32_t, &client->renderer.request_flag, &request_flag);
-	mutex_lock(&client->renderer.mutex);
-
-	uint32_t result = MINEC_CLIENT_SUCCESS;
-
-	struct renderer_backend_global_state global;
-	struct renderer_backend_base_state base;
-	struct renderer_backend_device_state device;
-	struct renderer_backend_pipelines_resources_state pipelines_resources;
-
-	global.library_load_index = (client->renderer.backend.global.library_load_index + 1) % 2;
-	global.backend_index = client->renderer.backend.global.backend_index;
-	base.device_index = client->renderer.backend.base.device_index;
-	device.fps = client->renderer.backend.device.fps;
-	pipelines_resources.pcr_backend_index = (client->renderer.backend.pipelines_resources.pcr_backend_index + 1) % 2;
-
-	if ((result = _renderer_backend_load_create(client, &global, &base, &device, &pipelines_resources)) == MINEC_CLIENT_SUCCESS)
+	if (file_copy(client->renderer.library_copy_path, "minec_client_temp_file") != 0)
 	{
-
-		_renderer_backend_unload_destroy(client, &client->renderer.backend.global, &client->renderer.backend.base, &client->renderer.backend.device, &client->renderer.backend.pipelines_resources);
-
-		client->renderer.backend.global = global;
-		client->renderer.backend.base = base;
-		client->renderer.backend.device = device;
-		client->renderer.backend.pipelines_resources = pipelines_resources;
-
-		*backend_index = global.backend_index;
-		*backend_count = global.backend_count;
-		*backend_names = global.backend_names;
-		*device_index = base.device_index;
-		*device_count = base.device_count;
-		*device_infos = base.device_infos;
-	}
-
-	mutex_unlock(&client->renderer.mutex);
-	return result;
-}
-
-uint32_t renderer_switch_backend(
-	struct minec_client* client, 
-	uint32_t backend_index,
-	uint32_t* device_index,
-	uint32_t* device_count,
-	uint8_t*** device_infos
-)
-{
-	mutex_lock(&client->renderer.mutex);
-
-	uint32_t result = MINEC_CLIENT_SUCCESS;
-
-	struct renderer_backend_base_state base;
-	struct renderer_backend_device_state device;
-	struct renderer_backend_pipelines_resources_state pipelines_resources;
-
-	base.device_index = 0;
-	device.fps = client->renderer.backend.device.fps;
-	pipelines_resources.pcr_backend_index = (client->renderer.backend.pipelines_resources.pcr_backend_index + 1) % 2;
-
-	if ((result = _renderer_backend_create(client, backend_index, &base, &device, &pipelines_resources)) == MINEC_CLIENT_SUCCESS)
-	{
-		_renderer_backend_destroy(client, client->renderer.backend.global.backend_index, &base, &device, &pipelines_resources);
-
-		client->renderer.backend.global.backend_index = backend_index;
-		client->renderer.backend.base = base;
-		client->renderer.backend.device = device;
-		client->renderer.backend.pipelines_resources = pipelines_resources;
-
-		*device_index = base.device_index;
-		*device_count = base.device_count;
-		*device_infos = base.device_infos;
-	}
-
-	mutex_unlock(&client->renderer.mutex);
-	return result;
-}
-
-uint32_t renderer_switch_backend_device(struct minec_client* client, uint32_t device_index)
-{
-	uint32_t request_flag = RENDERER_REQUEST_HALT;
-	atomic_store_(uint32_t, &client->renderer.request_flag, &request_flag);
-	mutex_lock(&client->renderer.mutex);
-
-	uint32_t result = MINEC_CLIENT_SUCCESS;
-
-	struct renderer_backend_device_state device;
-	struct renderer_backend_pipelines_resources_state pipelines_resources;
-
-	device.fps = client->renderer.backend.device.fps;
-	pipelines_resources.pcr_backend_index = (client->renderer.backend.pipelines_resources.pcr_backend_index + 1) % 2;
-
-	if ((
-		result = client->renderer.backend.global.interfaces[client->renderer.backend.global.backend_index].device_create(
-		client,
-		&client->renderer.backend.base.base,
-		&device.device,
-		device_index,
-		client->renderer.backend.device.fps
-	)) == MINEC_CLIENT_SUCCESS)
-	{
-		if ((result = client->renderer.backend.global.interfaces[client->renderer.backend.global.backend_index].pipelines_resources_create(
-			client,
-			&client->renderer.backend.base.base,
-			&device.device,
-			&pipelines_resources.pipelines_resources,
-			pipelines_resources.pcr_backend_index
-		)) != MINEC_CLIENT_SUCCESS)
-		{
-			client->renderer.backend.global.interfaces[client->renderer.backend.global.backend_index].device_destroy(
-				client,
-				&client->renderer.backend.base.base,
-				&device.device
-			);
-		}
-		else
-		{
-			client->renderer.backend.global.interfaces[client->renderer.backend.global.backend_index].pipelines_resources_destroy(
-				client,
-				&client->renderer.backend.base.base,
-				&client->renderer.backend.device.device,
-				&client->renderer.backend.pipelines_resources.pipelines_resources
-			);
-			client->renderer.backend.global.interfaces[client->renderer.backend.global.backend_index].device_destroy(
-				client,
-				&client->renderer.backend.base.base,
-				&client->renderer.backend.device.device
-			);
-
-			client->renderer.backend.device = device;
-			client->renderer.backend.pipelines_resources = pipelines_resources;
-		}
+		minec_client_log_error(client, "[RENDERER] Failed to copy %s to %s", client->renderer.library_copy_path, "minec_client_temp_file");
+		minec_client_log_debug_error(client, "'file_copy(client->renderer.library_copy_path, \"minec_client_temp_file\")' failed");
+		return MINEC_CLIENT_ERROR;
 	}
 	
-	mutex_unlock(&client->renderer.mutex);
-	return result;
-}
+	uint8_t* library_path;
+	if ((library_path = s_alloc_string(client->dynamic_alloc, client->renderer.library_path)) == NULL)
+	{
+		minec_client_log_out_of_memory(client, "s_alloc_string(client->dynamic_alloc, client->renderer.library_path)");
+		remove("minec_client_temp_file");
+		return MINEC_CLIENT_ERROR;
+	}
 
-uint32_t renderer_set_target_fps(struct minec_client* client, uint32_t fps)
+	struct renderer_settings_state request_settings = *client->renderer.settings_state_mirror;
+
+	renderer_destroy(client);
+
+	if (renderer_create(client, &request_settings, info_state, settings_state) != MINEC_CLIENT_SUCCESS)
+	{
+		minec_client_log_error(client, "[RENDERER] Failed to create new renderer, recreating old one");
+
+		if (file_copy("minec_client_temp_file", library_path) != 0)
+		{
+			minec_client_log_error(client, "[RENDERER] Failed to copy %s to %s, this application was not build for handeling this case: Crashing ...", "minec_client_temp_file", library_path);
+			minec_client_log_debug_error(client, "'file_copy(\"minec_client_temp_file\", library_path)' failed");
+			minec_client_nuke_destroy_kill_crush_annihilate_process_exit(client);
+		}
+
+		if (renderer_create(client, &request_settings, info_state, settings_state) != MINEC_CLIENT_SUCCESS)
+		{
+			minec_client_log_error(client, "[RENDERER] Failed to recreate old renderer, this application was not build for handeling this case: Crashing ...");
+			minec_client_nuke_destroy_kill_crush_annihilate_process_exit(client);
+		}
+
+		s_free(client->dynamic_alloc, library_path);
+		remove("minec_client_temp_file");
+		return MINEC_CLIENT_ERROR;
+	}
+
+	s_free(client->dynamic_alloc, library_path);
+	remove("minec_client_temp_file");
+	return MINEC_CLIENT_SUCCESS;
+}
+#endif
+
+void renderer_switch_backend(struct minec_client* client, uint32_t backend_index)
 {
-	return client->renderer.backend.global.interfaces[client->renderer.backend.global.backend_index].set_fps(client, fps);
+	client->renderer.internal.renderer_switch_backend(client, backend_index);
+}
+void renderer_switch_backend_device(struct minec_client* client, uint32_t backend_device_index)
+{
+	client->renderer.internal.renderer_switch_backend_device(client, backend_device_index);
+}
+void renderer_set_fps(struct minec_client* client, uint32_t fps)
+{
+	client->renderer.internal.renderer_set_fps(client, fps);
+}
+void renderer_set_vsync(struct minec_client* client, bool vsync)
+{
+	client->renderer.internal.renderer_set_vsync(client, vsync);
 }

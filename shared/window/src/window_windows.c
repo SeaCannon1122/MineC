@@ -530,7 +530,7 @@ void window_opengl_unload()
 	FreeLibrary(context->opengl.library);
 }
 
-bool window_glCreateContext(void* window, int32_t version_major, int32_t version_minor, void* share_window)
+bool window_glCreateContext(void* window, int32_t version_major, int32_t version_minor, void* share_window, bool* glSwapIntervalEXT_support)
 {
 	struct window_data_windows* window_data = window;
 	struct window_data_windows* share_window_data = share_window;
@@ -651,7 +651,11 @@ bool window_glCreateContext(void* window, int32_t version_major, int32_t version
 
 	if (result == true) if (context->opengl.func.wglMakeCurrent(window_data->hdc, window_data->hglrc) == FALSE) result = false;
 
-	if (result == true) if ((window_data->wglSwapIntervalEXT = context->opengl.func.wglGetProcAddress("wglSwapIntervalEXT")) == NULL) result = false;
+	if (result == true) 
+	{
+		if ((window_data->wglSwapIntervalEXT = context->opengl.func.wglGetProcAddress("wglSwapIntervalEXT")) != NULL) *glSwapIntervalEXT_support = true;
+		else *glSwapIntervalEXT_support = false;
+	}
 
 	context->opengl.func.wglMakeCurrent(NULL, NULL);
 
@@ -685,9 +689,10 @@ bool window_glMakeCurrent(void* window)
 	return result;
 }
 
-bool window_glSwapInterval(int interval)
+bool window_glSwapIntervalEXT(int interval)
 {
-	return (context->opengl.current_window->wglSwapIntervalEXT(interval) == TRUE);
+	if (context->opengl.current_window->wglSwapIntervalEXT) return (context->opengl.current_window->wglSwapIntervalEXT(interval) == TRUE);
+	else return false;
 }
 
 void (*window_glGetProcAddress(uint8_t* name)) (void)

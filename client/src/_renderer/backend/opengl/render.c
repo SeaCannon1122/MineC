@@ -20,7 +20,7 @@ void  renderer_backend_opengl_stop_rendering(struct minec_client* client)
 	}
 }
 
-uint32_t renderer_backend_opengl_render(struct minec_client* client)
+uint32_t renderer_backend_opengl_render(struct minec_client* client, bool resize)
 {
 	uint32_t return_result = MINEC_CLIENT_SUCCESS;
 	uint32_t result = MINEC_CLIENT_SUCCESS;
@@ -33,18 +33,14 @@ uint32_t renderer_backend_opengl_render(struct minec_client* client)
 	if (1000.f / (float)base->fps - client->renderer.thread_state.frame_info.time > 0 && base->fps != 0) sleep_for_ms((uint32_t)(1000.f / (float)base->fps - client->renderer.thread_state.frame_info.time));
 	base->last_frame_time = get_time();
 
-	uint32_t width;
-	uint32_t height;
+	uint32_t width, height;
 	atomic_load_(uint32_t, &client->window.width, &width);
 	atomic_load_(uint32_t, &client->window.height, &height);
 
-	uint32_t fps_new;
-	atomic_load_(uint32_t, &base->fps_new, &fps_new);
-
-	if (fps_new != base->fps)
+	if (resize)
 	{
-		/*fps change*/
-		base->fps = fps_new;
+		destroy_framebuffer_attachments(client, base);
+		create_framebuffer_attachments(client, base, client->renderer.thread_state.rendering_width, client->renderer.thread_state.rendering_height);
 	}
 
 	if (result == MINEC_CLIENT_SUCCESS)

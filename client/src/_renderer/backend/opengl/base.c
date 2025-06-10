@@ -12,8 +12,6 @@ void OpenGLDebugCallback(GLenum source, GLenum type, GLuint id, GLenum severity,
     printf("-----------------------------------------\n\n");
 }
 
-uint8_t* device_info[1];
-
 uint32_t renderer_backend_opengl_base_create(struct minec_client* client, void** backend_base, uint32_t* device_count, uint8_t*** device_infos)
 {
     uint32_t result = MINEC_CLIENT_SUCCESS;
@@ -50,7 +48,7 @@ uint32_t renderer_backend_opengl_base_create(struct minec_client* client, void**
     }
     if (result == MINEC_CLIENT_SUCCESS)
     {
-        if (window_glCreateContext(client->window.window_handle, 4, 3, NULL) == false)
+        if (window_glCreateContext(client->window.window_handle, 4, 3, NULL, &base->vsync_support) == false)
         {
             minec_client_log_debug_error(client, "'window_glCreateContext(client->window.window_handle, 4, 3, NULL)' failed");
             result = MINEC_CLIENT_ERROR;
@@ -176,8 +174,12 @@ uint32_t renderer_backend_opengl_base_create(struct minec_client* client, void**
         }
     }
 
-    minec_client_retrieve_log_opengl_errors(client, base, &result, "Initial error reset");
-
+    if (result == MINEC_CLIENT_SUCCESS)
+    {
+        minec_client_retrieve_log_opengl_errors(client, base, &result, "Initial error reset");
+        result = MINEC_CLIENT_SUCCESS;
+    } minec_client_retrieve_log_opengl_errors(client, base, &result, "Initial error reset");
+    
     uint8_t** extensions;
     GLint extension_count = 0;
 
@@ -243,7 +245,7 @@ uint32_t renderer_backend_opengl_base_create(struct minec_client* client, void**
 
     if (result == MINEC_CLIENT_SUCCESS)
     {
-        if ((device_info[0] = base->func.glGetString(GL_RENDERER)) == NULL)
+        if ((base->device_info[0] = base->func.glGetString(GL_RENDERER)) == NULL)
         {
             minec_client_log_debug_error(client, "'glGetString(GL_RENDERER)' failed");
             result = MINEC_CLIENT_ERROR;
@@ -253,10 +255,8 @@ uint32_t renderer_backend_opengl_base_create(struct minec_client* client, void**
     if (result == MINEC_CLIENT_SUCCESS)
     {
         *device_count = 1;
-        *device_infos = device_info;
+        *device_infos = base->device_info;
         *backend_base = base;
-
-        atomic_init(&base->fps_new);
     }
     
     if (currrent) if (window_glMakeCurrent(NULL) == false)
@@ -277,8 +277,6 @@ uint32_t renderer_backend_opengl_base_create(struct minec_client* client, void**
 void renderer_backend_opengl_base_destroy(struct minec_client* client, void** backend_base)
 {
     struct renderer_backend_opengl_base* base = *backend_base;
-
-    atomic_deinit(&base->fps_new);
 
     window_glDestroyContext(client->window.window_handle);
     window_opengl_unload();

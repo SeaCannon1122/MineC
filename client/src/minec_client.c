@@ -1,7 +1,11 @@
 #include "minec_client.h"
 
-uint32_t minec_client_run(struct minec_client* client, uint8_t* runtime_files_path)
+
+void minec_client_run(uint8_t* runtime_files_path)
 {
+	struct minec_client client_memory;
+	struct minec_client* client = &client_memory;
+
 	uint32_t return_value = MINEC_CLIENT_SUCCESS;
 
 	client->static_alloc = s_allocator_new(4096);
@@ -16,26 +20,34 @@ uint32_t minec_client_run(struct minec_client* client, uint8_t* runtime_files_pa
 		700,
 		500,
 		"MineC"
-	)) != MINEC_CLIENT_SUCCESS) goto _application_window_create_failed;
-	minec_client_log(client, "[GLOBAL STATE] Window created");
+	)) != MINEC_CLIENT_SUCCESS)
+	{
+		minec_client_log_info(client, "[GLOBAL] Failed to create Window");
+		goto _application_window_create_failed;
+	}
+	minec_client_log_info(client, "[GLOBAL] Window created");
 
 	settings_create(client);
 	settings_load(client);
 
 	resources_create(client);
-	minec_client_log(client, "[GLOBAL STATE] Resources created");
+	minec_client_log_info(client, "[GLOBAL] Resources created");
+
+	struct renderer_settings_state request_renderer_settings;
+	struct renderer_info_state* renderer_infos;
+	struct renderer_settings_state* renderer_settings;
 
 	if ((return_value = renderer_create(
-		client, 
-		&client->settings.video.graphics.backend_index,
-		&client->settings.video.graphics.backend_count,
-		&client->settings.video.graphics.backend_names,
-		&client->settings.video.graphics.device_index,
-		&client->settings.video.graphics.device_count,
-		&client->settings.video.graphics.device_infos,
-		client->settings.video.graphics.fps
-	)) != MINEC_CLIENT_SUCCESS) goto _renderer_create_failed;
-	minec_client_log(client, "[GLOBAL STATE] Renderer created");
+		client,
+		&request_renderer_settings,
+		&renderer_infos,
+		&renderer_settings
+	)) != MINEC_CLIENT_SUCCESS)
+	{
+		minec_client_log_error(client, "[GLOBAL] Failed to create Renderer ");
+		goto _renderer_create_failed;
+	}
+	minec_client_log_info(client, "[GLOBAL] Renderer created");
 
 	/*gui_menus_create(client);
 
@@ -51,7 +63,18 @@ uint32_t minec_client_run(struct minec_client* client, uint8_t* runtime_files_pa
 
 		//renderer_render(client);
 
-		sleep_for_ms(100);
+		if (client->window.input.keyboard[WINDOW_KEY_R] == (KEY_DOWN_MASK | KEY_CHANGE_MASK))
+		{
+			minec_client_log_info(client, "[GLOBAL] Reloading Renderer ...");
+
+			if (renderer_reload(
+				client,
+				&renderer_infos,
+				&renderer_settings
+			) != MINEC_CLIENT_SUCCESS) minec_client_log_info(client, "[GLOBAL] Failed to reload Renderer");
+		}
+
+		sleep_for_ms(20);
 	}
 
 	/*networker_stop(client);
@@ -60,14 +83,14 @@ uint32_t minec_client_run(struct minec_client* client, uint8_t* runtime_files_pa
 	gui_menus_destroy(client);*/
 
 	renderer_destroy(client);
-	minec_client_log(client, "[GLOBAL STATE] Renderer destroyed");
+	minec_client_log_info(client, "[GLOBAL] Renderer destroyed");
 
 _renderer_create_failed:
 	resources_destroy(client);
-	minec_client_log(client, "[GLOBAL STATE] Resources destroyed");
+	minec_client_log_info(client, "[GLOBAL] Resources destroyed");
 
 	settings_destroy(client);
-	minec_client_log(client, "[GLOBAL STATE] Window destroyed");
+	minec_client_log_info(client, "[GLOBAL] Window destroyed");
 
 	application_window_destroy(client);
 
@@ -75,6 +98,4 @@ _application_window_create_failed:
 	s_free(client->static_alloc, client->runtime_files_path);
 	s_allocator_delete(client->static_alloc);
 	s_allocator_delete(client->dynamic_alloc);
-
-	return return_value;
 }

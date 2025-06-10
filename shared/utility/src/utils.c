@@ -193,14 +193,14 @@ void join_thread(void* thread_handle)
 #endif
 
 
-uint32_t file_copy(uint8_t* source_path, uint8_t* dest_path)
+uint32_t file_copy(uint8_t* src_path, uint8_t* dst_path)
 {
-	FILE* source = fopen(source_path, "rb");
+	FILE* source = fopen(src_path, "rb");
 	if (source == NULL) {
 		return 1;
 	}
 
-	FILE* dest = fopen(dest_path, "wb");
+	FILE* dest = fopen(dst_path, "wb");
 	if (dest == NULL) {
 		fclose(source);
 		return 1;

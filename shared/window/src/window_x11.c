@@ -38,7 +38,7 @@ struct window_data_x11
 
 	bool selected;
 
-	int (*glXSwapIntervalSGI)(int interval);
+	void (*glXSwapIntervalEXT)(Display* dpy, GLXDrawable drawable, int interval);
 };
 
 struct window_context_x11
@@ -359,7 +359,7 @@ void window_opengl_unload()
 	dlclose(context->opengl.library);
 }
 
-bool window_glCreateContext(void* window, int32_t version_major, int32_t version_minor, void* share_window)
+bool window_glCreateContext(void* window, int32_t version_major, int32_t version_minor, void* share_window, bool* glSwapIntervalEXT_support)
 {
 	struct window_data_x11* window_data = window;
 	struct window_data_x11* share_window_data = share_window;
@@ -402,12 +402,8 @@ bool window_glCreateContext(void* window, int32_t version_major, int32_t version
 		return false;
 	}
 
-	if ((window_data->glXSwapIntervalSGI = context->opengl.func.glXGetProcAddress("glXSwapIntervalSGI")) == NULL)
-	{
-		context->opengl.func.glXMakeCurrent(context->display, None, NULL);
-		context->opengl.func.glXDestroyContext(context->display, window_data->glx_context);
-		return false;
-	}
+	if ((window_data->glXSwapIntervalEXT = context->opengl.func.glXGetProcAddress("glXSwapIntervalEXT")) != NULL) *glSwapIntervalEXT_support = false;
+	else *glSwapIntervalEXT_support = true;
 
 	context->opengl.func.glXMakeCurrent(context->display, None, NULL);
 	return true;
@@ -433,7 +429,8 @@ bool window_glMakeCurrent(void* window)
 
 bool window_glSwapInterval(int interval)
 {
-	return (context->opengl.current_window->glXSwapIntervalSGI(interval) == 0);
+	if (context->opengl.current_window->glXSwapIntervalEXT) return (context->opengl.current_window->glXSwapIntervalEXT(context->display, context->opengl.current_window->window, interval) == 0);
+	else return false;
 }
 
 void (*window_glGetProcAddress(uint8_t* name)) (void)

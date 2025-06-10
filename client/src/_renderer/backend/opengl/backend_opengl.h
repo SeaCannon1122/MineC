@@ -7,8 +7,6 @@
 #include <pixelchar/backend/backend_opengl.h>
 #include <minec_client.h>
 
-void* renderer_backend_get_window_context();
-
 #define OPENGL_FRAME_COUNT 3
 #define OPENGL_MENU_GUI_QUAD_COUNT 128
 
@@ -108,19 +106,37 @@ struct renderer_backend_opengl_base
 
 	} func;
 
+	uint8_t* device_info[1];
+
+	bool vsync_support;
+
 	uint32_t fps;
-	atomic_(uint32_t) fps_new;
 	float last_frame_time;
 
 	struct
 	{
 		struct
 		{
-			GLuint vao;
-			GLuint vbo[OPENGL_FRAME_COUNT];
-		} pass;
-	} menu_gui;
+			GLuint fbo;
+			GLuint color_buffer;
+			GLuint depth_buffer;
+		} game;
 
+		struct
+		{
+			GLuint fbo;
+			GLuint color_buffer;
+		} ldr_convert;
+
+		struct
+		{
+			GLuint fbo;
+			GLuint color_buffer;
+		} menu_gui;
+
+	} framebuffers[OPENGL_FRAME_COUNT];
+
+	bool framebuffer_atachments_created;
 };
 
 struct renderer_backend_opengl_pipelines_resources
@@ -147,7 +163,10 @@ struct renderer_backend_opengl_pipelines_resources
 
 };
 
-
+uint32_t create_framebuffers(struct minec_client* client, struct renderer_backend_opengl_base* base);
+void destroy_framebuffers(struct minec_client* client, struct renderer_backend_opengl_base* base);
+uint32_t create_framebuffer_attachments(struct minec_client* client, struct renderer_backend_opengl_base* base, uint32_t winodw_width, uint32_t window_height);
+void destroy_framebuffer_attachments(struct minec_client* client, struct renderer_backend_opengl_base* base);
 
 
 static void _minec_client_retrieve_log_opengl_errors(struct minec_client* client, struct renderer_backend_opengl_base* base, uint32_t* p_result, uint8_t* function, uint8_t* file, uint32_t line, uint8_t* action)

@@ -178,13 +178,13 @@ uint8_t* window_get_VK_KHR_PLATFORM_SURFACE_EXTENSION_NAME();
 bool window_opengl_load();
 void window_opengl_unload();
 
-bool window_glCreateContext(void* window, int32_t version_major, int32_t version_minor, void* share_window);
+bool window_glCreateContext(void* window, int32_t version_major, int32_t version_minor, void* share_window, bool* glSwapIntervalEXT_support);
 
 void window_glDestroyContext(void* window);
 
 bool window_glMakeCurrent(void* window);
 
-bool window_glSwapInterval(int interval);
+bool window_glSwapIntervalEXT(int interval);
 
 void (*window_glGetProcAddress(uint8_t* name)) (void);
 
