@@ -75,10 +75,10 @@ endif()
 
 if(WIN32)
     message(STATUS "Platform: Windows")
-    set(MINEC_CLIENT_CMAKE_GRAPHICS_BACKEND_VULKAN OFF)
-    set(MINEC_CLIENT_CMAKE_GRAPHICS_BACKEND_OPENGL ON)
-    set(MINEC_CLIENT_CMAKE_GRAPHICS_BACKEND_DIRECT3D11 ON)
-    set(MINEC_CLIENT_CMAKE_GRAPHICS_BACKEND_DIRECT3D12 ON)
+    set(MINEC_CLIENT_CMAKE_RENDERER_BACKEND_VULKAN ON)
+    set(MINEC_CLIENT_CMAKE_RENDERER_BACKEND_OPENGL ON)
+    set(MINEC_CLIENT_CMAKE_RENDERER_BACKEND_DIRECT3D11 ON)
+    set(MINEC_CLIENT_CMAKE_RENDERER_BACKEND_DIRECT3D12 ON)
 
     if(MINEC_CLIENT_CMAKE_DYNAMIC_RENDERER)
         target_compile_definitions(MineC_Client PRIVATE MINEC_CLIENT_SHARED_RENDERER_LIBRARY_NAME="MineC_Client_Renderer.dll")
@@ -91,8 +91,8 @@ if(WIN32)
 
 elseif(UNIX AND NOT APPLE)
     message(STATUS "Platform: Linux")
-    set(MINEC_CLIENT_CMAKE_GRAPHICS_BACKEND_VULKAN OFF)
-    set(MINEC_CLIENT_CMAKE_GRAPHICS_BACKEND_OPENGL ON)
+    set(MINEC_CLIENT_CMAKE_RENDERER_BACKEND_VULKAN OFF)
+    set(MINEC_CLIENT_CMAKE_RENDERER_BACKEND_OPENGL ON)
 
     if(MINEC_CLIENT_CMAKE_DYNAMIC_RENDERER)
         target_compile_definitions(MineC_Client PRIVATE MINEC_CLIENT_SHARED_RENDERER_LIBRARY_NAME="libMineC_Client_Renderer.so")
@@ -113,11 +113,15 @@ target_sources(MineC_Client PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/settings/settings.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/resources/resources.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/renderer.c
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/.cerialized_src/runtime_files.c
 )
 
 target_include_directories(MineC_Client PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/dependencies/stb_image/include
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/.cerialized_src
 )
 
 target_link_libraries(MineC_Client PRIVATE window pixelchar utility networking)
@@ -127,34 +131,47 @@ target_link_libraries(MineC_Client PRIVATE window pixelchar utility networking)
 target_sources(MineC_Client_Renderer PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/renderer_internal.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/logging.c
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/.cerialized_src/runtime_files.c
 )
 
-target_include_directories(MineC_Client_Renderer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_include_directories(MineC_Client_Renderer PRIVATE 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/.cerialized_src
+)
 
 target_link_libraries(MineC_Client_Renderer PRIVATE window pixelchar utility)
 
-if(MINEC_CLIENT_CMAKE_GRAPHICS_BACKEND_VULKAN)
-    message(STATUS "Graphics backend Vulkan: supported")
 
-    target_compile_definitions(MineC_Client_Renderer PRIVATE MINEC_CLIENT_GRAPHICS_BACKEND_VULKAN=1)
+message(STATUS "Renderer backends:")
+
+if(MINEC_CLIENT_CMAKE_RENDERER_BACKEND_VULKAN)
+    message(STATUS "  Vulkan")
+
+    target_compile_definitions(MineC_Client_Renderer PRIVATE MINEC_CLIENT_RENDERER_BACKEND_VULKAN=1)
 endif()
 
-if(MINEC_CLIENT_CMAKE_GRAPHICS_BACKEND_OPENGL)
-    message(STATUS "Graphics backend OpenGL: supported")
+if(MINEC_CLIENT_CMAKE_RENDERER_BACKEND_OPENGL)
+    message(STATUS "  OpenGL")
 
-    target_compile_definitions(MineC_Client_Renderer PRIVATE MINEC_CLIENT_GRAPHICS_BACKEND_OPENGL=1)
+    target_sources(MineC_Client_Renderer PRIVATE
+         ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/backend/opengl/context.c
+    )
+
+    target_compile_definitions(MineC_Client_Renderer PRIVATE MINEC_CLIENT_RENDERER_BACKEND_OPENGL=1)
 endif()
 
-if(MINEC_CLIENT_CMAKE_GRAPHICS_BACKEND_DIRECT3D11)
-    message(STATUS "Graphics backend Direct3D11: supported")
+if(MINEC_CLIENT_CMAKE_RENDERER_BACKEND_DIRECT3D11)
+    message(STATUS "  Direct3D11")
 
-    target_compile_definitions(MineC_Client_Renderer PRIVATE MINEC_CLIENT_GRAPHICS_BACKEND_DIRECT3D11=1)
+    target_compile_definitions(MineC_Client_Renderer PRIVATE MINEC_CLIENT_RENDERER_BACKEND_DIRECT3D11=1)
 endif()
 
-if(MINEC_CLIENT_CMAKE_GRAPHICS_BACKEND_DIRECT3D12)
-    message(STATUS "Graphics backend Direct3D12: supported")
+if(MINEC_CLIENT_CMAKE_RENDERER_BACKEND_DIRECT3D12)
+    message(STATUS "  Direct3D12")
 
-    target_compile_definitions(MineC_Client_Renderer PRIVATE MINEC_CLIENT_GRAPHICS_BACKEND_DIRECT3D12=1)
+    target_compile_definitions(MineC_Client_Renderer PRIVATE MINEC_CLIENT_RENDERER_BACKEND_DIRECT3D12=1)
 endif()
 
 ###

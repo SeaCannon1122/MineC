@@ -8,8 +8,5 @@
 #elif defined(WINDOW_IMPLEMENTATION_WAYLAND)
 #include "window_wayland.c"
 
-#elif defined(WINDOW_IMPLEMENTATION_MACOS)
-#include "window_macos.c"
-
 #endif
 

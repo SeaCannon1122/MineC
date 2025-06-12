@@ -33,54 +33,28 @@ void minec_client_run(uint8_t* runtime_files_path)
 	resources_create(client);
 	minec_client_log_info(client, "[GLOBAL] Resources created");
 
-	struct renderer_settings_state request_renderer_settings;
-	struct renderer_info_state* renderer_infos;
-	struct renderer_settings_state* renderer_settings;
+	struct renderer_settings settings;
 
-	if ((return_value = renderer_create(
-		client,
-		&request_renderer_settings,
-		&renderer_infos,
-		&renderer_settings
-	)) != MINEC_CLIENT_SUCCESS)
+	if ((return_value = renderer_create(client, &settings)) != MINEC_CLIENT_SUCCESS)
 	{
 		minec_client_log_error(client, "[GLOBAL] Failed to create Renderer ");
 		goto _renderer_create_failed;
 	}
 	minec_client_log_info(client, "[GLOBAL] Renderer created");
 
-	/*gui_menus_create(client);
-
-	simulator_start(client);
-	networker_start(client);*/
-
 	while (application_window_handle_events(client) == 0)
 	{
 
-		/*gui_menus_simulation_frame(client);
-
-		if (gui_is_button_clicked(client->gui_menus_state.main.menu_handle, client->gui_menus_state.main.quit_game_button)) break;*/
-
-		//renderer_render(client);
-
+#ifdef MINEC_CLIENT_DYNAMIC_RENDERER
 		if (client->window.input.keyboard[WINDOW_KEY_R] == (KEY_DOWN_MASK | KEY_CHANGE_MASK))
 		{
 			minec_client_log_info(client, "[GLOBAL] Reloading Renderer ...");
-
-			if (renderer_reload(
-				client,
-				&renderer_infos,
-				&renderer_settings
-			) != MINEC_CLIENT_SUCCESS) minec_client_log_info(client, "[GLOBAL] Failed to reload Renderer");
+			if (renderer_reload(client) != MINEC_CLIENT_SUCCESS) minec_client_log_info(client, "[GLOBAL] Failed to reload Renderer");
 		}
+#endif
 
 		sleep_for_ms(20);
 	}
-
-	/*networker_stop(client);
-	simulator_stop(client);
-
-	gui_menus_destroy(client);*/
 
 	renderer_destroy(client);
 	minec_client_log_info(client, "[GLOBAL] Renderer destroyed");

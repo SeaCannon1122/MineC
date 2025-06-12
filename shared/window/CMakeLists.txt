@@ -20,8 +20,4 @@ elseif(UNIX AND NOT APPLE)
 
     target_link_libraries(window PUBLIC ${X11_LIBRARIES})
 
-elseif(UNIX AND APPLE)
-
-    target_compile_definitions(window PUBLIC WINDOW_IMPLEMENTATION_MACOS)
-
 endif()

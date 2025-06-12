@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <mutex.h>
+#include <malloc.h>
 
 #if defined(_WIN32)
 
@@ -13,12 +14,6 @@
 #elif defined(__linux__)
 #include <signal.h>
 #define DEBUG_BREAK() raise(SIGTRAP)
-
-#elif defined(__APPLE__)
-
-#define DEBUG_BREAK __builtin_trap()
-#define RESTRICT restrict
-
 #endif
 
 void* loadFile(uint8_t* src, size_t* size) {
@@ -110,8 +105,10 @@ void vulkan_instance_create()
 	app_info.pEngineName = "blocks2_angine";
 	app_info.apiVersion = VK_API_VERSION_1_3;
 
+	
+
 	char* instance_extensions[] = {
-		window_get_vk_khr_surface_extension_name(),
+		window_get_VK_KHR_PLATFORM_SURFACE_EXTENSION_NAME(),
 		VK_KHR_SURFACE_EXTENSION_NAME,
 		VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
 		VK_EXT_DEBUG_UTILS_EXTENSION_NAME
@@ -395,9 +392,10 @@ void vulkan_device_swapchain_and_framebuffers_destroy()
 
 int main()
 {
-	window_init_system();
+	window_init_context(NULL);
+	window_vulkan_load();
 
-	window = window_create(100, 100, 500, 300, "test2 window vulkan", true, NULL);
+	window = window_create(100, 100, 500, 300, "pixelchar vulkan test", true);
 
 	window_get_dimensions(window, &width, &height, &position_x, &position_y);
 
@@ -424,7 +422,7 @@ int main()
 
 	PixelcharRenderer pcr;
 	res = pixelcharRendererCreate(100, &pcr);
-	res = pixelcharRendererBackendVulkanInitialize(pcr, device, gpu, queue, queue_index, window_render_pass, 0, 0, 0, 0);
+	res = pixelcharRendererBackendVulkanInitialize(pcr, 0, 3, device, gpu, queue, queue_index, window_render_pass, 0, vkGetDeviceProcAddr, 0, 0, 0, 0);
 	res = pixelcharRendererBindFont(pcr, default_font, 0);
 	res = pixelcharRendererBindFont(pcr, smooth_font, 1);
 
@@ -521,7 +519,7 @@ int main()
 
 			VKCall(vkBeginCommandBuffer(cmd, &begin_info));
 
-			pixelcharRendererBackendVulkanUpdateRenderingData(pcr, cmd);
+			pixelcharRendererBackendVulkanUpdateRenderingData(pcr, 0, 0, cmd);
 
 			VkExtent2D screen_size;
 			screen_size.width = width;
@@ -560,7 +558,7 @@ int main()
 
 			//pixel_chars
 			
-			pixelcharRendererBackendVulkanRender(pcr, cmd, width, height, 4.f, 4.f, 4.f, 1.4f);
+			pixelcharRendererBackendVulkanRender(pcr, 0, cmd, width, height, 4.f, 4.f, 4.f, 1.4f);
 
 			vkCmdEndRenderPass(cmd);
 
@@ -597,7 +595,7 @@ int main()
 
 	vkDeviceWaitIdle(device);
 
-	pixelcharRendererBackendVulkanDeinitialize(pcr);
+	pixelcharRendererBackendVulkanDeinitialize(pcr, 0);
 	pixelcharRendererDestroy(pcr);
 
 
@@ -608,5 +606,6 @@ int main()
 
 	window_destroy(window);
 
-	window_deinit_system();
+	window_vulkan_unload();
+	window_deinit_context();
 }
