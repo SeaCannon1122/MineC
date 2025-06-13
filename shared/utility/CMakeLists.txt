@@ -6,6 +6,7 @@ add_library(utility STATIC
     ${CMAKE_CURRENT_SOURCE_DIR}/src/string_allocator.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/rng.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/utils.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/cerialize.c
 )
 
 target_include_directories(utility 

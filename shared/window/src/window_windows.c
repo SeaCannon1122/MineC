@@ -11,6 +11,7 @@
 struct window_data_windows
 {
 	HWND hwnd;
+	HICON icon;
 
 	HDC hdc;
 	HGLRC hglrc;
@@ -312,7 +313,7 @@ void* window_get_context()
 
 void* window_create(int32_t posx, int32_t posy, uint32_t width, uint32_t height, uint8_t* name, bool visible)
 {
-	struct window_data_windows* window_data = malloc(sizeof(struct window_data_windows));
+	struct window_data_windows* window_data = calloc(1, sizeof(struct window_data_windows));
 	if (window_data == NULL) return NULL;
 	
 	window_data->event_queue_length = _WINDOW_QUEUE_EXTENSION_EVENTS_COUNT;
@@ -381,8 +382,72 @@ void window_destroy(void* window)
 	
 	DestroyWindow(window_data->hwnd);
 
+	if (window_data->icon) DestroyIcon(window_data->icon);
+
 	free(window_data->event_queue);
 	free(window_data);
+}
+
+bool window_set_icon(void* window, uint32_t* icon_rgba_pixel_data, uint32_t icon_width, uint32_t icon_height)
+{
+	struct window_data_windows* window_data = window;
+
+	BITMAPV5HEADER bi = { 0 };
+	bi.bV5Size = sizeof(BITMAPV5HEADER);
+	bi.bV5Width = icon_width;
+	bi.bV5Height = -icon_height; // top down
+	bi.bV5Planes = 1;
+	bi.bV5BitCount = 32;
+	bi.bV5Compression = BI_BITFIELDS;
+	bi.bV5RedMask = 0x00FF0000;
+	bi.bV5GreenMask = 0x0000FF00;
+	bi.bV5BlueMask = 0x000000FF;
+	bi.bV5AlphaMask = 0xFF000000;
+
+	HDC hdc = GetDC(NULL);
+	if (hdc == NULL) return false;
+
+	uint8_t* bits = NULL;
+	HBITMAP dib_section = CreateDIBSection(hdc, (BITMAPINFO*)&bi, DIB_RGB_COLORS, &bits, NULL, 0);
+
+	ReleaseDC(NULL, hdc);
+
+	if (dib_section == NULL || bits == NULL) return false;
+
+	uint8_t* rgba_pixels = icon_rgba_pixel_data;
+
+	for (uint32_t i = 0; i < icon_width * icon_height; i++) 
+	{
+		bits[4 * i + 0] = rgba_pixels[i * 4 + 3] * rgba_pixels[i * 4 + 2] / 255;
+		bits[4 * i + 1] = rgba_pixels[i * 4 + 3] * rgba_pixels[i * 4 + 1] / 255;
+		bits[4 * i + 2] = rgba_pixels[i * 4 + 3] * rgba_pixels[i * 4 + 0] / 255;
+		bits[4 * i + 3] = rgba_pixels[i * 4 + 3];
+	}
+
+	HBITMAP bitmap = CreateBitmap(icon_width, icon_height, 1, 1, NULL);
+	if (bitmap == NULL) {
+		DeleteObject(dib_section);
+		return false;
+	}
+
+	ICONINFO icon_info = { 0 };
+	icon_info.fIcon = TRUE;
+	icon_info.xHotspot = 0;
+	icon_info.yHotspot = 0;
+	icon_info.hbmMask = bitmap;
+	icon_info.hbmColor = dib_section;
+
+	window_data->icon = CreateIconIndirect(&icon_info);
+
+	DeleteObject(bitmap);
+	DeleteObject(dib_section);
+
+	if (window_data->icon == NULL) return false;
+
+	SendMessage(window_data->hwnd, WM_SETICON, ICON_SMALL, (LPARAM)window_data->icon);
+	SendMessage(window_data->hwnd, WM_SETICON, ICON_BIG, (LPARAM)window_data->icon);
+
+	return true;
 }
 
 void window_get_dimensions(void* window, uint32_t* width, uint32_t* height, int32_t* screen_position_x, int32_t* screen_position_y)
@@ -454,7 +519,6 @@ HWND window_windows_get_hwnd(void* window)
 
 	return window_data->hwnd;
 }
-
 
 //vulkan
 bool window_vulkan_load()

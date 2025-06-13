@@ -31,7 +31,7 @@ struct renderer_settings
 	uint32_t max_mipmap_level_count;
 	uint32_t fps;
 	uint32_t fov;
-} settings;
+};
 
 struct renderer_info_state
 {

@@ -1,15 +1,25 @@
 #include <minec_client.h>
 
+#include <stb_image/stb_image.h>
+
 uint32_t application_window_create(struct minec_client* client, uint32_t posx, uint32_t posy, uint32_t width, uint32_t height, uint8_t* name)
 {
 	if (window_init_context(NULL) != 0) return MINEC_CLIENT_ERROR;
 
-	client->window.window_handle = window_create(posx, posy, width, height, name, true, NULL);
+	client->window.window_handle = window_create(posx, posy, width, height, name, true);
 	if (client->window.window_handle == NULL)
 	{
 		minec_client_log_error(client, "Error creating window");
 		return MINEC_CLIENT_ERROR;
 	}
+
+	size_t raw_window_icon_data_size;
+	void* raw_window_icon_data = cerialized_get_file(cerialized_assets_file_system, "icon.png", &raw_window_icon_data_size);
+
+	uint32_t icon_width, icon_height, comp;
+	uint32_t* icon_data = stbi_load_from_memory(raw_window_icon_data, raw_window_icon_data_size, &icon_width, &icon_height, &comp, 4);
+
+	window_set_icon(client->window.window_handle, icon_data, icon_width, icon_height);
 
 	atomic_init(&client->window.width);
 	atomic_init(&client->window.height);

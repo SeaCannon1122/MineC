@@ -83,6 +83,7 @@ if(WIN32)
     if(MINEC_CLIENT_CMAKE_DYNAMIC_RENDERER)
         target_compile_definitions(MineC_Client PRIVATE MINEC_CLIENT_SHARED_RENDERER_LIBRARY_NAME="MineC_Client_Renderer.dll")
         target_link_options(MineC_Client_Renderer_build_dummy PRIVATE "/SUBSYSTEM:WINDOWS" "/ENTRY:mainCRTStartup")
+        target_sources(MineC_Client PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/icon.rc)
     endif()
 
     if(NOT MINEC_CLIENT_CMAKE_DEBUG_LOG)
@@ -114,7 +115,7 @@ target_sources(MineC_Client PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/resources/resources.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/renderer.c
 
-    ${CMAKE_CURRENT_SOURCE_DIR}/.cerialized_src/runtime_files.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/.cerialized_src/assets.c
 )
 
 target_include_directories(MineC_Client PRIVATE
@@ -132,7 +133,7 @@ target_sources(MineC_Client_Renderer PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/renderer_internal.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/logging.c
 
-    ${CMAKE_CURRENT_SOURCE_DIR}/.cerialized_src/runtime_files.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/.cerialized_src/assets.c
 )
 
 target_include_directories(MineC_Client_Renderer PRIVATE 

@@ -7,6 +7,8 @@ add_executable(pixelchar_test_vulkan pixelchar_test_vulkan.c)
 add_executable(direct3d12_testing direct3d12_testing.cpp)
 add_executable(old_to_new_pixelfont old_to_new_pixelfont.c)
 add_executable(general_testing general_testing.c)
+add_executable(cerialize_test cerialize_test.c ../client/.cerialized_src/assets.c)
+target_include_directories(cerialize_test PRIVATE ../client/.cerialized_src/)
 
 find_package(Vulkan)
 
@@ -14,6 +16,7 @@ target_link_libraries(pixelchar_test_vulkan PRIVATE pixelchar window utility ${V
 target_link_libraries(direct3d12_testing PRIVATE window d3d12 dxguid d3dcompiler dxgi utility)
 target_link_libraries(pixelchar_test_opengl PRIVATE pixelchar window utility)
 target_link_libraries(general_testing PRIVATE utility)
+target_link_libraries(cerialize_test PRIVATE utility)
 
 add_custom_target(test_copy_runtime_files ALL
     COMMAND ${CMAKE_COMMAND} -E copy_directory

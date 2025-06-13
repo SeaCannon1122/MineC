@@ -4,6 +4,7 @@
 
 #include <unistd.h>
 #include <X11/Xlib.h>
+#include <X11/Xatom.h>
 #include <X11/Xutil.h>
 #include <X11/XKBlib.h>
 #include <X11/Xlocale.h>
@@ -45,7 +46,7 @@ struct window_context_x11
 {
 	Display* display;
 	int screen;
-	Atom wm_delete_window;
+	Atom wm_delete_window, _net_wm_icon;
 	XIM xim;
 
 	struct
@@ -86,6 +87,7 @@ bool window_init_context(void* transfered_context)
 		context->display = XOpenDisplay(NULL);
 		context->screen = DefaultScreen(context->display);
 		context->wm_delete_window = XInternAtom(context->display, "WM_DELETE_WINDOW", False);
+		context->_net_wm_icon = XInternAtom(context->display, "_NET_WM_ICON", False);
 		context->xim = XOpenIM(context->display, NULL, NULL, NULL);
 	}
 	else
@@ -171,6 +173,36 @@ void window_destroy(void* window)
 	XFreeColormap(context->display, window_data->colormap);
 
 	free(window_data);
+}
+
+bool window_set_icon(void* window, uint32_t* icon_rgba_pixel_data, uint32_t icon_width, uint32_t icon_height)
+{
+	struct window_data_x11* window_data = window;
+
+	Atom type = XA_CARDINAL;
+	int format = 32;
+
+	size_t data_len = 2 + (icon_width * icon_height);
+	uint32_t* data = malloc(sizeof(uint32_t) * data_len);
+	if (data == NULL) return false;
+
+	data[0] = icon_width;
+	data[1] = icon_height;
+
+	for (uint32_t i = 0; i < icon_width * icon_height; i++) {
+		uint8_t r = (icon_rgba_pixel_data[i] >> 0) & 0xFF;
+		uint8_t g = (icon_rgba_pixel_data[i] >> 8) & 0xFF;
+		uint8_t b = (icon_rgba_pixel_data[i] >> 16) & 0xFF;
+		uint8_t a = (icon_rgba_pixel_data[i] >> 24) & 0xFF;
+
+		// X expects ARGB (premultiplied alpha usually not required here)
+		data[2 + i] = icon_rgba_pixel_data[i];// ((uint32_t)a << 24) | (r << 16) | (g << 8) | b;
+	}
+
+	XChangeProperty(context->display, window_data->window, context->_net_wm_icon, type, format, PropModeReplace, (unsigned char*)data, data_len);
+	free(data);
+
+	return true;
 }
 
 void window_get_dimensions(void* window, uint32_t* width, uint32_t* height, int32_t* screen_position_x, int32_t* screen_position_y)
@@ -431,8 +463,10 @@ bool window_glMakeCurrent(void* window)
 
 bool window_glSwapInterval(int interval)
 {
-	if (context->opengl.current_window->glXSwapIntervalEXT) return (context->opengl.current_window->glXSwapIntervalEXT(context->display, context->opengl.current_window->window, interval) == 0);
-	else return false;
+	if (context->opengl.current_window->glXSwapIntervalEXT == NULL) return false;
+
+	context->opengl.current_window->glXSwapIntervalEXT(context->display, context->opengl.current_window->window, interval);
+	return true;
 }
 
 void (*window_glGetProcAddress(uint8_t* name)) (void)

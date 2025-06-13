@@ -1,6 +1,7 @@
 #include <utils.h>
 
 #include <stdio.h>
+#include <string.h>
 
 #ifdef WIN32
 
@@ -52,25 +53,19 @@ void dynamic_library_unload(void* library_handle)
 void* dynamic_library_load(uint8_t* library_name, bool name_explicit)
 {
 
-	int32_t src_length = 0;
-	for (; library_name[src_length] != 0; src_length++);
+	uint8_t* load_library_name = library_name;
 
-	char* src_platform = alloca(sizeof("lib") - 1 + src_length + sizeof(".so"));
+	if (name_explicit == false)
+	{
+		size_t library_name_length = strlen(library_name);
+		load_library_name = malloc(sizeof("lib") - 1 + library_name_length + sizeof(".so"));
 
-	src_platform[0] = 'l';
-	src_platform[1] = 'i';
-	src_platform[2] = 'b';
-	for (int32_t i = 3; i < src_length + 3; i++) src_platform[i] = library_name[i - 3];
-	src_platform[src_length + 3] = '.';
-	src_platform[src_length + 4] = 's';
-	src_platform[src_length + 5] = 'o';
-	src_platform[src_length + 6] = '\0';
-
-	void* handle = dlopen(src_platform, RTLD_NOW);
-	if (!handle) {
-		printf("Error loading shared object: %s\n", dlerror());
-		return NULL;
+		snprintf(load_library_name, sizeof("lib") - 1 + library_name_length + sizeof(".so"), "lib%s.so", library_name);
 	}
+
+	void* handle = dlopen(load_library_name, RTLD_NOW);
+
+	if (name_explicit == false) free(load_library_name);
 
 	return handle;
 }

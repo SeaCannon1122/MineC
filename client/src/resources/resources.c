@@ -1,6 +1,6 @@
 #include "minec_client.h"
 
-#include <stb_image/stb_image.h>
+//#include <stb_image/stb_image.h>
 
 #include "resources_defines.h"
 
@@ -113,7 +113,7 @@ void resources_create(struct minec_client* client) {
 			uint32_t height;
 			uint32_t* data;
 
-			if (data = stbi_load(val->data._string, &width, &height, &comp, 4))
+			if (data = NULL)//stbi_load(val->data._string, &width, &height, &comp, 4))
 			{
 				client->resource_index.textures[client->resource_index.texture_count].data = data;
 				client->resource_index.textures[client->resource_index.texture_count].width = width;

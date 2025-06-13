@@ -3,7 +3,7 @@
 #ifndef RESOURCES_H
 #define RESOURCES_H
 
-#include "stdbool.h"
+#include <stdbool.h>
 #include <pixelchar/pixelchar.h>
 
 struct resources_texture

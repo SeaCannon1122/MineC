@@ -17,12 +17,14 @@
 #include <hashmap.h>
 #include <atomics.h>
 #include <utils.h>
+#include <cerialize.h>
 
 #include "logging.h"
 #include "application_window/application_window.h"
 #include "settings/settings.h"
 #include "resources/resources.h"
 #include "renderer/renderer.h"
+#include "assets.h"
 
 enum minec_client_result
 {

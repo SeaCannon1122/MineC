@@ -3,7 +3,6 @@
 #ifndef MINEC_CLIENT_RENDERER_BACKEND_VULKAN_BACKEND_OPENGL_H
 #define MINEC_CLIENT_RENDERER_BACKEND_VULKAN_BACKEND_OPENGL_H
 
-#include <minec_client.h>
 #include <GL/glcorearb.h>
 
 struct renderer_backend_opengl
@@ -107,6 +106,11 @@ struct renderer_backend_opengl_base_state
 
 	} func;
 };
+
+struct minec_client;
+union renderer_backend_state;
+struct renderer_backend_settings;
+struct renderer_backend_info;
 
 uint32_t renderer_backend_opengl_create(
 	struct minec_client* client,
