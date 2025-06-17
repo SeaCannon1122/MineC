@@ -5,12 +5,7 @@
 
 #include <GL/glcorearb.h>
 
-struct renderer_backend_opengl
-{
-	int a;
-};
-
-struct renderer_backend_opengl_base_state
+struct opengl_context_state
 {
 	struct
 	{
@@ -107,22 +102,14 @@ struct renderer_backend_opengl_base_state
 	} func;
 };
 
+struct renderer_backend_opengl
+{
+	struct opengl_context_state context;
+};
+
 struct minec_client;
-union renderer_backend_state;
-struct renderer_backend_settings;
-struct renderer_backend_info;
 
-uint32_t renderer_backend_opengl_create(
-	struct minec_client* client,
-	union renderer_backend_state* backend_state,
-	struct renderer_backend_settings* settings,
-	struct renderer_backend_info* backend_info,
-	struct renderer_backend_device_info* device_infos
-);
-
-void renderer_backend_opengl_destroy(
-	struct minec_client* client,
-	union renderer_backend_state* backend_state
-);
+uint32_t renderer_backend_opengl_create(struct minec_client* client);
+void renderer_backend_opengl_destroy(struct minec_client* client);
 
 #endif

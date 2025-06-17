@@ -169,7 +169,7 @@ VkResult _pixelchar_upload_data_to_buffer(_renderer_backend_vulkan* backend, voi
 
 	if ((memory_flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) && (memory_flags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT))
 	{
-		memcpy((size_t)buffer_host_handle + offset, data, data_size);
+		memcpy((void*)((size_t)buffer_host_handle + offset), data, data_size);
 	}
 	else {
 		VkDeviceSize staging_offset = 0;
@@ -178,7 +178,7 @@ VkResult _pixelchar_upload_data_to_buffer(_renderer_backend_vulkan* backend, voi
 		{
 			VkDeviceSize chunk_size = (backend->staging_buffer_size < data_size - staging_offset ? backend->staging_buffer_size : data_size - staging_offset);
 
-			memcpy(backend->staging_buffer_host_handle, (size_t)data + staging_offset, chunk_size);
+			memcpy(backend->staging_buffer_host_handle, (const void*)((size_t)data + staging_offset), chunk_size);
 
 			if (backend->staging_memory_flags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT == 0)
 			{
@@ -374,10 +374,10 @@ PixelcharResult pixelcharRendererBackendVulkanInitialize(
 	VkRenderPass renderPass,
 	uint32_t subpass,
 	PFN_vkGetDeviceProcAddr pfnvkGetDeviceProcAddr,
-	uint8_t* vertex_shader_custom,
-	uint32_t vertex_shader_custom_length,
-	uint8_t* fragment_shader_custom,
-	uint32_t fragment_shader_custom_length
+	const uint8_t* customVertexShaderSource,
+	size_t customVertexShaderSourceSize,
+	const uint8_t* customFragmentShaderSource,
+	size_t customFragmentShaderSourceSize
 )
 {
 	if (renderer == NULL) return PIXELCHAR_ERROR_INVALID_ARGUMENTS;
@@ -586,8 +586,8 @@ PixelcharResult pixelcharRendererBackendVulkanInitialize(
 	VkShaderModuleCreateInfo shader_info = { 0 };
 	shader_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 
-	shader_info.pCode = (vertex_shader_custom == 0 ? vertex_shader_code : vertex_shader_custom);
-	shader_info.codeSize = (vertex_shader_custom == 0 ? vertex_shader_code_len : vertex_shader_custom_length);
+	shader_info.pCode = (uint32_t*)(customVertexShaderSource == 0 ? vertex_shader_code : customVertexShaderSource);
+	shader_info.codeSize = (customVertexShaderSource == 0 ? vertex_shader_code_len : customVertexShaderSourceSize);
 
 	if (result == PIXELCHAR_SUCCESS)
 	{
@@ -595,8 +595,8 @@ PixelcharResult pixelcharRendererBackendVulkanInitialize(
 		else vertex_shader_module_created = true;
 	}
 
-	shader_info.pCode = (fragment_shader_custom == 0 ? fragment_shader_code : fragment_shader_custom);
-	shader_info.codeSize = (fragment_shader_custom == 0 ? fragment_shader_code_len : fragment_shader_custom_length);
+	shader_info.pCode = (uint32_t*)(customFragmentShaderSource == 0 ? fragment_shader_code : customFragmentShaderSource);
+	shader_info.codeSize = (customFragmentShaderSource == 0 ? fragment_shader_code_len : customFragmentShaderSourceSize);
 
 	if (result == PIXELCHAR_SUCCESS)
 	{

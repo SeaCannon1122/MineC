@@ -2,7 +2,9 @@
 
 uint32_t renderer_internal_create(struct minec_client* client, struct renderer_settings* settings)
 {
-	printf("hello");
+#ifdef MINEC_CLIENT_DYNAMIC_RENDERER
+	window_init_context(client->window.window_context_handle);
+#endif
 
 	uint32_t result = MINEC_CLIENT_SUCCESS;
 	bool

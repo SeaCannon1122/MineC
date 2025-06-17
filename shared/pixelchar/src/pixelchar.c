@@ -26,7 +26,7 @@ PixelcharResult pixelcharFontCreate(const void* fontData, size_t dataSize, Pixel
 	if (dataSize < sizeof(_pixelchar_font_metadata)) return PIXELCHAR_ERROR_INVALID_ARGUMENTS;
 	if (pFont == NULL) return PIXELCHAR_ERROR_INVALID_ARGUMENTS;
 	
-	_pixelchar_font_metadata* metadata = fontData;
+	const _pixelchar_font_metadata* metadata = (const _pixelchar_font_metadata*)fontData;
 
 	size_t bitmap_size = metadata->resolution * metadata->resolution / 8;
 
@@ -43,33 +43,36 @@ PixelcharResult pixelcharFontCreate(const void* fontData, size_t dataSize, Pixel
 	font->resolution = metadata->resolution;
 
 	font->mappings_count = metadata->mappings_count;
-	font->mappings = 
+	font->mappings = (uint32_t*)(
 		(size_t)font + 
-		(size_t)PIXELCHAR_PAD(sizeof(PixelcharFont_T), 8);
+		(size_t)PIXELCHAR_PAD(sizeof(PixelcharFont_T), 8)
+	);
 	memcpy(
 		font->mappings, 
-		(size_t)fontData + metadata->metadata_section_size, 
+		(uint32_t*)((size_t)fontData + metadata->metadata_section_size), 
 		metadata->mappings_count * sizeof(uint32_t)
 	);
 
 	font->bitmaps_count = metadata->bitmaps_count;
-	font->widths = 
+	font->widths = (uint8_t*)(
 		(size_t)font + 
 		(size_t)PIXELCHAR_PAD(sizeof(PixelcharFont_T), 8) + 
-		(size_t)PIXELCHAR_PAD(metadata->mappings_count * sizeof(uint32_t), 8);
+		(size_t)PIXELCHAR_PAD(metadata->mappings_count * sizeof(uint32_t), 8)
+	);
 	memcpy(
 		font->widths, 
-		(size_t)fontData + metadata->metadata_section_size + metadata->mappings_section_size, 
+		(uint8_t*)((size_t)fontData + metadata->metadata_section_size + metadata->mappings_section_size),
 		metadata->bitmaps_count * sizeof(uint8_t)
 	);
-	font->bitmaps = 
+	font->bitmaps = (void*)(
 		(size_t)font + 
 		(size_t)PIXELCHAR_PAD(sizeof(PixelcharFont_T), 8) + 
 		(size_t)PIXELCHAR_PAD(metadata->mappings_count * sizeof(uint32_t), 8) + 
-		(size_t)PIXELCHAR_PAD(metadata->bitmaps_count * sizeof(uint8_t), 8);
+		(size_t)PIXELCHAR_PAD(metadata->bitmaps_count * sizeof(uint8_t), 8)
+	);
 	memcpy(
 		font->bitmaps,
-		(size_t)fontData + metadata->metadata_section_size + metadata->mappings_section_size + metadata->widths_section_size, 
+		(void*)((size_t)fontData + metadata->metadata_section_size + metadata->mappings_section_size + metadata->widths_section_size), 
 		metadata->bitmaps_count * bitmap_size
 	);
 
@@ -79,7 +82,7 @@ PixelcharResult pixelcharFontCreate(const void* fontData, size_t dataSize, Pixel
 
 void pixelcharFontDestroy(PixelcharFont font)
 {
-	if (font == NULL) return PIXELCHAR_ERROR_INVALID_ARGUMENTS;
+	if (font == NULL) return;
 
 	font->destroyed = true;
 
@@ -88,7 +91,7 @@ void pixelcharFontDestroy(PixelcharFont font)
 
 void _pixelchar_renderer_convert_queue(PixelcharRenderer renderer, uint32_t backend_index)
 {
-	_pixelchar_renderer_char* chars = &renderer->queue;
+	_pixelchar_renderer_char* chars = (_pixelchar_renderer_char*) &renderer->queue;
 
 	for (uint32_t i = 0; i < renderer->queue_filled_length; i++)
 	{
@@ -136,7 +139,7 @@ PixelcharResult pixelcharRendererCreate(uint32_t charQueueLength, PixelcharRende
 
 void pixelcharRendererDestroy(PixelcharRenderer renderer)
 {
-	if (renderer == NULL) return PIXELCHAR_ERROR_INVALID_ARGUMENTS;
+	if (renderer == NULL) return;
 
 	for (uint32_t i = 0; i < PIXELCHAR_RENDERER_MAX_FONT_COUNT; i++)
 	{
@@ -153,7 +156,7 @@ void pixelcharRendererDestroy(PixelcharRenderer renderer)
 
 void pixelcharRendererHardResetBackendSlot(PixelcharRenderer renderer, uint32_t backendSlotIndex)
 {
-	if (renderer == NULL) return PIXELCHAR_ERROR_INVALID_ARGUMENTS;
+	if (renderer == NULL) return;
 	if (backendSlotIndex >= PIXELCHAR_RENDERER_MAX_BACKEND_COUNT) return;
 
 	free(renderer->backends[backendSlotIndex].data);

@@ -13,6 +13,8 @@ struct renderer_backend_info_state
 		uint8_t name[64];
 	} backend_infos[RENDRER_MAX_BACKEND_COUNT];
 
+	uint32_t backend_count;
+
 	struct renderer_backend_device_info
 	{
 		uint8_t name[64];
@@ -21,6 +23,8 @@ struct renderer_backend_info_state
 		bool usable;
 		bool disable_vsync_support;
 	} backend_device_infos[RENDERER_MAX_BACKEND_DEVICE_COUNT];
+
+	uint32_t backend_device_count;
 };
 
 struct renderer_settings
@@ -46,8 +50,6 @@ struct renderer
 {
 #ifdef MINEC_CLIENT_DYNAMIC_RENDERER
 	void* library_handle;
-	uint8_t* library_path;
-	uint8_t* library_copy_path;
 
 	struct renderer_settings settings_mirror;
 #endif

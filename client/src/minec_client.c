@@ -1,7 +1,7 @@
 #include "minec_client.h"
 
 
-void minec_client_run(uint8_t* runtime_files_path)
+void minec_client_run(uint8_t* data_files_path)
 {
 	struct minec_client client_memory;
 	struct minec_client* client = &client_memory;
@@ -10,8 +10,8 @@ void minec_client_run(uint8_t* runtime_files_path)
 
 	client->static_alloc = s_allocator_new(4096);
 	client->dynamic_alloc = s_allocator_new(4096);
-	client->runtime_files_path = s_alloc_string(client->static_alloc, runtime_files_path);
-	client->runtime_files_path_length = strlen(runtime_files_path);
+	client->data_files_path = s_alloc_string(client->static_alloc, data_files_path);
+	client->data_files_path_length = strlen(data_files_path);
 
 	if ((return_value = application_window_create(
 		client,
@@ -30,9 +30,6 @@ void minec_client_run(uint8_t* runtime_files_path)
 	settings_create(client);
 	settings_load(client);
 
-	resources_create(client);
-	minec_client_log_info(client, "[GLOBAL] Resources created");
-
 	struct renderer_settings settings;
 
 	if ((return_value = renderer_create(client, &settings)) != MINEC_CLIENT_SUCCESS)
@@ -42,7 +39,7 @@ void minec_client_run(uint8_t* runtime_files_path)
 	}
 	minec_client_log_info(client, "[GLOBAL] Renderer created");
 
-	while (application_window_handle_events(client) == 0)
+	while (application_window_handle_events(client) == MINEC_CLIENT_SUCCESS)
 	{
 
 #ifdef MINEC_CLIENT_DYNAMIC_RENDERER
@@ -60,8 +57,6 @@ void minec_client_run(uint8_t* runtime_files_path)
 	minec_client_log_info(client, "[GLOBAL] Renderer destroyed");
 
 _renderer_create_failed:
-	resources_destroy(client);
-	minec_client_log_info(client, "[GLOBAL] Resources destroyed");
 
 	settings_destroy(client);
 	minec_client_log_info(client, "[GLOBAL] Window destroyed");
@@ -69,7 +64,7 @@ _renderer_create_failed:
 	application_window_destroy(client);
 
 _application_window_create_failed:
-	s_free(client->static_alloc, client->runtime_files_path);
+	s_free(client->static_alloc, client->data_files_path);
 	s_allocator_delete(client->static_alloc);
 	s_allocator_delete(client->dynamic_alloc);
 }

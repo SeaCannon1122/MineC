@@ -27,7 +27,7 @@ endif()
 
 add_executable(MineC_Client)
 
-if(MINEC_CLIENT_CMAKE_DYNAMIC_RENDERER)
+if(MINEC_CLIENT_CMAKE_DYNAMIC_RENDERER AND WIN32)
     message(STATUS "Dynamic renderer: true")
 
     add_library(MineC_Client_Renderer SHARED)
@@ -40,14 +40,6 @@ if(MINEC_CLIENT_CMAKE_DYNAMIC_RENDERER)
     add_executable(MineC_Client_Renderer_build_dummy ${CMAKE_CURRENT_SOURCE_DIR}/src/dummy_main.c)
     target_link_libraries(MineC_Client_Renderer_build_dummy PRIVATE MineC_Client_Renderer)
 
-    add_custom_target(MineC_Client_copy_renderer
-    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:MineC_Client_Renderer> "${CMAKE_CURRENT_BINARY_DIR}/runtime_files"
-    COMMENT "Copying MineC_Client_Renderer ..."
-    )
-
-    add_dependencies(MineC_Client MineC_Client_copy_renderer)
-    add_dependencies(MineC_Client_Renderer_build_dummy MineC_Client_copy_renderer)
-
 else()
     message(STATUS "Dynamic renderer: false")
 
@@ -55,13 +47,13 @@ else()
     target_link_libraries(MineC_Client PRIVATE MineC_Client_Renderer)
 endif()
 
-add_custom_target(MineC_Client_copy_runtime_files
-    COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/runtime_files" "${CMAKE_CURRENT_BINARY_DIR}/runtime_files"
-    COMMENT "Copying runtime_files/ ..."
+add_custom_target(MineC_Client_copy_data_files
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/" "${CMAKE_CURRENT_BINARY_DIR}/MineC_Client_data"
+    COMMENT "Copying MineC_Client_data/ ..."
 )
 
-add_dependencies(MineC_Client MineC_Client_copy_runtime_files)
-add_dependencies(MineC_Client_Renderer MineC_Client_copy_runtime_files)
+add_dependencies(MineC_Client MineC_Client_copy_data_files)
+add_dependencies(MineC_Client_Renderer MineC_Client_copy_data_files)
 
 if(MINEC_CLIENT_CMAKE_DEBUG_LOG)
     message(STATUS "Debug log: true")
@@ -112,10 +104,9 @@ target_sources(MineC_Client PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/logging.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/application_window/application_window.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/settings/settings.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/resources/resources.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/renderer.c
 
-    ${CMAKE_CURRENT_SOURCE_DIR}/.cerialized_src/assets.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/.cerialized_src/resources.c
 )
 
 target_include_directories(MineC_Client PRIVATE
@@ -133,7 +124,7 @@ target_sources(MineC_Client_Renderer PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/renderer_internal.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/logging.c
 
-    ${CMAKE_CURRENT_SOURCE_DIR}/.cerialized_src/assets.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/.cerialized_src/resources.c
 )
 
 target_include_directories(MineC_Client_Renderer PRIVATE 
@@ -157,6 +148,7 @@ if(MINEC_CLIENT_CMAKE_RENDERER_BACKEND_OPENGL)
     message(STATUS "  OpenGL")
 
     target_sources(MineC_Client_Renderer PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/backend/opengl/backend_opengl.c
          ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/backend/opengl/context.c
     )
 

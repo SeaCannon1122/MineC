@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.15)
 
 project(MineC)
 
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 include_directories(dependencies/graphics_headers)
 
 add_subdirectory(shared/window)

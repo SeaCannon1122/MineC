@@ -84,6 +84,8 @@ bool window_init_context(void* transfered_context)
 {
 	if (transfered_context == NULL)
 	{
+		XInitThreads();
+
 		context->display = XOpenDisplay(NULL);
 		context->screen = DefaultScreen(context->display);
 		context->wm_delete_window = XInternAtom(context->display, "WM_DELETE_WINDOW", False);
@@ -93,7 +95,7 @@ bool window_init_context(void* transfered_context)
 	else
 		context = transfered_context;
 
-	return 0;
+	return true;
 }
 
 void window_deinit_context()
@@ -103,6 +105,11 @@ void window_deinit_context()
 		XCloseIM(context->xim);
 		XCloseDisplay(context->display);
 	}
+}
+
+void* window_get_context()
+{
+	return context;
 }
 
 void* window_create(int32_t posx, int32_t posy, uint32_t width, uint32_t height, uint8_t* name, bool visible)
@@ -200,6 +207,7 @@ bool window_set_icon(void* window, uint32_t* icon_rgba_pixel_data, uint32_t icon
 	}
 
 	XChangeProperty(context->display, window_data->window, context->_net_wm_icon, type, format, PropModeReplace, (unsigned char*)data, data_len);
+	XFlush(context->display);
 	free(data);
 
 	return true;

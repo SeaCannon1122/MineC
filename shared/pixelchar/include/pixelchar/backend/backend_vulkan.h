@@ -22,10 +22,10 @@ PixelcharResult pixelcharRendererBackendVulkanInitialize(
 	VkRenderPass renderPass,
 	uint32_t subpass,
 	PFN_vkGetDeviceProcAddr pfnvkGetDeviceProcAddr,
-	uint8_t* vertex_shader_custom,
-	uint32_t vertex_shader_custom_length,
-	uint8_t* fragment_shader_custom,
-	uint32_t fragment_shader_custom_length
+	const uint8_t* customVertexShaderSource,
+	size_t customVertexShaderSourceSize,
+	const uint8_t* customFragmentShaderSource,
+	size_t customFragmentShaderSourceSize
 );
 
 void pixelcharRendererBackendVulkanDeinitialize(PixelcharRenderer renderer, uint32_t backendSlotIndex);

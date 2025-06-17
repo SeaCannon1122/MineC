@@ -287,18 +287,18 @@ bool window_init_context(void* transfered_context)
 			0,
 			GetModuleHandleW(NULL),
 			NULL,
-			LoadCursorW(NULL, IDC_ARROW),
+			LoadCursorW(NULL, (LPCWSTR)IDC_ARROW),
 			NULL,
 			NULL,
 			L"window_window_class"
 		};
 
-		if (RegisterClassW(&wc) == 0) return 1;
+		if (RegisterClassW(&wc) == 0) return false;
 	}
 	else
 		context = transfered_context;
 
-	return 0;
+	return true;
 }
 
 void window_deinit_context()
@@ -414,7 +414,7 @@ bool window_set_icon(void* window, uint32_t* icon_rgba_pixel_data, uint32_t icon
 
 	if (dib_section == NULL || bits == NULL) return false;
 
-	uint8_t* rgba_pixels = icon_rgba_pixel_data;
+	uint8_t* rgba_pixels = (uint8_t*)icon_rgba_pixel_data;
 
 	for (uint32_t i = 0; i < icon_width * icon_height; i++) 
 	{
@@ -525,7 +525,7 @@ bool window_vulkan_load()
 {
 	if ((context->vulkan.library = LoadLibraryA("vulkan-1.dll")) == NULL) return false;
 	
-	if ((context->vulkan.func.vkGetInstanceProcAddr = GetProcAddress(context->vulkan.library, "vkGetInstanceProcAddr")) == NULL)
+	if ((context->vulkan.func.vkGetInstanceProcAddr = (PFN_vkGetInstanceProcAddr)GetProcAddress(context->vulkan.library, "vkGetInstanceProcAddr")) == NULL)
 	{
 		FreeLibrary(context->vulkan.library);
 		return false;
@@ -570,10 +570,10 @@ bool window_opengl_load()
 {
 	if ((context->opengl.library = LoadLibraryA("opengl32.dll")) == NULL) return false;
 
-	context->opengl.func.wglCreateContext = GetProcAddress(context->opengl.library, "wglCreateContext");
-	context->opengl.func.wglDeleteContext = GetProcAddress(context->opengl.library, "wglDeleteContext");
-	context->opengl.func.wglMakeCurrent = GetProcAddress(context->opengl.library, "wglMakeCurrent");
-	context->opengl.func.wglGetProcAddress = GetProcAddress(context->opengl.library, "wglGetProcAddress");
+	context->opengl.func.wglCreateContext = (PFNWGLCREATECONTEXTPROC)GetProcAddress(context->opengl.library, "wglCreateContext");
+	context->opengl.func.wglDeleteContext = (PFNWGLDELETECONTEXTPROC)GetProcAddress(context->opengl.library, "wglDeleteContext");
+	context->opengl.func.wglMakeCurrent = (PFNWGLMAKECURRENTPROC)GetProcAddress(context->opengl.library, "wglMakeCurrent");
+	context->opengl.func.wglGetProcAddress = (PFNWGLGETPROCADDRESSPROC)GetProcAddress(context->opengl.library, "wglGetProcAddress");
 
 	if (
 		context->opengl.func.wglCreateContext == NULL ||
@@ -620,7 +620,7 @@ bool window_glCreateContext(void* window, int32_t version_major, int32_t version
 		0,
 		L"window_window_class",
 		L"dummy_window",
-		NULL,
+		0,
 		0,
 		0,
 		0 + 16,
@@ -669,8 +669,8 @@ bool window_glCreateContext(void* window, int32_t version_major, int32_t version
 	if (result == true) if (context->opengl.func.wglMakeCurrent(dummy_hdc, dummy_hglrc) == FALSE) result = false;
 
 	if (result == true) if (
-		(wglCreateContextAttribsARB = context->opengl.func.wglGetProcAddress("wglCreateContextAttribsARB")) == NULL ||
-		(wglChoosePixelFormatARB = context->opengl.func.wglGetProcAddress("wglChoosePixelFormatARB")) == NULL
+		(wglCreateContextAttribsARB = (PFNWGLCREATECONTEXTATTRIBSARBPROC)context->opengl.func.wglGetProcAddress("wglCreateContextAttribsARB")) == NULL ||
+		(wglChoosePixelFormatARB = (PFNWGLCHOOSEPIXELFORMATARBPROC)context->opengl.func.wglGetProcAddress("wglChoosePixelFormatARB")) == NULL
 	) result = false;
 
 	if (result == true)
@@ -719,7 +719,7 @@ bool window_glCreateContext(void* window, int32_t version_major, int32_t version
 
 	if (result == true) 
 	{
-		if ((window_data->wglSwapIntervalEXT = context->opengl.func.wglGetProcAddress("wglSwapIntervalEXT")) != NULL) *glSwapIntervalEXT_support = true;
+		if ((window_data->wglSwapIntervalEXT = (PFNWGLSWAPINTERVALEXTPROC)context->opengl.func.wglGetProcAddress("wglSwapIntervalEXT")) != NULL) *glSwapIntervalEXT_support = true;
 		else *glSwapIntervalEXT_support = false;
 	}
 
@@ -765,8 +765,8 @@ void (*window_glGetProcAddress(uint8_t* name)) (void)
 {
 	void (*function)(void);
 
-	if ((function = context->opengl.func.wglGetProcAddress(name)) != NULL) return function;
-	else return GetProcAddress(context->opengl.library, name);
+	if ((function = (void (*)(void))context->opengl.func.wglGetProcAddress(name)) != NULL) return function;
+	else return (void (*)(void))GetProcAddress(context->opengl.library, name);
 }
 
 bool window_glSwapBuffers(void* window)

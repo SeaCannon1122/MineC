@@ -65,8 +65,8 @@ uint32_t networking_io_status(void* handle) {
 
     FD_ZERO(&readfds);
     FD_ZERO(&writefds);
-    FD_SET(handle, &readfds);
-    FD_SET(handle, &writefds);
+    FD_SET((SOCKET)handle, &readfds);
+    FD_SET((SOCKET)handle, &writefds);
 
     struct timeval timeout;
     timeout.tv_sec = 0;
@@ -83,8 +83,8 @@ uint32_t networking_io_status(void* handle) {
     }
 
     uint32_t return_value = 0;
-    if (FD_ISSET(handle, &readfds)) return_value |= NETWORKING_READ_READY;
-    if (FD_ISSET(handle, &writefds)) return_value |= NETWORKING_WRITE_READY;
+    if (FD_ISSET((SOCKET)handle, &readfds)) return_value |= NETWORKING_READ_READY;
+    if (FD_ISSET((SOCKET)handle, &writefds)) return_value |= NETWORKING_WRITE_READY;
 
     return return_value;
 }
@@ -136,7 +136,7 @@ uint32_t networking_server_init(uint16_t port, void** p_server_handle) {
         return NETWORKING_ERROR;
     }
 
-    *p_server_handle = server_socket;
+    *p_server_handle = (void*)server_socket;
     return NETWORKING_SUCCESS;
 }
 
@@ -154,7 +154,7 @@ uint32_t networking_server_accept(void* server_handle, void** p_client_handle) {
         return NETWORKING_ERROR;
     }
 
-    *p_client_handle = client_socket;
+    *p_client_handle = (void*)client_socket;
     return NETWORKING_SUCCESS;
 }
 
@@ -216,7 +216,7 @@ uint32_t networking_client_connect(const uint8_t* ip, uint16_t port, void** p_se
         }
     }
 
-    *p_server_handle = client_socket;
+    *p_server_handle = (void*)client_socket;
     return NETWORKING_SUCCESS;
 }
 
@@ -225,7 +225,7 @@ uint32_t networking_client_connection_status(void* server_handle) {
     fd_set write_fds;
 
     FD_ZERO(&write_fds);
-    FD_SET(server_handle, &write_fds);
+    FD_SET((SOCKET)server_handle, &write_fds);
     struct timeval timeout = { 0, 0 };
 
     int result = select((size_t)server_handle + 1, NULL, &write_fds, NULL, &timeout);
@@ -234,7 +234,7 @@ uint32_t networking_client_connection_status(void* server_handle) {
 
         int error = 0;
         socklen_t len = sizeof(error);
-        if (getsockopt(server_handle, SOL_SOCKET, SO_ERROR, &error, &len) != 0) {
+        if (getsockopt((SOCKET)server_handle, SOL_SOCKET, SO_ERROR, (char*)&error, &len) != 0) {
             perror("getsockopt failed");
             return NETWORKING_ERROR;
         }
@@ -244,7 +244,7 @@ uint32_t networking_client_connection_status(void* server_handle) {
 
     int error = 0;
     socklen_t len = sizeof(error);
-    if (getsockopt(server_handle, SOL_SOCKET, SO_ERROR, &error, &len) != 0) {
+    if (getsockopt((SOCKET)server_handle, SOL_SOCKET, SO_ERROR, (char*)&error, &len) != 0) {
         perror("getsockopt failed");
         return NETWORKING_ERROR;
     }

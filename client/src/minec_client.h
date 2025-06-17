@@ -22,9 +22,8 @@
 #include "logging.h"
 #include "application_window/application_window.h"
 #include "settings/settings.h"
-#include "resources/resources.h"
 #include "renderer/renderer.h"
-#include "assets.h"
+#include "resources.h"
 
 enum minec_client_result
 {
@@ -36,20 +35,18 @@ struct minec_client
 {
 	void* static_alloc;
 	void* dynamic_alloc;
-	uint8_t* runtime_files_path;
-	size_t runtime_files_path_length;
+	uint8_t* data_files_path;
+	size_t data_files_path_length;
 
 	struct application_window window;
 
 	struct settings settings;
 
-	struct resource_index resource_index;
-
 	struct renderer renderer;
 	atomic_(bool) renderer_recreate;
 };
 
-void minec_client_run(uint8_t* runtime_files_path);
+void minec_client_run(uint8_t* data_files_path);
 
 //should not be called unless catastrophic unrecoverable operating system failure (NOT malloc failing)
 static void minec_client_nuke_destroy_kill_crush_annihilate_process_exit(struct minec_client* client)

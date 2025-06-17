@@ -248,3 +248,129 @@ void* file_load(uint8_t* path, size_t* size)
 
 	return buffer;
 }
+
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <dirent.h>
+#include <sys/stat.h>
+#endif
+
+
+
+// Utility: check if a name is "." or ".."
+int is_dot_or_dotdot(const char* name) {
+	return (strcmp(name, ".") == 0 || strcmp(name, "..") == 0);
+}
+
+// Shared result construction helper
+char* join_names(const char** names, int count) {
+	if (count == 0) return strdup(""); // empty string
+
+	// Calculate total size
+	size_t total_len = 0;
+	for (int i = 0; i < count; ++i)
+		total_len += strlen(names[i]) + 1; // +1 for '/'
+
+	char* result = malloc(total_len + 1); // +1 for null terminator
+	if (!result) return NULL;
+
+	result[0] = '\0';
+	for (int i = 0; i < count; ++i) {
+		if (i > 0) strcat(result, "/");
+		strcat(result, names[i]);
+	}
+	return result;
+}
+
+char* list_subdirectories(const char* path) {
+#ifdef _WIN32
+	char search_path[MAX_PATH];
+	snprintf(search_path, sizeof(search_path), "%s/*", path);
+
+
+
+	WIN32_FIND_DATAA ffd;
+	HANDLE hFind = FindFirstFileA(search_path, &ffd);
+	if (hFind == INVALID_HANDLE_VALUE) return NULL;
+
+	const char* names[1024]; // max 1024 dirs for simplicity
+	int count = 0;
+
+	do {
+		if ((ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) && !is_dot_or_dotdot(ffd.cFileName)) {
+			names[count++] = _strdup(ffd.cFileName);
+		}
+	} while (FindNextFileA(hFind, &ffd) && count < 1024);
+
+	FindClose(hFind);
+	char* result = join_names(names, count);
+
+	for (int i = 0; i < count; ++i) free((void*)names[i]);
+	return result;
+
+#else
+	DIR* dir = opendir(path);
+	if (!dir) return NULL;
+
+	const char* names[1024];
+	int count = 0;
+	struct dirent* entry;
+
+	while ((entry = readdir(dir)) != NULL) {
+		if (entry->d_type == DT_DIR && !is_dot_or_dotdot(entry->d_name)) {
+			names[count++] = strdup(entry->d_name);
+		}
+	}
+	closedir(dir);
+	char* result = join_names(names, count);
+
+	for (int i = 0; i < count; ++i) free((void*)names[i]);
+	return result;
+#endif
+}
+
+char* list_files(const char* path) {
+#ifdef _WIN32
+	char search_path[MAX_PATH];
+	snprintf(search_path, sizeof(search_path), "%s/*", path);
+
+	WIN32_FIND_DATAA ffd;
+	HANDLE hFind = FindFirstFileA(search_path, &ffd);
+	if (hFind == INVALID_HANDLE_VALUE) return NULL;
+
+	const char* names[1024];
+	int count = 0;
+
+	do {
+		if (!(ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+			names[count++] = _strdup(ffd.cFileName);
+		}
+	} while (FindNextFileA(hFind, &ffd) && count < 1024);
+
+	FindClose(hFind);
+	char* result = join_names(names, count);
+
+	for (int i = 0; i < count; ++i) free((void*)names[i]);
+	return result;
+
+#else
+	DIR* dir = opendir(path);
+	if (!dir) return NULL;
+
+	const char* names[1024];
+	int count = 0;
+	struct dirent* entry;
+
+	while ((entry = readdir(dir)) != NULL) {
+		if (entry->d_type == DT_REG) {
+			names[count++] = strdup(entry->d_name);
+		}
+	}
+	closedir(dir);
+	char* result = join_names(names, count);
+
+	for (int i = 0; i < count; ++i) free((void*)names[i]);
+	return result;
+#endif
+}

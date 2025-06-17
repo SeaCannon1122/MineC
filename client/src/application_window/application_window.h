@@ -14,8 +14,7 @@
 struct application_window
 {
 	void* window_handle;
-
-	void* rendering_backend_handle;
+	void* window_context_handle;
 
 	atomic_(uint32_t) width;
 	atomic_(uint32_t) height;

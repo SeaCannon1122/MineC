@@ -86,11 +86,11 @@ int main(int argc, char* argv[]) {
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
 	size_t default_font_data_size;
-	void* default_font_data = loadFile("runtime_files/assets/MineCdefault/fonts/default.pixelfont", &default_font_data_size);
+	void* default_font_data = loadFile("data_files/assets/MineCdefault/fonts/default.pixelfont", &default_font_data_size);
 	if (default_font_data == NULL) printf("failed to load pixelfont\n");
 
 	size_t smooth_font_data_size;
-	void* smooth_font_data = loadFile("runtime_files/assets/MineCdefault/fonts/smooth.pixelfont", &smooth_font_data_size);
+	void* smooth_font_data = loadFile("data_files/assets/MineCdefault/fonts/smooth.pixelfont", &smooth_font_data_size);
 	if (smooth_font_data == NULL) printf("failed to load pixelfont\n");
 
 	PixelcharFont default_font;

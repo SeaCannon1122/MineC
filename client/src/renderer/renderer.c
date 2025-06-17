@@ -4,6 +4,11 @@
 void renderer_get_api(struct renderer_api* api);
 #endif
 
+#ifdef MINEC_CLIENT_DYNAMIC_RENDERER
+uint8_t* library_path = MINEC_CLIENT_SHARED_RENDERER_LIBRARY_NAME;
+uint8_t* library_copy_path = "temp_" MINEC_CLIENT_SHARED_RENDERER_LIBRARY_NAME;
+#endif
+
 uint32_t renderer_create(struct minec_client* client, struct renderer_settings* settings)
 {
 	uint32_t result = MINEC_CLIENT_SUCCESS;
@@ -12,39 +17,24 @@ uint32_t renderer_create(struct minec_client* client, struct renderer_settings* 
 #ifdef MINEC_CLIENT_DYNAMIC_RENDERER
 
 	bool
-		library_path_allocated = false,
-		library_copy_path_allocated = false,
 		library_copied = false,
 		library_loaded = false
 	;
 
-	uint8_t* library_path_components[2] = { client->runtime_files_path, MINEC_CLIENT_SHARED_RENDERER_LIBRARY_NAME };
-	uint8_t* library_copy_path_components[3] = { client->runtime_files_path, "temp_", MINEC_CLIENT_SHARED_RENDERER_LIBRARY_NAME};
-
 	if (result == MINEC_CLIENT_SUCCESS)
 	{
-		if ((client->renderer.library_path = s_alloc_joined_string(client->static_alloc, library_path_components, 2)) != NULL) library_path_allocated = true;
-		else { result = MINEC_CLIENT_ERROR; minec_client_log_out_of_memory(client, "s_alloc_joined_string(client->static_alloc, library_path_components, 2)"); }
+		if (file_copy(library_path, library_copy_path) == 0) library_copied = true;
+		else { result = MINEC_CLIENT_ERROR; minec_client_log_error(client, "[RENDERER] Failed to copy %s to %s", library_path, library_copy_path); minec_client_log_debug_error(client, "'file_copy(library_path, library_copy_path)' failed"); }
 	}
 	if (result == MINEC_CLIENT_SUCCESS)
 	{
-		if ((client->renderer.library_copy_path = s_alloc_joined_string(client->static_alloc, library_copy_path_components, 3)) != NULL) library_copy_path_allocated = true;
-		else { result = MINEC_CLIENT_ERROR; minec_client_log_out_of_memory(client, "s_alloc_joined_string(client->static_alloc, library_copy_path_components, 3)");}
+		if ((client->renderer.library_handle = dynamic_library_load(library_copy_path, true)) != NULL) library_loaded = true;
+		else { result = MINEC_CLIENT_ERROR; minec_client_log_error(client, "[RENDERER] Failed to process dynamic library %s, may be corrupted", library_copy_path); minec_client_log_debug_error(client, "'dynamic_library_load(library_copy_path, true)' failed"); }
 	}
 	if (result == MINEC_CLIENT_SUCCESS)
 	{
-		if (file_copy(client->renderer.library_path, client->renderer.library_copy_path) == 0) library_copied = true;
-		else { result = MINEC_CLIENT_ERROR; minec_client_log_error(client, "[RENDERER] Failed to copy %s to %s", client->renderer.library_path, client->renderer.library_copy_path); minec_client_log_debug_error(client, "'file_copy(client->renderer.library_path, client->renderer.library_copy_path)' failed"); }
-	}
-	if (result == MINEC_CLIENT_SUCCESS)
-	{
-		if ((client->renderer.library_handle = dynamic_library_load(client->renderer.library_copy_path, true)) != NULL) library_loaded = true;
-		else { result = MINEC_CLIENT_ERROR; minec_client_log_error(client, "[RENDERER] Failed to process dynamic library %s, may be corrupted", client->renderer.library_copy_path); minec_client_log_debug_error(client, "'dynamic_library_load(client->renderer.library_copy_path, true)' failed"); }
-	}
-	if (result == MINEC_CLIENT_SUCCESS)
-	{
-		if ((renderer_get_api_func = dynamic_library_get_function(client->renderer.library_handle, "renderer_get_api")) != NULL);
-		else { result = MINEC_CLIENT_ERROR; minec_client_log_error(client, "[RENDERER] Failed to process dynamic library %s, may be old version", client->renderer.library_copy_path); minec_client_log_debug_error(client, "'dynamic_library_get_function(client->renderer.library_handle, \"renderer_get_api\")' failed"); }
+		if ((renderer_get_api_func = (void (*)(struct renderer_api* api))dynamic_library_get_function(client->renderer.library_handle, "renderer_get_api")) != NULL);
+		else { result = MINEC_CLIENT_ERROR; minec_client_log_error(client, "[RENDERER] Failed to process dynamic library %s, may be old version", library_copy_path); minec_client_log_debug_error(client, "'dynamic_library_get_function(client->renderer.library_handle, \"renderer_get_api\")' failed"); }
 	}
 
 #else
@@ -63,9 +53,7 @@ uint32_t renderer_create(struct minec_client* client, struct renderer_settings* 
 	if (result != MINEC_CLIENT_SUCCESS)
 	{
 		if (library_loaded) dynamic_library_unload(client->renderer.library_handle);
-		if (library_copied) remove(client->renderer.library_copy_path);
-		if (library_copy_path_allocated) s_free(client->static_alloc, client->renderer.library_copy_path);
-		if (library_path_allocated) s_free(client->static_alloc, client->renderer.library_path);
+		if (library_copied) remove(library_copy_path);
 	}
 #endif
 
@@ -77,9 +65,7 @@ void renderer_destroy(struct minec_client* client)
 	client->renderer.api.destroy(client);
 #ifdef MINEC_CLIENT_DYNAMIC_RENDERER
 	dynamic_library_unload(client->renderer.library_handle);
-	remove(client->renderer.library_copy_path);
-	s_free(client->static_alloc, client->renderer.library_copy_path);
-	s_free(client->static_alloc, client->renderer.library_path);
+	remove(library_copy_path);
 #endif
 }
 
@@ -91,18 +77,10 @@ void renderer_get_info_state(struct minec_client* client, struct renderer_info_s
 #ifdef MINEC_CLIENT_DYNAMIC_RENDERER
 uint32_t renderer_reload(struct minec_client* client)
 {
-	if (file_copy(client->renderer.library_copy_path, "minec_client_temp_file") != 0)
+	if (file_copy(library_copy_path, "minec_client_temp_file") != 0)
 	{
-		minec_client_log_error(client, "[RENDERER] Failed to copy %s to %s", client->renderer.library_copy_path, "minec_client_temp_file");
+		minec_client_log_error(client, "[RENDERER] Failed to copy %s to %s", library_copy_path, "minec_client_temp_file");
 		minec_client_log_debug_error(client, "'file_copy(client->renderer.library_copy_path, \"minec_client_temp_file\")' failed");
-		return MINEC_CLIENT_ERROR;
-	}
-	
-	uint8_t* library_path;
-	if ((library_path = s_alloc_string(client->dynamic_alloc, client->renderer.library_path)) == NULL)
-	{
-		minec_client_log_out_of_memory(client, "s_alloc_string(client->dynamic_alloc, client->renderer.library_path)");
-		remove("minec_client_temp_file");
 		return MINEC_CLIENT_ERROR;
 	}
 
@@ -127,12 +105,10 @@ uint32_t renderer_reload(struct minec_client* client)
 			minec_client_nuke_destroy_kill_crush_annihilate_process_exit(client);
 		}
 
-		s_free(client->dynamic_alloc, library_path);
 		remove("minec_client_temp_file");
 		return MINEC_CLIENT_ERROR;
 	}
 
-	s_free(client->dynamic_alloc, library_path);
 	remove("minec_client_temp_file");
 	return MINEC_CLIENT_SUCCESS;
 }

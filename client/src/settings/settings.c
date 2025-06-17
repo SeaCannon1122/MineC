@@ -9,7 +9,7 @@ void settings_create(struct minec_client* client)
 
 	client->settings.resource_pack_paths_hashmap = hashmap_new(20, 2);
 
-	uint8_t* path_components[] = { client->runtime_files_path, DEFAULT_RESOURCE_PACK_PATH };
+	uint8_t* path_components[] = { client->data_files_path, DEFAULT_RESOURCE_PACK_PATH };
 	uint8_t* path = s_alloc_joined_string(client->dynamic_alloc, path_components, 2);
 	uint32_t weight = 0;
 	hashmap_set_value(client->settings.resource_pack_paths_hashmap, path, &weight, HASHMAP_VALUE_INT);
@@ -27,7 +27,7 @@ void settings_load(struct minec_client* client)
 	//video settings
 	{
 		size_t file_length;
-		uint8_t* path_components[] = { client->runtime_files_path, VIDEO_SETTINGS_FILE_PATH };
+		uint8_t* path_components[] = { client->data_files_path, VIDEO_SETTINGS_FILE_PATH };
 		uint8_t* path = s_alloc_joined_string(client->dynamic_alloc, path_components, 2);
 
 		void* file_data = file_load(path, &file_length);
@@ -60,7 +60,11 @@ void settings_load(struct minec_client* client)
 
 			hashmap_delete(hashmap);
 		}
-		else printf("[SETTINGS] failed to open %s\n", path);
+		else
+		{
+			minec_client_log_info(client, "[SETTINGS] Could not open %s", path);
+			minec_client_log_debug_error(client, "file_load with %s failed", path);
+		}
 
 		s_free(client->dynamic_alloc, path);
 	}
@@ -68,7 +72,7 @@ void settings_load(struct minec_client* client)
 	//resource packs
 	{
 		size_t file_length;
-		uint8_t* path_components[] = { client->runtime_files_path, RESOURCE_PACKS_FILE_PATH };
+		uint8_t* path_components[] = { client->data_files_path, RESOURCE_PACKS_FILE_PATH };
 		uint8_t* path = s_alloc_joined_string(client->dynamic_alloc, path_components, 2);
 
 		void* file_data = file_load(path, &file_length);
@@ -95,7 +99,11 @@ void settings_load(struct minec_client* client)
 
 			hashmap_delete(hashmap);
 		}
-		else printf("[SETTINGS] failed to open %s\n", path);
+		else
+		{
+			minec_client_log_info(client, "[SETTINGS] Could not open %s", path);
+			minec_client_log_debug_error(client, "file_load with %s failed", path);
+		}
 
 		s_free(client->dynamic_alloc, path);
 	}

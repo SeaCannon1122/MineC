@@ -185,7 +185,7 @@ uint32_t renderer_create(
 	;
 
 	uint8_t* backend_library_path_parts[] = {
-		client->runtime_files_path,
+		client->data_files_path,
 		"temp0_",
 		MINEC_CLIENT_RENDERER_BACKEND_LIBRARY_NAME
 	};

@@ -2,5 +2,5 @@
 
 int main(int argc, char* argv[])
 {
-	minec_client_run("runtime_files/");
+	minec_client_run("MineC_Client_data/");
 }

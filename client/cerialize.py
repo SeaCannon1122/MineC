@@ -54,8 +54,8 @@ def write_header_files(file_data, out_dir, base_dir):
         with open(header_file, 'w') as hf:
             hf.write('#pragma once\n')
             hf.write('#include <stdint.h>\n\n')
-            hf.write(f'const uint8_t {f["data_sym"]}[] = {{\n    {make_c_array(f["data"])}\n}};\n\n')
-            hf.write(f'const uint8_t {f["name_sym"]}[] = "{f["c_path"]}";\n')
+            hf.write(f'static const uint8_t {f["data_sym"]}[] = {{\n    {make_c_array(f["data"])}\n}};\n\n')
+            hf.write(f'static const uint8_t {f["name_sym"]}[] = "{f["c_path"]}";\n')
 
 def write_fs_map(file_data, out_dir, base_dir, table_size=64):
     os.makedirs(out_dir, exist_ok=True)
@@ -66,7 +66,7 @@ def write_fs_map(file_data, out_dir, base_dir, table_size=64):
         hf.write('#pragma once\n')
         hf.write('#include <stdint.h>\n')
         hf.write('#include "cerialize.h"\n\n')
-        hf.write(f'extern struct cerialized_file_system* cerialized_{base_dir}_file_system;\n')
+        hf.write(f'extern const struct cerialized_file_system* const cerialized_{base_dir}_file_system;\n')
 
     with open(c_path, 'w') as cf:
         cf.write(f'#include "{base_dir}.h"\n\n')
@@ -99,14 +99,14 @@ def write_fs_map(file_data, out_dir, base_dir, table_size=64):
             sym = f"entry_{i}"
             bucket = buckets[h]
             idx_in_bucket = bucket.index(sym)
-            next_ptr = f"&{bucket[idx_in_bucket-1]}" if idx_in_bucket > 0 else "NULL"
+            next_ptr = f"(struct cerialized_file_system_entry*) &{bucket[idx_in_bucket-1]}" if idx_in_bucket > 0 else "NULL"
             entry_defs.append(
-                f'struct cerialized_file_system_entry {sym} = {{ .next = {next_ptr}, .name = {f["name_sym"]}, .data = {f["data_sym"]}, .size = sizeof({f["data_sym"]}) }};'
+                f'static const struct cerialized_file_system_entry {sym} = {{ .next = {next_ptr}, .name = {f["name_sym"]}, .data = {f["data_sym"]}, .size = sizeof({f["data_sym"]}) }};'
             )
 
         cf.write('\n'.join(entry_defs) + '\n\n')
 
-        cf.write(f'struct cerialized_file_system_entry* {base_dir}_entries[{table_size}] = {{\n')
+        cf.write(f'static const struct cerialized_file_system_entry* {base_dir}_entries[{table_size}] = {{\n')
         for i, bucket in enumerate(buckets):
             if bucket:
                 cf.write(f'    [{i}] = &{bucket[-1]},\n')
@@ -114,14 +114,14 @@ def write_fs_map(file_data, out_dir, base_dir, table_size=64):
                 cf.write(f'    [{i}] = NULL,\n')
         cf.write('};\n\n')
 
-        cf.write(f'struct cerialized_file_system* cerialized_{base_dir}_file_system = &(struct cerialized_file_system) {{\n')
+        cf.write(f'const struct cerialized_file_system* const cerialized_{base_dir}_file_system = &(const struct cerialized_file_system) {{\n')
         cf.write(f'    .table_length = {table_size},\n')
         cf.write(f'    .entries = {base_dir}_entries\n')
         cf.write('};\n')
 
 def main():
     
-    cerialize_dir = "assets"
+    cerialize_dir = "resources"
 
     if len(sys.argv) != 2:
         print(f"Usage: {sys.argv[0]} <path_to_cerialize_dir> -> assuming 'assets' as default folder")
