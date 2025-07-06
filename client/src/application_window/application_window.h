@@ -11,13 +11,15 @@
 #define KEY_CHANGE_MASK 0b10
 #define KEY_DOWN_MASK  0b01
 
+#define WINDOW client->window
+
 struct application_window
 {
 	void* window_handle;
 	void* window_context_handle;
 
-	atomic_(uint32_t) width;
-	atomic_(uint32_t) height;
+	atomic_uint32_t width;
+	atomic_uint32_t height;
 
 	struct application_window_input {
 		uint32_t characters[MAX_FRAME_CHAR_INPUTS];
@@ -35,7 +37,7 @@ struct application_window
 
 struct minec_client;
 
-uint32_t application_window_create(struct minec_client* client, uint32_t posx, uint32_t posy, uint32_t width, uint32_t height, uint8_t* name);
+uint32_t application_window_create(struct minec_client* client);
 
 uint32_t application_window_handle_events(struct minec_client* client);
 

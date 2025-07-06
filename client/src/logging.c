@@ -3,7 +3,7 @@
 
 void minec_client_log_info(struct minec_client* client, uint8_t* message, ...)
 {
-	printf("[LOG] [INFO] ");
+	printf("LOG: INFO ");
 
 	va_list args;
 	va_start(args, message);
@@ -15,7 +15,7 @@ void minec_client_log_info(struct minec_client* client, uint8_t* message, ...)
 
 void minec_client_log_error(struct minec_client* client, uint8_t* message, ...)
 {
-	printf("[LOG] [ERROR] ");
+	printf("LOG: ERROR ");
 
 	va_list args;
 	va_start(args, message);
@@ -25,10 +25,16 @@ void minec_client_log_error(struct minec_client* client, uint8_t* message, ...)
 	printf("\n--------------------------------------------------------------------------------------------------\n");
 }
 
+void minec_client_log_private_error(struct minec_client* client, uint8_t* message)
+{
+	printf("LOG: ERROR %s private error ", message);
+	printf("\n--------------------------------------------------------------------------------------------------\n");
+}
+
 #ifdef MINEC_CLIENT_DEBUG_LOG
 void _minec_client_log_debug_error(struct minec_client* client, uint8_t* function, uint8_t* file, uint32_t line, uint8_t* message, ...)
 {
-	printf("[DEBUGLOG] [ERROR] in %s at %s:%d | ", function, file, line);
+	printf("DEBUGLOG: In %s at %s:%d | ", function, file, line);
 
 	va_list args;
 	va_start(args, message);

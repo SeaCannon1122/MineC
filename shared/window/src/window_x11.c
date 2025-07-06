@@ -186,9 +186,6 @@ bool window_set_icon(void* window, uint32_t* icon_rgba_pixel_data, uint32_t icon
 {
 	struct window_data_x11* window_data = window;
 
-	Atom type = XA_CARDINAL;
-	int format = 32;
-
 	size_t data_len = 2 + (icon_width * icon_height);
 	uint32_t* data = malloc(sizeof(uint32_t) * data_len);
 	if (data == NULL) return false;
@@ -196,17 +193,12 @@ bool window_set_icon(void* window, uint32_t* icon_rgba_pixel_data, uint32_t icon
 	data[0] = icon_width;
 	data[1] = icon_height;
 
-	for (uint32_t i = 0; i < icon_width * icon_height; i++) {
-		uint8_t r = (icon_rgba_pixel_data[i] >> 0) & 0xFF;
-		uint8_t g = (icon_rgba_pixel_data[i] >> 8) & 0xFF;
-		uint8_t b = (icon_rgba_pixel_data[i] >> 16) & 0xFF;
-		uint8_t a = (icon_rgba_pixel_data[i] >> 24) & 0xFF;
-
-		// X expects ARGB (premultiplied alpha usually not required here)
-		data[2 + i] = icon_rgba_pixel_data[i];// ((uint32_t)a << 24) | (r << 16) | (g << 8) | b;
+	for (uint32_t i = 0; i < icon_width * icon_height; i++)
+	{
+		data[2 + i] = (icon_rgba_pixel_data[i] & 0xff00ff00) | ((icon_rgba_pixel_data[i] & 0xff) << 16) | ((icon_rgba_pixel_data[i] & 0xff0000) >> 16);
 	}
 
-	XChangeProperty(context->display, window_data->window, context->_net_wm_icon, type, format, PropModeReplace, (unsigned char*)data, data_len);
+	XChangeProperty(context->display, window_data->window, context->_net_wm_icon, XA_CARDINAL, 32, PropModeReplace, (unsigned char*)data, data_len);
 	XFlush(context->display);
 	free(data);
 

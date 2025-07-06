@@ -13,14 +13,7 @@ void minec_client_run(uint8_t* data_files_path)
 	client->data_files_path = s_alloc_string(client->static_alloc, data_files_path);
 	client->data_files_path_length = strlen(data_files_path);
 
-	if ((return_value = application_window_create(
-		client,
-		100,
-		100,
-		700,
-		500,
-		"MineC"
-	)) != MINEC_CLIENT_SUCCESS)
+	if ((return_value = application_window_create(client)) != MINEC_CLIENT_SUCCESS)
 	{
 		minec_client_log_info(client, "[GLOBAL] Failed to create Window");
 		goto _application_window_create_failed;
@@ -41,7 +34,6 @@ void minec_client_run(uint8_t* data_files_path)
 
 	while (application_window_handle_events(client) == MINEC_CLIENT_SUCCESS)
 	{
-
 #ifdef MINEC_CLIENT_DYNAMIC_RENDERER
 		if (client->window.input.keyboard[WINDOW_KEY_R] == (KEY_DOWN_MASK | KEY_CHANGE_MASK))
 		{
@@ -49,8 +41,7 @@ void minec_client_run(uint8_t* data_files_path)
 			if (renderer_reload(client) != MINEC_CLIENT_SUCCESS) minec_client_log_info(client, "[GLOBAL] Failed to reload Renderer");
 		}
 #endif
-
-		sleep_for_ms(20);
+		time_sleep(20);
 	}
 
 	renderer_destroy(client);

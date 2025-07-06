@@ -29,38 +29,22 @@
 #define RESTRICT restrict
 #define EXPORT __attribute__((visibility("default")))
 
-#elif defined(__APPLE__)
-
-#ifndef NDEBUG
-#define DEBUGBREAK __builtin_trap()
-#else
-#define DEBUGBREAK()
 #endif
 
-#define RESTRICT restrict
-
-#endif
-
+//dynamic_library
 void* dynamic_library_load(uint8_t* library_name, bool name_explicit);
 void (*dynamic_library_get_function(void* library_handle, uint8_t* function_name)) (void);
 void dynamic_library_unload(void* library_handle);
 
-uint32_t directory_exists(uint8_t* path);
-uint32_t create_directory(uint8_t* path);
-uint32_t get_cwd(uint8_t* buffer, size_t buffer_size);
+//time
+void time_sleep(uint32_t time_in_milliseconds);
+float time_get();
 
-//general
+//thread
+void* thread_create(void (address) (void*), void* args);
+void thread_join(void* thread_handle);
 
-void set_console_cursor_position(int32_t x, int32_t y);
-
-void sleep_for_ms(uint32_t time_in_milliseconds);
-
-float get_time();
-
-void* create_thread(void (address) (void*), void* args);
-
-void join_thread(void* thread_handle);
-
+//file
 uint32_t file_copy(uint8_t* src_path, uint8_t* dst_path);
 void* file_load(uint8_t* path, size_t* size);
 

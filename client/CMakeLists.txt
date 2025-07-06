@@ -122,9 +122,8 @@ target_link_libraries(MineC_Client PRIVATE window pixelchar utility networking)
 
 target_sources(MineC_Client_Renderer PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/renderer_internal.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/backend.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/logging.c
-
-    ${CMAKE_CURRENT_SOURCE_DIR}/.cerialized_src/resources.c
 )
 
 target_include_directories(MineC_Client_Renderer PRIVATE 

@@ -17,13 +17,3 @@ target_link_libraries(direct3d12_testing PRIVATE window d3d12 dxguid d3dcompiler
 target_link_libraries(pixelchar_test_opengl PRIVATE pixelchar window utility)
 target_link_libraries(general_testing PRIVATE utility)
 target_link_libraries(cerialize_test PRIVATE utility)
-
-add_custom_target(test_copy_data_files ALL
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-    "${CMAKE_SOURCE_DIR}/client/data_files"
-    "${CMAKE_CURRENT_BINARY_DIR}/data_files"
-    COMMENT "Copying runtime files..."
-)
-
-add_dependencies(pixelchar_test_opengl test_copy_data_files)
-add_dependencies(pixelchar_test_vulkan test_copy_data_files)

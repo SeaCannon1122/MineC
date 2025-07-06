@@ -131,19 +131,13 @@ void window_deinit_context();
 void* window_get_context();
 
 void* window_create(int32_t posx, int32_t posy, uint32_t width, uint32_t height, uint8_t* name, bool visible);
-
-void window_destroy(void* window);
+bool window_destroy(void* window);
 
 bool window_set_icon(void* window, uint32_t* icon_rgba_pixel_data, uint32_t icon_width, uint32_t icon_height);
-
 void window_get_dimensions(void* window, uint32_t* width, uint32_t* height, int32_t* screen_position_x, int32_t* screen_position_y);
-
 bool window_is_selected(void* window);
-
 void window_get_mouse_cursor_position(void* window, int32_t* position_x, int32_t* position_y);
-
 void window_set_mouse_cursor_position(void* window, int32_t x, int32_t y);
-
 struct window_event* window_next_event(void* window);
 
 #ifdef WINDOW_IMPLEMENTATION_WINDOWS
@@ -166,9 +160,7 @@ bool window_vulkan_load();
 void window_vulkan_unload();
 
 PFN_vkGetInstanceProcAddr window_get_vkGetInstanceProcAddr();
-
 VkResult window_vkCreateSurfaceKHR(void* window, VkInstance instance, VkSurfaceKHR* surface);
-
 uint8_t* window_get_VK_KHR_PLATFORM_SURFACE_EXTENSION_NAME();
 
 #endif
@@ -181,15 +173,11 @@ bool window_opengl_load();
 void window_opengl_unload();
 
 bool window_glCreateContext(void* window, int32_t version_major, int32_t version_minor, void* share_window, bool* glSwapIntervalEXT_support);
-
-void window_glDestroyContext(void* window);
+bool window_glDestroyContext(void* window);
 
 bool window_glMakeCurrent(void* window);
-
 bool window_glSwapIntervalEXT(int interval);
-
 void (*window_glGetProcAddress(uint8_t* name)) (void);
-
 bool window_glSwapBuffers(void* window);
 
 #endif

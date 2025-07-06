@@ -323,8 +323,6 @@ void* window_create(int32_t posx, int32_t posy, uint32_t width, uint32_t height,
 		free(window_data);
 		return NULL;
 	}
-	window_data->free_event_queue_index = 0;
-	window_data->last_event_queue_index = 0;
 
 	uint32_t name_length = strlen(name) + 1;
 	USHORT* wide_name = malloc(name_length * sizeof(USHORT));
@@ -359,8 +357,6 @@ void* window_create(int32_t posx, int32_t posy, uint32_t width, uint32_t height,
 	}
 
 	window_data->hwnd = hwnd;
-	window_data->hdc = NULL;
-	window_data->hglrc = NULL;
 
 	RECT rect;
 	GetClientRect(window_data->hwnd, &rect);
@@ -376,13 +372,13 @@ void* window_create(int32_t posx, int32_t posy, uint32_t width, uint32_t height,
 	return window_data;
 }
 
-void window_destroy(void* window)
+bool window_destroy(void* window)
 {
 	struct window_data_windows* window_data = window;
 	
-	DestroyWindow(window_data->hwnd);
+	if (DestroyWindow(window_data->hwnd) == FALSE) return false;
 
-	if (window_data->icon) DestroyIcon(window_data->icon);
+	if (window_data->icon) if (DestroyIcon(window_data->icon) == FALSE) return false;
 
 	free(window_data->event_queue);
 	free(window_data);
@@ -391,6 +387,9 @@ void window_destroy(void* window)
 bool window_set_icon(void* window, uint32_t* icon_rgba_pixel_data, uint32_t icon_width, uint32_t icon_height)
 {
 	struct window_data_windows* window_data = window;
+
+	if (window_data->icon) DestroyIcon(window_data->icon);
+	window_data->icon = NULL;
 
 	BITMAPV5HEADER bi = { 0 };
 	bi.bV5Size = sizeof(BITMAPV5HEADER);
@@ -735,13 +734,13 @@ bool window_glCreateContext(void* window, int32_t version_major, int32_t version
 	return result;
 }
 
-void window_glDestroyContext(void* window)
+bool window_glDestroyContext(void* window)
 {
 	struct window_data_windows* window_data = window;
 
-	context->opengl.func.wglMakeCurrent(NULL, NULL);
-	context->opengl.func.wglDeleteContext(window_data->hglrc);
-	ReleaseDC(window_data->hwnd, window_data->hdc);
+	if (context->opengl.func.wglMakeCurrent(NULL, NULL) == FALSE) return false;
+	if (context->opengl.func.wglDeleteContext(window_data->hglrc) == FALSE) return false;
+	if (ReleaseDC(window_data->hwnd, window_data->hdc) == 0) return false;
 }
 
 bool window_glMakeCurrent(void* window)

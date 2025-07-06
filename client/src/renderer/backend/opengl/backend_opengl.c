@@ -1,5 +1,7 @@
 #include "renderer/renderer_internal.h"
 
+
+
 uint32_t renderer_backend_opengl_create(struct minec_client* client)
 {
 

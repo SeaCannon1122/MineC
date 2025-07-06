@@ -9,6 +9,7 @@ struct minec_client;
 
 void minec_client_log_info(struct minec_client* client, uint8_t* message, ...);
 void minec_client_log_error(struct minec_client* client, uint8_t* message, ...);
+void minec_client_log_private_error(struct minec_client* client, uint8_t* message);
 
 #ifdef MINEC_CLIENT_DEBUG_LOG
 

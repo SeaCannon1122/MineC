@@ -69,9 +69,15 @@ void renderer_destroy(struct minec_client* client)
 #endif
 }
 
-void renderer_get_info_state(struct minec_client* client, struct renderer_info_state* info_state)
+bool renderer_did_crash(struct minec_client* client)
 {
+	return client->renderer.api.did_crash(client);
+}
 
+
+bool renderer_get_info_state(struct minec_client* client, struct renderer_info_state* info_state)
+{
+	return client->renderer.api.get_info_state(client, info_state);
 }
 
 #ifdef MINEC_CLIENT_DYNAMIC_RENDERER
@@ -138,9 +144,19 @@ void renderer_set_fps(struct minec_client* client, uint32_t fps)
 	client->renderer.api.set_fps(client, fps);
 }
 
+void renderer_set_gui_scale(struct minec_client* client, uint32_t scale)
+{
+	client->renderer.api.set_gui_scale(client, scale);
+}
+
 void renderer_set_fov(struct minec_client* client, uint32_t fov)
 {
 	client->renderer.api.set_fov(client, fov);
+}
+
+void renderer_set_render_distance(struct minec_client* client, uint32_t render_distance)
+{
+	client->renderer.api.set_render_distance(client, render_distance);
 }
 
 void renderer_set_max_mipmap_level_count(struct minec_client* client, uint32_t max_mipmap_level_count)

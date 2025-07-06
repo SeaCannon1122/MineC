@@ -1,0 +1,13 @@
+#include <atomics.h>
+
+ATOMICS_IMPLEMENTATION_(int8_t, int8_t, )
+ATOMICS_IMPLEMENTATION_(uint8_t, uint8_t, )
+ATOMICS_IMPLEMENTATION_(int16_t, int16_t, )
+ATOMICS_IMPLEMENTATION_(uint16_t, uint16_t, )
+ATOMICS_IMPLEMENTATION_(int32_t, int32_t, )
+ATOMICS_IMPLEMENTATION_(uint32_t, uint32_t, )
+ATOMICS_IMPLEMENTATION_(int64_t, int64_t, )
+ATOMICS_IMPLEMENTATION_(uint64_t, uint64_t, )
+ATOMICS_IMPLEMENTATION_(float, float, )
+ATOMICS_IMPLEMENTATION_(double, double, )
+ATOMICS_IMPLEMENTATION_(bool, bool, )

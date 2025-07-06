@@ -43,7 +43,6 @@ struct minec_client
 	struct settings settings;
 
 	struct renderer renderer;
-	atomic_(bool) renderer_recreate;
 };
 
 void minec_client_run(uint8_t* data_files_path);

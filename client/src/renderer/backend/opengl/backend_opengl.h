@@ -5,7 +5,9 @@
 
 #include <GL/glcorearb.h>
 
-struct opengl_context_state
+#define OPENGL state.opengl
+
+struct renderer_backend_opengl
 {
 	struct
 	{
@@ -100,11 +102,6 @@ struct opengl_context_state
 		PFNGLDRAWELEMENTSINSTANCEDPROC glDrawElementsInstanced;
 
 	} func;
-};
-
-struct renderer_backend_opengl
-{
-	struct opengl_context_state context;
 };
 
 struct minec_client;
