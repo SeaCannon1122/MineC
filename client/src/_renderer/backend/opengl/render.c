@@ -4,7 +4,7 @@ uint32_t renderer_backend_opengl_start_rendering(struct minec_client* client)
 {
 	if (window_glMakeCurrent(client->window.window_handle) == false)
 	{
-		minec_client_log_debug_error(client, "'window_glMakeCurrent' failed");
+		minec_client_log_debug_l(client, "'window_glMakeCurrent' failed");
 		return MINEC_CLIENT_ERROR;
 	}
 	return MINEC_CLIENT_SUCCESS;
@@ -15,7 +15,7 @@ void  renderer_backend_opengl_stop_rendering(struct minec_client* client)
 	if (window_glMakeCurrent(NULL) == false)
 	{
 		minec_client_log_error(client, "[FATAL] Failed to unset OpenGL context. Crashing ...");
-		minec_client_log_debug_error(client, "'window_glMakeCurrent(NULL)' failed");
+		minec_client_log_debug_l(client, "'window_glMakeCurrent(NULL)' failed");
 		minec_client_nuke_destroy_kill_crush_annihilate_process_exit(client);
 	}
 }
@@ -63,7 +63,7 @@ uint32_t renderer_backend_opengl_render(struct minec_client* client, bool resize
 	{
 		if (window_glSwapBuffers(client->window.window_handle) == false) 
 		{
-			minec_client_log_debug_error(client, "'window_glSwapBuffers' failed");
+			minec_client_log_debug_l(client, "'window_glSwapBuffers' failed");
 			return_result = MINEC_CLIENT_ERROR;
 			result = MINEC_CLIENT_ERROR;
 		}

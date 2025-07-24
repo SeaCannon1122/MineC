@@ -89,7 +89,7 @@ uint32_t _renderer_backend_load_create(
 	if (file_copy(client->renderer.backend_library_paths[2], client->renderer.backend_library_paths[global->library_load_index]) != 0)
 	{
 		minec_client_log_error(client, "[RENDERER] Could not copy %s to %s", client->renderer.backend_library_paths[2], client->renderer.backend_library_paths[global->library_load_index]);
-		minec_client_log_debug_error(client, "'file_copy(%s, %s)' failed", client->renderer.backend_library_paths[2], client->renderer.backend_library_paths[global->library_load_index]);
+		minec_client_log_debug_l(client, "'file_copy(%s, %s)' failed", client->renderer.backend_library_paths[2], client->renderer.backend_library_paths[global->library_load_index]);
 		result = MINEC_CLIENT_ERROR;
 	}
 	else file_copied = true;
@@ -99,7 +99,7 @@ uint32_t _renderer_backend_load_create(
 		if ((global->líbrary_handle = dynamic_library_load(client->renderer.backend_library_paths[global->library_load_index], true)) == NULL)
 		{
 			minec_client_log_error(client, "[RENDERER] Could not fully process dynamic library %s. May be corrupted or out of date version.", client->renderer.backend_library_paths[global->library_load_index]);
-			minec_client_log_debug_error(client, "'dynamic_library_load(%s)' failed", client->renderer.backend_library_paths[global->library_load_index]);
+			minec_client_log_debug_l(client, "'dynamic_library_load(%s)' failed", client->renderer.backend_library_paths[global->library_load_index]);
 			result = MINEC_CLIENT_ERROR;
 		}
 		else library_loaded = true;
@@ -112,7 +112,7 @@ uint32_t _renderer_backend_load_create(
 		if ((get_interfaces_function = dynamic_library_get_function(global->líbrary_handle, "renderer_backend_get_interfaces")) == NULL)
 		{
 			minec_client_log_error(client, "[RENDERER] Could not fully process dynamic library %s. May be corrupted or out of date version.", client->renderer.backend_library_paths[global->library_load_index]);
-			minec_client_log_debug_error(client, "'dynamic_library_get_function(global->líbrary_handle, \"renderer_backend_get_interfaces\")' failed");
+			minec_client_log_debug_l(client, "'dynamic_library_get_function(global->líbrary_handle, \"renderer_backend_get_interfaces\")' failed");
 			result = MINEC_CLIENT_ERROR;
 		}
 		global->interfaces = get_interfaces_function(window_get_context(), &global->backend_count, &global->backend_names);

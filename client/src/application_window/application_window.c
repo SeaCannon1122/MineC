@@ -8,7 +8,7 @@ uint32_t application_window_create(struct minec_client* client)
 
 	if (window_init_context(NULL) == false)
 	{
-		minec_client_log_debug_error(client, "window_init_context(NULL) failed");
+		minec_client_log_debug_l(client, "window_init_context(NULL) failed");
 		return MINEC_CLIENT_ERROR;
 	}
 
@@ -17,7 +17,7 @@ uint32_t application_window_create(struct minec_client* client)
 	if ((WINDOW.window_handle = window_create(100, 100, width, height, "MineC", true)) == NULL)
 	{
 		minec_client_log_error(client, "[WINDOW] Failed to create window");
-		minec_client_log_debug_error(client, "window_create failed");
+		minec_client_log_debug_l(client, "window_create failed");
 		return MINEC_CLIENT_ERROR;
 	}
 
@@ -32,20 +32,20 @@ uint32_t application_window_create(struct minec_client* client)
 			if (window_set_icon(WINDOW.window_handle, icon_data, icon_width, icon_height) == false)
 			{
 				minec_client_log_error(client, "[WINDOW] Failed to set window icon");
-				minec_client_log_debug_error(client, "window_set_icon failed");
+				minec_client_log_debug_l(client, "window_set_icon failed");
 			}
 			free(icon_data);
 		}
 		else
 		{
 			minec_client_log_error(client, "[WINDOW] Failed to set window icon");
-			minec_client_log_debug_error(client, "stbi_load_from_memory failed when loading icon data, THIS SHOULD NOT HAPPEN. Check if icon file is actually a png");
+			minec_client_log_debug_l(client, "stbi_load_from_memory failed when loading icon data, THIS SHOULD NOT HAPPEN. Check if icon file is actually a png");
 		}
 	}
 	else
 	{
 		minec_client_log_error(client, "[WINDOW] Failed to set window icon");
-		minec_client_log_debug_error(client, "cerialized_get_file(cerialized_resources_file_system, \"icon.png\", &raw_window_icon_data_size) failed, THIS SHOULD NOT HAPPEN. Check completeness of cerialized resources");
+		minec_client_log_debug_l(client, "cerialized_get_file(cerialized_resources_file_system, \"icon.png\", &raw_window_icon_data_size) failed, THIS SHOULD NOT HAPPEN. Check completeness of cerialized resources");
 	}
 
 	atomic_uint32_t_init(&WINDOW.width, width);

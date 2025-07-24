@@ -24,17 +24,17 @@ uint32_t renderer_create(struct minec_client* client, struct renderer_settings* 
 	if (result == MINEC_CLIENT_SUCCESS)
 	{
 		if (file_copy(library_path, library_copy_path) == 0) library_copied = true;
-		else { result = MINEC_CLIENT_ERROR; minec_client_log_error(client, "[RENDERER] Failed to copy %s to %s", library_path, library_copy_path); minec_client_log_debug_error(client, "'file_copy(library_path, library_copy_path)' failed"); }
+		else { result = MINEC_CLIENT_ERROR; minec_client_log_error(client, "[RENDERER] Failed to copy %s to %s", library_path, library_copy_path); minec_client_log_debug_l(client, "'file_copy(library_path, library_copy_path)' failed"); }
 	}
 	if (result == MINEC_CLIENT_SUCCESS)
 	{
 		if ((client->renderer.library_handle = dynamic_library_load(library_copy_path, true)) != NULL) library_loaded = true;
-		else { result = MINEC_CLIENT_ERROR; minec_client_log_error(client, "[RENDERER] Failed to process dynamic library %s, may be corrupted", library_copy_path); minec_client_log_debug_error(client, "'dynamic_library_load(library_copy_path, true)' failed"); }
+		else { result = MINEC_CLIENT_ERROR; minec_client_log_error(client, "[RENDERER] Failed to process dynamic library %s, may be corrupted", library_copy_path); minec_client_log_debug_l(client, "'dynamic_library_load(library_copy_path, true)' failed"); }
 	}
 	if (result == MINEC_CLIENT_SUCCESS)
 	{
 		if ((renderer_get_api_func = (void (*)(struct renderer_api* api))dynamic_library_get_function(client->renderer.library_handle, "renderer_get_api")) != NULL);
-		else { result = MINEC_CLIENT_ERROR; minec_client_log_error(client, "[RENDERER] Failed to process dynamic library %s, may be old version", library_copy_path); minec_client_log_debug_error(client, "'dynamic_library_get_function(client->renderer.library_handle, \"renderer_get_api\")' failed"); }
+		else { result = MINEC_CLIENT_ERROR; minec_client_log_error(client, "[RENDERER] Failed to process dynamic library %s, may be old version", library_copy_path); minec_client_log_debug_l(client, "'dynamic_library_get_function(client->renderer.library_handle, \"renderer_get_api\")' failed"); }
 	}
 
 #else
@@ -86,7 +86,7 @@ uint32_t renderer_reload(struct minec_client* client)
 	if (file_copy(library_copy_path, "minec_client_temp_file") != 0)
 	{
 		minec_client_log_error(client, "[RENDERER] Failed to copy %s to %s", library_copy_path, "minec_client_temp_file");
-		minec_client_log_debug_error(client, "'file_copy(client->renderer.library_copy_path, \"minec_client_temp_file\")' failed");
+		minec_client_log_debug_l(client, "'file_copy(client->renderer.library_copy_path, \"minec_client_temp_file\")' failed");
 		return MINEC_CLIENT_ERROR;
 	}
 
@@ -101,7 +101,7 @@ uint32_t renderer_reload(struct minec_client* client)
 		if (file_copy("minec_client_temp_file", library_path) != 0)
 		{
 			minec_client_log_error(client, "[RENDERER] Failed to copy %s to %s, this application was not build for handeling this case: Crashing ...", "minec_client_temp_file", library_path);
-			minec_client_log_debug_error(client, "'file_copy(\"minec_client_temp_file\", library_path)' failed");
+			minec_client_log_debug_l(client, "'file_copy(\"minec_client_temp_file\", library_path)' failed");
 			minec_client_nuke_destroy_kill_crush_annihilate_process_exit(client);
 		}
 

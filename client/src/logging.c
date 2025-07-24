@@ -32,7 +32,20 @@ void minec_client_log_private_error(struct minec_client* client, uint8_t* messag
 }
 
 #ifdef MINEC_CLIENT_DEBUG_LOG
-void _minec_client_log_debug_error(struct minec_client* client, uint8_t* function, uint8_t* file, uint32_t line, uint8_t* message, ...)
+
+void minec_client_log_debug(struct minec_client* client, uint8_t* message, ...)
+{
+	printf("DEBUGLOG: ");
+
+	va_list args;
+	va_start(args, message);
+	vprintf(message, args);
+	va_end(args);
+
+	printf("\n--------------------------------------------------------------------------------------------------\n");
+}
+
+void _minec_client_log_debug_l(struct minec_client* client, uint8_t* function, uint8_t* file, uint32_t line, uint8_t* message, ...)
 {
 	printf("DEBUGLOG: In %s at %s:%d | ", function, file, line);
 

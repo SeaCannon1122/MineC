@@ -1,4 +1,4 @@
-#include "renderer_internal.h"
+ #include "renderer_internal.h"
 
 void rendering_thread_function(struct minec_client* client)
 {
@@ -7,7 +7,7 @@ void rendering_thread_function(struct minec_client* client)
 	{
 		uint32_t result = MINEC_CLIENT_SUCCESS;
 
-		result = renderer_backend_initialize(client);
+		result = renderer_backend_create(client);
 
 		if (result == MINEC_CLIENT_ERROR)
 		{
@@ -23,6 +23,7 @@ void rendering_thread_function(struct minec_client* client)
 
 	}
 
+	renderer_backend_destroy(client);
 }
 
 void renderer_internal_destroy(struct minec_client* client);
@@ -39,7 +40,7 @@ uint32_t renderer_internal_create(struct minec_client* client, struct renderer_s
 		return MINEC_CLIENT_ERROR;
 	}
 
-	RENDERER.backend_memory_index = 0;
+	RENDERER.public.requested_settings = *settings;
 
 	client->renderer.state->public.info.changed = true;
 	mutex_create(&client->renderer.state->public.info.mutex);
@@ -47,11 +48,11 @@ uint32_t renderer_internal_create(struct minec_client* client, struct renderer_s
 	atomic_bool_init(&client->renderer.state->public.created, false);
 	atomic_bool_init(&client->renderer.state->public.active, true);
 
-	mutex_create(&client->renderer.state->public.settings.mutex);
+	mutex_create(&client->renderer.state->public.requested_settings_mutex);
 	if ((client->renderer.state->thread_handle = thread_create(rendering_thread_function, client)) == NULL)
 	{
-		minec_client_log_debug_error(client, "thread_create failed");
-		mutex_destroy(&client->renderer.state->public.settings.mutex);
+		minec_client_log_debug_l(client, "thread_create failed");
+		mutex_destroy(&client->renderer.state->public.requested_settings_mutex);
 		atomic_bool_deinit(&client->renderer.state->public.created);
 		atomic_bool_deinit(&client->renderer.state->public.active);
 		mutex_destroy(&client->renderer.state->public.info.mutex);
@@ -77,7 +78,7 @@ void renderer_internal_destroy(struct minec_client* client)
 
 	thread_join(client->renderer.state->thread_handle);
 
-	mutex_destroy(&client->renderer.state->public.settings.mutex);
+	mutex_destroy(&client->renderer.state->public.requested_settings_mutex);
 	atomic_bool_deinit(&client->renderer.state->public.created);
 	atomic_bool_deinit(&client->renderer.state->public.active);
 	mutex_destroy(&client->renderer.state->public.info.mutex);
@@ -110,16 +111,16 @@ bool renderer_internal_get_info_state(struct minec_client* client, struct render
 
 void renderer_internal_switch_backend(struct minec_client* client, uint32_t backend_index)
 {
-	mutex_lock(&client->renderer.state->public.settings.mutex);
-	client->renderer.state->public.settings.backend_index = backend_index;
-	mutex_unlock(&client->renderer.state->public.settings.mutex);
+	mutex_lock(&client->renderer.state->public.requested_settings_mutex);
+	client->renderer.state->public.requested_settings.backend_index = backend_index;
+	mutex_unlock(&client->renderer.state->public.requested_settings_mutex);
 }
 
 void renderer_internal_switch_backend_device(struct minec_client* client, uint32_t backend_device_index)
 {
-	mutex_lock(&client->renderer.state->public.settings.mutex);
-	client->renderer.state->public.settings.backend_device_index = backend_device_index;
-	mutex_unlock(&client->renderer.state->public.settings.mutex);
+	mutex_lock(&client->renderer.state->public.requested_settings_mutex);
+	client->renderer.state->public.requested_settings.backend_device_index = backend_device_index;
+	mutex_unlock(&client->renderer.state->public.requested_settings_mutex);
 }
 
 void renderer_internal_reload_resources(struct minec_client* client)
@@ -129,44 +130,44 @@ void renderer_internal_reload_resources(struct minec_client* client)
 
 void renderer_internal_set_vsync(struct minec_client* client, bool vsync)
 {
-	mutex_lock(&client->renderer.state->public.settings.mutex);
-	client->renderer.state->public.settings.vsync = vsync;
-	mutex_unlock(&client->renderer.state->public.settings.mutex);
+	mutex_lock(&client->renderer.state->public.requested_settings_mutex);
+	client->renderer.state->public.requested_settings.vsync = vsync;
+	mutex_unlock(&client->renderer.state->public.requested_settings_mutex);
 }
 
 void renderer_internal_set_fps(struct minec_client* client, uint32_t fps)
 {
-	mutex_lock(&client->renderer.state->public.settings.mutex);
-	client->renderer.state->public.settings.fps = fps;
-	mutex_unlock(&client->renderer.state->public.settings.mutex);
+	mutex_lock(&client->renderer.state->public.requested_settings_mutex);
+	client->renderer.state->public.requested_settings.fps = fps;
+	mutex_unlock(&client->renderer.state->public.requested_settings_mutex);
 }
 
 void renderer_internal_set_gui_scale(struct minec_client* client, uint32_t scale)
 {
-	mutex_lock(&client->renderer.state->public.settings.mutex);
-	client->renderer.state->public.settings.gui_scale = scale;
-	mutex_unlock(&client->renderer.state->public.settings.mutex);
+	mutex_lock(&client->renderer.state->public.requested_settings_mutex);
+	client->renderer.state->public.requested_settings.gui_scale = scale;
+	mutex_unlock(&client->renderer.state->public.requested_settings_mutex);
 }
 
 void renderer_internal_set_fov(struct minec_client* client, uint32_t fov)
 {
-	mutex_lock(&client->renderer.state->public.settings.mutex);
-	client->renderer.state->public.settings.fov = fov;
-	mutex_unlock(&client->renderer.state->public.settings.mutex);
+	mutex_lock(&client->renderer.state->public.requested_settings_mutex);
+	client->renderer.state->public.requested_settings.fov = fov;
+	mutex_unlock(&client->renderer.state->public.requested_settings_mutex);
 }
 
 void renderer_internal_set_render_distance(struct minec_client* client, uint32_t render_distance)
 {
-	mutex_lock(&client->renderer.state->public.settings.mutex);
-	client->renderer.state->public.settings.render_distance = render_distance;
-	mutex_unlock(&client->renderer.state->public.settings.mutex);
+	mutex_lock(&client->renderer.state->public.requested_settings_mutex);
+	client->renderer.state->public.requested_settings.render_distance = render_distance;
+	mutex_unlock(&client->renderer.state->public.requested_settings_mutex);
 }
 
 void renderer_internal_set_max_mipmap_level_count(struct minec_client* client, uint32_t max_mipmap_level_count)
 {
-	mutex_lock(&client->renderer.state->public.settings.mutex);
-	client->renderer.state->public.settings.max_mipmap_level_count = max_mipmap_level_count;
-	mutex_unlock(&client->renderer.state->public.settings.mutex);
+	mutex_lock(&client->renderer.state->public.requested_settings_mutex);
+	client->renderer.state->public.requested_settings.max_mipmap_level_count = max_mipmap_level_count;
+	mutex_unlock(&client->renderer.state->public.requested_settings_mutex);
 }
 
 #ifdef MINEC_CLIENT_DYNAMIC_RENDERER

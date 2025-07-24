@@ -180,7 +180,7 @@ static void _minec_client_retrieve_log_opengl_errors(struct minec_client* client
 
 		if (error_count > 16)
 		{
-			_minec_client_log_debug_error(client, function, file, line, "'%s' failed with more then 16 glErrors", action);
+			_minec_client_log_debug_l(client, function, file, line, "'%s' failed with more then 16 glErrors", action);
 			return;
 		}
 
@@ -198,7 +198,7 @@ static void _minec_client_retrieve_log_opengl_errors(struct minec_client* client
 		}
 		}
 
-		_minec_client_log_debug_error(client, function, file, line, "'%s' failed with glError 0x%x '%s'", action, error, error_name);
+		_minec_client_log_debug_l(client, function, file, line, "'%s' failed with glError 0x%x '%s'", action, error, error_name);
 	}
 }
 

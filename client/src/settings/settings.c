@@ -63,7 +63,7 @@ void settings_load(struct minec_client* client)
 		else
 		{
 			minec_client_log_info(client, "[SETTINGS] Could not open %s", path);
-			minec_client_log_debug_error(client, "file_load with %s failed", path);
+			minec_client_log_debug_l(client, "file_load with %s failed", path);
 		}
 
 		s_free(client->dynamic_alloc, path);
@@ -102,7 +102,7 @@ void settings_load(struct minec_client* client)
 		else
 		{
 			minec_client_log_info(client, "[SETTINGS] Could not open %s", path);
-			minec_client_log_debug_error(client, "file_load with %s failed", path);
+			minec_client_log_debug_l(client, "file_load with %s failed", path);
 		}
 
 		s_free(client->dynamic_alloc, path);

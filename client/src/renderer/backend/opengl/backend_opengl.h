@@ -5,7 +5,7 @@
 
 #include <GL/glcorearb.h>
 
-#define OPENGL state.opengl
+#define OPENGL RENDERER.BACKEND.state.opengl
 
 struct renderer_backend_opengl
 {
@@ -102,11 +102,18 @@ struct renderer_backend_opengl
 		PFNGLDRAWELEMENTSINSTANCEDPROC glDrawElementsInstanced;
 
 	} func;
+
+	uint8_t* extensions[1024];
+	GLint extension_count;
 };
 
 struct minec_client;
 
 uint32_t renderer_backend_opengl_create(struct minec_client* client);
 void renderer_backend_opengl_destroy(struct minec_client* client);
+bool _opengl_error_get_log(struct minec_client* client, uint8_t* action, uint8_t* function, uint8_t* file, uint32_t line);
+#define opengl_error_get_log(client, action) _opengl_error_get_log(client, action, __func__, __FILE__, __LINE__)
+uint32_t opengl_errors_clear(struct minec_client* client);
+
 
 #endif

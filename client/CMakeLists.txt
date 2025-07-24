@@ -147,8 +147,9 @@ if(MINEC_CLIENT_CMAKE_RENDERER_BACKEND_OPENGL)
     message(STATUS "  OpenGL")
 
     target_sources(MineC_Client_Renderer PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/backend/opengl/backend_opengl.c
-         ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/backend/opengl/context.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/backend/opengl/backend_opengl.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/backend/opengl/context.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/backend/opengl/debug_messenger.c
     )
 
     target_compile_definitions(MineC_Client_Renderer PRIVATE MINEC_CLIENT_RENDERER_BACKEND_OPENGL=1)

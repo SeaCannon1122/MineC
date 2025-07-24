@@ -32,7 +32,7 @@ uint32_t renderer_backend_opengl_base_create(struct minec_client* client, void**
 
     if ((base = s_alloc(client->static_alloc, sizeof(struct renderer_backend_opengl_base))) == NULL)
     {
-        minec_client_log_debug_error(client, "'s_alloc(client->static_alloc, sizeof(struct renderer_backend_opengl_base))' failed");
+        minec_client_log_debug_l(client, "'s_alloc(client->static_alloc, sizeof(struct renderer_backend_opengl_base))' failed");
         result = MINEC_CLIENT_ERROR;
     }
     else base_memory = true;
@@ -41,7 +41,7 @@ uint32_t renderer_backend_opengl_base_create(struct minec_client* client, void**
     {
         if (window_opengl_load() == false)
         {
-            minec_client_log_debug_error(client, "'window_opengl_load()' failed");
+            minec_client_log_debug_l(client, "'window_opengl_load()' failed");
             result = MINEC_CLIENT_ERROR;
         }
         else opengl_loaded = true;
@@ -50,7 +50,7 @@ uint32_t renderer_backend_opengl_base_create(struct minec_client* client, void**
     {
         if (window_glCreateContext(client->window.window_handle, 4, 3, NULL, &base->vsync_support) == false)
         {
-            minec_client_log_debug_error(client, "'window_glCreateContext(client->window.window_handle, 4, 3, NULL)' failed");
+            minec_client_log_debug_l(client, "'window_glCreateContext(client->window.window_handle, 4, 3, NULL)' failed");
             result = MINEC_CLIENT_ERROR;
         }
         else context_created = true;
@@ -59,7 +59,7 @@ uint32_t renderer_backend_opengl_base_create(struct minec_client* client, void**
     {
         if (window_glMakeCurrent(client->window.window_handle) == false)
         {
-            minec_client_log_debug_error(client, "'window_glMakeCurrent' failed");
+            minec_client_log_debug_l(client, "'window_glMakeCurrent' failed");
             result = MINEC_CLIENT_ERROR;
         }
         else currrent = true;
@@ -168,7 +168,7 @@ uint32_t renderer_backend_opengl_base_create(struct minec_client* client, void**
         {
             if ((*load_entries[i].load_dst = (void*)window_glGetProcAddress(load_entries[i].func_name)) == NULL)
             {
-                minec_client_log_debug_error(client, "'window_glGetProcAddress(\"%s\")' failed", load_entries[i].func_name);
+                minec_client_log_debug_l(client, "'window_glGetProcAddress(\"%s\")' failed", load_entries[i].func_name);
                 result = MINEC_CLIENT_ERROR;
             }
         }
@@ -190,14 +190,14 @@ uint32_t renderer_backend_opengl_base_create(struct minec_client* client, void**
     {
         if ((extensions = s_alloc(client->dynamic_alloc, sizeof(uint8_t*) * extension_count + 8)) == NULL)
         {
-            minec_client_log_debug_error(client, "'s_alloc(client->dynamic_alloc, sizeof(uint8_t*) * extension_count(%d) + 8)' failed", extension_count);
+            minec_client_log_debug_l(client, "'s_alloc(client->dynamic_alloc, sizeof(uint8_t*) * extension_count(%d) + 8)' failed", extension_count);
             result = MINEC_CLIENT_ERROR;
         }
         else extensions_memory = true;
     }
     for (GLint i = 0; result == MINEC_CLIENT_SUCCESS && i < extension_count; i++) if ((extensions[i] = base->func.glGetStringi(GL_EXTENSIONS, i)) == NULL)
     {
-        minec_client_log_debug_error(client, "'glGetStringi(GL_EXTENSIONS, %d)' failed", i);
+        minec_client_log_debug_l(client, "'glGetStringi(GL_EXTENSIONS, %d)' failed", i);
         result = MINEC_CLIENT_ERROR;
     }
 
@@ -213,7 +213,7 @@ uint32_t renderer_backend_opengl_base_create(struct minec_client* client, void**
 
         if (extension_support == false)
         {
-            minec_client_log_debug_error(client, "required extension %s not supported", extension_names[i]);
+            minec_client_log_debug_l(client, "required extension %s not supported", extension_names[i]);
             result = MINEC_CLIENT_ERROR;
         }
     }
@@ -247,7 +247,7 @@ uint32_t renderer_backend_opengl_base_create(struct minec_client* client, void**
     {
         if ((base->device_info[0] = base->func.glGetString(GL_RENDERER)) == NULL)
         {
-            minec_client_log_debug_error(client, "'glGetString(GL_RENDERER)' failed");
+            minec_client_log_debug_l(client, "'glGetString(GL_RENDERER)' failed");
             result = MINEC_CLIENT_ERROR;
         }
     }
@@ -262,7 +262,7 @@ uint32_t renderer_backend_opengl_base_create(struct minec_client* client, void**
     if (currrent) if (window_glMakeCurrent(NULL) == false)
     {
         minec_client_log_error(client, "[FATAL] Failed to unset OpenGL context. Crashing ...");
-        minec_client_log_debug_error(client, "'window_glMakeCurrent(NULL)' failed");
+        minec_client_log_debug_l(client, "'window_glMakeCurrent(NULL)' failed");
         minec_client_nuke_destroy_kill_crush_annihilate_process_exit(client);
     }
 

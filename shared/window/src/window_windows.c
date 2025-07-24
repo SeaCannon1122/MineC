@@ -738,9 +738,11 @@ bool window_glDestroyContext(void* window)
 {
 	struct window_data_windows* window_data = window;
 
-	if (context->opengl.func.wglMakeCurrent(NULL, NULL) == FALSE) return false;
+	if (window_glMakeCurrent(NULL) == false) return false;
 	if (context->opengl.func.wglDeleteContext(window_data->hglrc) == FALSE) return false;
 	if (ReleaseDC(window_data->hwnd, window_data->hdc) == 0) return false;
+
+	return true;
 }
 
 bool window_glMakeCurrent(void* window)
@@ -749,8 +751,15 @@ bool window_glMakeCurrent(void* window)
 
 	bool result = true;
 
-	if (window_data == NULL) result = (context->opengl.func.wglMakeCurrent(NULL, NULL) == TRUE);
+	if (window_data == NULL)
+	{
+		if (context->opengl.current_window != NULL)
+		{
+			if (result = (context->opengl.func.wglMakeCurrent(NULL, NULL) == TRUE)) context->opengl.current_window = NULL;
+		}
+	}
 	else if ((result = (context->opengl.func.wglMakeCurrent(window_data->hdc, window_data->hglrc) == TRUE)) == true) context->opengl.current_window = window;
+
 	return result;
 }
 

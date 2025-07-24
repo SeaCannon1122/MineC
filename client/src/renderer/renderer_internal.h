@@ -54,19 +54,8 @@ struct renderer_internal_state
 
 	struct
 	{
-		struct
-		{
-			mutex_t mutex;
-
-			uint32_t gui_scale;
-			uint32_t fov;
-			uint32_t render_distance;
-			uint32_t backend_index;
-			uint32_t backend_device_index;
-			bool vsync;
-			uint32_t fps;
-			uint32_t max_mipmap_level_count;
-		} settings;
+		struct renderer_settings requested_settings;
+		mutex_t requested_settings_mutex;
 
 		struct
 		{
