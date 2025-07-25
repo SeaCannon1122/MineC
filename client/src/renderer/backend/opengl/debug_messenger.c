@@ -9,9 +9,11 @@ static void DebugCallback(
 	GLenum severity,
 	GLsizei length, 
 	const GLchar* message, 
-	struct minec_client* client
+	const void* userParam
 )
 {
+	struct minec_client* client = (struct minec_client*)userParam;
+
 	minec_client_log_debug(client, "--OpenGL-Debug-Message-- Source: %u | Type : %u | ID : %u | Severity : %u | Message : %s", source, type, id, severity, message);
 }
 
@@ -20,7 +22,7 @@ uint32_t _debug_messenger_init(struct minec_client* client)
 	OPENGL.func.glEnable(GL_DEBUG_OUTPUT);
 	OPENGL.func.glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 
-	OPENGL.func.glDebugMessageCallback(DebugCallback, client);
+	OPENGL.func.glDebugMessageCallback(DebugCallback, (const void*)client);
 
 	OPENGL.func.glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_HIGH, 0, NULL, GL_TRUE);
 	OPENGL.func.glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_MEDIUM, 0, NULL, GL_TRUE);

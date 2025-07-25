@@ -154,7 +154,7 @@ uint32_t _context_create(struct minec_client* client)
 
     for (GLint i = 0; i < OPENGL.extension_count && result == MINEC_CLIENT_SUCCESS; i++)
     {
-        if ((OPENGL.extensions[i] = OPENGL.func.glGetStringi(GL_EXTENSIONS, i)) == NULL)
+        if ((OPENGL.extensions[i] = (GLubyte*)OPENGL.func.glGetStringi(GL_EXTENSIONS, i)) == NULL)
         {
             minec_client_log_debug_l(client, "'glGetStringi(GL_EXTENSIONS, %d)' failed", i);
             result = MINEC_CLIENT_ERROR;
@@ -182,7 +182,7 @@ uint32_t _context_create(struct minec_client* client)
         GLubyte* name;
         GLubyte* version;
 
-        if ((name = OPENGL.func.glGetString(GL_RENDERER)) == NULL || (version = OPENGL.func.glGetString(GL_VERSION)) == NULL) result = MINEC_CLIENT_ERROR;
+        if ((name = (GLubyte*)OPENGL.func.glGetString(GL_RENDERER)) == NULL || (version = (GLubyte*)OPENGL.func.glGetString(GL_VERSION)) == NULL) result = MINEC_CLIENT_ERROR;
         else
         {
             snprintf(RENDERER.BACKEND.device_infos[0].name, sizeof(RENDERER.BACKEND.device_infos[0].name), name);

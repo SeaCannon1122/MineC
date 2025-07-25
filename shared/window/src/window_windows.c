@@ -382,6 +382,8 @@ bool window_destroy(void* window)
 
 	free(window_data->event_queue);
 	free(window_data);
+
+	return true;
 }
 
 bool window_set_icon(void* window, uint32_t* icon_rgba_pixel_data, uint32_t icon_width, uint32_t icon_height)

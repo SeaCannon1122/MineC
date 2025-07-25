@@ -4,8 +4,6 @@ project(MineC_Client)
 
 message(STATUS "Building MineC_Client")
 
-
-
 set(MINEC_CLIENT_CMAKE_BUILD_DEVELOPMENT ON)
 
 if(MINEC_CLIENT_CMAKE_BUILD_DEVELOPMENT)
@@ -122,6 +120,7 @@ target_link_libraries(MineC_Client PRIVATE window pixelchar utility networking)
 
 target_sources(MineC_Client_Renderer PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/renderer_internal.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/frontend.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/backend.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/logging.c
 )

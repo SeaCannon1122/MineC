@@ -13,6 +13,8 @@ function_prefix void atomic_##type_name##_init(atomic_##type_name* p_atomic, typ
 function_prefix void atomic_##type_name##_deinit(atomic_##type_name* p_atomic);\
 function_prefix void atomic_##type_name##_store(atomic_##type_name* p_atomic, type value);\
 function_prefix type atomic_##type_name##_load(atomic_##type_name* p_atomic);\
+function_prefix void atomic_##type_name##_store_p(atomic_##type_name* p_atomic, type* src_data);\
+function_prefix void atomic_##type_name##_load_p(atomic_##type_name* p_atomic, type* dst_data);\
 
 #define ATOMICS_IMPLEMENTATION_(type, type_name, function_prefix)\
 function_prefix void atomic_##type_name##_init(atomic_##type_name* p_atomic, type initial_value)\
@@ -37,6 +39,18 @@ function_prefix type atomic_##type_name##_load(atomic_##type_name* p_atomic)\
 	value = p_atomic->value;\
 	mutex_unlock(&p_atomic->mutex);\
 	return value;\
+}\
+function_prefix void atomic_##type_name##_store_p(atomic_##type_name* p_atomic, type* src_data)\
+{\
+	mutex_lock(&p_atomic->mutex);\
+	memcpy(&p_atomic->value, src_data, sizeof(type));\
+	mutex_unlock(&p_atomic->mutex);\
+}\
+function_prefix void atomic_##type_name##_load_p(atomic_##type_name* p_atomic, type* dst_data)\
+{\
+	mutex_lock(&p_atomic->mutex);\
+	memcpy(dst_data, &p_atomic->value, sizeof(type));\
+	mutex_unlock(&p_atomic->mutex);\
 }\
 
 ATOMICS_DECLARATION_(int8_t, int8_t, )

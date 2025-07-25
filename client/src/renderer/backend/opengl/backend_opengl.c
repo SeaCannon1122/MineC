@@ -53,6 +53,8 @@ uint32_t renderer_backend_opengl_create(struct minec_client* client)
 	if (result == MINEC_CLIENT_ERROR) result = _debug_messenger_init(client);
 #endif
 
+
+
 	if (result != MINEC_CLIENT_SUCCESS)
 	{
 		if (context_created) _context_destroy(client);

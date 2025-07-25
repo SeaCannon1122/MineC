@@ -103,7 +103,7 @@ struct renderer_backend_opengl
 
 	} func;
 
-	uint8_t* extensions[1024];
+	GLubyte* extensions[1024];
 	GLint extension_count;
 };
 
