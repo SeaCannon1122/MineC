@@ -1,5 +1,7 @@
 #include <minec_client.h>
 
+#ifndef MINEC_CLIENT_ONLY_RUNTIME_INTERFACE
+
 #include <stb_image/stb_image.h>
 
 uint32_t application_window_create(struct minec_client* client)
@@ -120,4 +122,12 @@ uint32_t application_window_destroy(struct minec_client* client)
 	window_deinit_context();
 
 	return MINEC_CLIENT_SUCCESS;
+}
+
+#endif
+
+void application_window_get_dimensions(struct minec_client* client, uint32_t* width, uint32_t* height)
+{
+	*width = atomic_uint32_t_load(&WINDOW.width);
+	*height = atomic_uint32_t_load(&WINDOW.height);
 }

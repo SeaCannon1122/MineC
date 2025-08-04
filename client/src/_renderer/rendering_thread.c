@@ -6,7 +6,7 @@ void rendering_thread_function(struct minec_client* client)
 	minec_client_log(client, "[RENDERER][THREAD] Entered rendering loop");
 
 	mutex_lock(&client->renderer.mutex);
-	client->renderer.backend.global.interfaces[client->renderer.backend.global.backend_index].start_rendering(client);
+	client->RENDERER.backend.global.interfaces[client->RENDERER.backend.global.backend_index].start_rendering(client);
 
 	uint32_t request_flag;
 	while (true)
@@ -17,7 +17,7 @@ void rendering_thread_function(struct minec_client* client)
 		else if (request_flag == RENDERER_REQUEST_HALT)
 		{
 
-			client->renderer.backend.global.interfaces[client->renderer.backend.global.backend_index].stop_rendering(client);
+			client->RENDERER.backend.global.interfaces[client->RENDERER.backend.global.backend_index].stop_rendering(client);
 			mutex_unlock(&client->renderer.mutex);
 
 			request_flag = RENDERER_REQUEST_RENDER;
@@ -25,7 +25,7 @@ void rendering_thread_function(struct minec_client* client)
 			sleep_for_ms(1);
 
 			mutex_lock(&client->renderer.mutex);
-			client->renderer.backend.global.interfaces[client->renderer.backend.global.backend_index].start_rendering(client);
+			client->RENDERER.backend.global.interfaces[client->RENDERER.backend.global.backend_index].start_rendering(client);
 		}
 
 		uint32_t width, height;
@@ -68,12 +68,12 @@ void rendering_thread_function(struct minec_client* client)
 		pixelcharRendererResetQueue(client->renderer.pixelchar_renderer);
 		pixelcharRendererEnqueCharacters(client->renderer.pixelchar_renderer, c, str_len);
 
-		client->renderer.backend.global.interfaces[client->renderer.backend.global.backend_index].render(client);
+		client->RENDERER.backend.global.interfaces[client->RENDERER.backend.global.backend_index].render(client);
 
 		client->renderer.thread_state.frame_info.index++;
 	}
 
-	client->renderer.backend.global.interfaces[client->renderer.backend.global.backend_index].stop_rendering(client);
+	client->RENDERER.backend.global.interfaces[client->RENDERER.backend.global.backend_index].stop_rendering(client);
 	mutex_unlock(&client->renderer.mutex);
 
 	minec_client_log(client, "[RENDERER][THREAD] Left rendering loop");

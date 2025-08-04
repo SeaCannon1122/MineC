@@ -20,7 +20,7 @@ function_prefix void atomic_##type_name##_load_p(atomic_##type_name* p_atomic, t
 function_prefix void atomic_##type_name##_init(atomic_##type_name* p_atomic, type initial_value)\
 {\
 	mutex_create(&p_atomic->mutex);\
-	p_atomic-> value = initial_value;\
+	p_atomic->value = initial_value;\
 }\
 function_prefix void atomic_##type_name##_deinit(atomic_##type_name* p_atomic)\
 {\

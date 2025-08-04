@@ -31,6 +31,8 @@ uint32_t opengl_errors_clear(struct minec_client* client)
 
 uint32_t _context_create(struct minec_client* client);
 void _context_destroy(struct minec_client* client);
+uint32_t _context_frame_submit(struct minec_client* client);
+
 #ifdef MINEC_CLIENT_DEBUG_LOG
 uint32_t _debug_messenger_init(struct minec_client* client);
 #endif
@@ -53,8 +55,6 @@ uint32_t renderer_backend_opengl_create(struct minec_client* client)
 	if (result == MINEC_CLIENT_ERROR) result = _debug_messenger_init(client);
 #endif
 
-
-
 	if (result != MINEC_CLIENT_SUCCESS)
 	{
 		if (context_created) _context_destroy(client);
@@ -66,4 +66,39 @@ uint32_t renderer_backend_opengl_create(struct minec_client* client)
 void renderer_backend_opengl_destroy(struct minec_client* client)
 {
 	_context_destroy(client);
+}
+
+uint32_t renderer_backend_opengl_frame(struct minec_client* client)
+{
+
+	_context_frame_submit(client);
+
+	return MINEC_CLIENT_SUCCESS;
+}
+
+uint32_t renderer_backend_opengl_switch_device(struct minec_client* client, uint32_t device_index)
+{
+	return MINEC_CLIENT_SUCCESS;
+}
+
+uint32_t renderer_backend_opengl_reload_resources(struct minec_client* client)
+{
+	return MINEC_CLIENT_SUCCESS;
+}
+
+uint32_t renderer_backend_opengl_set_vsync(struct minec_client* client, bool vsync)
+{
+	return MINEC_CLIENT_SUCCESS;
+}
+
+uint32_t renderer_backend_opengl_set_fps(struct minec_client* client, uint32_t fps)
+{
+	if (RENDERER.backend.settings.vsync == true || fps != 0) RENDERER.backend.settings.fps = fps;
+
+	return MINEC_CLIENT_SUCCESS;
+}
+
+uint32_t renderer_backend_opengl_set_max_mipmap_level_count(struct minec_client* client, uint32_t max_mipmap_level_count)
+{
+	return MINEC_CLIENT_SUCCESS;
 }

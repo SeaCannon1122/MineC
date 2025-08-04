@@ -5,25 +5,11 @@
 
 #include <stdint.h>
 
+#include <renderer/renderer.h>
+
 struct settings {
 
-	struct
-	{
-		uint32_t gui_scale;
-		uint32_t fov;
-
-		struct {
-			uint32_t backend_index;
-			uint8_t** backend_names;
-			uint32_t backend_count;
-			uint32_t device_index;
-			uint8_t** device_infos;
-			uint32_t device_count;
-
-			uint32_t fps;
-		} graphics;
-
-	} video;
+	struct renderer_settings renderer;
 
 	void* resource_pack_paths_hashmap;
 };

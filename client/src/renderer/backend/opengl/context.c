@@ -20,7 +20,7 @@ uint32_t _context_create(struct minec_client* client)
 
 	if (result == MINEC_CLIENT_SUCCESS)
 	{
-		if (window_glCreateContext(WINDOW.window_handle, 4, 3, NULL, &RENDERER.BACKEND.device_infos[0].disable_vsync_support) == true) opengl_context_created = true;
+		if (window_glCreateContext(WINDOW.window_handle, 4, 3, NULL, &RENDERER.backend.device_infos.infos[0].disable_vsync_support) == true) opengl_context_created = true;
 		else { minec_client_log_debug_l(client, "window_glCreateContext() with version 4.3 failed"); result = MINEC_CLIENT_ERROR; }
 	}
 
@@ -185,28 +185,30 @@ uint32_t _context_create(struct minec_client* client)
         if ((name = (GLubyte*)OPENGL.func.glGetString(GL_RENDERER)) == NULL || (version = (GLubyte*)OPENGL.func.glGetString(GL_VERSION)) == NULL) result = MINEC_CLIENT_ERROR;
         else
         {
-            snprintf(RENDERER.BACKEND.device_infos[0].name, sizeof(RENDERER.BACKEND.device_infos[0].name), name);
-            snprintf(RENDERER.BACKEND.device_infos[0].name, sizeof(RENDERER.BACKEND.device_infos[0].version), version);
+            snprintf(RENDERER.backend.device_infos.infos[0].name, sizeof(RENDERER.backend.device_infos.infos[0].name), name);
+            snprintf(RENDERER.backend.device_infos.infos[0].name, sizeof(RENDERER.backend.device_infos.infos[0].version), version);
         }
     }
 
     if (result == MINEC_CLIENT_SUCCESS) {
 
-        RENDERER.BACKEND.device_count = 1;
-        RENDERER.BACKEND.settings.backend_device_index = 0;
-        RENDERER.BACKEND.device_infos[0].usable = true;
+        RENDERER.backend.device_infos.count = 1;
+        RENDERER.backend.settings.backend_device_index = 0;
+        RENDERER.backend.device_infos.infos[0].usable = true;
+        OPENGL.last_frame_time = 0.f;
 
-        if (RENDERER.BACKEND.settings.vsync == false)
+        if (RENDERER.backend.settings.vsync == false)
         {
-            if (RENDERER.BACKEND.device_infos[0].disable_vsync_support)
+            if (RENDERER.backend.device_infos.infos[0].disable_vsync_support)
             {
                 if (window_glSwapIntervalEXT(0) == false)
                 {
-                    RENDERER.BACKEND.settings.vsync = true;
+                    RENDERER.backend.settings.vsync = true;
                     minec_client_log_debug_l(client, "'window_glSwapIntervalEXT(0)' failed even though its supported");
                 }
+                else if (RENDERER.backend.settings.fps == 0) RENDERER.backend.settings.fps = 1;
             }
-            else RENDERER.BACKEND.settings.vsync = true;
+            else RENDERER.backend.settings.vsync = true;
         }
     }
 
@@ -247,4 +249,25 @@ void _context_destroy(struct minec_client* client)
 	window_opengl_unload();
 
 	return;
+}
+
+uint32_t _context_frame_submit(struct minec_client* client)
+{
+    if (window_glSwapBuffers(WINDOW.window_handle) == false)
+    {
+        minec_client_log_debug_l(client, "window_glSwapBuffers failed");
+        opengl_errors_clear(client);
+    }
+
+    if (RENDERER.backend.settings.vsync == false || RENDERER.backend.settings.fps != 0)
+    {
+        float frame_time_delta = time_get() - OPENGL.last_frame_time;
+        float sleep_time = 1000.f / RENDERER.backend.settings.fps - frame_time_delta;
+
+        if (sleep_time > 0.f) time_sleep(sleep_time > 1000.f ? 1000.f : sleep_time);
+    }
+    
+    OPENGL.last_frame_time = time_get();
+
+    return MINEC_CLIENT_SUCCESS;
 }

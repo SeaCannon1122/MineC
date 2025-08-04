@@ -77,7 +77,7 @@ uint32_t renderer_backend_opengl_set_fps(struct minec_client* client, uint32_t f
 		return MINEC_CLIENT_ERROR;
 	}
 
-	struct renderer_backend_opengl_base* base = client->renderer.backend.base.base;
+	struct renderer_backend_opengl_base* base = client->RENDERER.backend.base.base;
 	uint32_t result = MINEC_CLIENT_SUCCESS;
 
 	uint32_t swap_interval = (fps == 0 ? 1 : 0);

@@ -120,6 +120,11 @@ uint32_t renderer_reload(struct minec_client* client)
 }
 #endif
 
+void renderer_set_order_create_new_destroy_old(struct minec_client* client, bool order)
+{
+	client->renderer.api.set_order_create_new_destroy_old(client, order);
+}
+
 void renderer_switch_backend(struct minec_client* client, uint32_t backend_index)
 {
 	client->renderer.api.switch_backend(client, backend_index);

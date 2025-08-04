@@ -33,8 +33,6 @@ enum minec_client_result
 
 struct minec_client
 {
-	void* static_alloc;
-	void* dynamic_alloc;
 	uint8_t* data_files_path;
 	size_t data_files_path_length;
 
@@ -47,7 +45,6 @@ struct minec_client
 
 void minec_client_run(uint8_t* data_files_path);
 
-//should not be called unless catastrophic unrecoverable operating system failure (NOT malloc failing)
 static void minec_client_nuke_destroy_kill_crush_annihilate_process_exit(struct minec_client* client)
 {
 	exit(EXIT_FAILURE);

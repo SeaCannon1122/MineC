@@ -487,6 +487,6 @@ void renderer_backend_vulkan_device_destroy(struct minec_client* client, void** 
 
 uint32_t renderer_backend_vulkan_set_fps(struct minec_client* client, uint32_t fps)
 {
-    struct renderer_backend_vulkan_base* base = client->renderer.backend.base.base;
-    struct renderer_backend_vulkan_device* device = client->renderer.backend.device.device;;
+    struct renderer_backend_vulkan_base* base = client->RENDERER.backend.base.base;
+    struct renderer_backend_vulkan_device* device = client->RENDERER.backend.device.device;;
 }

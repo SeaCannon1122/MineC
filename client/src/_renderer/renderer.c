@@ -21,7 +21,7 @@ uint32_t _renderer_backend_create(
 
 	uint32_t device_index = base->device_index;
 
-	if ((result = client->renderer.backend.global.interfaces[backend_index].base_create(client, &base->base, &base->device_count, &base->device_infos)) == MINEC_CLIENT_SUCCESS) base_created = true;
+	if ((result = client->RENDERER.backend.global.interfaces[backend_index].base_create(client, &base->base, &base->device_count, &base->device_infos)) == MINEC_CLIENT_SUCCESS) base_created = true;
 
 	for (int32_t i = -1; result == MINEC_CLIENT_SUCCESS && device_created == false; i++)
 	{
@@ -30,13 +30,13 @@ uint32_t _renderer_backend_create(
 		{
 			if (device_index < base->device_count)
 			{
-				if ((result = client->renderer.backend.global.interfaces[backend_index].device_create(client, &base->base, &device->device, device_index, device->fps)) == MINEC_CLIENT_SUCCESS) device_created = true;
+				if ((result = client->RENDERER.backend.global.interfaces[backend_index].device_create(client, &base->base, &device->device, device_index, device->fps)) == MINEC_CLIENT_SUCCESS) device_created = true;
 				else if (result == MINEC_CLIENT_ERROR) result = MINEC_CLIENT_SUCCESS;
 			}
 		}
 		else
 		{
-			if ((result = client->renderer.backend.global.interfaces[backend_index].device_create(client, &base->base, &device->device, (uint32_t)i, device->fps)) == MINEC_CLIENT_SUCCESS)
+			if ((result = client->RENDERER.backend.global.interfaces[backend_index].device_create(client, &base->base, &device->device, (uint32_t)i, device->fps)) == MINEC_CLIENT_SUCCESS)
 			{
 				device_index = (uint32_t)i;
 				device_created = true;
@@ -46,12 +46,12 @@ uint32_t _renderer_backend_create(
 	}
 
 	if (result == MINEC_CLIENT_SUCCESS && device_created == false) result = MINEC_CLIENT_ERROR;
-	if (result == MINEC_CLIENT_SUCCESS) if ((result = client->renderer.backend.global.interfaces[backend_index].pipelines_resources_create(client, &base->base, &device->device, &pipelines_resources->pipelines_resources, pipelines_resources->pcr_backend_index)) == MINEC_CLIENT_SUCCESS) pipelines_resources_created = true;
+	if (result == MINEC_CLIENT_SUCCESS) if ((result = client->RENDERER.backend.global.interfaces[backend_index].pipelines_resources_create(client, &base->base, &device->device, &pipelines_resources->pipelines_resources, pipelines_resources->pcr_backend_index)) == MINEC_CLIENT_SUCCESS) pipelines_resources_created = true;
 
 	if (result != MINEC_CLIENT_SUCCESS)
 	{
-		if (device_created) client->renderer.backend.global.interfaces[backend_index].device_destroy(client, &base->base, &device->device);
-		if (base_created) client->renderer.backend.global.interfaces[backend_index].base_destroy(client, &base->base);
+		if (device_created) client->RENDERER.backend.global.interfaces[backend_index].device_destroy(client, &base->base, &device->device);
+		if (base_created) client->RENDERER.backend.global.interfaces[backend_index].base_destroy(client, &base->base);
 	}
 	else base->device_index = device_index;
 	
@@ -66,9 +66,9 @@ void _renderer_backend_destroy(
 	struct renderer_backend_pipelines_resources_state* pipelines_resources
 )
 {
-	client->renderer.backend.global.interfaces[backend_index].pipelines_resources_destroy(client, &base->base, &device->device, &pipelines_resources->pipelines_resources);
-	client->renderer.backend.global.interfaces[backend_index].device_destroy(client, &base->base, &device->device);
-	client->renderer.backend.global.interfaces[backend_index].base_destroy(client, &base->base);
+	client->RENDERER.backend.global.interfaces[backend_index].pipelines_resources_destroy(client, &base->base, &device->device, &pipelines_resources->pipelines_resources);
+	client->RENDERER.backend.global.interfaces[backend_index].device_destroy(client, &base->base, &device->device);
+	client->RENDERER.backend.global.interfaces[backend_index].base_destroy(client, &base->base);
 }
 
 uint32_t _renderer_backend_load_create(
@@ -86,20 +86,20 @@ uint32_t _renderer_backend_load_create(
 		library_loaded = false
 	;
 
-	if (file_copy(client->renderer.backend_library_paths[2], client->renderer.backend_library_paths[global->library_load_index]) != 0)
+	if (file_copy(client->RENDERER.backend_library_paths[2], client->RENDERER.backend_library_paths[global->library_load_index]) != 0)
 	{
-		minec_client_log_error(client, "[RENDERER] Could not copy %s to %s", client->renderer.backend_library_paths[2], client->renderer.backend_library_paths[global->library_load_index]);
-		minec_client_log_debug_l(client, "'file_copy(%s, %s)' failed", client->renderer.backend_library_paths[2], client->renderer.backend_library_paths[global->library_load_index]);
+		minec_client_log_error(client, "[RENDERER] Could not copy %s to %s", client->RENDERER.backend_library_paths[2], client->RENDERER.backend_library_paths[global->library_load_index]);
+		minec_client_log_debug_l(client, "'file_copy(%s, %s)' failed", client->RENDERER.backend_library_paths[2], client->RENDERER.backend_library_paths[global->library_load_index]);
 		result = MINEC_CLIENT_ERROR;
 	}
 	else file_copied = true;
 
 	if (result == MINEC_CLIENT_SUCCESS)
 	{
-		if ((global->líbrary_handle = dynamic_library_load(client->renderer.backend_library_paths[global->library_load_index], true)) == NULL)
+		if ((global->líbrary_handle = dynamic_library_load(client->RENDERER.backend_library_paths[global->library_load_index], true)) == NULL)
 		{
-			minec_client_log_error(client, "[RENDERER] Could not fully process dynamic library %s. May be corrupted or out of date version.", client->renderer.backend_library_paths[global->library_load_index]);
-			minec_client_log_debug_l(client, "'dynamic_library_load(%s)' failed", client->renderer.backend_library_paths[global->library_load_index]);
+			minec_client_log_error(client, "[RENDERER] Could not fully process dynamic library %s. May be corrupted or out of date version.", client->RENDERER.backend_library_paths[global->library_load_index]);
+			minec_client_log_debug_l(client, "'dynamic_library_load(%s)' failed", client->RENDERER.backend_library_paths[global->library_load_index]);
 			result = MINEC_CLIENT_ERROR;
 		}
 		else library_loaded = true;
@@ -111,7 +111,7 @@ uint32_t _renderer_backend_load_create(
 	{
 		if ((get_interfaces_function = dynamic_library_get_function(global->líbrary_handle, "renderer_backend_get_interfaces")) == NULL)
 		{
-			minec_client_log_error(client, "[RENDERER] Could not fully process dynamic library %s. May be corrupted or out of date version.", client->renderer.backend_library_paths[global->library_load_index]);
+			minec_client_log_error(client, "[RENDERER] Could not fully process dynamic library %s. May be corrupted or out of date version.", client->RENDERER.backend_library_paths[global->library_load_index]);
 			minec_client_log_debug_l(client, "'dynamic_library_get_function(global->líbrary_handle, \"renderer_backend_get_interfaces\")' failed");
 			result = MINEC_CLIENT_ERROR;
 		}
@@ -146,7 +146,7 @@ uint32_t _renderer_backend_load_create(
 	}
 
 	if (result != MINEC_CLIENT_SUCCESS && library_loaded) dynamic_library_unload(global->líbrary_handle);
-	if (result != MINEC_CLIENT_SUCCESS && file_copied) remove(client->renderer.backend_library_paths[global->library_load_index]);
+	if (result != MINEC_CLIENT_SUCCESS && file_copied) remove(client->RENDERER.backend_library_paths[global->library_load_index]);
 
 	return result;
 }
@@ -162,7 +162,7 @@ void _renderer_backend_unload_destroy(
 	_renderer_backend_destroy(client, global->backend_index, base, device, pipelines_resources);
 
 	dynamic_library_unload(global->líbrary_handle);
-	remove(client->renderer.backend_library_paths[global->library_load_index]);
+	remove(client->RENDERER.backend_library_paths[global->library_load_index]);
 }
 
 uint32_t renderer_create(
@@ -192,22 +192,22 @@ uint32_t renderer_create(
 
 	if (result == MINEC_CLIENT_SUCCESS)
 	{
-		if ((client->renderer.backend_library_paths[0] = s_alloc_joined_string(client->static_alloc, backend_library_path_parts, 3)) == NULL) result = PIXELCHAR_ERROR_OUT_OF_MEMORY;
+		if ((client->RENDERER.backend_library_paths[0] = s_alloc_joined_string(client->static_alloc, backend_library_path_parts, 3)) == NULL) result = PIXELCHAR_ERROR_OUT_OF_MEMORY;
 		else
 		{
 			backend_library_path_parts[1] = "temp1_";
-			if ((client->renderer.backend_library_paths[1] = s_alloc_joined_string(client->static_alloc, backend_library_path_parts, 3)) == NULL)
+			if ((client->RENDERER.backend_library_paths[1] = s_alloc_joined_string(client->static_alloc, backend_library_path_parts, 3)) == NULL)
 			{
-				s_free(client->static_alloc, client->renderer.backend_library_paths[0]);
+				s_free(client->static_alloc, client->RENDERER.backend_library_paths[0]);
 				result = PIXELCHAR_ERROR_OUT_OF_MEMORY;
 			}
 			else
 			{
 				backend_library_path_parts[1] = MINEC_CLIENT_RENDERER_BACKEND_LIBRARY_NAME;
-				if ((client->renderer.backend_library_paths[2] = s_alloc_joined_string(client->static_alloc, backend_library_path_parts, 2)) == NULL)
+				if ((client->RENDERER.backend_library_paths[2] = s_alloc_joined_string(client->static_alloc, backend_library_path_parts, 2)) == NULL)
 				{
-					s_free(client->static_alloc, client->renderer.backend_library_paths[0]);
-					s_free(client->static_alloc, client->renderer.backend_library_paths[1]);
+					s_free(client->static_alloc, client->RENDERER.backend_library_paths[0]);
+					s_free(client->static_alloc, client->RENDERER.backend_library_paths[1]);
 					result = PIXELCHAR_ERROR_OUT_OF_MEMORY;
 				}
 				else backend_library_names_memory = true;
@@ -243,13 +243,13 @@ uint32_t renderer_create(
 	
 	if (result == MINEC_CLIENT_SUCCESS)
 	{
-		client->renderer.backend.global.library_load_index = 0;
-		client->renderer.backend.global.backend_index = *backend_index;
-		client->renderer.backend.base.device_index = *device_index;
-		client->renderer.backend.device.fps = fps;
-		client->renderer.backend.pipelines_resources.pcr_backend_index = 0;
+		client->RENDERER.backend.global.library_load_index = 0;
+		client->RENDERER.backend.global.backend_index = *backend_index;
+		client->RENDERER.backend.base.device_index = *device_index;
+		client->RENDERER.backend.device.fps = fps;
+		client->RENDERER.backend.pipelines_resources.pcr_backend_index = 0;
 
-		if ((result = _renderer_backend_load_create(client, &client->renderer.backend.global, &client->renderer.backend.base, &client->renderer.backend.device, &client->renderer.backend.pipelines_resources)) == MINEC_CLIENT_SUCCESS)
+		if ((result = _renderer_backend_load_create(client, &client->RENDERER.backend.global, &client->RENDERER.backend.base, &client->RENDERER.backend.device, &client->RENDERER.backend.pipelines_resources)) == MINEC_CLIENT_SUCCESS)
 		{
 			backend_loaded_created = true;
 		}
@@ -257,12 +257,12 @@ uint32_t renderer_create(
 
 	if (result == MINEC_CLIENT_SUCCESS)
 	{
-		*backend_index = client->renderer.backend.global.backend_index;
-		*backend_count = client->renderer.backend.global.backend_count;
-		*backend_names = client->renderer.backend.global.backend_names;
-		*device_index = client->renderer.backend.base.device_index;
-		*device_count = client->renderer.backend.base.device_count;
-		*device_infos = client->renderer.backend.base.device_infos;
+		*backend_index = client->RENDERER.backend.global.backend_index;
+		*backend_count = client->RENDERER.backend.global.backend_count;
+		*backend_names = client->RENDERER.backend.global.backend_names;
+		*device_index = client->RENDERER.backend.base.device_index;
+		*device_count = client->RENDERER.backend.base.device_count;
+		*device_infos = client->RENDERER.backend.base.device_infos;
 
 		client->renderer.thread_state.frame_info.time = 0.f;
 		client->renderer.thread_state.frame_info.index = 0;
@@ -276,9 +276,9 @@ uint32_t renderer_create(
 		client->renderer.thread_state.handle = create_thread(rendering_thread_function, client);
 	}
 
-	if (result != MINEC_CLIENT_SUCCESS && backend_loaded_created) _renderer_backend_unload_destroy(client, &client->renderer.backend.global, &client->renderer.backend.base, &client->renderer.backend.device, &client->renderer.backend.pipelines_resources);
+	if (result != MINEC_CLIENT_SUCCESS && backend_loaded_created) _renderer_backend_unload_destroy(client, &client->RENDERER.backend.global, &client->RENDERER.backend.base, &client->RENDERER.backend.device, &client->RENDERER.backend.pipelines_resources);
 	if (result != MINEC_CLIENT_SUCCESS && pixelchar_renderer_create) pixelcharRendererDestroy(client->renderer.pixelchar_renderer);
-	if (result != MINEC_CLIENT_SUCCESS && backend_library_names_memory) for (uint32_t i = 0; i < 3; i++) s_free(client->static_alloc, client->renderer.backend_library_paths[i]);
+	if (result != MINEC_CLIENT_SUCCESS && backend_library_names_memory) for (uint32_t i = 0; i < 3; i++) s_free(client->static_alloc, client->RENDERER.backend_library_paths[i]);
 
 	return result;
 }
@@ -293,11 +293,11 @@ void renderer_destroy(struct minec_client* client)
 	mutex_destroy(&client->renderer.mutex);
 	atomic_deinit(&client->renderer.request_flag);
 
-	_renderer_backend_unload_destroy(client, &client->renderer.backend.global, &client->renderer.backend.base, &client->renderer.backend.device, &client->renderer.backend.pipelines_resources);
+	_renderer_backend_unload_destroy(client, &client->RENDERER.backend.global, &client->RENDERER.backend.base, &client->RENDERER.backend.device, &client->RENDERER.backend.pipelines_resources);
 
 	pixelcharRendererDestroy(client->renderer.pixelchar_renderer);
 
-	for (uint32_t i = 0; i < 3; i++) s_free(client->static_alloc, client->renderer.backend_library_paths[i]);
+	for (uint32_t i = 0; i < 3; i++) s_free(client->static_alloc, client->RENDERER.backend_library_paths[i]);
 }
 
 uint32_t renderer_reload_backend(
@@ -321,21 +321,21 @@ uint32_t renderer_reload_backend(
 	struct renderer_backend_device_state device;
 	struct renderer_backend_pipelines_resources_state pipelines_resources;
 
-	global.library_load_index = (client->renderer.backend.global.library_load_index + 1) % 2;
-	global.backend_index = client->renderer.backend.global.backend_index;
-	base.device_index = client->renderer.backend.base.device_index;
-	device.fps = client->renderer.backend.device.fps;
-	pipelines_resources.pcr_backend_index = (client->renderer.backend.pipelines_resources.pcr_backend_index + 1) % 2;
+	global.library_load_index = (client->RENDERER.backend.global.library_load_index + 1) % 2;
+	global.backend_index = client->RENDERER.backend.global.backend_index;
+	base.device_index = client->RENDERER.backend.base.device_index;
+	device.fps = client->RENDERER.backend.device.fps;
+	pipelines_resources.pcr_backend_index = (client->RENDERER.backend.pipelines_resources.pcr_backend_index + 1) % 2;
 
 	if ((result = _renderer_backend_load_create(client, &global, &base, &device, &pipelines_resources)) == MINEC_CLIENT_SUCCESS)
 	{
 
-		_renderer_backend_unload_destroy(client, &client->renderer.backend.global, &client->renderer.backend.base, &client->renderer.backend.device, &client->renderer.backend.pipelines_resources);
+		_renderer_backend_unload_destroy(client, &client->RENDERER.backend.global, &client->RENDERER.backend.base, &client->RENDERER.backend.device, &client->RENDERER.backend.pipelines_resources);
 
-		client->renderer.backend.global = global;
-		client->renderer.backend.base = base;
-		client->renderer.backend.device = device;
-		client->renderer.backend.pipelines_resources = pipelines_resources;
+		client->RENDERER.backend.global = global;
+		client->RENDERER.backend.base = base;
+		client->RENDERER.backend.device = device;
+		client->RENDERER.backend.pipelines_resources = pipelines_resources;
 
 		*backend_index = global.backend_index;
 		*backend_count = global.backend_count;
@@ -366,17 +366,17 @@ uint32_t renderer_switch_backend(
 	struct renderer_backend_pipelines_resources_state pipelines_resources;
 
 	base.device_index = 0;
-	device.fps = client->renderer.backend.device.fps;
-	pipelines_resources.pcr_backend_index = (client->renderer.backend.pipelines_resources.pcr_backend_index + 1) % 2;
+	device.fps = client->RENDERER.backend.device.fps;
+	pipelines_resources.pcr_backend_index = (client->RENDERER.backend.pipelines_resources.pcr_backend_index + 1) % 2;
 
 	if ((result = _renderer_backend_create(client, backend_index, &base, &device, &pipelines_resources)) == MINEC_CLIENT_SUCCESS)
 	{
-		_renderer_backend_destroy(client, client->renderer.backend.global.backend_index, &base, &device, &pipelines_resources);
+		_renderer_backend_destroy(client, client->RENDERER.backend.global.backend_index, &base, &device, &pipelines_resources);
 
-		client->renderer.backend.global.backend_index = backend_index;
-		client->renderer.backend.base = base;
-		client->renderer.backend.device = device;
-		client->renderer.backend.pipelines_resources = pipelines_resources;
+		client->RENDERER.backend.global.backend_index = backend_index;
+		client->RENDERER.backend.base = base;
+		client->RENDERER.backend.device = device;
+		client->RENDERER.backend.pipelines_resources = pipelines_resources;
 
 		*device_index = base.device_index;
 		*device_count = base.device_count;
@@ -398,48 +398,48 @@ uint32_t renderer_switch_backend_device(struct minec_client* client, uint32_t de
 	struct renderer_backend_device_state device;
 	struct renderer_backend_pipelines_resources_state pipelines_resources;
 
-	device.fps = client->renderer.backend.device.fps;
-	pipelines_resources.pcr_backend_index = (client->renderer.backend.pipelines_resources.pcr_backend_index + 1) % 2;
+	device.fps = client->RENDERER.backend.device.fps;
+	pipelines_resources.pcr_backend_index = (client->RENDERER.backend.pipelines_resources.pcr_backend_index + 1) % 2;
 
 	if ((
-		result = client->renderer.backend.global.interfaces[client->renderer.backend.global.backend_index].device_create(
+		result = client->RENDERER.backend.global.interfaces[client->RENDERER.backend.global.backend_index].device_create(
 		client,
-		&client->renderer.backend.base.base,
+		&client->RENDERER.backend.base.base,
 		&device.device,
 		device_index,
-		client->renderer.backend.device.fps
+		client->RENDERER.backend.device.fps
 	)) == MINEC_CLIENT_SUCCESS)
 	{
-		if ((result = client->renderer.backend.global.interfaces[client->renderer.backend.global.backend_index].pipelines_resources_create(
+		if ((result = client->RENDERER.backend.global.interfaces[client->RENDERER.backend.global.backend_index].pipelines_resources_create(
 			client,
-			&client->renderer.backend.base.base,
+			&client->RENDERER.backend.base.base,
 			&device.device,
 			&pipelines_resources.pipelines_resources,
 			pipelines_resources.pcr_backend_index
 		)) != MINEC_CLIENT_SUCCESS)
 		{
-			client->renderer.backend.global.interfaces[client->renderer.backend.global.backend_index].device_destroy(
+			client->RENDERER.backend.global.interfaces[client->RENDERER.backend.global.backend_index].device_destroy(
 				client,
-				&client->renderer.backend.base.base,
+				&client->RENDERER.backend.base.base,
 				&device.device
 			);
 		}
 		else
 		{
-			client->renderer.backend.global.interfaces[client->renderer.backend.global.backend_index].pipelines_resources_destroy(
+			client->RENDERER.backend.global.interfaces[client->RENDERER.backend.global.backend_index].pipelines_resources_destroy(
 				client,
-				&client->renderer.backend.base.base,
-				&client->renderer.backend.device.device,
-				&client->renderer.backend.pipelines_resources.pipelines_resources
+				&client->RENDERER.backend.base.base,
+				&client->RENDERER.backend.device.device,
+				&client->RENDERER.backend.pipelines_resources.pipelines_resources
 			);
-			client->renderer.backend.global.interfaces[client->renderer.backend.global.backend_index].device_destroy(
+			client->RENDERER.backend.global.interfaces[client->RENDERER.backend.global.backend_index].device_destroy(
 				client,
-				&client->renderer.backend.base.base,
-				&client->renderer.backend.device.device
+				&client->RENDERER.backend.base.base,
+				&client->RENDERER.backend.device.device
 			);
 
-			client->renderer.backend.device = device;
-			client->renderer.backend.pipelines_resources = pipelines_resources;
+			client->RENDERER.backend.device = device;
+			client->RENDERER.backend.pipelines_resources = pipelines_resources;
 		}
 	}
 	
@@ -453,7 +453,7 @@ uint32_t renderer_set_target_fps(struct minec_client* client, uint32_t fps)
 	atomic_store_(uint32_t, &client->renderer.request_flag, &request_flag);
 	mutex_lock(&client->renderer.mutex);
 
-	uint32_t result = client->renderer.backend.global.interfaces[client->renderer.backend.global.backend_index].set_fps(client, fps);
+	uint32_t result = client->RENDERER.backend.global.interfaces[client->RENDERER.backend.global.backend_index].set_fps(client, fps);
 
 	mutex_unlock(&client->renderer.mutex);
 	return result;

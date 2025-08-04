@@ -31,7 +31,7 @@ if(MINEC_CLIENT_CMAKE_DYNAMIC_RENDERER AND WIN32)
     add_library(MineC_Client_Renderer SHARED)
     
     target_compile_definitions(MineC_Client PRIVATE MINEC_CLIENT_DYNAMIC_RENDERER)
-    target_compile_definitions(MineC_Client_Renderer PRIVATE MINEC_CLIENT_DYNAMIC_RENDERER)
+    target_compile_definitions(MineC_Client_Renderer PRIVATE MINEC_CLIENT_DYNAMIC_RENDERER MINEC_CLIENT_ONLY_RUNTIME_INTERFACE=1)
 
     add_dependencies(MineC_Client MineC_Client_Renderer)
 
@@ -123,6 +123,7 @@ target_sources(MineC_Client_Renderer PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/frontend.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/backend.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/logging.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/application_window/application_window.c
 )
 
 target_include_directories(MineC_Client_Renderer PRIVATE 

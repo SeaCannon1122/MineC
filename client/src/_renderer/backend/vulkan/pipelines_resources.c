@@ -6,13 +6,13 @@ uint32_t renderer_backend_vulkan_pipelines_resources_create(struct minec_client*
 {
     uint32_t result = MINEC_CLIENT_SUCCESS;
 
-    struct renderer_backend_vulkan_base* base = client->renderer.backend.base.base;
-    struct renderer_backend_vulkan_device* device = client->renderer.backend.device.device;
+    struct renderer_backend_vulkan_base* base = client->RENDERER.backend.base.base;
+    struct renderer_backend_vulkan_device* device = client->RENDERER.backend.device.device;
     struct renderer_backend_vulkan_pipelines_resources* pipelines_resources;
 
-    if ((client->renderer.backend.pipelines_resources.pipelines_resources = s_alloc(client->static_alloc, sizeof(struct renderer_backend_vulkan_pipelines_resources))) == NULL) return MINEC_CLIENT_CRITICAL_ERROR;
+    if ((client->RENDERER.backend.pipelines_resources.pipelines_resources = s_alloc(client->static_alloc, sizeof(struct renderer_backend_vulkan_pipelines_resources))) == NULL) return MINEC_CLIENT_CRITICAL_ERROR;
 
-    pipelines_resources = client->renderer.backend.pipelines_resources.pipelines_resources;
+    pipelines_resources = client->RENDERER.backend.pipelines_resources.pipelines_resources;
 
     /*if ((result = pixelcharRendererBackendVulkanInitialize(
         client->renderer.pixelchar_renderer,
@@ -30,9 +30,9 @@ uint32_t renderer_backend_vulkan_pipelines_resources_create(struct minec_client*
 
 void renderer_backend_vulkan_pipelines_resources_destroy(struct minec_client* client, void** backend_base, void** backend_device, void** backend_pipelines_resources)
 {
-    struct renderer_backend_vulkan_base* base = client->renderer.backend.base.base;
-    struct renderer_backend_vulkan_device* device = client->renderer.backend.device.device;
-    struct renderer_backend_vulkan_pipelines_resources* pipelines_resources = client->renderer.backend.pipelines_resources.pipelines_resources;
+    struct renderer_backend_vulkan_base* base = client->RENDERER.backend.base.base;
+    struct renderer_backend_vulkan_device* device = client->RENDERER.backend.device.device;
+    struct renderer_backend_vulkan_pipelines_resources* pipelines_resources = client->RENDERER.backend.pipelines_resources.pipelines_resources;
 
     s_free(client->static_alloc, pipelines_resources);
 }

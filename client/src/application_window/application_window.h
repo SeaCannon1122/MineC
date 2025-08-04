@@ -37,10 +37,14 @@ struct application_window
 
 struct minec_client;
 
+#ifndef MINEC_CLIENT_ONLY_RUNTIME_INTERFACE
 uint32_t application_window_create(struct minec_client* client);
+uint32_t application_window_destroy(struct minec_client* client);
 
 uint32_t application_window_handle_events(struct minec_client* client);
+#endif
 
-uint32_t application_window_destroy(struct minec_client* client);
+void application_window_get_dimensions(struct minec_client* client, uint32_t* width, uint32_t* height);
+
 
 #endif // !APPLICATION_WINDOW

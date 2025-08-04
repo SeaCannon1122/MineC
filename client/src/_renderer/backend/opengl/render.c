@@ -25,8 +25,8 @@ uint32_t renderer_backend_opengl_render(struct minec_client* client, bool resize
 	uint32_t return_result = MINEC_CLIENT_SUCCESS;
 	uint32_t result = MINEC_CLIENT_SUCCESS;
 
-	struct renderer_backend_opengl_base* base = client->renderer.backend.base.base;
-	struct renderer_backend_opengl_pipelines_resources* pipelines_resources = client->renderer.backend.pipelines_resources.pipelines_resources;
+	struct renderer_backend_opengl_base* base = client->RENDERER.backend.base.base;
+	struct renderer_backend_opengl_pipelines_resources* pipelines_resources = client->RENDERER.backend.pipelines_resources.pipelines_resources;
 	 
 	float frame_time = get_time();
 	client->renderer.thread_state.frame_info.time = frame_time - base->last_frame_time;
@@ -55,7 +55,7 @@ uint32_t renderer_backend_opengl_render(struct minec_client* client, bool resize
 	{
 		if (pipelines_resources->pixelchar_renderer.usable == true)
 		{
-			pixelcharRendererBackendOpenGLRender(client->renderer.pixelchar_renderer, pipelines_resources->pixelchar_renderer.backend_index, 0, width, height, 4.f, 4.f, 4.f, 1.4f);
+			pixelcharRendererBackendOpenGLRender(client->renderer.pixelchar_renderer, pipelines_resources->pixelchar_RENDERER.backend_index, 0, width, height, 4.f, 4.f, 4.f, 1.4f);
 		}
 	}
 
