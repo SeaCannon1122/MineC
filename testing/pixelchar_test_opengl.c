@@ -109,6 +109,12 @@ int main(int argc, char* argv[]) {
 	res = pixelcharRendererBindFont(pcr, default_font, 0);
 	res = pixelcharRendererBindFont(pcr, smooth_font, 1);
 
+	uint8_t name_default[PIXELCHAR_FONT_NAME_BUFFER_SIZE];
+	uint8_t name_smooth[PIXELCHAR_FONT_NAME_BUFFER_SIZE];
+
+	pixelcharFontGetName(default_font, name_default);
+	pixelcharFontGetName(smooth_font, name_smooth);
+
 	pixelcharFontDestroy(default_font);
 	pixelcharFontDestroy(smooth_font);
 

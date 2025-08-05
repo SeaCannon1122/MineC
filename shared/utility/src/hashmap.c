@@ -2,7 +2,6 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdarg.h>
 
@@ -153,6 +152,10 @@ void hashmap_set_value(void* hashmap, uint8_t* key, void* value, uint32_t value_
 		resolved_value.data._int = *((int32_t*)value);
 	} break;
 
+	case HASHMAP_VALUE_BOOL: {
+		resolved_value.data._bool = *((bool*)value);
+	} break;
+
 	default: return;
 
 	}
@@ -276,12 +279,40 @@ void hashmap_read_yaml(void* hashmap, uint8_t* yaml_data, size_t yaml_data_size)
 
 		uint32_t value_start = text_i;
 
-		for (; data[text_i] != '\n' && data[text_i] != '\r' && data[text_i] != '\0' && (data[text_i] != ' ' || string_quotes); text_i++) {
+		uint8_t* bool_strings[2] = { "false", "true" };
+		bool bool_value = false;
+		bool bool_string_full = false;
+
+		for (uint32_t value_i = 0; data[text_i] != '\n' && data[text_i] != '\r' && data[text_i] != '\0' && (data[text_i] != ' ' || string_quotes); text_i++, value_i++) {
 			if (data[text_i] == '"') { type = HASHMAP_VALUE_STRING; string_quotes ^= 1; }
 			if (type == HASHMAP_VALUE_STRING) continue;
 			if (data[text_i] == '.' && type == HASHMAP_VALUE_INT) type = HASHMAP_VALUE_FLOAT;
-			else if ((data[text_i] < '0' || data[text_i] > '9') && (data[text_i] != '-' || text_i != value_start)) { type = HASHMAP_VALUE_STRING; }
+			else if ((data[text_i] < '0' || data[text_i] > '9') && (data[text_i] != '-' || value_i != 0)) {
+				
+				if (value_i == 0)
+				{
+					if (bool_strings[0][0] == data[text_i])
+					{
+						type = HASHMAP_VALUE_BOOL;
+						bool_value = false;
+					}
+					else if (bool_strings[1][0] == data[text_i])
+					{
+						type = HASHMAP_VALUE_BOOL;
+						bool_value = true;
+					}
+					else type = HASHMAP_VALUE_STRING;
+				}
+				else
+				{
+					if (bool_string_full) type = HASHMAP_VALUE_STRING;
+					else if (bool_strings[bool_value][value_i] != data[text_i]) type = HASHMAP_VALUE_STRING;
+					else if (value_i == strlen(bool_strings[bool_value]) - 1) bool_string_full = true;
+				}
+			}
 		}
+
+		if (bool_string_full == false && type == HASHMAP_VALUE_BOOL) type = HASHMAP_VALUE_STRING;
 
 		if (text_i - value_start == 0) { continue_on_next_line; }
 
@@ -309,7 +340,7 @@ void hashmap_read_yaml(void* hashmap, uint8_t* yaml_data, size_t yaml_data_size)
 			int_val *= negative;
 			hashmap_set_value(map, &data[key_start], &int_val, HASHMAP_VALUE_INT);
 		}
-		else {
+		else if (type == HASHMAP_VALUE_FLOAT) {
 			float float_val = 0.f;
 			float decimal = -1.f;
 			float negative = 1.f;
@@ -330,6 +361,10 @@ void hashmap_read_yaml(void* hashmap, uint8_t* yaml_data, size_t yaml_data_size)
 			float_val *= negative;
 			hashmap_set_value(map, &data[key_start], &float_val, HASHMAP_VALUE_FLOAT);
 		}
+		else
+		{
+			hashmap_set_value(map, &data[key_start], &bool_value, HASHMAP_VALUE_BOOL);
+		}
 
 		continue_on_next_line;
 	}
@@ -339,7 +374,7 @@ void hashmap_read_yaml(void* hashmap, uint8_t* yaml_data, size_t yaml_data_size)
 
 #define _HAHSMAP_WRITE_DATA_BUFFER_EXTENSION_SIZE 4096
 
-void _hashmap_buffer_write(void** buffer, size_t* buffer_size, size_t* buffer_filled_size, uint8_t* format, ...) {
+void _hashmap_buffer_write(uint8_t** buffer, size_t* buffer_size, size_t* buffer_filled_size, uint8_t* format, ...) {
 	va_list args;
 	va_start(args, format);
 
@@ -352,13 +387,13 @@ void _hashmap_buffer_write(void** buffer, size_t* buffer_size, size_t* buffer_fi
 	}
 
 	va_start(args, format);
-	*buffer_filled_size += vsnprintf(buffer[*buffer_filled_size], *buffer_size - *buffer_filled_size, format, args);
+	*buffer_filled_size += vsnprintf(&((uint8_t*)*buffer)[*buffer_filled_size], *buffer_size - *buffer_filled_size, format, args);
 	va_end(args);
 }
 
-void* hashmap_write_yaml(void* hashmap, size_t* yaml_data_size)
+uint8_t* hashmap_write_yaml(void* hashmap, size_t* yaml_data_size)
 {
-	void* buffer = malloc(_HAHSMAP_WRITE_DATA_BUFFER_EXTENSION_SIZE);
+	uint8_t* buffer = malloc(_HAHSMAP_WRITE_DATA_BUFFER_EXTENSION_SIZE);
 	size_t buffer_size = _HAHSMAP_WRITE_DATA_BUFFER_EXTENSION_SIZE;
 	size_t buffer_filled_size = 0;
 
@@ -377,11 +412,15 @@ void* hashmap_write_yaml(void* hashmap, size_t* yaml_data_size)
 		} break;
 
 		case HASHMAP_VALUE_FLOAT: {
-			_hashmap_buffer_write(&buffer, &buffer_size, &buffer_filled_size, "%s: \"%f\"\n", key, value->data._float);
+			_hashmap_buffer_write(&buffer, &buffer_size, &buffer_filled_size, "%s: %f\n", key, value->data._float);
 		} break;
 
 		case HASHMAP_VALUE_INT: {
-			_hashmap_buffer_write(&buffer, &buffer_size, &buffer_filled_size, "%s: \"%d\"\n", key, value->data._int);
+			_hashmap_buffer_write(&buffer, &buffer_size, &buffer_filled_size, "%s: %d\n", key, value->data._int);
+		} break;
+
+		case HASHMAP_VALUE_BOOL: {
+			_hashmap_buffer_write(&buffer, &buffer_size, &buffer_filled_size, "%s: %s\n", key, value->data._bool ? "true" : "false");
 		} break;
 
 		}

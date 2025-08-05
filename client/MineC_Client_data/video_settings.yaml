@@ -1,6 +1,11 @@
-gui_scale: 2
 fov: 80
+gui_scale: 2
+render_distance: 8
 
 backend_index: 0
 backend_device_index: 0
-fps: 0
+fps: 100
+vsync: false
+max_mipmap_level_count: 8
+
+order_create_new_destroy_old: true

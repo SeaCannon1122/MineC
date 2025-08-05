@@ -3,13 +3,17 @@
 #ifndef MINEC_CLIENT_SETTINGS_SETTINGS_SETTINGS_H
 #define MINEC_CLIENT_SETTINGS_SETTINGS_SETTINGS_H
 
+#define SETTINGS client->settings
+
 #include <stdint.h>
 
 #include <renderer/renderer.h>
 
 struct settings {
 
-	struct renderer_settings renderer;
+	struct renderer_settings video;
+
+	uint8_t* video_settings_file_path;
 
 	void* resource_pack_paths_hashmap;
 };

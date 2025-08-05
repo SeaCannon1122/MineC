@@ -76,6 +76,8 @@ PixelcharResult pixelcharFontCreate(const void* fontData, size_t dataSize, Pixel
 		metadata->bitmaps_count * bitmap_size
 	);
 
+	memcpy(font->name, metadata->name, sizeof(font->name));
+
 	*pFont = font;
 	return PIXELCHAR_SUCCESS;
 }
@@ -87,6 +89,11 @@ void pixelcharFontDestroy(PixelcharFont font)
 	font->destroyed = true;
 
 	if (font->reference_count == 0) free(font);
+}
+
+void pixelcharFontGetName(PixelcharFont font, uint8_t* buffer)
+{
+	memcpy(buffer, font->name, sizeof(font->name));
 }
 
 void _pixelchar_renderer_convert_queue(PixelcharRenderer renderer, uint32_t backend_index)

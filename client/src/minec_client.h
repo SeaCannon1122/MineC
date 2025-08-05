@@ -15,6 +15,7 @@
 
 #include <string_allocator.h>
 #include <hashmap.h>
+#include <array_list.h>
 #include <atomics.h>
 #include <utils.h>
 #include <cerialize.h>

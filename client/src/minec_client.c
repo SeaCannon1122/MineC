@@ -20,7 +20,7 @@ void minec_client_run(uint8_t* data_files_path)
 	settings_create(client);
 	settings_load(client);
 
-	if ((return_value = renderer_create(client, &client->settings.renderer)) != MINEC_CLIENT_SUCCESS)
+	if ((return_value = renderer_create(client, &client->settings.video)) != MINEC_CLIENT_SUCCESS)
 	{
 		minec_client_log_error(client, "[GLOBAL] Failed to create Renderer ");
 		goto _renderer_create_failed;
@@ -51,6 +51,7 @@ void minec_client_run(uint8_t* data_files_path)
 
 _renderer_create_failed:
 
+	settings_save(client);
 	settings_destroy(client);
 	minec_client_log_info(client, "[GLOBAL] Window destroyed");
 

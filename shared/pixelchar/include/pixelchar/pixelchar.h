@@ -13,6 +13,7 @@ extern "C" {
 
 #define PIXELCHAR_RENDERER_MAX_FONT_COUNT 8
 #define PIXELCHAR_RENDERER_MAX_BACKEND_COUNT 32
+#define PIXELCHAR_FONT_NAME_BUFFER_SIZE 32
 
 typedef enum PixelcharResult
 {
@@ -56,6 +57,7 @@ const uint8_t* pixelcharGetResultAsString(PixelcharResult result);
 
 PixelcharResult pixelcharFontCreate(const void* fontData, size_t dataSize, PixelcharFont* pFont);
 void pixelcharFontDestroy(PixelcharFont font);
+void pixelcharFontGetName(PixelcharFont font, uint8_t* buffer);
 
 PixelcharResult pixelcharRendererCreate(uint32_t charQueueLength, PixelcharRenderer* pRenderer);
 void pixelcharRendererDestroy(PixelcharRenderer renderer);

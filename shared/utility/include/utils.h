@@ -47,5 +47,9 @@ void thread_join(void* thread_handle);
 //file
 uint32_t file_copy(uint8_t* src_path, uint8_t* dst_path);
 void* file_load(uint8_t* path, size_t* size);
+bool file_save(uint8_t* path, void* data, size_t size);
+
+uint8_t* malloc_string(uint8_t* string, ...);
+uint8_t* malloc_joined_string(uint8_t** strings, uint32_t string_count);
 
 #endif

@@ -5,12 +5,14 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
 
-enum hasmap_value
+enum hashmap_value
 {
 	HASHMAP_VALUE_STRING,
 	HASHMAP_VALUE_FLOAT,
 	HASHMAP_VALUE_INT,
+	HASHMAP_VALUE_BOOL,
 };
 
 struct hashmap_multi_type
@@ -20,6 +22,7 @@ struct hashmap_multi_type
 		uint8_t* _string;
 		int32_t _int;
 		float _float;
+		bool _bool;
 	} data;
 	uint32_t type;
 };
@@ -45,6 +48,6 @@ void hashmap_iterator_start(struct hashmap_iterator* iterator, void* hashmap);
 struct hashmap_multi_type* hashmap_iterator_next_key_value_pair(struct hashmap_iterator* iterator, uint8_t** key);
 
 void hashmap_read_yaml(void* hashmap, uint8_t* yaml_data, size_t yaml_data_size);
-void* hashmap_write_yaml(void* hashmap, size_t* yaml_data_size);
+uint8_t* hashmap_write_yaml(void* hashmap, size_t* yaml_data_size);
 
-#endif // !HASHMAP_H
+#endif

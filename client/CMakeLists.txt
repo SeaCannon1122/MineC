@@ -46,7 +46,7 @@ else()
 endif()
 
 add_custom_target(MineC_Client_copy_data_files
-    COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/" "${CMAKE_CURRENT_BINARY_DIR}/MineC_Client_data"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/MineC_Client_data" "${CMAKE_CURRENT_BINARY_DIR}/MineC_Client_data"
     COMMENT "Copying MineC_Client_data/ ..."
 )
 

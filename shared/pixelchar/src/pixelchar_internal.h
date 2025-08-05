@@ -27,6 +27,8 @@ typedef struct _pixelchar_renderer_char {
 
 typedef struct PixelcharFont_T
 {
+	uint8_t name[PIXELCHAR_FONT_NAME_BUFFER_SIZE];
+
 	void* backends[PIXELCHAR_RENDERER_MAX_BACKEND_COUNT];
 	uint32_t backends_reference_count[PIXELCHAR_RENDERER_MAX_BACKEND_COUNT];
 
@@ -70,7 +72,7 @@ typedef struct _pixelchar_font_metadata
 	size_t widths_section_size;
 	size_t bitmaps_section_size;
 
-	uint8_t name[32];
+	uint8_t name[PIXELCHAR_FONT_NAME_BUFFER_SIZE];
 	uint32_t mappings_count;
 	uint32_t bitmaps_count;
 	uint32_t resolution;
