@@ -1,4 +1,4 @@
-#include "renderer/renderer_internal.h"
+#include <minec_client.h>
 
 #ifdef MINEC_CLIENT_DEBUG_LOG
 

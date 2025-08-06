@@ -4,7 +4,7 @@ project(utility)
 add_library(utility STATIC 
     ${CMAKE_CURRENT_SOURCE_DIR}/src/atomics.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/hashmap.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/array_list.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/arraylist.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/string_allocator.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/rng.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/utils.c

@@ -1,4 +1,4 @@
-#include "renderer/renderer_internal.h"
+#include <minec_client.h>
 
 uint32_t _context_create(struct minec_client* client)
 {
@@ -20,13 +20,13 @@ uint32_t _context_create(struct minec_client* client)
 
 	if (result == MINEC_CLIENT_SUCCESS)
 	{
-		if (window_glCreateContext(WINDOW.window_handle, 4, 3, NULL, &RENDERER.backend.device_infos.infos[0].disable_vsync_support) == true) opengl_context_created = true;
+		if (window_glCreateContext(APPLICATION_WINDOW.window_handle, 4, 3, NULL, &RENDERER.backend.device_infos.infos[0].disable_vsync_support) == true) opengl_context_created = true;
 		else { minec_client_log_debug_l(client, "window_glCreateContext() with version 4.3 failed"); result = MINEC_CLIENT_ERROR; }
 	}
 
 	if (result == MINEC_CLIENT_SUCCESS)
 	{
-		if (window_glMakeCurrent(WINDOW.window_handle)) opengl_context_current = true;
+		if (window_glMakeCurrent(APPLICATION_WINDOW.window_handle)) opengl_context_current = true;
 		else { minec_client_log_debug_l(client, "window_glMakeCurrent failed"); result = MINEC_CLIENT_ERROR; }
 	}
 
@@ -220,7 +220,7 @@ uint32_t _context_create(struct minec_client* client)
             RENDERER.crashing = true;
 			return MINEC_CLIENT_ERROR;
 		}
-		if (opengl_context_created) if (window_glDestroyContext(WINDOW.window_handle) == false)
+		if (opengl_context_created) if (window_glDestroyContext(APPLICATION_WINDOW.window_handle) == false)
 		{
 			minec_client_log_debug_l(client, "window_glDestroyContext failed");
             RENDERER.crashing = true;
@@ -240,7 +240,7 @@ void _context_destroy(struct minec_client* client)
 		RENDERER.crashing = true;
         return;
 	}
-	if (window_glDestroyContext(WINDOW.window_handle) == false)
+	if (window_glDestroyContext(APPLICATION_WINDOW.window_handle) == false)
 	{
 		minec_client_log_debug_l(client, "window_glDestroyContext failed");
         RENDERER.crashing = true;
@@ -253,7 +253,7 @@ void _context_destroy(struct minec_client* client)
 
 uint32_t _context_frame_submit(struct minec_client* client)
 {
-    if (window_glSwapBuffers(WINDOW.window_handle) == false)
+    if (window_glSwapBuffers(APPLICATION_WINDOW.window_handle) == false)
     {
         minec_client_log_debug_l(client, "window_glSwapBuffers failed");
         opengl_errors_clear(client);

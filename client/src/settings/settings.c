@@ -2,10 +2,16 @@
 
 #include "settings_defines.h"
 
-void settings_create(struct minec_client* client)
+uint32_t settings_create(struct minec_client* client)
 {
-	uint8_t* path_components[] = { client->data_files_path, VIDEO_SETTINGS_FILE_PATH };
+	uint8_t* path_components[2] = { client->data_files_path };
+
+	path_components[1] = VIDEO_SETTINGS_FILE_PATH;
 	SETTINGS.video_settings_file_path = malloc_joined_string(path_components, 2);
+	path_components[1] = ACTIVE_RESOURCEPACKS_FILE_PATH;
+	SETTINGS.active_resourcepack_file_path = malloc_joined_string(path_components, 2);
+	path_components[1] = INACTIVE_RESOURCEPACKS_FILE_PATH;
+	SETTINGS.inactive_resourcepack_file_path = malloc_joined_string(path_components, 2);
 
 	SETTINGS.video.frontend.fov = 120;
 	SETTINGS.video.frontend.gui_scale = 0;
@@ -18,10 +24,20 @@ void settings_create(struct minec_client* client)
 	SETTINGS.video.backend.max_mipmap_level_count = 5;
 
 	SETTINGS.video.other.order_create_new_destroy_old = true;
+
+	SETTINGS.active_resourcepack_paths_arraylist = arraylist_string_new(8);
+	SETTINGS.inactive_resourcepack_paths_arraylist = arraylist_string_new(8);
+
+	return MINEC_CLIENT_SUCCESS;
 }
 
 void settings_destroy(struct minec_client* client)
 {
+	arraylist_string_delete(SETTINGS.active_resourcepack_paths_arraylist);
+	arraylist_string_delete(SETTINGS.inactive_resourcepack_paths_arraylist);
+
+	free(SETTINGS.active_resourcepack_file_path);
+	free(SETTINGS.inactive_resourcepack_file_path);
 	free(SETTINGS.video_settings_file_path);
 }
 
@@ -74,8 +90,37 @@ void settings_load(struct minec_client* client)
 		}
 		else
 		{
-			minec_client_log_info(client, "[SETTINGS] Could not open %s", SETTINGS.video_settings_file_path);
+			minec_client_log_info(client, "[SETTINGS] Could not read from file %s", SETTINGS.video_settings_file_path);
 			minec_client_log_debug_l(client, "file_load(%s, &file_length) failed", SETTINGS.video_settings_file_path);
+		}
+	}
+
+	//resourcepacks
+	{
+		size_t active_file_length, inactive_file_length;
+		void* active_file_data = file_load(SETTINGS.active_resourcepack_file_path, &active_file_length);
+		void* inactive_file_data = file_load(SETTINGS.inactive_resourcepack_file_path, &inactive_file_length);
+	
+		if (active_file_data != NULL)
+		{
+			arraylist_string_read_file_data(SETTINGS.active_resourcepack_paths_arraylist, active_file_data, active_file_length);
+			free(active_file_data);
+		}
+		else
+		{
+			minec_client_log_info(client, "[SETTINGS] Could not read from file %s", SETTINGS.active_resourcepack_file_path);
+			minec_client_log_debug_l(client, "file_load(%s, &file_length) failed", SETTINGS.active_resourcepack_file_path);
+		}
+
+		if (inactive_file_data != NULL)
+		{
+			arraylist_string_read_file_data(SETTINGS.inactive_resourcepack_paths_arraylist, inactive_file_data, inactive_file_length);
+			free(inactive_file_data);
+		}
+		else
+		{
+			minec_client_log_info(client, "[SETTINGS] Could not read from file %s", SETTINGS.inactive_resourcepack_file_path);
+			minec_client_log_debug_l(client, "file_load(%s, &file_length) failed", SETTINGS.inactive_resourcepack_file_path);
 		}
 	}
 
@@ -109,7 +154,8 @@ void settings_save(struct minec_client* client)
 		{
 			if (file_save(SETTINGS.video_settings_file_path, yaml_file_data, file_length) == false)
 			{
-
+				minec_client_log_info(client, "[SETTINGS] Could not write to file %s", SETTINGS.video_settings_file_path);
+				minec_client_log_debug_l(client, "file_save(%s, &file_length) failed", SETTINGS.video_settings_file_path);
 			}
 			free(yaml_file_data);
 		}
@@ -117,4 +163,31 @@ void settings_save(struct minec_client* client)
 		hashmap_delete(hashmap);
 	}
 	
+	//resourcepacks
+	{
+		size_t active_file_length, inactive_file_length; 
+		uint8_t* active_file_data;
+		uint8_t* inactive_file_data;
+
+		if (active_file_data = arraylist_string_write_file_data(SETTINGS.active_resourcepack_paths_arraylist, &active_file_length))
+		{
+			if (file_save(SETTINGS.active_resourcepack_file_path, active_file_data, active_file_length) == false)
+			{
+				minec_client_log_info(client, "[SETTINGS] Could not write to file %s", SETTINGS.active_resourcepack_file_path);
+				minec_client_log_debug_l(client, "file_save(%s, &file_length) failed", SETTINGS.active_resourcepack_file_path);
+			}
+			free(active_file_data);
+		}
+
+		if (inactive_file_data = arraylist_string_write_file_data(SETTINGS.inactive_resourcepack_paths_arraylist, &inactive_file_length))
+		{
+			if (file_save(SETTINGS.inactive_resourcepack_file_path, inactive_file_data, inactive_file_length) == false)
+			{
+				minec_client_log_info(client, "[SETTINGS] Could not write to file %s", SETTINGS.inactive_resourcepack_file_path);
+				minec_client_log_debug_l(client, "file_save(%s, &file_length) failed", SETTINGS.inactive_resourcepack_file_path);
+			}
+			free(inactive_file_data);
+		}
+	}
+
 }

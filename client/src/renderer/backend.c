@@ -1,4 +1,4 @@
-#include "renderer_internal.h"
+#include <minec_client.h>
 
 // return value of MINEC_CLIENT_ERROR means after the function call, no backend exists
 
@@ -84,7 +84,7 @@ void renderer_backend_destroy(struct minec_client* client)
 void renderer_backend_frame(struct minec_client* client)
 {
 	struct renderer_backend_settings requested_settings;
-	ACCESS_REQUEST_STATE(requested_settings = RENDERER.public.request.settings.backend;);
+	RENDERER_ACCESS_REQUEST_STATE(requested_settings = RENDERER.public.request.settings.backend;);
 	
 	for (uint32_t i = 0; i < 6; i++)
 	{
@@ -196,7 +196,7 @@ void renderer_backend_frame(struct minec_client* client)
 		}
 	}
 
-	ACCESS_REQUEST_STATE(
+	RENDERER_ACCESS_REQUEST_STATE(
 		if (RENDERER.public.request.settings.backend.backend_index == requested_settings.backend_index)
 			RENDERER.public.request.settings.backend.backend_index = RENDERER.backend.settings.backend_index;
 
@@ -213,7 +213,7 @@ void renderer_backend_frame(struct minec_client* client)
 			RENDERER.public.request.settings.backend.max_mipmap_level_count = RENDERER.backend.settings.max_mipmap_level_count;
 	);
 	
-	ACCESS_INFO_STATE(
+	RENDERER_ACCESS_INFO_STATE(
 		if (RENDERER.public.info.state.settings.backend.backend_index != RENDERER.backend.settings.backend_index)
 		  { RENDERER.public.info.state.settings.backend.backend_index = RENDERER.backend.settings.backend_index; RENDERER.public.info.changed = true; }
 

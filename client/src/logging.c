@@ -25,12 +25,6 @@ void minec_client_log_error(struct minec_client* client, uint8_t* message, ...)
 	printf("\n--------------------------------------------------------------------------------------------------\n");
 }
 
-void minec_client_log_private_error(struct minec_client* client, uint8_t* message)
-{
-	printf("LOG: ERROR %s private error ", message);
-	printf("\n--------------------------------------------------------------------------------------------------\n");
-}
-
 #ifdef MINEC_CLIENT_DEBUG_LOG
 
 void minec_client_log_debug(struct minec_client* client, uint8_t* message, ...)

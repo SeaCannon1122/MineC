@@ -15,7 +15,7 @@
 
 #include <string_allocator.h>
 #include <hashmap.h>
-#include <array_list.h>
+#include <arraylist.h>
 #include <atomics.h>
 #include <utils.h>
 #include <cerialize.h>
@@ -24,7 +24,10 @@
 #include "application_window/application_window.h"
 #include "settings/settings.h"
 #include "renderer/renderer.h"
-#include "resources.h"
+
+#ifndef MINEC_CLIENT_DYNAMIC_RENDERER_LIBRARY
+#include "assets.h"
+#endif
 
 enum minec_client_result
 {
@@ -45,10 +48,5 @@ struct minec_client
 };
 
 void minec_client_run(uint8_t* data_files_path);
-
-static void minec_client_nuke_destroy_kill_crush_annihilate_process_exit(struct minec_client* client)
-{
-	exit(EXIT_FAILURE);
-}
 
 #endif

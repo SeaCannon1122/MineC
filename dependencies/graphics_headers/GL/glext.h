@@ -9185,24 +9185,24 @@ GLAPI void APIENTRY glFlushStaticDataIBM (GLenum target);
 #define GL_MIRRORED_REPEAT_IBM            0x8370
 #endif /* GL_IBM_texture_mirrored_repeat */
 
-#ifndef GL_IBM_vertex_array_lists
-#define GL_IBM_vertex_array_lists 1
-#define GL_VERTEX_ARRAY_LIST_IBM          103070
-#define GL_NORMAL_ARRAY_LIST_IBM          103071
-#define GL_COLOR_ARRAY_LIST_IBM           103072
-#define GL_INDEX_ARRAY_LIST_IBM           103073
-#define GL_TEXTURE_COORD_ARRAY_LIST_IBM   103074
-#define GL_EDGE_FLAG_ARRAY_LIST_IBM       103075
-#define GL_FOG_COORDINATE_ARRAY_LIST_IBM  103076
-#define GL_SECONDARY_COLOR_ARRAY_LIST_IBM 103077
-#define GL_VERTEX_ARRAY_LIST_STRIDE_IBM   103080
-#define GL_NORMAL_ARRAY_LIST_STRIDE_IBM   103081
-#define GL_COLOR_ARRAY_LIST_STRIDE_IBM    103082
-#define GL_INDEX_ARRAY_LIST_STRIDE_IBM    103083
-#define GL_TEXTURE_COORD_ARRAY_LIST_STRIDE_IBM 103084
-#define GL_EDGE_FLAG_ARRAY_LIST_STRIDE_IBM 103085
-#define GL_FOG_COORDINATE_ARRAY_LIST_STRIDE_IBM 103086
-#define GL_SECONDARY_COLOR_ARRAY_LIST_STRIDE_IBM 103087
+#ifndef GL_IBM_vertex_arraylists
+#define GL_IBM_vertex_arraylists 1
+#define GL_VERTEX_arraylist_IBM          103070
+#define GL_NORMAL_arraylist_IBM          103071
+#define GL_COLOR_arraylist_IBM           103072
+#define GL_INDEX_arraylist_IBM           103073
+#define GL_TEXTURE_COORD_arraylist_IBM   103074
+#define GL_EDGE_FLAG_arraylist_IBM       103075
+#define GL_FOG_COORDINATE_arraylist_IBM  103076
+#define GL_SECONDARY_COLOR_arraylist_IBM 103077
+#define GL_VERTEX_arraylist_STRIDE_IBM   103080
+#define GL_NORMAL_arraylist_STRIDE_IBM   103081
+#define GL_COLOR_arraylist_STRIDE_IBM    103082
+#define GL_INDEX_arraylist_STRIDE_IBM    103083
+#define GL_TEXTURE_COORD_arraylist_STRIDE_IBM 103084
+#define GL_EDGE_FLAG_arraylist_STRIDE_IBM 103085
+#define GL_FOG_COORDINATE_arraylist_STRIDE_IBM 103086
+#define GL_SECONDARY_COLOR_arraylist_STRIDE_IBM 103087
 typedef void (APIENTRYP PFNGLCOLORPOINTERLISTIBMPROC) (GLint size, GLenum type, GLint stride, const void **pointer, GLint ptrstride);
 typedef void (APIENTRYP PFNGLSECONDARYCOLORPOINTERLISTIBMPROC) (GLint size, GLenum type, GLint stride, const void **pointer, GLint ptrstride);
 typedef void (APIENTRYP PFNGLEDGEFLAGPOINTERLISTIBMPROC) (GLint stride, const GLboolean **pointer, GLint ptrstride);
@@ -9221,7 +9221,7 @@ GLAPI void APIENTRY glNormalPointerListIBM (GLenum type, GLint stride, const voi
 GLAPI void APIENTRY glTexCoordPointerListIBM (GLint size, GLenum type, GLint stride, const void **pointer, GLint ptrstride);
 GLAPI void APIENTRY glVertexPointerListIBM (GLint size, GLenum type, GLint stride, const void **pointer, GLint ptrstride);
 #endif
-#endif /* GL_IBM_vertex_array_lists */
+#endif /* GL_IBM_vertex_arraylists */
 
 #ifndef GL_INGR_blend_func_separate
 #define GL_INGR_blend_func_separate 1

@@ -1,2 +1,0 @@
-fonts/font0.pixelfont
-fonts/font1.pixelfont

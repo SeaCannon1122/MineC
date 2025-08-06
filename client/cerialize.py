@@ -121,7 +121,7 @@ def write_fs_map(file_data, out_dir, base_dir, table_size=64):
 
 def main():
     
-    cerialize_dir = "resources"
+    cerialize_dir = "assets"
 
     if len(sys.argv) != 2:
         print(f"Usage: {sys.argv[0]} <path_to_cerialize_dir> -> assuming 'assets' as default folder")

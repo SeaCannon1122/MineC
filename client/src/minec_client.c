@@ -5,35 +5,84 @@ void minec_client_run(uint8_t* data_files_path)
 	struct minec_client client_memory;
 	struct minec_client* client = &client_memory;
 
-	uint32_t return_value = MINEC_CLIENT_SUCCESS;
+	bool status = MINEC_CLIENT_SUCCESS;
 
-	client->data_files_path = (uint8_t*)strdup(data_files_path);
-	client->data_files_path_length = strlen(data_files_path);
+	bool
+		data_files_path_allocated  = false,
+		settings_created = false,
+		application_window_created = false,
+		renderer_created = false
+	;
 
-	if ((return_value = application_window_create(client)) != MINEC_CLIENT_SUCCESS)
+	if (status == MINEC_CLIENT_SUCCESS)
 	{
-		minec_client_log_info(client, "[GLOBAL] Failed to create Window");
-		goto _application_window_create_failed;
+		if ((client->data_files_path = malloc_string(data_files_path)) == NULL)
+		{
+			status = MINEC_CLIENT_ERROR;
+			minec_client_log_out_of_memory(client, "[GLOBAL]", "malloc_string(%s)", data_files_path);
+		}
+		else data_files_path_allocated = true;
 	}
-	minec_client_log_info(client, "[GLOBAL] Window created");
-
-	settings_create(client);
-	settings_load(client);
-
-	if ((return_value = renderer_create(client, &client->settings.video)) != MINEC_CLIENT_SUCCESS)
+	
+	if (status == MINEC_CLIENT_SUCCESS)
 	{
-		minec_client_log_error(client, "[GLOBAL] Failed to create Renderer ");
-		goto _renderer_create_failed;
+		client->data_files_path_length = strlen(data_files_path);
+
+		if (settings_create(client) != MINEC_CLIENT_SUCCESS)
+		{
+			status = MINEC_CLIENT_ERROR;
+			minec_client_log_info(client, "[GLOBAL] Failed to create Settings");
+		}
+		else
+		{
+			settings_created = true;
+			minec_client_log_info(client, "[GLOBAL] Settings created");
+		}
 	}
-	minec_client_log_info(client, "[GLOBAL] Renderer created");
 
-	while (application_window_handle_events(client) == MINEC_CLIENT_SUCCESS)
+	if (status == MINEC_CLIENT_SUCCESS)
 	{
-#ifdef MINEC_CLIENT_DYNAMIC_RENDERER
+		settings_load(client);
+
+		if (application_window_create(client) != MINEC_CLIENT_SUCCESS)
+		{
+			status = MINEC_CLIENT_ERROR;
+			minec_client_log_info(client, "[GLOBAL] Failed to create Application window");
+		}
+		else
+		{
+			application_window_created = true;
+			minec_client_log_info(client, "[GLOBAL] Application window created");
+		}
+	}
+
+	if (status == MINEC_CLIENT_SUCCESS)
+	{
+		if (renderer_create(client, &client->settings.video) != MINEC_CLIENT_SUCCESS)
+		{
+			status = MINEC_CLIENT_ERROR;
+			minec_client_log_error(client, "[GLOBAL] Failed to create Renderer");
+		}
+		else
+		{
+			renderer_created = true;
+			minec_client_log_info(client, "[GLOBAL] Renderer created");
+		}
+	}
+
+	if (status == MINEC_CLIENT_SUCCESS) while (application_window_handle_events(client) == MINEC_CLIENT_SUCCESS)
+	{
+#ifdef MINEC_CLIENT_DYNAMIC_RENDERER_EXECUTABLE
 		if (client->window.input.keyboard[WINDOW_KEY_R] == (KEY_DOWN_MASK | KEY_CHANGE_MASK))
 		{
-			minec_client_log_info(client, "[GLOBAL] Reloading Renderer ...");
-			if (renderer_reload(client) != MINEC_CLIENT_SUCCESS) minec_client_log_info(client, "[GLOBAL] Failed to reload Renderer");
+			minec_client_log_info(client, "[GLOBAL] Reloading Renderer");
+
+			if (renderer_reload(client) != MINEC_CLIENT_SUCCESS)
+			{
+				minec_client_log_info(client, "[GLOBAL] Fatal error while attempting to reloading Renderer");
+				renderer_created = false;
+				break;
+			}
 		}
 #endif
 
@@ -46,17 +95,24 @@ void minec_client_run(uint8_t* data_files_path)
 		time_sleep(20);
 	}
 
-	renderer_destroy(client);
-	minec_client_log_info(client, "[GLOBAL] Renderer destroyed");
+	if (renderer_created)
+	{
+		renderer_destroy(client);
+		minec_client_log_info(client, "[GLOBAL] Renderer destroyed");
+	}
 
-_renderer_create_failed:
+	if (application_window_created)
+	{
+		application_window_destroy(client);
+		minec_client_log_info(client, "[GLOBAL] Application window destroyed");
+	}
+	
+	if (settings_created)
+	{
+		settings_save(client);
+		settings_destroy(client);
+		minec_client_log_info(client, "[GLOBAL] Renderer destroyed");
+	}
 
-	settings_save(client);
-	settings_destroy(client);
-	minec_client_log_info(client, "[GLOBAL] Window destroyed");
-
-	application_window_destroy(client);
-
-_application_window_create_failed:
-	free(client->data_files_path);
+	if (data_files_path_allocated) free(client->data_files_path);
 }

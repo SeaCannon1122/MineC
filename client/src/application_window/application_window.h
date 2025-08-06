@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef APPLICATION_WINDOW
-#define APPLICATION_WINDOW
+#ifndef MINEC_CLIENT_APPLICATION_WINDOW_APPLICATION_WINDOW_H
+#define MINEC_CLIENT_APPLICATION_WINDOW_APPLICATION_WINDOW_H
 
 #include <stdint.h>
 #include <window/window.h>
@@ -11,7 +11,7 @@
 #define KEY_CHANGE_MASK 0b10
 #define KEY_DOWN_MASK  0b01
 
-#define WINDOW client->window
+#define APPLICATION_WINDOW client->window
 
 struct application_window
 {
@@ -35,16 +35,17 @@ struct application_window
 	} input;
 };
 
+#ifndef MINEC_CLIENT_INCLUDE_ONLY_STRUCTURE
+
 struct minec_client;
 
-#ifndef MINEC_CLIENT_ONLY_RUNTIME_INTERFACE
 uint32_t application_window_create(struct minec_client* client);
 uint32_t application_window_destroy(struct minec_client* client);
 
 uint32_t application_window_handle_events(struct minec_client* client);
-#endif
 
 void application_window_get_dimensions(struct minec_client* client, uint32_t* width, uint32_t* height);
 
+#endif
 
-#endif // !APPLICATION_WINDOW
+#endif

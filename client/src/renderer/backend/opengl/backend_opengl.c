@@ -1,4 +1,4 @@
-#include "renderer/renderer_internal.h"
+#include <minec_client.h>
 
 bool _opengl_error_get_log(struct minec_client* client, uint8_t* action, uint8_t* function, uint8_t* file, uint32_t line)
 {

@@ -1,4 +1,4 @@
-#include "renderer_internal.h"
+#include <minec_client.h>
 
 uint32_t renderer_frontend_create(struct minec_client* client)
 {
@@ -43,7 +43,7 @@ void renderer_frontend_destroy(struct minec_client* client)
 
 void renderer_frontend_frame(struct minec_client* client)
 {
-	ACCESS_INFO_STATE(ACCESS_REQUEST_STATE(
+	RENDERER_ACCESS_INFO_STATE(RENDERER_ACCESS_REQUEST_STATE(
 		if (
 			RENDERER.public.request.settings.frontend.fov != RENDERER.frontend.settings.fov &&
 			RENDERER.public.request.settings.frontend.fov > 0 &&
