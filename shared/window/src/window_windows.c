@@ -20,6 +20,7 @@ struct window_data_windows
 	struct window_event dispatched_event;
 	bool move_size;
 
+	CRITICAL_SECTION dimension_cr;
 	uint32_t width;
 	uint32_t height;
 	uint32_t position_x;
@@ -195,10 +196,12 @@ LRESULT CALLBACK window_WinProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 			RECT rect;
 			if (GetClientRect(hwnd, &rect))
 			{
+				EnterCriticalSection(&window_data->dimension_cr);
 				window_data->width = rect.right - rect.left;
 				window_data->height = rect.bottom - rect.top;
 				window_data->position_x = rect.left;
 				window_data->position_y = rect.top;
+				LeaveCriticalSection(&window_data->dimension_cr);
 
 				window_data->move_size = true;
 			}
@@ -333,6 +336,8 @@ void* window_create(int32_t posx, int32_t posy, uint32_t width, uint32_t height,
 	}
 	for (int32_t i = 0; i < name_length; i++) wide_name[i] = name[i];
 
+	InitializeCriticalSection(&window_data->dimension_cr);
+
 	HWND hwnd = CreateWindowExW(
 		0,
 		L"window_window_class",
@@ -352,6 +357,7 @@ void* window_create(int32_t posx, int32_t posy, uint32_t width, uint32_t height,
 
 	if (hwnd == NULL)
 	{
+		DeleteCriticalSection(&window_data->dimension_cr);
 		free(window_data->event_queue);
 		free(window_data);
 	}
@@ -361,6 +367,7 @@ void* window_create(int32_t posx, int32_t posy, uint32_t width, uint32_t height,
 	RECT rect;
 	GetClientRect(window_data->hwnd, &rect);
 
+	
 	window_data->width = rect.right - rect.left;
 	window_data->height = rect.bottom - rect.top;
 	window_data->position_x = rect.left;
@@ -372,18 +379,16 @@ void* window_create(int32_t posx, int32_t posy, uint32_t width, uint32_t height,
 	return window_data;
 }
 
-bool window_destroy(void* window)
+void window_destroy(void* window)
 {
 	struct window_data_windows* window_data = window;
 	
-	if (DestroyWindow(window_data->hwnd) == FALSE) return false;
-
-	if (window_data->icon) if (DestroyIcon(window_data->icon) == FALSE) return false;
+	DeleteCriticalSection(&window_data->dimension_cr);
+	DestroyWindow(window_data->hwnd);
+	if (window_data->icon) DestroyIcon(window_data->icon);
 
 	free(window_data->event_queue);
 	free(window_data);
-
-	return true;
 }
 
 bool window_set_icon(void* window, uint32_t* icon_rgba_pixel_data, uint32_t icon_width, uint32_t icon_height)
@@ -396,7 +401,7 @@ bool window_set_icon(void* window, uint32_t* icon_rgba_pixel_data, uint32_t icon
 	BITMAPV5HEADER bi = { 0 };
 	bi.bV5Size = sizeof(BITMAPV5HEADER);
 	bi.bV5Width = icon_width;
-	bi.bV5Height = -icon_height; // top down
+	bi.bV5Height = -icon_height;
 	bi.bV5Planes = 1;
 	bi.bV5BitCount = 32;
 	bi.bV5Compression = BI_BITFIELDS;
@@ -455,10 +460,13 @@ void window_get_dimensions(void* window, uint32_t* width, uint32_t* height, int3
 {
 	struct window_data_windows* window_data = window;
 
+	EnterCriticalSection(&window_data->dimension_cr);
+
 	*width = window_data->width;
 	*height = window_data->height;
 	*screen_position_x = window_data->position_x;
 	*screen_position_y = window_data->position_y;
+	LeaveCriticalSection(&window_data->dimension_cr);
 }
 
 bool window_is_selected(void* window)

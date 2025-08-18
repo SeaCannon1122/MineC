@@ -9,10 +9,75 @@
 
 #define STAGING_BUFFER_SIZE 65536
 
+#define VULKAN_INSTANCE_FUNCTION_LIST \
+	VULKAN_INSTANCE_FUNCTION(PFN_vkGetPhysicalDeviceMemoryProperties, vkGetPhysicalDeviceMemoryProperties)\
+	VULKAN_INSTANCE_FUNCTION(PFN_vkGetDeviceProcAddr, vkGetDeviceProcAddr)\
+
+
+#define VULKAN_DEVICE_FUNCTION_LIST \
+	VULKAN_DEVICE_FUNCTION(PFN_vkDeviceWaitIdle, vkDeviceWaitIdle)\
+	VULKAN_DEVICE_FUNCTION(PFN_vkQueueWaitIdle, vkQueueWaitIdle)\
+	VULKAN_DEVICE_FUNCTION(PFN_vkQueueSubmit, vkQueueSubmit)\
+	VULKAN_DEVICE_FUNCTION(PFN_vkCreateBuffer, vkCreateBuffer)\
+	VULKAN_DEVICE_FUNCTION(PFN_vkDestroyBuffer, vkDestroyBuffer)\
+	VULKAN_DEVICE_FUNCTION(PFN_vkAllocateMemory, vkAllocateMemory)\
+	VULKAN_DEVICE_FUNCTION(PFN_vkFreeMemory, vkFreeMemory)\
+	VULKAN_DEVICE_FUNCTION(PFN_vkBindBufferMemory, vkBindBufferMemory)\
+	VULKAN_DEVICE_FUNCTION(PFN_vkGetBufferMemoryRequirements, vkGetBufferMemoryRequirements)\
+	VULKAN_DEVICE_FUNCTION(PFN_vkMapMemory, vkMapMemory)\
+	VULKAN_DEVICE_FUNCTION(PFN_vkUnmapMemory, vkUnmapMemory)\
+	VULKAN_DEVICE_FUNCTION(PFN_vkFlushMappedMemoryRanges, vkFlushMappedMemoryRanges)\
+	VULKAN_DEVICE_FUNCTION(PFN_vkCreateShaderModule, vkCreateShaderModule)\
+	VULKAN_DEVICE_FUNCTION(PFN_vkDestroyShaderModule, vkDestroyShaderModule)\
+	VULKAN_DEVICE_FUNCTION(PFN_vkCreateDescriptorSetLayout, vkCreateDescriptorSetLayout)\
+	VULKAN_DEVICE_FUNCTION(PFN_vkDestroyDescriptorSetLayout, vkDestroyDescriptorSetLayout)\
+	VULKAN_DEVICE_FUNCTION(PFN_vkCreatePipelineLayout, vkCreatePipelineLayout)\
+	VULKAN_DEVICE_FUNCTION(PFN_vkDestroyPipelineLayout, vkDestroyPipelineLayout)\
+	VULKAN_DEVICE_FUNCTION(PFN_vkCreateGraphicsPipelines, vkCreateGraphicsPipelines)\
+	VULKAN_DEVICE_FUNCTION(PFN_vkDestroyPipeline, vkDestroyPipeline)\
+	VULKAN_DEVICE_FUNCTION(PFN_vkCreateCommandPool, vkCreateCommandPool)\
+	VULKAN_DEVICE_FUNCTION(PFN_vkDestroyCommandPool, vkDestroyCommandPool)\
+	VULKAN_DEVICE_FUNCTION(PFN_vkAllocateCommandBuffers, vkAllocateCommandBuffers)\
+	VULKAN_DEVICE_FUNCTION(PFN_vkFreeCommandBuffers, vkFreeCommandBuffers)\
+	VULKAN_DEVICE_FUNCTION(PFN_vkResetCommandBuffer, vkResetCommandBuffer)\
+	VULKAN_DEVICE_FUNCTION(PFN_vkBeginCommandBuffer, vkBeginCommandBuffer)\
+	VULKAN_DEVICE_FUNCTION(PFN_vkEndCommandBuffer, vkEndCommandBuffer)\
+	VULKAN_DEVICE_FUNCTION(PFN_vkCreateDescriptorPool, vkCreateDescriptorPool)\
+	VULKAN_DEVICE_FUNCTION(PFN_vkDestroyDescriptorPool, vkDestroyDescriptorPool)\
+	VULKAN_DEVICE_FUNCTION(PFN_vkAllocateDescriptorSets, vkAllocateDescriptorSets)\
+	VULKAN_DEVICE_FUNCTION(PFN_vkUpdateDescriptorSets, vkUpdateDescriptorSets)\
+	VULKAN_DEVICE_FUNCTION(PFN_vkCreateFence, vkCreateFence)\
+	VULKAN_DEVICE_FUNCTION(PFN_vkDestroyFence, vkDestroyFence)\
+	VULKAN_DEVICE_FUNCTION(PFN_vkResetFences, vkResetFences)\
+	VULKAN_DEVICE_FUNCTION(PFN_vkWaitForFences, vkWaitForFences)\
+	VULKAN_DEVICE_FUNCTION(PFN_vkCmdCopyBuffer, vkCmdCopyBuffer)\
+	VULKAN_DEVICE_FUNCTION(PFN_vkCmdBindDescriptorSets, vkCmdBindDescriptorSets)\
+	VULKAN_DEVICE_FUNCTION(PFN_vkCmdBindPipeline, vkCmdBindPipeline)\
+	VULKAN_DEVICE_FUNCTION(PFN_vkCmdBindVertexBuffers, vkCmdBindVertexBuffers)\
+	VULKAN_DEVICE_FUNCTION(PFN_vkCmdBindIndexBuffer, vkCmdBindIndexBuffer)\
+	VULKAN_DEVICE_FUNCTION(PFN_vkCmdPushConstants, vkCmdPushConstants)\
+	VULKAN_DEVICE_FUNCTION(PFN_vkCmdDrawIndexed, vkCmdDrawIndexed)\
+
+struct _memory
+{
+	VkDeviceMemory memory;
+	size_t size;
+	VkMemoryPropertyFlags property_flags;
+	void* host_handle;
+};
+
+#define MEMORY_PROPERTY_REQUEST_FLAG_COUNT_MAX 4
+struct memory_property_request_flags
+{
+	VkMemoryPropertyFlags include[MEMORY_PROPERTY_REQUEST_FLAG_COUNT_MAX];
+	VkMemoryPropertyFlags exclude[MEMORY_PROPERTY_REQUEST_FLAG_COUNT_MAX];
+	uint32_t count;
+};
+
 typedef struct _font_backend_vulkan
 {
 	VkBuffer buffer;
-	VkDeviceMemory memory;
+	struct _memory memory;
 
 } _font_backend_vulkan;
 
@@ -20,51 +85,16 @@ typedef struct _renderer_backend_vulkan
 {
 	struct
 	{
-		PFN_vkDeviceWaitIdle vkDeviceWaitIdle;
-		PFN_vkQueueWaitIdle vkQueueWaitIdle;
-		PFN_vkQueueSubmit vkQueueSubmit;
-		PFN_vkCreateBuffer vkCreateBuffer;
-		PFN_vkDestroyBuffer vkDestroyBuffer;
-		PFN_vkAllocateMemory vkAllocateMemory;
-		PFN_vkFreeMemory vkFreeMemory;
-		PFN_vkBindBufferMemory vkBindBufferMemory;
-		PFN_vkGetPhysicalDeviceMemoryProperties vkGetPhysicalDeviceMemoryProperties;
-		PFN_vkGetBufferMemoryRequirements vkGetBufferMemoryRequirements;
-		PFN_vkMapMemory vkMapMemory;
-		PFN_vkUnmapMemory vkUnmapMemory;
-		PFN_vkFlushMappedMemoryRanges vkFlushMappedMemoryRanges;
-		PFN_vkCreateShaderModule vkCreateShaderModule;
-		PFN_vkDestroyShaderModule vkDestroyShaderModule;
-		PFN_vkCreateDescriptorSetLayout vkCreateDescriptorSetLayout;
-		PFN_vkDestroyDescriptorSetLayout vkDestroyDescriptorSetLayout;
-		PFN_vkCreatePipelineLayout vkCreatePipelineLayout;
-		PFN_vkDestroyPipelineLayout vkDestroyPipelineLayout;
-		PFN_vkCreateGraphicsPipelines vkCreateGraphicsPipelines;
-		PFN_vkDestroyPipeline vkDestroyPipeline;
-		PFN_vkCreateCommandPool vkCreateCommandPool;
-		PFN_vkDestroyCommandPool vkDestroyCommandPool;
-		PFN_vkAllocateCommandBuffers vkAllocateCommandBuffers;
-		PFN_vkFreeCommandBuffers vkFreeCommandBuffers;
-		PFN_vkResetCommandBuffer vkResetCommandBuffer;
-		PFN_vkBeginCommandBuffer vkBeginCommandBuffer;
-		PFN_vkEndCommandBuffer vkEndCommandBuffer;
-		PFN_vkCreateDescriptorPool vkCreateDescriptorPool;
-		PFN_vkDestroyDescriptorPool vkDestroyDescriptorPool;
-		PFN_vkAllocateDescriptorSets vkAllocateDescriptorSets;
-		PFN_vkUpdateDescriptorSets vkUpdateDescriptorSets;
-		PFN_vkCreateFence vkCreateFence;
-		PFN_vkDestroyFence vkDestroyFence;
-		PFN_vkResetFences vkResetFences;
-		PFN_vkWaitForFences vkWaitForFences;
-		PFN_vkCmdCopyBuffer vkCmdCopyBuffer;
-		PFN_vkCmdBindDescriptorSets vkCmdBindDescriptorSets;
-		PFN_vkCmdBindPipeline vkCmdBindPipeline;
-		PFN_vkCmdBindVertexBuffers vkCmdBindVertexBuffers;
-		PFN_vkCmdBindIndexBuffer vkCmdBindIndexBuffer;
-		PFN_vkCmdPushConstants vkCmdPushConstants;
-		PFN_vkCmdDrawIndexed vkCmdDrawIndexed;
+#define VULKAN_INSTANCE_FUNCTION(signature, name) signature name;
+		VULKAN_INSTANCE_FUNCTION_LIST
+#undef VULKAN_INSTANCE_FUNCTION
+
+#define VULKAN_DEVICE_FUNCTION(signature, name) signature name;
+		VULKAN_DEVICE_FUNCTION_LIST
+#undef VULKAN_DEVICE_FUNCTION
 	} func;
 
+	VkInstance instance;
 	VkDevice device;
 	VkPhysicalDevice physical_device;
 	VkQueue queue;
@@ -72,22 +102,24 @@ typedef struct _renderer_backend_vulkan
 	VkRenderPass render_pass;
 	uint32_t subpass;
 
+	VkPhysicalDeviceMemoryProperties memory_properties;
+
 	VkDescriptorSetLayout set_layout;
 	VkDescriptorSet descriptor_set;
 	VkPipelineLayout pipe_layout;
 	VkPipeline pipeline;
 	VkDescriptorPool descriptor_pool;
 
+	uint32_t resource_frame_count;
+
+	VkBuffer index_buffer;
+	VkDeviceMemory index_buffer_memory;
+
 	VkBuffer vertex_index_buffer;
-	VkDeviceMemory vertex_index_memory;
-	VkMemoryPropertyFlags vertex_index_memory_flags;
-	void* vertex_index_buffer_host_handle;
+	struct _memory vertex_index_memory;
 
 	VkBuffer staging_buffer;
-	VkDeviceMemory staging_memory;
-	VkMemoryPropertyFlags staging_memory_flags;
-	void* staging_buffer_host_handle;
-	size_t staging_buffer_size;
+	struct _memory staging_memory;
 
 	VkFence fence;
 	VkCommandPool cmd_pool;
@@ -118,49 +150,59 @@ typedef struct _push_constants
 	uint32_t _padding_1[3];
 } _push_constants;
 
-VkResult _allocate_best_memory(
-	_renderer_backend_vulkan* backend,
-	VkPhysicalDeviceMemoryProperties* memory_properties,
+#ifdef _MSC_VER
+#define restrict __restrict
+#endif
+
+bool _find_suitable_memory_type(
+	uint32_t* restrict type,
+	VkPhysicalDeviceMemoryProperties* restrict memory_props,
+	uint32_t memory_type_bits,
+	VkMemoryPropertyFlags include_flags,
+	VkMemoryPropertyFlags exclude_flags
+)
+{
+	for (; *type < memory_props->memoryTypeCount; (*type)++)
+	{
+		if (
+			memory_type_bits & (1 << *type) &&
+			(memory_props->memoryTypes[*type].propertyFlags & include_flags) == include_flags &&
+			!(memory_props->memoryTypes[*type].propertyFlags & exclude_flags)
+		) return true;
+	}
+	return false;
+}
+
+struct _memory _allocate_best_memory(
+	_renderer_backend_vulkan* restrict backend,
 	VkDeviceSize size,
 	uint32_t memory_type_bits,
-	VkMemoryPropertyFlags* preference_flags,
-	VkMemoryPropertyFlags* exclude_flags,
-	uint32_t preference_count,
-	VkDeviceMemory* out_memory,
-	VkMemoryPropertyFlags* out_property_flags
-) {
-	VkResult result = VK_ERROR_OUT_OF_HOST_MEMORY;
+	struct memory_property_request_flags* restrict request_flags
+)
+{
+	VkMemoryAllocateInfo allocInfo = { 0 };
+	allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	allocInfo.pNext = NULL;
+	allocInfo.allocationSize = size;
 
-	for (uint32_t pass = 0; pass < preference_count; pass++)
+	for (uint32_t pass = 0; pass <= request_flags->count; pass++)
 	{
-		for (uint32_t i = 0; i < memory_properties->memoryTypeCount; i++)
+		uint32_t i = 0;
+		while (_find_suitable_memory_type(
+			&i, 
+			&backend->memory_properties, 
+			memory_type_bits, 
+			(pass < request_flags->count ? request_flags->include[pass] : 0),
+			(pass < request_flags->count ? request_flags->exclude[pass] : 0)
+		))
 		{
-			if ((memory_type_bits & (1 << i)) != 0)
-			{
-				if (
-					(memory_properties->memoryTypes[i].propertyFlags & preference_flags[pass]) == preference_flags[pass] &&
-					!(memory_properties->memoryTypes[i].propertyFlags & exclude_flags[pass])
-				)
-				{
-					VkMemoryAllocateInfo allocInfo = {0};
-					allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-					allocInfo.pNext = NULL;
-					allocInfo.allocationSize = size;
-					allocInfo.memoryTypeIndex = i;
+			allocInfo.memoryTypeIndex = i;
 
-					result = backend->func.vkAllocateMemory(backend->device, &allocInfo, NULL, out_memory);
-
-					if (result == VK_SUCCESS)
-					{
-						*out_property_flags = memory_properties->memoryTypes[i].propertyFlags;
-						return VK_SUCCESS;
-					}
-				}
-			}
+			struct _memory memory = {.size = size, .property_flags = backend->memory_properties.memoryTypes[i].propertyFlags};
+			if (backend->func.vkAllocateMemory(backend->device, &allocInfo, NULL, &memory.memory) == VK_SUCCESS) return memory;
 		}
 	}
-
-	return result;
+	return (struct _memory){.memory = NULL};
 }
 
 VkResult _pixelchar_upload_data_to_buffer(_renderer_backend_vulkan* backend, void* data, size_t data_size, VkBuffer buffer, VkDeviceSize offset, void* buffer_host_handle, VkMemoryPropertyFlags memory_flags)
@@ -176,15 +218,15 @@ VkResult _pixelchar_upload_data_to_buffer(_renderer_backend_vulkan* backend, voi
 
 		while (staging_offset < data_size)
 		{
-			VkDeviceSize chunk_size = (backend->staging_buffer_size < data_size - staging_offset ? backend->staging_buffer_size : data_size - staging_offset);
+			VkDeviceSize chunk_size = (backend->staging_memory.size < data_size - staging_offset ? backend->staging_memory.size : data_size - staging_offset);
 
-			memcpy(backend->staging_buffer_host_handle, (const void*)((size_t)data + staging_offset), chunk_size);
+			memcpy(backend->staging_memory.host_handle, (const void*)((size_t)data + staging_offset), chunk_size);
 
-			if (backend->staging_memory_flags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT == 0)
+			if (backend->staging_memory.property_flags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT == 0)
 			{
 				VkMappedMemoryRange mapped_memory_range = { 0 };
 				mapped_memory_range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-				mapped_memory_range.memory = backend->staging_memory;
+				mapped_memory_range.memory = backend->staging_memory.memory;
 				mapped_memory_range.offset = 0;
 				mapped_memory_range.size = chunk_size;
 				
@@ -248,36 +290,21 @@ PixelcharResult _font_backend_vulkan_add_reference(PixelcharRenderer renderer, u
 
 		VkMemoryRequirements memory_requirements;
 		renderer_backend->func.vkGetBufferMemoryRequirements(renderer_backend->device, font_backend->buffer, &memory_requirements);
-		VkPhysicalDeviceMemoryProperties memory_properties;
-		renderer_backend->func.vkGetPhysicalDeviceMemoryProperties(renderer_backend->physical_device, &memory_properties);
-
-		VkMemoryPropertyFlags preference_flags[] = {
-			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-			0
-		};
-
-		VkMemoryPropertyFlags exclude_flags[] = {
-			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-			0,
-			0,
-		};
 
 		VkMemoryPropertyFlags memory_flags;
 		void* buffer_host_handle = NULL;
 
 		if (
-			_allocate_best_memory(
+			(font_backend->memory = _allocate_best_memory(
 				renderer_backend,
-				&memory_properties,
 				memory_requirements.size,
 				memory_requirements.memoryTypeBits,
-				preference_flags,
-				exclude_flags,
-				3,
-				&font_backend->memory,
-				&memory_flags
-			) != VK_SUCCESS
+				&(struct memory_property_request_flags) {
+					.count = 3, 
+					.include = { VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT },
+					.exclude = { VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, 0}
+				}
+			)).memory
 		)
 		{
 			renderer_backend->func.vkDestroyBuffer(renderer_backend->device, font_backend->buffer, 0);
@@ -367,13 +394,14 @@ PixelcharResult pixelcharRendererBackendVulkanInitialize(
 	PixelcharRenderer renderer,
 	uint32_t backendSlotIndex,
 	uint32_t resourceFrameCount,
+	VkInstance instance,
 	VkDevice device,
 	VkPhysicalDevice physicalDevice,
 	VkQueue transferQueue,
 	uint32_t transferQueueFamilyIndex,
 	VkRenderPass renderPass,
 	uint32_t subpass,
-	PFN_vkGetDeviceProcAddr pfnvkGetDeviceProcAddr,
+	PFN_vkGetInstanceProcAddr pfnvkGetInstanceProcAddr,
 	const uint8_t* customVertexShaderSource,
 	size_t customVertexShaderSourceSize,
 	const uint8_t* customFragmentShaderSource,
@@ -382,7 +410,7 @@ PixelcharResult pixelcharRendererBackendVulkanInitialize(
 {
 	if (renderer == NULL) return PIXELCHAR_ERROR_INVALID_ARGUMENTS;
 	if (backendSlotIndex >= PIXELCHAR_RENDERER_MAX_BACKEND_COUNT) return PIXELCHAR_ERROR_INVALID_ARGUMENTS;
-	if (pfnvkGetDeviceProcAddr == NULL) return PIXELCHAR_ERROR_INVALID_ARGUMENTS;
+	if (pfnvkGetInstanceProcAddr == NULL) return PIXELCHAR_ERROR_INVALID_ARGUMENTS;
 	if (renderer->backends[backendSlotIndex].data != NULL) return PIXELCHAR_ERROR_BACKEND_SLOT_ALREADY_IN_USED;
 
 	PixelcharResult result = PIXELCHAR_SUCCESS;
@@ -421,64 +449,32 @@ PixelcharResult pixelcharRendererBackendVulkanInitialize(
 		backend->subpass = subpass;
 
 		struct load_entry { void** load_dst; uint8_t* func_name; };
-#define LOAD_FUNC_ENTRY(func_name) {(void**)&backend->func.func_name, #func_name}
+#define LOAD_FUNC_ENTRY(func_name) 
 
-		struct load_entry load_entries[] =
+		struct load_entry instance_load_entries[] =
 		{
-			LOAD_FUNC_ENTRY(vkDeviceWaitIdle),
-			LOAD_FUNC_ENTRY(vkQueueWaitIdle),
-			LOAD_FUNC_ENTRY(vkQueueSubmit),
-			LOAD_FUNC_ENTRY(vkCreateBuffer),
-			LOAD_FUNC_ENTRY(vkDestroyBuffer),
-			LOAD_FUNC_ENTRY(vkAllocateMemory),
-			LOAD_FUNC_ENTRY(vkFreeMemory),
-			LOAD_FUNC_ENTRY(vkBindBufferMemory),
-			LOAD_FUNC_ENTRY(vkGetPhysicalDeviceMemoryProperties),
-			LOAD_FUNC_ENTRY(vkGetBufferMemoryRequirements),
-			LOAD_FUNC_ENTRY(vkMapMemory),
-			LOAD_FUNC_ENTRY(vkUnmapMemory),
-			LOAD_FUNC_ENTRY(vkFlushMappedMemoryRanges),
-			LOAD_FUNC_ENTRY(vkCreateShaderModule),
-			LOAD_FUNC_ENTRY(vkDestroyShaderModule),
-			LOAD_FUNC_ENTRY(vkCreateDescriptorSetLayout),
-			LOAD_FUNC_ENTRY(vkDestroyDescriptorSetLayout),
-			LOAD_FUNC_ENTRY(vkCreatePipelineLayout),
-			LOAD_FUNC_ENTRY(vkDestroyPipelineLayout),
-			LOAD_FUNC_ENTRY(vkCreateGraphicsPipelines),
-			LOAD_FUNC_ENTRY(vkDestroyPipeline),
-			LOAD_FUNC_ENTRY(vkCreateCommandPool),
-			LOAD_FUNC_ENTRY(vkDestroyCommandPool),
-			LOAD_FUNC_ENTRY(vkAllocateCommandBuffers),
-			LOAD_FUNC_ENTRY(vkFreeCommandBuffers),
-			LOAD_FUNC_ENTRY(vkResetCommandBuffer),
-			LOAD_FUNC_ENTRY(vkBeginCommandBuffer),
-			LOAD_FUNC_ENTRY(vkEndCommandBuffer),
-			LOAD_FUNC_ENTRY(vkCreateDescriptorPool),
-			LOAD_FUNC_ENTRY(vkDestroyDescriptorPool),
-			LOAD_FUNC_ENTRY(vkAllocateDescriptorSets),
-			LOAD_FUNC_ENTRY(vkUpdateDescriptorSets),
-			LOAD_FUNC_ENTRY(vkCreateFence),
-			LOAD_FUNC_ENTRY(vkDestroyFence),
-			LOAD_FUNC_ENTRY(vkResetFences),
-			LOAD_FUNC_ENTRY(vkWaitForFences),
-			LOAD_FUNC_ENTRY(vkCmdCopyBuffer),
-			LOAD_FUNC_ENTRY(vkCmdBindDescriptorSets),
-			LOAD_FUNC_ENTRY(vkCmdBindPipeline),
-			LOAD_FUNC_ENTRY(vkCmdBindVertexBuffers),
-			LOAD_FUNC_ENTRY(vkCmdBindIndexBuffer),
-			LOAD_FUNC_ENTRY(vkCmdPushConstants),
-			LOAD_FUNC_ENTRY(vkCmdDrawIndexed)
+#define VULKAN_INSTANCE_FUNCTION(signature, name) {(void**)&backend->func.name, #name},
+			VULKAN_INSTANCE_FUNCTION_LIST
+#undef VULKAN_INSTANCE_FUNCTION
 		};
 
-		for (uint32_t i = 0; i < sizeof(load_entries) / sizeof(load_entries[0]); i++)
+		struct load_entry device_load_entries[] =
 		{
-			if ((*load_entries[i].load_dst = (void*)pfnvkGetDeviceProcAddr(backend->device, load_entries[i].func_name)) == NULL)
-			{
+#define VULKAN_DEVICE_FUNCTION(signature, name) {(void**)&backend->func.name, #name},
+			VULKAN_DEVICE_FUNCTION_LIST
+#undef VULKAN_DEVICE_FUNCTION
+		};
+
+		for (uint32_t i = 0; i < sizeof(instance_load_entries) / sizeof(instance_load_entries[0]) && result == PIXELCHAR_SUCCESS; i++)
+			if ((*instance_load_entries[i].load_dst = (void*)pfnvkGetInstanceProcAddr(instance, instance_load_entries[i].func_name)) == NULL)
 				result = PIXELCHAR_ERROR_BACKEND_API;
-				break;
-			}
-		}
+
+		for (uint32_t i = 0; i < sizeof(device_load_entries) / sizeof(device_load_entries[0]) && result == PIXELCHAR_SUCCESS; i++)
+			if ((*device_load_entries[i].load_dst = (void*)backend->func.vkGetDeviceProcAddr(backend->device, device_load_entries[i].func_name)) == NULL) 
+				result = PIXELCHAR_ERROR_BACKEND_API;
 	}
+
+	if (result == PIXELCHAR_SUCCESS) backend->func.vkGetPhysicalDeviceMemoryProperties(backend->physical_device, &backend->memory_properties);
 
 	size_t vertex_index_buffer_size = PIXELCHAR_PAD(renderer->queue_total_length * sizeof(Pixelchar), 32) + PIXELCHAR_PAD(sizeof(uint32_t) * 6, 32);
 	size_t staging_buffer_size = (STAGING_BUFFER_SIZE > renderer->queue_total_length * sizeof(Pixelchar) ? STAGING_BUFFER_SIZE : renderer->queue_total_length * sizeof(Pixelchar));
@@ -507,9 +503,6 @@ PixelcharResult pixelcharRendererBackendVulkanInitialize(
 		if (backend->func.vkCreateBuffer(backend->device, &buffer_info, 0, &backend->staging_buffer) != VK_SUCCESS) result = PIXELCHAR_ERROR_BACKEND_API;
 		else staging_buffer_created = true;
 	}
-	
-	VkPhysicalDeviceMemoryProperties memory_properties;
-	if (result == PIXELCHAR_SUCCESS) backend->func.vkGetPhysicalDeviceMemoryProperties(backend->physical_device, &memory_properties);
 
 	//vertex index memory
 	VkMemoryRequirements vertex_index_memory_requirements;
@@ -531,7 +524,6 @@ PixelcharResult pixelcharRendererBackendVulkanInitialize(
 		if (
 			_allocate_best_memory(
 				backend,
-				&memory_properties,
 				vertex_index_memory_requirements.size,
 				vertex_index_memory_requirements.memoryTypeBits,
 				vertex_index_preference_flags,
@@ -563,7 +555,6 @@ PixelcharResult pixelcharRendererBackendVulkanInitialize(
 		if (
 			_allocate_best_memory(
 				backend,
-				&memory_properties,
 				staging_memory_requirements.size,
 				staging_memory_requirements.memoryTypeBits,
 				staging_preference_flags,

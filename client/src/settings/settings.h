@@ -11,7 +11,12 @@
 
 struct settings {
 
-	struct renderer_settings video;
+	struct
+	{
+		struct renderer_info_state renderer_info;
+		struct renderer_settings_state renderer;
+		uint32_t gui_scale;
+	} video;
 
 	uint8_t* video_settings_file_path;
 	uint8_t* active_resourcepack_file_path;

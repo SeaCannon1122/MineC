@@ -10,6 +10,7 @@ void minec_client_run(uint8_t* data_files_path)
 	bool
 		data_files_path_allocated  = false,
 		settings_created = false,
+		asset_loader_created = false,
 		application_window_created = false,
 		renderer_created = false
 	;
@@ -44,6 +45,20 @@ void minec_client_run(uint8_t* data_files_path)
 	{
 		settings_load(client);
 
+		if (asset_loader_create(client) != MINEC_CLIENT_SUCCESS)
+		{
+			status = MINEC_CLIENT_ERROR;
+			minec_client_log_info(client, "[GLOBAL] Failed to create Asset Manager");
+		}
+		else
+		{
+			asset_loader_created = true;
+			minec_client_log_info(client, "[GLOBAL] Asset Manager created");
+		}
+	}
+
+	if (status == MINEC_CLIENT_SUCCESS)
+	{
 		if (application_window_create(client) != MINEC_CLIENT_SUCCESS)
 		{
 			status = MINEC_CLIENT_ERROR;
@@ -58,7 +73,7 @@ void minec_client_run(uint8_t* data_files_path)
 
 	if (status == MINEC_CLIENT_SUCCESS)
 	{
-		if (renderer_create(client, &client->settings.video) != MINEC_CLIENT_SUCCESS)
+		if (renderer_create(client, &client->settings.video.renderer) != MINEC_CLIENT_SUCCESS)
 		{
 			status = MINEC_CLIENT_ERROR;
 			minec_client_log_error(client, "[GLOBAL] Failed to create Renderer");
@@ -107,6 +122,12 @@ void minec_client_run(uint8_t* data_files_path)
 		minec_client_log_info(client, "[GLOBAL] Application window destroyed");
 	}
 	
+	if (asset_loader_created)
+	{
+		asset_loader_destroy(client);
+		minec_client_log_info(client, "[GLOBAL] Asset manager destroyed");
+	}
+
 	if (settings_created)
 	{
 		settings_save(client);

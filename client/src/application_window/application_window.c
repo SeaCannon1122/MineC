@@ -1,7 +1,5 @@
 #include <minec_client.h>
 
-#include <stb_image/stb_image.h>
-
 uint32_t application_window_create(struct minec_client* client)
 {
 	uint32_t width = 700, height = 500;
@@ -22,11 +20,13 @@ uint32_t application_window_create(struct minec_client* client)
 	}
 
 	size_t raw_window_icon_data_size;
-	const void* raw_window_icon_data = cerialized_get_file(cerialized_assets_file_system, "icon.png", &raw_window_icon_data_size);
-	if (raw_window_icon_data != NULL)
+	uint8_t* raw_window_icon_data;
+	void* window_icon_asset_handle = asset_loader_asset_load(client, "window_icon.png", &raw_window_icon_data, &raw_window_icon_data_size);
+	if (window_icon_asset_handle != NULL)
 	{
 		uint32_t icon_width, icon_height, comp;
 		uint32_t* icon_data = (uint32_t*)stbi_load_from_memory((const stbi_uc*)raw_window_icon_data, raw_window_icon_data_size, &icon_width, &icon_height, &comp, 4);
+		asset_loader_asset_unload(client, window_icon_asset_handle);
 		if (icon_data != NULL)
 		{
 			if (window_set_icon(APPLICATION_WINDOW.window_handle, icon_data, icon_width, icon_height) == false)
@@ -39,13 +39,13 @@ uint32_t application_window_create(struct minec_client* client)
 		else
 		{
 			minec_client_log_error(client, "[WINDOW] Failed to set window icon");
-			minec_client_log_debug_l(client, "stbi_load_from_memory failed when loading icon data, THIS SHOULD NOT HAPPEN. Check if icon file is actually a png");
-		}
+			minec_client_log_debug_l(client, "'stbi_load_from_memory' with icon data failed");
+		}	
 	}
 	else
 	{
 		minec_client_log_error(client, "[WINDOW] Failed to set window icon");
-		minec_client_log_debug_l(client, "cerialized_get_file(cerialized_resources_file_system, \"icon.png\", &raw_window_icon_data_size) failed, THIS SHOULD NOT HAPPEN. Check completeness of cerialized resources");
+		minec_client_log_debug_l(client, "'asset_loader_asset_load(client, \"window_icon.png\", &raw_window_icon_data, &raw_window_icon_data_size)' failed, THIS SHOULD NOT HAPPEN. Check completeness of cerialized assets");
 	}
 
 	atomic_uint32_t_init(&APPLICATION_WINDOW.width, width);

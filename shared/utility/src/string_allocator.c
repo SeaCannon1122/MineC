@@ -152,13 +152,13 @@ void s_free(void* allocator, void* memory_handle)
 		{
 			if (string_allocator->arenas[i].allocations_count == 0)
 			{
-				printf("[STRING ALLOCATOR] s_free: allocation count already 0zero\n");
+				printf("[STRING ALLOCATOR] s_free: allocation count already 0\n");
 				return;
 			}
 
 			string_allocator->arenas[i].allocations_count--;
 
-			if (string_allocator->arenas[i].allocations_count == 0)
+			if (string_allocator->arenas[i].allocations_count == 0 && string_allocator->arenas[i].free_index > string_allocator->arenas[i].size / 2)
 			{
 				string_allocator->arenas[i].free_index = 0;
 				string_allocator->arenas[i].allocated = false;
@@ -175,11 +175,12 @@ void s_allocator_delete(void* allocator)
 {
 	struct string_allocator* string_allocator = (struct string_allocator*)allocator;
 
-	for (uint32_t i = 0; i < string_allocator->arena_count; i++) if (string_allocator->arenas[i].allocated)
+	for (uint32_t i = 0; i < string_allocator->arena_count; i++)
 	{
-		free(string_allocator->arenas[i].memory_pointer);
-		printf("[STRING ALLOCATOR] s_allocator_delete: MEMORY LEAK\n");
+		if (string_allocator->arenas[i].allocations_count != 0) printf("[STRING ALLOCATOR] s_allocator_delete: MEMORY LEAK\n");
+		if (string_allocator->arenas[i].allocated) free(string_allocator->arenas[i].memory_pointer);
 	}
+	
 
 	if (string_allocator->arena_count > 0)
 	{

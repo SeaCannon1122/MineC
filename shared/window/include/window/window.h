@@ -131,7 +131,7 @@ void window_deinit_context();
 void* window_get_context();
 
 void* window_create(int32_t posx, int32_t posy, uint32_t width, uint32_t height, uint8_t* name, bool visible);
-bool window_destroy(void* window);
+void window_destroy(void* window);
 
 bool window_set_icon(void* window, uint32_t* icon_rgba_pixel_data, uint32_t icon_width, uint32_t icon_height);
 void window_get_dimensions(void* window, uint32_t* width, uint32_t* height, int32_t* screen_position_x, int32_t* screen_position_y);

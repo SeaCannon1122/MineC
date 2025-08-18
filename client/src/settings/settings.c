@@ -13,17 +13,15 @@ uint32_t settings_create(struct minec_client* client)
 	path_components[1] = INACTIVE_RESOURCEPACKS_FILE_PATH;
 	SETTINGS.inactive_resourcepack_file_path = malloc_joined_string(path_components, 2);
 
-	SETTINGS.video.frontend.fov = 120;
-	SETTINGS.video.frontend.gui_scale = 0;
-	SETTINGS.video.frontend.render_distance = 8;
-
-	SETTINGS.video.backend.backend_index = 0;
-	SETTINGS.video.backend.backend_device_index = 0;
-	SETTINGS.video.backend.fps = 0;
-	SETTINGS.video.backend.vsync = true;
-	SETTINGS.video.backend.max_mipmap_level_count = 5;
-
-	SETTINGS.video.other.order_create_new_destroy_old = true;
+	SETTINGS.video.gui_scale = 0;
+	SETTINGS.video.renderer.fov = 120;
+	SETTINGS.video.renderer.render_distance = 8;
+	SETTINGS.video.renderer.backend_index = 0;
+	SETTINGS.video.renderer.backend_device_index = 0;
+	SETTINGS.video.renderer.fps = 0;
+	SETTINGS.video.renderer.vsync = true;
+	SETTINGS.video.renderer.max_mipmap_level_count = 5;
+	SETTINGS.video.renderer.order_create_new_destroy_old = true;
 
 	SETTINGS.active_resourcepack_paths_arraylist = arraylist_string_new(8);
 	SETTINGS.inactive_resourcepack_paths_arraylist = arraylist_string_new(8);
@@ -56,35 +54,32 @@ void settings_load(struct minec_client* client)
 
 			struct hashmap_multi_type* value;
 
-			//frontend
-			if (value = hashmap_get_value(hashmap, "fov")) if (value->type == HASHMAP_VALUE_INT)
-				SETTINGS.video.frontend.fov = (uint32_t) value->data._int;
-
 			if (value = hashmap_get_value(hashmap, "gui_scale")) if (value->type == HASHMAP_VALUE_INT)
-				SETTINGS.video.frontend.gui_scale = (uint32_t) value->data._int;
+				SETTINGS.video.gui_scale = (uint32_t)value->data._int;
+
+			if (value = hashmap_get_value(hashmap, "fov")) if (value->type == HASHMAP_VALUE_INT)
+				SETTINGS.video.renderer.fov = (uint32_t) value->data._int;
 
 			if (value = hashmap_get_value(hashmap, "render_distance")) if (value->type == HASHMAP_VALUE_INT)
-				SETTINGS.video.frontend.render_distance = (uint32_t) value->data._int;
+				SETTINGS.video.renderer.render_distance = (uint32_t) value->data._int;
 
-			//backend
 			if (value = hashmap_get_value(hashmap, "backend_index")) if (value->type == HASHMAP_VALUE_INT)
-				SETTINGS.video.backend.backend_index = (uint32_t)value->data._int;
+				SETTINGS.video.renderer.backend_index = (uint32_t)value->data._int;
 
 			if (value = hashmap_get_value(hashmap, "backend_device_index")) if (value->type == HASHMAP_VALUE_INT)
-				SETTINGS.video.backend.backend_device_index = (uint32_t)value->data._int;
+				SETTINGS.video.renderer.backend_device_index = (uint32_t)value->data._int;
 
 			if (value = hashmap_get_value(hashmap, "fps")) if (value->type == HASHMAP_VALUE_INT)
-				SETTINGS.video.backend.fps = (uint32_t)value->data._int;
+				SETTINGS.video.renderer.fps = (uint32_t)value->data._int;
 
 			if (value = hashmap_get_value(hashmap, "vsync")) if (value->type == HASHMAP_VALUE_BOOL)
-				SETTINGS.video.backend.vsync = value->data._bool;
+				SETTINGS.video.renderer.vsync = value->data._bool;
 
 			if (value = hashmap_get_value(hashmap, "max_mipmap_level_count")) if (value->type == HASHMAP_VALUE_INT)
-				SETTINGS.video.backend.max_mipmap_level_count = (uint32_t) value->data._int;
+				SETTINGS.video.renderer.max_mipmap_level_count = (uint32_t) value->data._int;
 
-			//other
 			if (value = hashmap_get_value(hashmap, "order_create_new_destroy_old")) if (value->type == HASHMAP_VALUE_BOOL)
-				SETTINGS.video.other.order_create_new_destroy_old = value->data._bool;
+				SETTINGS.video.renderer.order_create_new_destroy_old = value->data._bool;
 
 			hashmap_delete(hashmap);
 		}
@@ -133,19 +128,15 @@ void settings_save(struct minec_client* client)
 		void* hashmap = hashmap_new(20, 2);
 		
 		//frontend
-		hashmap_set_value(hashmap, "fov",							&SETTINGS.video.frontend.fov,						HASHMAP_VALUE_INT);
-		hashmap_set_value(hashmap, "gui_scale",						&SETTINGS.video.frontend.gui_scale,					HASHMAP_VALUE_INT);
-		hashmap_set_value(hashmap, "render_distance",				&SETTINGS.video.frontend.render_distance,			HASHMAP_VALUE_INT);
-		
-		//backend
-		hashmap_set_value(hashmap, "backend_index",					&SETTINGS.video.backend.backend_index,				HASHMAP_VALUE_INT);
-		hashmap_set_value(hashmap, "backend_device_index",			&SETTINGS.video.backend.backend_device_index,		HASHMAP_VALUE_INT);
-		hashmap_set_value(hashmap, "fps",							&SETTINGS.video.backend.fps,							HASHMAP_VALUE_INT);
-		hashmap_set_value(hashmap, "vsync",							&SETTINGS.video.backend.vsync,						HASHMAP_VALUE_BOOL);
-		hashmap_set_value(hashmap, "max_mipmap_level_count",		&SETTINGS.video.backend.max_mipmap_level_count,		HASHMAP_VALUE_INT);
-
-		//other
-		hashmap_set_value(hashmap, "order_create_new_destroy_old",	&SETTINGS.video.other.order_create_new_destroy_old,	HASHMAP_VALUE_BOOL);
+		hashmap_set_value(hashmap, "gui_scale",						&SETTINGS.video.gui_scale,								HASHMAP_VALUE_INT);
+		hashmap_set_value(hashmap, "fov",							&SETTINGS.video.renderer.fov,							HASHMAP_VALUE_INT);
+		hashmap_set_value(hashmap, "render_distance",				&SETTINGS.video.renderer.render_distance,				HASHMAP_VALUE_INT);
+		hashmap_set_value(hashmap, "backend_index",					&SETTINGS.video.renderer.backend_index,					HASHMAP_VALUE_INT);
+		hashmap_set_value(hashmap, "backend_device_index",			&SETTINGS.video.renderer.backend_device_index,			HASHMAP_VALUE_INT);
+		hashmap_set_value(hashmap, "fps",							&SETTINGS.video.renderer.fps,							HASHMAP_VALUE_INT);
+		hashmap_set_value(hashmap, "vsync",							&SETTINGS.video.renderer.vsync,							HASHMAP_VALUE_BOOL);
+		hashmap_set_value(hashmap, "max_mipmap_level_count",		&SETTINGS.video.renderer.max_mipmap_level_count,		HASHMAP_VALUE_INT);
+		hashmap_set_value(hashmap, "order_create_new_destroy_old",	&SETTINGS.video.renderer.order_create_new_destroy_old,	HASHMAP_VALUE_BOOL);
 
 		size_t file_length;
 		uint8_t* yaml_file_data = hashmap_write_yaml(hashmap, &file_length);

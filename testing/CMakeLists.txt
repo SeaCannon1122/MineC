@@ -10,9 +10,7 @@ add_executable(general_testing general_testing.c)
 add_executable(cerialize_test cerialize_test.c ../client/.cerialized_src/assets.c)
 target_include_directories(cerialize_test PRIVATE ../client/.cerialized_src/)
 
-find_package(Vulkan)
-
-target_link_libraries(pixelchar_test_vulkan PRIVATE pixelchar window utility ${Vulkan_LIBRARIES})
+target_link_libraries(pixelchar_test_vulkan PRIVATE pixelchar window utility)
 target_link_libraries(direct3d12_testing PRIVATE window d3d12 dxguid d3dcompiler dxgi utility)
 target_link_libraries(pixelchar_test_opengl PRIVATE pixelchar window utility)
 target_link_libraries(general_testing PRIVATE utility)

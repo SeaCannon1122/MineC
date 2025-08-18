@@ -3,87 +3,83 @@
 #ifndef MINEC_CLIENT_RENDERER_RENDERER_H
 #define MINEC_CLIENT_RENDERER_RENDERER_H
 
-#define RENDRER_MAX_BACKEND_COUNT 8
-#define RENDERER_MAX_BACKEND_DEVICE_COUNT 8
-
-#include <stdint.h>
+#ifndef MINEC_CLIENT_DYNAMIC_RENDERER_EXECUTABLE
 #include <pixelchar/pixelchar.h>
 #include <mutex.h>
 
-#include "frontend.h"
-#include "backend.h"
+#include "components.h"
 
-#ifdef MINEC_CLIENT_RENDERER_BACKEND_OPENGL
-#include "backend/opengl/backend_opengl.h"
+#define RENDERER_ACCESS_PUBLIC_STATE(changes) {mutex_lock(&RENDERER.public.state.mutex); changes mutex_unlock(&RENDERER.public.state.mutex);}
+#define RENDERER_ACCESS_ACTION_STATE(changes) {mutex_lock(&RENDERER.public.action.mutex); changes mutex_unlock(&RENDERER.public.action.mutex);}
+
+#define RENDERER_MIN_FOV 70
+#define RENDERER_MAX_FOV 150
+#define RENDERER_MIN_RENDER_DISTANCE 2
+#define RENDERER_MAX_RENDER_DISTANCE 32
+
 #endif
 
-#define RENDERER_ACCESS_INFO_STATE(changes) {mutex_lock(&RENDERER.public.info.mutex); changes mutex_unlock(&RENDERER.public.info.mutex);}
-#define RENDERER_ACCESS_REQUEST_STATE(changes) {mutex_lock(&RENDERER.public.request.mutex); changes mutex_unlock(&RENDERER.public.request.mutex);}
+#include <stdint.h>
+#include "backend/backend.h"
 
-#define RENDERER_PIXELCHAR_RENDERER_QUEUE_LENGTH 1024
-
-struct renderer_backend_info
+enum _renderer_action_type
 {
-	uint8_t name[64];
+	_RENDERER_ACTION_SET_BACKEND_INDEX,
+	_RENDERER_ACTION_SET_BACKEND_DEVICE_INDEX,
+	_RENDERER_ACTION_SET_FPS,
+	_RENDERER_ACTION_SET_VSYNC,
+	_RENDERER_ACTION_SET_MAX_MIPMAP_LEVEL_COUNT,
+	_RENDERER_ACTION_SET_FOV,
+	_RENDERER_ACTION_SET_RENDER_DISTANCE,
+	_RENDERER_ACTION_SET_ORDER_CREATE_NEW_DESTROY_OLD,
+	_RENDERER_ACTION_RELOAD_ASSETS,
+	_RENDERER_ACTION_RESTART,
 };
 
-struct renderer_backend_device_info
+struct renderer_action
 {
-	uint8_t name[64];
-	uint8_t version[64];
+	uint32_t type;
 
-	bool usable;
-	bool disable_vsync_support;
+	union
+	{
+		uint32_t backend_index;
+		uint32_t backend_device_index;
+		uint32_t fps;
+		bool vsync;
+		uint32_t max_mipmap_level_count;
+		uint32_t fov;
+		uint32_t render_distance;
+		bool order_create_new_destroy_old;
+	} parameters;
 };
 
-struct renderer_backend_infos
-{
-	struct renderer_backend_info infos[RENDRER_MAX_BACKEND_COUNT];
-	uint32_t count;
-};
+#define RENDERER_ACTION_SET_BACKEND_INDEX(backend_index)								&(struct renderer_action){.type = _RENDERER_ACTION_SET_BACKEND_INDEX,					.parameters.bakend_index = backend_index}
+#define RENDERER_ACTION_SET_BACKEND_DEVICE_INDEX(backend_device_index)					&(struct renderer_action){.type = _RENDERER_ACTION_SET_BACKEND_DEVICE_INDEX,			.parameters.backend_device_index = backend_device_index}
+#define RENDERER_ACTION_SET_FPS(fps)													&(struct renderer_action){.type = _RENDERER_ACTION_SET_FPS,								.parameters.fps = fps}
+#define RENDERER_ACTION_SET_VSYNC(vsync)												&(struct renderer_action){.type = _RENDERER_ACTION_SET_VSYNC,							.parameters.vsync = vsync}
+#define RENDERER_ACTION_SET_MAX_MIPMAP_LEVEL_COUNT(max_mipmap_level_count)				&(struct renderer_action){.type = _RENDERER_ACTION_SET_MAX_MIPMAP_LEVEL_COUNT,			.parameters.max_mipmap_level_count = max_mipmap_level_count}
+#define RENDERER_ACTION_SET_FOV(fov)													&(struct renderer_action){.type = _RENDERER_ACTION_SET_FOV,								.parameters.fov = fov}
+#define RENDERER_ACTION_SET_RENDER_DISTANCE(render_distance)							&(struct renderer_action){.type = _RENDERER_ACTION_SET_RENDER_DISTANCE,					.parameters.render_distance = render_distance}
+#define RENDERER_ACTION_SET_ORDER_CREATE_NEW_DESTROY_OLD(order_create_new_destroy_old)	&(struct renderer_action){.type = _RENDERER_ACTION_SET_ORDER_CREATE_NEW_DESTROY_OLD,	.parameters.order_create_new_destroy_old = order_create_new_destroy_old}
+#define RENDERER_ACTION_RELOAD_ASSETS													&(struct renderer_action){.type = _RENDERER_ACTION_RELOAD_ASSETS}
+#define RENDERER_ACTION_RESTART															&(struct renderer_action){.type = _RENDERER_ACTION_RESTART}
 
-struct renderer_backend_device_infos
-{
-	struct renderer_backend_device_info infos[RENDERER_MAX_BACKEND_DEVICE_COUNT];
-	uint32_t count;
-};
-
-struct renderer_backend_info_state
-{
-	struct renderer_backend_infos backend_infos;
-	struct renderer_backend_device_infos backend_device_infos;
-};
-
-struct renderer_backend_settings
+struct renderer_settings_state
 {
 	uint32_t backend_index;
 	uint32_t backend_device_index;
 	uint32_t fps;
 	bool vsync;
 	uint32_t max_mipmap_level_count;
-};
-struct renderer_frontend_settings
-{
 	uint32_t fov;
-	uint32_t gui_scale;
 	uint32_t render_distance;
-};
-struct renderer_other_settings
-{
 	bool order_create_new_destroy_old;
-};
-
-struct renderer_settings
-{
-	struct renderer_backend_settings backend;
-	struct renderer_frontend_settings frontend;
-	struct renderer_other_settings other;
 };
 
 struct renderer_info_state
 {
-	struct renderer_backend_info_state backend;
-	struct renderer_settings settings;
+	struct renderer_backend_infos backend_infos;
+	struct renderer_backend_device_infos backend_device_infos;
 };
 
 #if MINEC_CLIENT_DYNAMIC_RENDERER_LIBRARY
@@ -98,7 +94,8 @@ struct renderer_info_state
 
 #endif
 
-#define application_window_get_dimensions client->renderer.client_renderer_api._application_window_get_dimensions
+#define asset_loader_asset_load client->renderer.client_renderer_api._asset_loader_asset_load
+#define asset_loader_asset_unload client->renderer.client_renderer_api._asset_loader_asset_unload
 
 #define RENDERER (*client->renderer._renderer)
 #elif !defined(MINEC_CLIENT_DYNAMIC_RENDERER_EXECUTABLE)
@@ -118,17 +115,9 @@ struct renderer
 		bool(*_did_crash)(struct minec_client* client);
 
 		bool(*_get_info_state)(struct minec_client* client, struct renderer_info_state* info_state);
-
-		void(*_set_order_create_new_destroy_old)(struct minec_client* client, bool order);
-		void(*_reload_resources)(struct minec_client* client);
-		void(*_switch_backend)(struct minec_client* client, uint32_t backend_index);
-		void(*_switch_backend_device)(struct minec_client* client, uint32_t backend_device_index);
-		void(*_set_vsync)(struct minec_client* client, bool vsync);
-		void(*_set_fps)(struct minec_client* client, uint32_t fps);
-		void(*_set_gui_scale)(struct minec_client* client, uint32_t scale);
-		void(*_set_fov)(struct minec_client* client, uint32_t fov);
-		void(*_set_render_distance)(struct minec_client* client, uint32_t render_distance);
-		void(*_set_max_mipmap_level_count)(struct minec_client* client, uint32_t max_mipmap_level_count);
+		bool(*_get_settings_state)(struct minec_client* client, struct renderer_settings* settings);
+		void(*_action)(struct minec_client* client, struct renderer_action* action);
+		
 	} renderer_client_api;
 
 	struct client_renderer_api
@@ -138,7 +127,8 @@ struct renderer
 		void (*_log_debug)(struct minec_client* client, uint8_t* message, ...);
 		void (*_log_debug_l)(struct minec_client* client, uint8_t* function, uint8_t* file, uint32_t line, uint8_t* message, ...);
 
-		void (*_application_window_get_dimensions)(struct minec_client* client, uint32_t* width, uint32_t* height);
+		void*(*_asset_loader_asset_load)(struct minec_client* client, uint8_t* name, uint8_t** data, size_t* size);
+		void(*_asset_loader_asset_unload)(struct minec_client* client, void* asset_handle);
 	} client_renderer_api;
 
 	struct _renderer* _renderer;
@@ -148,38 +138,44 @@ struct renderer
 
 #ifndef MINEC_CLIENT_DYNAMIC_RENDERER_EXECUTABLE
 
-struct renderer_backend
+
+
+struct renderer_settings
 {
-	struct renderer_backend_device_infos device_infos;
-	bool device_infos_changed;
-
-	struct renderer_backend_settings settings;
-
-	union renderer_backend_internal_state
-	{
-#ifdef MINEC_CLIENT_RENDERER_BACKEND_OPENGL
-		struct renderer_backend_opengl opengl;
-#endif
-	} state;
-
-	uint32_t pixelchar_slots[2];
-	uint32_t pixelchar_slot_index;
+	uint32_t fov;
+	uint32_t render_distance;
+	bool order_create_new_destroy_old;
 };
 
-struct renderer_frontend
+struct renderer_action_state
 {
-	struct renderer_frontend_settings settings;
+	mutex_t mutex;
 
-	PixelcharRenderer pixelchar_renderer;
+	struct { uint32_t value; bool change; } backend_index;
+	struct { uint32_t value; bool change; } backend_device_index;
+	struct { uint32_t value; bool change; } fps;
+	struct { bool value; bool change; } vsync;
+	struct { uint32_t value; bool change; } max_mipmap_level_count;
+	struct { uint32_t value; bool change; } fov;
+	struct { uint32_t value; bool change; } render_distance;
+	struct { bool value; bool change; } order_create_new_destroy_old;
 
-	struct
-	{
-		float last_frame_time;
-
-		uint32_t width;
-		uint32_t height;
-	} frame_info;
+	bool reload_assets;
+	bool restart;
 };
+
+struct renderer_public_state
+{
+	mutex_t mutex;
+
+	bool info_changed;
+	struct renderer_info_state info;
+
+	bool settings_changed;
+	struct renderer_settings_state settings;
+};
+
+#define RENDERER_CRASHING RENDERER.crashing
 
 #if defined(MINEC_CLIENT_DYNAMIC_RENDERER_LIBRARY)
 struct _renderer
@@ -188,32 +184,24 @@ struct renderer
 #endif
 {
 	void* thread_handle;
-
 	bool crashing;
 
-	struct renderer_frontend frontend;
+	struct renderer_settings settings;
+	struct renderer_components components;
 	struct renderer_backend backend;
-	bool backend_exists;
-
-	struct renderer_other_settings settings;
 
 	struct
 	{
-		struct
-		{
-			mutex_t mutex;
-			struct renderer_settings settings;
-			bool reload_resources;
-			bool reload_resources_detected;
-			bool restart;
-		} request;
+		float last_frame_time;
 
-		struct
-		{
-			mutex_t mutex;
-			bool changed;
-			struct renderer_info_state state;
-		} info;
+		uint32_t width;
+		uint32_t height;
+	} frame_info;
+
+	struct
+	{
+		struct renderer_action_state action;
+		struct renderer_public_state state;
 
 		atomic_bool active;
 		atomic_bool created;
@@ -223,25 +211,23 @@ struct renderer
 
 struct minec_client;
 
-uint32_t renderer_create(struct minec_client* client, struct renderer_settings* settings);
+uint32_t renderer_create(struct minec_client* client, struct renderer_settings_state* settings);
 void renderer_destroy(struct minec_client* client);
 bool renderer_did_crash(struct minec_client* client);
 
 bool renderer_get_info_state(struct minec_client* client, struct renderer_info_state* info_state);
+bool renderer_get_settings_state(struct minec_client* client, struct renderer_settings_state* settings_state);
+void renderer_action(struct minec_client* client, struct renderer_action* action);
 
 #ifdef MINEC_CLIENT_DYNAMIC_RENDERER_EXECUTABLE
 uint32_t renderer_reload(struct minec_client* client);
-#endif
+#else
+void renderer_read_settings_from_settings_state(struct renderer_settings_state* settings_state, struct renderer_settings* settings);
+void renderer_write_settings_to_settings_state(struct renderer_settings_state* settings_state, struct renderer_settings* settings);
+void renderer_read_backend_settings_from_settings_state(struct renderer_settings_state* settings_state, struct renderer_backend_settings* backend_settings);
+void renderer_write_backend_settings_to_settings_state(struct renderer_settings_state* settings_state, struct renderer_backend_settings* backend_settings);
 
-void renderer_set_order_create_new_destroy_old(struct minec_client* client, bool order);
-void renderer_switch_backend(struct minec_client* client, uint32_t backend_index);
-void renderer_switch_backend_device(struct minec_client* client, uint32_t backend_device_index);
-void renderer_reload_resources(struct minec_client* client);
-void renderer_set_vsync(struct minec_client* client, bool vsync);
-void renderer_set_fps(struct minec_client* client, uint32_t fps);
-void renderer_set_gui_scale(struct minec_client* client, uint32_t scale);
-void renderer_set_fov(struct minec_client* client, uint32_t fov);
-void renderer_set_render_distance(struct minec_client* client, uint32_t render_distance);
-void renderer_set_max_mipmap_level_count(struct minec_client* client, uint32_t max_mipmap_level_count);
+void renderer_reset_action_state(struct minec_client* client);
+#endif
 
 #endif

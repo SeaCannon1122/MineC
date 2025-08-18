@@ -4,9 +4,11 @@
 #define ARRAYLIST_H
 
 #include <stdint.h>
+#include <stddef.h>
 
 void* arraylist_string_new(uint32_t extension_element_count);
 void arraylist_string_delete(void* arraylist_string);
+void* arraylist_string_new_copy(void* arraylist_string);
 
 uint32_t arraylist_string_get_length(void* arraylist_string);
 const uint8_t* arraylist_string_get_element(void* arraylist_string, uint32_t index);

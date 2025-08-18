@@ -1,6 +1,6 @@
 #include <stdint.h>
 
-uint8_t pixelchar_opengl_fragment_shader_code[] =
+uint8_t fragment_shader_source[] =
 "#version 410 core\n"
 "\n"
 "#extension GL_ARB_shader_storage_buffer_object : enable\n"

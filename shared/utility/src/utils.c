@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 
 #ifdef WIN32
 
@@ -46,13 +47,15 @@ void time_sleep(uint32_t time_in_milliseconds)
 	Sleep(time_in_milliseconds);
 }
 
-float time_get()
+LARGE_INTEGER frequency = { .QuadPart = 0 };
+
+double time_get()
 {
-	LARGE_INTEGER frequency, start;
-	QueryPerformanceFrequency(&frequency);
+	LARGE_INTEGER start;
+	if (frequency.QuadPart == 0) QueryPerformanceFrequency(&frequency);
 	QueryPerformanceCounter(&start);
 
-	return (float)1000 * ((float)start.QuadPart / (float)frequency.QuadPart);
+	return 1000.0 * (double)start.QuadPart / (double)frequency.QuadPart;
 }
 
 void* thread_create(void (address)(void*), void* args)
@@ -108,11 +111,11 @@ void time_sleep(uint32_t time_in_milliseconds)
 	usleep(time_in_milliseconds * 1000);
 }
 
-float time_get()
+double time_get()
 {
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
-	return (float)tv.tv_sec * 1000. + (float)tv.tv_usec / 1000.;
+	return (double)tv.tv_sec * 1000. + (double)tv.tv_usec / 1000.;
 }
 
 void* thread_create(void (address)(void*), void* args)

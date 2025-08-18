@@ -38,7 +38,7 @@ void dynamic_library_unload(void* library_handle);
 
 //time
 void time_sleep(uint32_t time_in_milliseconds);
-float time_get();
+double time_get();
 
 //thread
 void* thread_create(void (address) (void*), void* args);

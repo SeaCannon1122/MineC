@@ -18,16 +18,13 @@
 #include <arraylist.h>
 #include <atomics.h>
 #include <utils.h>
-#include <cerialize.h>
+#include <stb_image/stb_image.h>
 
 #include "logging.h"
 #include "application_window/application_window.h"
 #include "settings/settings.h"
 #include "renderer/renderer.h"
-
-#ifndef MINEC_CLIENT_DYNAMIC_RENDERER_LIBRARY
-#include "assets.h"
-#endif
+#include "asset_loader/asset_loader.h"
 
 enum minec_client_result
 {
@@ -40,10 +37,9 @@ struct minec_client
 	uint8_t* data_files_path;
 	size_t data_files_path_length;
 
-	struct application_window window;
-
 	struct settings settings;
-
+	struct asset_loader asset_loader;
+	struct application_window window;
 	struct renderer renderer;
 };
 

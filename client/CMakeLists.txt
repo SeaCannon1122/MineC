@@ -99,7 +99,7 @@ target_sources(MineC_Client PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/logging.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/application_window/application_window.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/settings/settings.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/resource_loader/resource_loader.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/asset_loader/asset_loader.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/renderer.c
 
     ${CMAKE_CURRENT_SOURCE_DIR}/.cerialized_src/assets.c
@@ -112,21 +112,25 @@ target_include_directories(MineC_Client PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/.cerialized_src
 )
 
-target_link_libraries(MineC_Client PRIVATE window pixelchar utility networking)
+target_link_libraries(MineC_Client PRIVATE window utility networking stb_image)
 
 
 
 target_sources(${MINEC_CLIENT_RENDERER_TARGET} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/renderer.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/frontend.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/backend.c
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/components.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/pixelchar.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/menu.c
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/backend/backend.c
 )
 
 target_include_directories(${MINEC_CLIENT_RENDERER_TARGET} PRIVATE 
     ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
-target_link_libraries(${MINEC_CLIENT_RENDERER_TARGET} PRIVATE window pixelchar utility)
+target_link_libraries(${MINEC_CLIENT_RENDERER_TARGET} PRIVATE window pixelchar utility stb_image)
 
 
 message(STATUS "Renderer backends:")

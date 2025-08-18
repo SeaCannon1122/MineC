@@ -57,7 +57,7 @@ int main(int argc, char* argv[]) {
 	if (window_glCreateContext(window, 4, 6, NULL, &a) == false) printf("failed to create opengl context\n");
 	window_glMakeCurrent(window);
 
-	//window_glSwapIntervalEXT(1);
+	window_glSwapIntervalEXT(1);
 
 	PFNGLENABLEPROC glEnable = window_glGetProcAddress("glEnable");
 	PFNGLDEBUGMESSAGECALLBACKPROC glDebugMessageCallback = window_glGetProcAddress("glDebugMessageCallback");
@@ -88,11 +88,11 @@ int main(int argc, char* argv[]) {
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
 	size_t default_font_data_size;
-	void* default_font_data = loadFile("../../../../client/resources/resourcepacks/minec_default/assets/fonts/default.pixelfont", &default_font_data_size);
+	void* default_font_data = loadFile("../../../../client/assets/minec/fonts/font0.pixelfont", &default_font_data_size);
 	if (default_font_data == NULL) printf("failed to load pixelfont\n");
 
 	size_t smooth_font_data_size;
-	void* smooth_font_data = loadFile("../../../../client/resources/resourcepacks/minec_default/assets/fonts/smooth.pixelfont", &smooth_font_data_size);
+	void* smooth_font_data = loadFile("../../../../client/assets/minec/fonts/font1.pixelfont", &smooth_font_data_size);
 	if (smooth_font_data == NULL) printf("failed to load pixelfont\n");
 
 	PixelcharFont default_font;
@@ -105,7 +105,7 @@ int main(int argc, char* argv[]) {
 
 	PixelcharRenderer pcr;
 	res = pixelcharRendererCreate(100, &pcr);
-	res = pixelcharRendererBackendOpenGLInitialize(pcr, 0, 3, window_glGetProcAddress, 0, 0, 0, 0);
+	res = pixelcharRendererBackendOpenGLInitialize(pcr, 0, 3, window_glGetProcAddress, NULL, 0, NULL, 0, NULL, NULL);
 	res = pixelcharRendererBindFont(pcr, default_font, 0);
 	res = pixelcharRendererBindFont(pcr, smooth_font, 1);
 
@@ -133,7 +133,7 @@ int main(int argc, char* argv[]) {
 
 	glViewport(0, 0, width, height);
 	
-	float time = time_get();
+	double time = time_get();
 
 	bool leave = false;
 	while (leave == false)
@@ -169,7 +169,7 @@ int main(int argc, char* argv[]) {
 
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		float time_now = time_get();
+		double time_now = time_get();
 
 		uint8_t buffer[11];
 		snprintf(buffer, sizeof(buffer), "%.10f", time_now - time);

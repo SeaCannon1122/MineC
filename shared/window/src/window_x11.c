@@ -418,7 +418,7 @@ bool window_glCreateContext(void* window, int32_t version_major, int32_t version
 
 
 	PFNGLXCREATECONTEXTATTRIBSARBPROC glXCreateContextAttribsARB_func;
-	if ((glXCreateContextAttribsARB_func = context->opengl.func.glXGetProcAddress("glXCreateContextAttribsARB")) == NULL) return false;
+	if ((glXCreateContextAttribsARB_func = (PFNGLXCREATECONTEXTATTRIBSARBPROC)context->opengl.func.glXGetProcAddress("glXCreateContextAttribsARB")) == NULL) return false;
 
 	int context_attribs[] = {
 		GLX_CONTEXT_MAJOR_VERSION_ARB, version_major,
@@ -436,18 +436,20 @@ bool window_glCreateContext(void* window, int32_t version_major, int32_t version
 		return false;
 	}
 
-	if ((window_data->glXSwapIntervalEXT = context->opengl.func.glXGetProcAddress("glXSwapIntervalEXT")) != NULL) *glSwapIntervalEXT_support = false;
+	if ((window_data->glXSwapIntervalEXT = (void (*)(Display * dpy, GLXDrawable drawable, int interval))context->opengl.func.glXGetProcAddress("glXSwapIntervalEXT")) != NULL) *glSwapIntervalEXT_support = false;
 	else *glSwapIntervalEXT_support = true;
 
 	context->opengl.func.glXMakeCurrent(context->display, None, NULL);
 	return true;
 }
 
-void window_glDestroyContext(void* window)
+bool window_glDestroyContext(void* window)
 {
 	struct window_data_x11* window_data = window;
 
 	context->opengl.func.glXDestroyContext(context->display, window_data->glx_context);
+
+	return true;
 }
 
 bool window_glMakeCurrent(void* window)
@@ -461,7 +463,7 @@ bool window_glMakeCurrent(void* window)
 	return result;
 }
 
-bool window_glSwapInterval(int interval)
+bool window_glSwapIntervalEXT(int interval)
 {
 	if (context->opengl.current_window->glXSwapIntervalEXT == NULL) return false;
 

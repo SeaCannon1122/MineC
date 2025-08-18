@@ -1,6 +1,6 @@
 #include <stdint.h>
 
-uint8_t pixelchar_opengl_vertex_shader_code[] =
+uint8_t vertex_shader_source[] =
 "#version 410 core\n"
 "\n"
 "uint VULKAN_PIXELFONT_INVALID = 255;\n"

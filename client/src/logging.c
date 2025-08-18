@@ -1,7 +1,6 @@
 #include <minec_client.h>
 
-
-void minec_client_log_info(struct minec_client* client, uint8_t* message, ...)
+void minec_client_log_info(struct minec_client* client, const uint8_t* message, ...)
 {
 	printf("LOG: INFO ");
 
@@ -13,7 +12,7 @@ void minec_client_log_info(struct minec_client* client, uint8_t* message, ...)
 	printf("\n--------------------------------------------------------------------------------------------------\n");
 }
 
-void minec_client_log_error(struct minec_client* client, uint8_t* message, ...)
+void minec_client_log_error(struct minec_client* client, const uint8_t* message, ...)
 {
 	printf("LOG: ERROR ");
 
@@ -27,7 +26,7 @@ void minec_client_log_error(struct minec_client* client, uint8_t* message, ...)
 
 #ifdef MINEC_CLIENT_DEBUG_LOG
 
-void minec_client_log_debug(struct minec_client* client, uint8_t* message, ...)
+void minec_client_log_debug(struct minec_client* client, const uint8_t* message, ...)
 {
 	printf("DEBUGLOG: ");
 
@@ -39,7 +38,7 @@ void minec_client_log_debug(struct minec_client* client, uint8_t* message, ...)
 	printf("\n--------------------------------------------------------------------------------------------------\n");
 }
 
-void _minec_client_log_debug_l(struct minec_client* client, uint8_t* function, uint8_t* file, uint32_t line, uint8_t* message, ...)
+void _minec_client_log_debug_l(struct minec_client* client, const uint8_t* function, const uint8_t* file, const uint32_t line, const uint8_t* message, ...)
 {
 	printf("DEBUGLOG: In %s at %s:%d | ", function, file, line);
 

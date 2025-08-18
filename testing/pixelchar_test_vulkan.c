@@ -1,6 +1,7 @@
 #include <pixelchar/pixelchar.h>
 #include <pixelchar/backend/backend_vulkan.h>
 #include <window/window.h>
+#include <utils.h>
 
 #include <stdio.h>
 #include <math.h>
@@ -84,10 +85,10 @@ VkSurfaceCapabilitiesKHR surface_capabilities;
 VkQueue queue;
 uint32_t queue_index;
 VkCommandPool command_pool;
-VkCommandBuffer cmd;
-VkSemaphore aquire_semaphore;
-VkSemaphore submit_semaphore;
-VkFence queue_fence;
+VkCommandBuffer cmds[3];
+VkSemaphore aquire_semaphores[3];
+VkSemaphore submit_semaphores[3];
+VkFence queue_fences[3];
 
 VkRenderPass window_render_pass;
 
@@ -97,15 +98,97 @@ VkSwapchainKHR swapchain;
 VkImage swapchain_images[10];
 VkImageView swapchain_image_views[10];
 
+
+
+
+#define VULKAN_FUNCTION_LIST \
+	VULKAN_FUNCTION(PFN_vkGetInstanceProcAddr, _vkGetInstanceProcAddr)\
+	VULKAN_FUNCTION(PFN_vkGetDeviceProcAddr, _vkGetDeviceProcAddr)\
+	VULKAN_FUNCTION(PFN_vkCreateInstance, _vkCreateInstance)\
+	VULKAN_FUNCTION(PFN_vkDestroyInstance, _vkDestroyInstance)\
+	VULKAN_FUNCTION(PFN_vkDestroySurfaceKHR, _vkDestroySurfaceKHR)\
+	VULKAN_FUNCTION(PFN_vkCreateSwapchainKHR, _vkCreateSwapchainKHR)\
+	VULKAN_FUNCTION(PFN_vkDestroySwapchainKHR, _vkDestroySwapchainKHR)\
+	VULKAN_FUNCTION(PFN_vkGetSwapchainImagesKHR, _vkGetSwapchainImagesKHR)\
+	VULKAN_FUNCTION(PFN_vkEnumeratePhysicalDevices, _vkEnumeratePhysicalDevices)\
+	VULKAN_FUNCTION(PFN_vkGetPhysicalDeviceProperties, _vkGetPhysicalDeviceProperties)\
+	VULKAN_FUNCTION(PFN_vkGetPhysicalDeviceSurfaceFormatsKHR, _vkGetPhysicalDeviceSurfaceFormatsKHR)\
+	VULKAN_FUNCTION(PFN_vkGetPhysicalDeviceQueueFamilyProperties, _vkGetPhysicalDeviceQueueFamilyProperties)\
+	VULKAN_FUNCTION(PFN_vkGetPhysicalDeviceSurfaceSupportKHR, _vkGetPhysicalDeviceSurfaceSupportKHR)\
+	VULKAN_FUNCTION(PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR, _vkGetPhysicalDeviceSurfaceCapabilitiesKHR)\
+	VULKAN_FUNCTION(PFN_vkCreateDevice, _vkCreateDevice)\
+	VULKAN_FUNCTION(PFN_vkDestroyDevice, _vkDestroyDevice)\
+	VULKAN_FUNCTION(PFN_vkDeviceWaitIdle, _vkDeviceWaitIdle)\
+	VULKAN_FUNCTION(PFN_vkGetDeviceQueue, _vkGetDeviceQueue)\
+	VULKAN_FUNCTION(PFN_vkQueueSubmit, _vkQueueSubmit)\
+	VULKAN_FUNCTION(PFN_vkQueuePresentKHR, _vkQueuePresentKHR)\
+	VULKAN_FUNCTION(PFN_vkCreateCommandPool, _vkCreateCommandPool)\
+	VULKAN_FUNCTION(PFN_vkDestroyCommandPool, _vkDestroyCommandPool)\
+	VULKAN_FUNCTION(PFN_vkCreateFramebuffer, _vkCreateFramebuffer)\
+	VULKAN_FUNCTION(PFN_vkDestroyFramebuffer, _vkDestroyFramebuffer)\
+	VULKAN_FUNCTION(PFN_vkAllocateCommandBuffers, _vkAllocateCommandBuffers)\
+	VULKAN_FUNCTION(PFN_vkFreeCommandBuffers, _vkFreeCommandBuffers)\
+	VULKAN_FUNCTION(PFN_vkResetCommandBuffer, _vkResetCommandBuffer)\
+	VULKAN_FUNCTION(PFN_vkCreateSemaphore, _vkCreateSemaphore)\
+	VULKAN_FUNCTION(PFN_vkDestroySemaphore, _vkDestroySemaphore)\
+	VULKAN_FUNCTION(PFN_vkCreateFence, _vkCreateFence)\
+	VULKAN_FUNCTION(PFN_vkDestroyFence, _vkDestroyFence)\
+	VULKAN_FUNCTION(PFN_vkResetFences, _vkResetFences)\
+	VULKAN_FUNCTION(PFN_vkWaitForFences, _vkWaitForFences)\
+	VULKAN_FUNCTION(PFN_vkCreateImageView, _vkCreateImageView)\
+	VULKAN_FUNCTION(PFN_vkDestroyImageView, _vkDestroyImageView)\
+	VULKAN_FUNCTION(PFN_vkCreateRenderPass, _vkCreateRenderPass)\
+	VULKAN_FUNCTION(PFN_vkDestroyRenderPass, _vkDestroyRenderPass)\
+	VULKAN_FUNCTION(PFN_vkAcquireNextImageKHR, _vkAcquireNextImageKHR)\
+	VULKAN_FUNCTION(PFN_vkBeginCommandBuffer, _vkBeginCommandBuffer)\
+	VULKAN_FUNCTION(PFN_vkEndCommandBuffer, _vkEndCommandBuffer)\
+	VULKAN_FUNCTION(PFN_vkCmdBeginRenderPass, _vkCmdBeginRenderPass)\
+	VULKAN_FUNCTION(PFN_vkCmdEndRenderPass, _vkCmdEndRenderPass)\
+	VULKAN_FUNCTION(PFN_vkCmdSetScissor, _vkCmdSetScissor)\
+	VULKAN_FUNCTION(PFN_vkCmdSetViewport, _vkCmdSetViewport)\
+
+#define VULKAN_FUNCTION(signature, name) signature name = NULL;
+VULKAN_FUNCTION_LIST
+#undef VULKAN_FUNCTION
+
+void load_functions(uint32_t step)
+{
+	void* param;
+	void* (*function)(void*, uint8_t * name);
+
+	if (step == 0)
+	{
+		param = NULL;
+		function = _vkGetInstanceProcAddr;
+	}
+	if (step == 1)
+	{
+		param = instance;
+		function = _vkGetInstanceProcAddr;
+	}
+	if (step == 2)
+	{
+		param = device;
+		function = _vkGetDeviceProcAddr;
+	}
+
+#define VULKAN_FUNCTION(signature, name) if (name == NULL) name = function(param, &(#name)[1]);
+	VULKAN_FUNCTION_LIST
+#undef VULKAN_FUNCTION
+
+}
+
+
 void vulkan_instance_create()
 {
+	_vkGetInstanceProcAddr = window_get_vkGetInstanceProcAddr();
+	load_functions(0);
+
 	VkApplicationInfo app_info = { 0 };
 	app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 	app_info.pApplicationName = "blocks2";
 	app_info.pEngineName = "blocks2_angine";
 	app_info.apiVersion = VK_API_VERSION_1_3;
-
-	
 
 	char* instance_extensions[] = {
 		window_get_VK_KHR_PLATFORM_SURFACE_EXTENSION_NAME(),
@@ -126,9 +209,11 @@ void vulkan_instance_create()
 	instance_info.ppEnabledLayerNames = (const char* const*)layers;
 	instance_info.enabledLayerCount = 1;
 
-	VKCall(vkCreateInstance(&instance_info, 0, &instance));
+	VKCall(_vkCreateInstance(&instance_info, 0, &instance));
 
-	PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessengerEXT = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
+	load_functions(1);
+
+	PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessengerEXT = (PFN_vkCreateDebugUtilsMessengerEXT)_vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
 
 	debug_messenger = 0;
 	if (vkCreateDebugUtilsMessengerEXT) {
@@ -147,34 +232,34 @@ void vulkan_instance_create()
 
 void vulkan_instance_destroy()
 {
-	vkDestroySurfaceKHR(instance, surface, 0);
+	_vkDestroySurfaceKHR(instance, surface, 0);
 
-	PFN_vkDestroyDebugUtilsMessengerEXT vkDestroyDebugUtilsMessengerEXT = vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
+	PFN_vkDestroyDebugUtilsMessengerEXT vkDestroyDebugUtilsMessengerEXT = _vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
 
 	if (vkDestroyDebugUtilsMessengerEXT != 0) {
 		vkDestroyDebugUtilsMessengerEXT(instance, debug_messenger, 0);
 	}
 
-	vkDestroyInstance(instance, 0);
+	_vkDestroyInstance(instance, 0);
 }
 
 void vulkan_device_create()
 {
 	uint32_t gpu_count = 0;
-	VKCall(vkEnumeratePhysicalDevices(instance, &gpu_count, 0));
-	VKCall(vkEnumeratePhysicalDevices(instance, &gpu_count, gpus));
+	VKCall(_vkEnumeratePhysicalDevices(instance, &gpu_count, 0));
+	VKCall(_vkEnumeratePhysicalDevices(instance, &gpu_count, gpus));
 
 	for (uint32_t i = 0; i < gpu_count; i++) {
 
 		VkPhysicalDeviceProperties dev_prop;
-		vkGetPhysicalDeviceProperties(gpus[i], &dev_prop);
+		_vkGetPhysicalDeviceProperties(gpus[i], &dev_prop);
 
 		if (VK_API_VERSION_MAJOR(dev_prop.apiVersion) < 1 || VK_API_VERSION_MINOR(dev_prop.apiVersion) < 2) continue;
 
 		uint32_t format_count = 0;
-		VKCall(vkGetPhysicalDeviceSurfaceFormatsKHR(gpus[i], surface, &format_count, 0));
+		VKCall(_vkGetPhysicalDeviceSurfaceFormatsKHR(gpus[i], surface, &format_count, 0));
 		VkSurfaceFormatKHR* surface_formats = malloc(format_count * sizeof(VkSurfaceFormatKHR));
-		VKCall(vkGetPhysicalDeviceSurfaceFormatsKHR(gpus[i], surface, &format_count, surface_formats));
+		VKCall(_vkGetPhysicalDeviceSurfaceFormatsKHR(gpus[i], surface, &format_count, surface_formats));
 
 		uint32_t found_format = 0;
 		for (uint32_t k = 0; k < format_count; k++) if (surface_formats[k].format == VK_FORMAT_B8G8R8A8_UNORM) {
@@ -185,16 +270,16 @@ void vulkan_device_create()
 		if (found_format == 0) continue;
 
 		uint32_t queue_family_count = 0;
-		vkGetPhysicalDeviceQueueFamilyProperties(gpus[i], &queue_family_count, 0);
+		_vkGetPhysicalDeviceQueueFamilyProperties(gpus[i], &queue_family_count, 0);
 		VkQueueFamilyProperties* queue_props = alloca(queue_family_count * sizeof(VkQueueFamilyProperties));
-		vkGetPhysicalDeviceQueueFamilyProperties(gpus[i], &queue_family_count, queue_props);
+		_vkGetPhysicalDeviceQueueFamilyProperties(gpus[i], &queue_family_count, queue_props);
 
 		for (uint32_t j = 0; j < queue_family_count; j++) {
 
 			if ((queue_props[j].queueFlags & VK_QUEUE_GRAPHICS_BIT) && (queue_props[j].queueFlags & VK_QUEUE_TRANSFER_BIT) && (queue_props[j].queueFlags & VK_QUEUE_COMPUTE_BIT)) {
 
 				VkBool32 surface_support = VK_FALSE;
-				VKCall(vkGetPhysicalDeviceSurfaceSupportKHR(gpus[i], j, surface, &surface_support));
+				VKCall(_vkGetPhysicalDeviceSurfaceSupportKHR(gpus[i], j, surface, &surface_support));
 
 				if (surface_support) {
 					gpu_queue_indices[i] = j;
@@ -209,7 +294,7 @@ void vulkan_device_create()
 
 	gpu = gpus[0];
 
-	VKCall(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(gpu, surface, &surface_capabilities));
+	VKCall(_vkGetPhysicalDeviceSurfaceCapabilitiesKHR(gpu, surface, &surface_capabilities));
 
 	float queue_priority = 1.f;
 
@@ -242,48 +327,62 @@ void vulkan_device_create()
 	device_info.pEnabledFeatures = &enabled_features;
 	device_info.pNext = &features12;
 
-	VKCall(vkCreateDevice(gpu, &device_info, 0, &device));
-	vkGetDeviceQueue(device, queue_index, 0, &queue);
+	VKCall(_vkCreateDevice(gpu, &device_info, 0, &device));
+	_vkGetDeviceQueue(device, queue_index, 0, &queue);
+
+	load_functions(2);
 
 	VkCommandPoolCreateInfo pool_info = { 0 };
 	pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 	pool_info.queueFamilyIndex = queue_index;
 	pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
-	VKCall(vkCreateCommandPool(device, &pool_info, 0, &command_pool));
+	VKCall(_vkCreateCommandPool(device, &pool_info, 0, &command_pool));
 
 	VkCommandBufferAllocateInfo alloc_info = { 0 };
 	alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	alloc_info.commandBufferCount = 1;
+	alloc_info.commandBufferCount = 3;
 	alloc_info.commandPool = command_pool;
 	alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 
-	VKCall(vkAllocateCommandBuffers(device, &alloc_info, &cmd));
+	VKCall(_vkAllocateCommandBuffers(device, &alloc_info, cmds));
 
 	VkSemaphoreCreateInfo sema_info = { 0 };
 	sema_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-	VKCall(vkCreateSemaphore(device, &sema_info, 0, &aquire_semaphore));
-	VKCall(vkCreateSemaphore(device, &sema_info, 0, &submit_semaphore));
+	VKCall(_vkCreateSemaphore(device, &sema_info, 0, &aquire_semaphores[0]));
+	VKCall(_vkCreateSemaphore(device, &sema_info, 0, &aquire_semaphores[1]));
+	VKCall(_vkCreateSemaphore(device, &sema_info, 0, &aquire_semaphores[2]));
+	VKCall(_vkCreateSemaphore(device, &sema_info, 0, &submit_semaphores[0]));
+	VKCall(_vkCreateSemaphore(device, &sema_info, 0, &submit_semaphores[1]));
+	VKCall(_vkCreateSemaphore(device, &sema_info, 0, &submit_semaphores[2]));
 
 	VkFenceCreateInfo fence_info = { 0 };
 	fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 	fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-	VKCall(vkCreateFence(device, &fence_info, 0, &queue_fence));
+	VKCall(_vkCreateFence(device, &fence_info, 0, &queue_fences[0]));
+	VKCall(_vkCreateFence(device, &fence_info, 0, &queue_fences[1]));
+	VKCall(_vkCreateFence(device, &fence_info, 0, &queue_fences[2]));
 }
 
 void vulkan_device_destroy()
 {
-	vkDeviceWaitIdle(device);
+	_vkDeviceWaitIdle(device);
 
-	vkDestroySemaphore(device, submit_semaphore, 0);
-	vkDestroySemaphore(device, aquire_semaphore, 0);
-	vkDestroyFence(device, queue_fence, 0);
-	vkFreeCommandBuffers(device, command_pool, 1, &cmd);
-	vkDestroyCommandPool(device, command_pool, 0);
+	_vkDestroySemaphore(device, submit_semaphores[0], 0);
+	_vkDestroySemaphore(device, submit_semaphores[1], 0);
+	_vkDestroySemaphore(device, submit_semaphores[2], 0);
+	_vkDestroySemaphore(device, aquire_semaphores[0], 0);
+	_vkDestroySemaphore(device, aquire_semaphores[1], 0);
+	_vkDestroySemaphore(device, aquire_semaphores[2], 0);
+	_vkDestroyFence(device, queue_fences[0], 0);
+	_vkDestroyFence(device, queue_fences[1], 0);
+	_vkDestroyFence(device, queue_fences[2], 0);
+	_vkFreeCommandBuffers(device, command_pool, 3, cmds);
+	_vkDestroyCommandPool(device, command_pool, 0);
 
-	vkDestroyDevice(device, 0);
+	_vkDestroyDevice(device, 0);
 }
 
 void vulkan_device_renderpasses_create()
@@ -317,20 +416,20 @@ void vulkan_device_renderpasses_create()
 	render_pass_info.subpassCount = 1;
 	render_pass_info.pSubpasses = &subpass_description;
 
-	VKCall(vkCreateRenderPass(device, &render_pass_info, 0, &window_render_pass));
+	VKCall(_vkCreateRenderPass(device, &render_pass_info, 0, &window_render_pass));
 }
 
 void vulkan_device_renderpasses_destroy()
 {
-	vkDeviceWaitIdle(device);
+	_vkDeviceWaitIdle(device);
 
-	vkDestroyRenderPass(device, window_render_pass, 0);
+	_vkDestroyRenderPass(device, window_render_pass, 0);
 }
 
 void vulkan_device_swapchain_and_framebuffers_create()
 {
 	VkSurfaceCapabilitiesKHR surface_capabilities = { 0 };
-	VKCall(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(gpu, surface, &surface_capabilities));
+	VKCall(_vkGetPhysicalDeviceSurfaceCapabilitiesKHR(gpu, surface, &surface_capabilities));
 
 	swapchain_image_count = surface_capabilities.minImageCount +
 		(surface_capabilities.minImageCount == surface_capabilities.maxImageCount ? 0 : 1);
@@ -345,11 +444,11 @@ void vulkan_device_swapchain_and_framebuffers_create()
 	swapchain_info.preTransform = surface_capabilities.currentTransform;
 	swapchain_info.imageExtent = surface_capabilities.currentExtent;
 	swapchain_info.imageArrayLayers = 1;
-	swapchain_info.presentMode = VK_PRESENT_MODE_FIFO_KHR;
+	swapchain_info.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
 
-	VKCall(vkCreateSwapchainKHR(device, &swapchain_info, 0, &swapchain));
+	VKCall(_vkCreateSwapchainKHR(device, &swapchain_info, 0, &swapchain));
 
-	VKCall(vkGetSwapchainImagesKHR(device, swapchain, &swapchain_image_count, swapchain_images));
+	VKCall(_vkGetSwapchainImagesKHR(device, swapchain, &swapchain_image_count, swapchain_images));
 
 	VkImageViewCreateInfo image_view_info = { 0 };
 	image_view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -362,7 +461,7 @@ void vulkan_device_swapchain_and_framebuffers_create()
 	for (uint32_t i = 0; i < swapchain_image_count; i++) {
 
 		image_view_info.image = swapchain_images[i];
-		VKCall(vkCreateImageView(device, &image_view_info, 0, &swapchain_image_views[i]));
+		VKCall(_vkCreateImageView(device, &image_view_info, 0, &swapchain_image_views[i]));
 	}
 
 	VkFramebufferCreateInfo framebuffer_info = { 0 };
@@ -375,19 +474,19 @@ void vulkan_device_swapchain_and_framebuffers_create()
 
 	for (uint32_t i = 0; i < swapchain_image_count; i++) {
 		framebuffer_info.pAttachments = &swapchain_image_views[i];
-		VKCall(vkCreateFramebuffer(device, &framebuffer_info, 0, &framebuffers[i]));
+		VKCall(_vkCreateFramebuffer(device, &framebuffer_info, 0, &framebuffers[i]));
 	}
 }
 
 void vulkan_device_swapchain_and_framebuffers_destroy()
 {
-	vkDeviceWaitIdle(device);
+	_vkDeviceWaitIdle(device);
 
 	for (uint32_t i = 0; i < swapchain_image_count; i++) {
-		vkDestroyFramebuffer(device, framebuffers[i], 0);
-		vkDestroyImageView(device, swapchain_image_views[i], 0);
+		_vkDestroyFramebuffer(device, framebuffers[i], 0);
+		_vkDestroyImageView(device, swapchain_image_views[i], 0);
 	}
-	vkDestroySwapchainKHR(device, swapchain, 0);
+	_vkDestroySwapchainKHR(device, swapchain, 0);
 }
 
 int main()
@@ -405,11 +504,11 @@ int main()
 	vulkan_device_swapchain_and_framebuffers_create();
 
 	size_t default_font_data_size;
-	void* default_font_data = loadFile("data_files/assets/MineCdefault/fonts/default.pixelfont", &default_font_data_size);
+	void* default_font_data = loadFile("../../../../client/assets/minec/fonts/font0.pixelfont", &default_font_data_size);
 	if (default_font_data == NULL) printf("failed to load pixelfont\n");
 
 	size_t smooth_font_data_size;
-	void* smooth_font_data = loadFile("data_files/assets/MineCdefault/fonts/smooth.pixelfont", &smooth_font_data_size);
+	void* smooth_font_data = loadFile("../../../../client/assets/minec/fonts/font1.pixelfont", &smooth_font_data_size);
 	if (smooth_font_data == NULL) printf("failed to load pixelfont\n");
 
 	PixelcharFont default_font;
@@ -422,42 +521,18 @@ int main()
 
 	PixelcharRenderer pcr;
 	res = pixelcharRendererCreate(100, &pcr);
-	res = pixelcharRendererBackendVulkanInitialize(pcr, 0, 3, device, gpu, queue, queue_index, window_render_pass, 0, vkGetDeviceProcAddr, 0, 0, 0, 0);
+	res = pixelcharRendererBackendVulkanInitialize(pcr, 0, 3, instance, device, gpu, queue, queue_index, window_render_pass, 0, _vkGetInstanceProcAddr, 0, 0, 0, 0);
 	res = pixelcharRendererBindFont(pcr, default_font, 0);
 	res = pixelcharRendererBindFont(pcr, smooth_font, 1);
 
 	pixelcharFontDestroy(default_font);
 	pixelcharFontDestroy(smooth_font);
 
-	uint8_t str[] = { 'H', 'e', 'l', 'l', 'o', ' ', 'W', 'O', 'R', 'L', 'D', '!', 128, 129, 0 };
-	uint32_t str_len = sizeof(str) - 1;
+	Pixelchar c[30];
 
-	Pixelchar c[100];
+	uint32_t frame_index = 0;
 
-	uint32_t scale = 2;
-
-	for (uint32_t i = 0; i < str_len; i++)
-	{
-		c[i].character = str[i];
-		c[i].flags = PIXELCHAR_BACKGROUND_BIT | PIXELCHAR_UNDERLINE_BIT | PIXELCHAR_SHADOW_BIT;
-		c[i].fontIndex = i % 2;
-		c[i].scale = scale;
-
-		c[i].position[1] = 100;
-		
-		if (i == 0) c[i].position[0] = 100;
-		else c[i].position[0] = c[i - 1].position[0] + pixelcharGetCharacterRenderingWidth(pcr, &c[i - 1]) + pixelcharGetCharacterRenderingSpacing(pcr, &c[i - 1], &c[i]);
-
-		c[i].color[0] = 0xdc;
-		c[i].color[1] = 0xdc;
-		c[i].color[2] = 0xdc;
-		c[i].color[3] = 255;
-		c[i].backgroundColor[0] = 255;
-		c[i].backgroundColor[1] = 0;
-		c[i].backgroundColor[2] = 0;
-		c[i].backgroundColor[3] = 255;
-		
-	}
+	double time = time_get();
 
 	bool leave = false;
 	while (leave == false) {
@@ -497,29 +572,62 @@ int main()
 
 		if (width != 0 && height != 0)
 		{
-			pixelcharRendererEnqueCharacters(pcr, c, str_len);
+			double time_now = time_get();
 
-			VKCall(vkWaitForFences(device, 1, &queue_fence, VK_TRUE, UINT64_MAX));
+			uint8_t buffer[11];
+			snprintf(buffer, sizeof(buffer), "%.10f", time_now - time);
+
+			time = time_now;
+
+			uint32_t scale = 2;
+
+			for (uint32_t i = 0; i < 10; i++)
+			{
+				c[i].character = buffer[i];
+				c[i].flags = PIXELCHAR_BACKGROUND_BIT | PIXELCHAR_UNDERLINE_BIT | PIXELCHAR_SHADOW_BIT;
+				c[i].fontIndex = i % 2;
+				c[i].scale = scale;
+
+				c[i].position[1] = 100;
+
+				if (i == 0) c[i].position[0] = 100;
+				else c[i].position[0] = c[i - 1].position[0] + pixelcharGetCharacterRenderingWidth(pcr, &c[i - 1]) + pixelcharGetCharacterRenderingSpacing(pcr, &c[i - 1], &c[i]);
+
+				c[i].color[0] = 0xdc;
+				c[i].color[1] = 0xdc;
+				c[i].color[2] = 0xdc;
+				c[i].color[3] = 255;
+				c[i].backgroundColor[0] = 255;
+				c[i].backgroundColor[1] = 0;
+				c[i].backgroundColor[2] = 0;
+				c[i].backgroundColor[3] = 255;
+
+			}
+
+			pixelcharRendererResetQueue(pcr);
+			pixelcharRendererEnqueCharacters(pcr, c, 10);
+
+			VKCall(_vkWaitForFences(device, 1, &queue_fences[frame_index], VK_TRUE, UINT64_MAX));
 
 			uint32_t swapchain_image_index;
-			VkResult res = vkAcquireNextImageKHR(device, swapchain, 0, aquire_semaphore, 0, &swapchain_image_index);
+			VkResult res = _vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, aquire_semaphores[frame_index], 0, &swapchain_image_index);
 			if (res != VK_SUCCESS) {
 				printf("[RENDERER BACKEND] Error aquireing next swapchain image, error %d\n", res);
 
 				continue;
 			}
 
-			VKCall(vkResetFences(device, 1, &queue_fence));
+			VKCall(_vkResetFences(device, 1, &queue_fences[frame_index]));
 
-			VKCall(vkResetCommandBuffer(cmd, 0));
+			VKCall(_vkResetCommandBuffer(cmds[frame_index], 0));
 
 			VkCommandBufferBeginInfo begin_info = { 0 };
 			begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 			begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-			VKCall(vkBeginCommandBuffer(cmd, &begin_info));
+			VKCall(_vkBeginCommandBuffer(cmds[frame_index], &begin_info));
 
-			pixelcharRendererBackendVulkanUpdateRenderingData(pcr, 0, 0, cmd);
+			pixelcharRendererBackendVulkanUpdateRenderingData(pcr, 0, frame_index, cmds[frame_index]);
 
 			VkExtent2D screen_size;
 			screen_size.width = width;
@@ -533,8 +641,8 @@ int main()
 			viewport.height = screen_size.height;
 			viewport.maxDepth = 1.0f;
 
-			vkCmdSetViewport(cmd, 0, 1, &viewport);
-			vkCmdSetScissor(cmd, 0, 1, &scissor);
+			_vkCmdSetViewport(cmds[frame_index], 0, 1, &viewport);
+			_vkCmdSetScissor(cmds[frame_index], 0, 1, &scissor);
 
 			VkClearColorValue clearColor = {0};
 			clearColor.float32[0] = 0.0f; // Red
@@ -554,15 +662,15 @@ int main()
 			renderpass_begin_info.clearValueCount = 1;
 			renderpass_begin_info.pClearValues = clearValues;
 
-			vkCmdBeginRenderPass(cmd, &renderpass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
+			_vkCmdBeginRenderPass(cmds[frame_index], &renderpass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
 			//pixel_chars
 			
-			pixelcharRendererBackendVulkanRender(pcr, 0, cmd, width, height, 4.f, 4.f, 4.f, 1.4f);
+			pixelcharRendererBackendVulkanRender(pcr, 0, cmds[frame_index], width, height, 4.f, 4.f, 4.f, 1.4f);
 
-			vkCmdEndRenderPass(cmd);
+			_vkCmdEndRenderPass(cmds[frame_index]);
 
-			VKCall(vkEndCommandBuffer(cmd));
+			VKCall(_vkEndCommandBuffer(cmds[frame_index]));
 
 			VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
@@ -570,13 +678,13 @@ int main()
 			submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 			submit_info.pWaitDstStageMask = &wait_stage;
 			submit_info.commandBufferCount = 1;
-			submit_info.pCommandBuffers = &cmd;
-			submit_info.pSignalSemaphores = &submit_semaphore;
-			submit_info.pWaitSemaphores = &aquire_semaphore;
+			submit_info.pCommandBuffers = &cmds[frame_index];
+			submit_info.pSignalSemaphores = &submit_semaphores[frame_index];
+			submit_info.pWaitSemaphores = &aquire_semaphores[frame_index];
 			submit_info.signalSemaphoreCount = 1;
 			submit_info.waitSemaphoreCount = 1;
 
-			VKCall(vkQueueSubmit(queue, 1, &submit_info, queue_fence));
+			VKCall(_vkQueueSubmit(queue, 1, &submit_info, queue_fences[frame_index]));
 
 
 
@@ -585,15 +693,17 @@ int main()
 			present_info.pSwapchains = &swapchain;
 			present_info.swapchainCount = 1;
 			present_info.pImageIndices = &swapchain_image_index;
-			present_info.pWaitSemaphores = &submit_semaphore;
+			present_info.pWaitSemaphores = &submit_semaphores[frame_index];
 			present_info.waitSemaphoreCount = 1;
 
-			vkQueuePresentKHR(queue, &present_info);
+			_vkQueuePresentKHR(queue, &present_info);
+		
+			frame_index = (frame_index + 1 ) % 3;
 		}
 
 	}
 
-	vkDeviceWaitIdle(device);
+	_vkDeviceWaitIdle(device);
 
 	pixelcharRendererBackendVulkanDeinitialize(pcr, 0);
 	pixelcharRendererDestroy(pcr);

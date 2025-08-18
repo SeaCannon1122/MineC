@@ -7,17 +7,17 @@ const uint8_t* pixelcharGetResultAsString(PixelcharResult result)
 {
 	switch (result)
 	{
-	case PIXELCHAR_SUCCESS:								return "PIXELCHAR_SUCCESS";
-	case PIXELCHAR_INFO_FULL_QUEUE:						return "PIXELCHAR_INFO_FULL_QUEUE";
-	case PIXELCHAR_ERROR_OUT_OF_MEMORY:					return "PIXELCHAR_ERROR_OUT_OF_MEMORY";
-	case PIXELCHAR_ERROR_INVALID_ARGUMENTS:				return "PIXELCHAR_ERROR_INVALID_ARGUMENTS";
-	case PIXELCHAR_ERROR_INVALID_FONT_DATA:				return "PIXELCHAR_ERROR_INVALID_FONT_DATA";
-	case PIXELCHAR_ERROR_BACKEND_SLOT_ALREADY_IN_USED:	return "PIXELCHAR_ERROR_BACKEND_SLOT_ALREADY_IN_USED";
-	case PIXELCHAR_ERROR_BACKEND_SLOT_NOT_IN_USED:		return "PIXELCHAR_ERROR_BACKEND_SLOT_NOT_IN_USED";
-	case PIXELCHAR_ERROR_BACKEND_API:					return "PIXELCHAR_ERROR_BACKEND_API";
+	case PIXELCHAR_SUCCESS:								return (const uint8_t*)"PIXELCHAR_SUCCESS";
+	case PIXELCHAR_INFO_FULL_QUEUE:						return (const uint8_t*)"PIXELCHAR_INFO_FULL_QUEUE";
+	case PIXELCHAR_ERROR_OUT_OF_MEMORY:					return (const uint8_t*)"PIXELCHAR_ERROR_OUT_OF_MEMORY";
+	case PIXELCHAR_ERROR_INVALID_ARGUMENTS:				return (const uint8_t*)"PIXELCHAR_ERROR_INVALID_ARGUMENTS";
+	case PIXELCHAR_ERROR_INVALID_FONT_DATA:				return (const uint8_t*)"PIXELCHAR_ERROR_INVALID_FONT_DATA";
+	case PIXELCHAR_ERROR_BACKEND_SLOT_ALREADY_IN_USED:	return (const uint8_t*)"PIXELCHAR_ERROR_BACKEND_SLOT_ALREADY_IN_USED";
+	case PIXELCHAR_ERROR_BACKEND_SLOT_NOT_IN_USED:		return (const uint8_t*)"PIXELCHAR_ERROR_BACKEND_SLOT_NOT_IN_USED";
+	case PIXELCHAR_ERROR_BACKEND_API:					return (const uint8_t*)"PIXELCHAR_ERROR_BACKEND_API";
 	}
 
-	return "PIXELCHAR_ERROR_UNKNOWN";
+	return (const uint8_t*)"PIXELCHAR_ERROR_UNKNOWN";
 }
 
 PixelcharResult pixelcharFontCreate(const void* fontData, size_t dataSize, PixelcharFont* pFont)
@@ -123,7 +123,7 @@ void _pixelchar_renderer_convert_queue(PixelcharRenderer renderer, uint32_t back
 				chars[i].bitmapIndex = renderer->fonts[chars[i].fontIndex]->mappings[character];
 
 			chars[i].bitmapWidth = renderer->fonts[chars[i].fontIndex]->widths[chars[i].bitmapIndex];
-			chars[i].fontResolution = renderer->fonts[chars[i].fontIndex]->resolution;
+			chars[i].fontResolution = (uint16_t)renderer->fonts[chars[i].fontIndex]->resolution;
 		}
 	}
 }
