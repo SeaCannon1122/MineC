@@ -9,12 +9,12 @@ extern "C" {
 
 #include <pixelchar/pixelchar.h>
 
-PixelcharResult pixelcharRendererBackendMetalInitialize(PixelcharRenderer renderer);
+PixelcharResult PixelcharManagerBackendMetalInitialize(PixelcharManager renderer);
 
-void pixelcharRendererBackendMetalDeinitialize(PixelcharRenderer renderer);
+void PixelcharManagerBackendMetalDeinitialize(PixelcharManager renderer);
 
-PixelcharResult pixelcharRendererBackendMetalRender(
-	PixelcharRenderer renderer,
+PixelcharResult PixelcharManagerBackendMetalRender(
+	PixelcharManager renderer,
 	uint32_t width,
 	uint32_t height,
 	float shadowDevisorR,

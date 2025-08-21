@@ -62,7 +62,7 @@ struct renderer
 
 	uint8_t* backend_library_paths[3];
 
-	PixelcharRenderer pixelchar_renderer;
+	PixelcharManager pixelchar_renderer;
 
 	struct rendering_thread_state
 	{

@@ -5,7 +5,7 @@
 #include <window/window.h>
 #include <GL/glcorearb.h>
 #include <pixelchar/pixelchar.h>
-#include <pixelchar/backend/backend_opengl.h>
+#include <pixelchar/renderers/renderer_opengl.h>
 
 void DebugCallback(GLenum source, GLenum type, GLuint id, GLenum severity,
 	GLsizei length, const GLchar* message, const void* userParam) {
@@ -57,7 +57,7 @@ int main(int argc, char* argv[]) {
 	if (window_glCreateContext(window, 4, 6, NULL, &a) == false) printf("failed to create opengl context\n");
 	window_glMakeCurrent(window);
 
-	window_glSwapIntervalEXT(1);
+	window_glSwapIntervalEXT(0);
 
 	PFNGLENABLEPROC glEnable = window_glGetProcAddress("glEnable");
 	PFNGLDEBUGMESSAGECALLBACKPROC glDebugMessageCallback = window_glGetProcAddress("glDebugMessageCallback");
@@ -103,20 +103,20 @@ int main(int argc, char* argv[]) {
 	free(default_font_data);
 	free(smooth_font_data);
 
-	PixelcharRenderer pcr;
-	res = pixelcharRendererCreate(100, &pcr);
-	res = pixelcharRendererBackendOpenGLInitialize(pcr, 0, 3, window_glGetProcAddress, NULL, 0, NULL, 0, NULL, NULL);
-	res = pixelcharRendererBindFont(pcr, default_font, 0);
-	res = pixelcharRendererBindFont(pcr, smooth_font, 1);
+	PixelcharRendererOpenGL pcr;;
+	PixelcharRendererOpenGLCreate(window_glGetProcAddress, NULL, 0, NULL, 0, NULL, NULL, 2, 100, &pcr);
+	PixelcharRendererOpenGLUseFont(pcr, default_font, 0);
+	PixelcharRendererOpenGLUseFont(pcr, smooth_font, 1);
+
+	PixelcharFont fonts[PIXELCHAR_RENDERER_MAX_FONT_COUNT] = { 0 };
+	fonts[0] = default_font;
+	fonts[1] = smooth_font;
 
 	uint8_t name_default[PIXELCHAR_FONT_NAME_BUFFER_SIZE];
 	uint8_t name_smooth[PIXELCHAR_FONT_NAME_BUFFER_SIZE];
 
 	pixelcharFontGetName(default_font, name_default);
 	pixelcharFontGetName(smooth_font, name_smooth);
-
-	pixelcharFontDestroy(default_font);
-	pixelcharFontDestroy(smooth_font);
 
 	Pixelchar c[100];
 
@@ -134,6 +134,8 @@ int main(int argc, char* argv[]) {
 	glViewport(0, 0, width, height);
 	
 	double time = time_get();
+
+	uint32_t frame_index = 0;
 
 	bool leave = false;
 	while (leave == false)
@@ -186,7 +188,7 @@ int main(int argc, char* argv[]) {
 			c[i].position[1] = 100;
 
 			if (i == 0) c[i].position[0] = 100;
-			else c[i].position[0] = c[i - 1].position[0] + pixelcharGetCharacterRenderingWidth(pcr, &c[i - 1]) + pixelcharGetCharacterRenderingSpacing(pcr, &c[i - 1], &c[i]);
+			else c[i].position[0] = c[i - 1].position[0] + pixelcharGetCharacterRenderingWidth(&c[i - 1], fonts) + pixelcharGetCharacterRenderingSpacing(&c[i - 1], &c[i], fonts);
 
 			c[i].color[0] = 0xdc;
 			c[i].color[1] = 0xdc;
@@ -200,16 +202,20 @@ int main(int argc, char* argv[]) {
 		}
 
 
-		pixelcharRendererResetQueue(pcr);
-		pixelcharRendererEnqueCharacters(pcr, c, 10);
+		PixelcharRendererVulkanResetResourceFrame(pcr, frame_index);
+		PixelcharRendererVulkanUpdateRenderingData(pcr, c, 10, frame_index);
 
-		pixelcharRendererBackendOpenGLRender(pcr, 0, 0, width, height, 4.f, 4.f, 4.f, 1.4f);
+		PixelcharRendererVulkanRender(pcr, width, height, 4.f, 4.f, 4.f, 1.4f);
 
 		window_glSwapBuffers(window);
+
+		frame_index = (frame_index + 1 ) % 2;
 	}
 
-	pixelcharRendererBackendOpenGLDeinitialize(pcr, 0);
-	pixelcharRendererDestroy(pcr);
+	PixelcharRendererOpenGLDestroy(pcr);
+
+	pixelcharFontDestroy(default_font);
+	pixelcharFontDestroy(smooth_font);
 
 	window_glMakeCurrent(NULL);
 

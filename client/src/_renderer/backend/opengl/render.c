@@ -55,7 +55,7 @@ uint32_t renderer_backend_opengl_render(struct minec_client* client, bool resize
 	{
 		if (pipelines_resources->pixelchar_renderer.usable == true)
 		{
-			pixelcharRendererBackendOpenGLRender(client->renderer.pixelchar_renderer, pipelines_resources->pixelchar_RENDERER.backend_index, 0, width, height, 4.f, 4.f, 4.f, 1.4f);
+			PixelcharManagerBackendOpenGLRender(client->renderer.pixelchar_renderer, pipelines_resources->pixelchar_RENDERER.backend_index, 0, width, height, 4.f, 4.f, 4.f, 1.4f);
 		}
 	}
 

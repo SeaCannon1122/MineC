@@ -65,8 +65,8 @@ void rendering_thread_function(struct minec_client* client)
 
 		}
 
-		pixelcharRendererResetQueue(client->renderer.pixelchar_renderer);
-		pixelcharRendererEnqueCharacters(client->renderer.pixelchar_renderer, c, str_len);
+		PixelcharManagerResetQueue(client->renderer.pixelchar_renderer);
+		PixelcharManagerEnqueCharacters(client->renderer.pixelchar_renderer, c, str_len);
 
 		client->RENDERER.backend.global.interfaces[client->RENDERER.backend.global.backend_index].render(client);
 

@@ -29,9 +29,6 @@ typedef struct PixelcharFont_T
 {
 	uint8_t name[PIXELCHAR_FONT_NAME_BUFFER_SIZE];
 
-	void* backends[PIXELCHAR_RENDERER_MAX_BACKEND_COUNT];
-	uint32_t backends_reference_count[PIXELCHAR_RENDERER_MAX_BACKEND_COUNT];
-
 	uint32_t resolution;
 
 	uint32_t mappings_count;
@@ -42,27 +39,8 @@ typedef struct PixelcharFont_T
 	void* bitmaps;
 
 	uint32_t reference_count;
-
 	bool destroyed;
 } PixelcharFont_T;
-
-typedef struct PixelcharRenderer_T
-{
-	struct
-	{
-		void* data;
-		void (*deinitialize_function)(PixelcharRenderer renderer, uint32_t backend_slot_index);
-		PixelcharResult(*font_backend_add_reference_function)(PixelcharRenderer renderer, uint32_t font_index, uint32_t backend_slot_index);
-		void (*font_backend_sub_reference_function)(PixelcharRenderer renderer, uint32_t font_index, uint32_t backend_slot_index);
-	} backends[PIXELCHAR_RENDERER_MAX_BACKEND_COUNT];
-
-	PixelcharFont fonts[PIXELCHAR_RENDERER_MAX_FONT_COUNT];
-	bool font_backends_referenced[PIXELCHAR_RENDERER_MAX_FONT_COUNT][PIXELCHAR_RENDERER_MAX_BACKEND_COUNT];
-
-	uint32_t queue_total_length;
-	uint32_t queue_filled_length;
-	Pixelchar queue[];
-} PixelcharRenderer_T;
 
 typedef struct _pixelchar_font_metadata
 {
@@ -78,7 +56,7 @@ typedef struct _pixelchar_font_metadata
 	uint32_t resolution;
 } _pixelchar_font_metadata;
 
-void _pixelchar_renderer_convert_queue(PixelcharRenderer renderer, uint32_t backend_index);
+void _convert_chars_to_render_chars(Pixelchar* chars, uint32_t char_count, PixelcharFont* fonts);
 
 #ifdef __cplusplus
 }

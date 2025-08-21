@@ -217,7 +217,7 @@ uint32_t renderer_create(
 
 	if (result == MINEC_CLIENT_SUCCESS)
 	{
-		if ((result = pixelcharRendererCreate(4096, &client->renderer.pixelchar_renderer)) != PIXELCHAR_SUCCESS) result = MINEC_CLIENT_ERROR;
+		if ((result = PixelcharManagerCreate(4096, &client->renderer.pixelchar_renderer)) != PIXELCHAR_SUCCESS) result = MINEC_CLIENT_ERROR;
 		else
 		{
 			result = MINEC_CLIENT_SUCCESS;
@@ -235,7 +235,7 @@ uint32_t renderer_create(
 			uint32_t pc_result = pixelcharFontCreate(client->resource_index.pixelchar_fonts[i].font_file_data, client->resource_index.pixelchar_fonts[i].font_file_data_size, &font);
 			if (result == PIXELCHAR_SUCCESS)
 			{
-				pixelcharRendererBindFont(client->renderer.pixelchar_renderer, font, i);
+				PixelcharManagerBindFont(client->renderer.pixelchar_renderer, font, i);
 				pixelcharFontDestroy(font);
 			}
 		}
@@ -277,7 +277,7 @@ uint32_t renderer_create(
 	}
 
 	if (result != MINEC_CLIENT_SUCCESS && backend_loaded_created) _renderer_backend_unload_destroy(client, &client->RENDERER.backend.global, &client->RENDERER.backend.base, &client->RENDERER.backend.device, &client->RENDERER.backend.pipelines_resources);
-	if (result != MINEC_CLIENT_SUCCESS && pixelchar_renderer_create) pixelcharRendererDestroy(client->renderer.pixelchar_renderer);
+	if (result != MINEC_CLIENT_SUCCESS && pixelchar_renderer_create) PixelcharManagerDestroy(client->renderer.pixelchar_renderer);
 	if (result != MINEC_CLIENT_SUCCESS && backend_library_names_memory) for (uint32_t i = 0; i < 3; i++) s_free(client->static_alloc, client->RENDERER.backend_library_paths[i]);
 
 	return result;
@@ -295,7 +295,7 @@ void renderer_destroy(struct minec_client* client)
 
 	_renderer_backend_unload_destroy(client, &client->RENDERER.backend.global, &client->RENDERER.backend.base, &client->RENDERER.backend.device, &client->RENDERER.backend.pipelines_resources);
 
-	pixelcharRendererDestroy(client->renderer.pixelchar_renderer);
+	PixelcharManagerDestroy(client->renderer.pixelchar_renderer);
 
 	for (uint32_t i = 0; i < 3; i++) s_free(client->static_alloc, client->RENDERER.backend_library_paths[i]);
 }

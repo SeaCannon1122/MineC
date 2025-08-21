@@ -24,10 +24,11 @@ struct renderer_backend_info
 struct renderer_backend_device_info
 {
 	uint8_t name[64];
-	uint8_t version[64];
+	uint8_t extra_info[128];
 
 	bool usable;
 	bool disable_vsync_support;
+	bool use_triple_buffering_support;
 };
 
 struct renderer_backend_infos
@@ -48,6 +49,7 @@ struct renderer_backend_settings
 	uint32_t backend_device_index;
 	uint32_t fps;
 	bool vsync;
+	bool use_triple_buffering;
 	uint32_t max_mipmap_level_count;
 };
 
@@ -86,6 +88,7 @@ void renderer_backend_switch_device(struct minec_client* client, uint32_t device
 void renderer_backend_reload_resources(struct minec_client* client);
 void renderer_backend_set_vsync(struct minec_client* client, bool vsync);
 void renderer_backend_set_fps(struct minec_client* client, uint32_t fps);
+void renderer_backend_set_use_triple_buffering(struct minec_client* client, bool use_triple_buffering);
 void renderer_backend_set_max_mipmap_level_count(struct minec_client* client, uint32_t max_mipmap_level_count);
 
 void renderer_backend_frame_begin(struct minec_client* client);

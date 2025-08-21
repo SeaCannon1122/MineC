@@ -14,7 +14,7 @@ uint32_t renderer_backend_vulkan_pipelines_resources_create(struct minec_client*
 
     pipelines_resources = client->RENDERER.backend.pipelines_resources.pipelines_resources;
 
-    /*if ((result = pixelcharRendererBackendVulkanInitialize(
+    /*if ((result = PixelcharManagerBackendVulkanInitialize(
         client->renderer.pixelchar_renderer,
         device->device,
         base->physical_devices[device->physical_device_index],

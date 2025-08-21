@@ -78,8 +78,8 @@ void renderer_component_menu_frame(struct minec_client* client)
 
 	}
 
-	pixelcharRendererResetQueue(RENDERER.components.pixelchar.renderer);
-	pixelcharRendererEnqueCharacters(RENDERER.components.pixelchar.renderer, c, sizeof(buffer) - 1);
+	PixelcharManagerResetQueue(RENDERER.components.pixelchar.renderer);
+	PixelcharManagerEnqueCharacters(RENDERER.components.pixelchar.renderer, c, sizeof(buffer) - 1);
 
 	renderer_backend_frame_menu(client);
 }

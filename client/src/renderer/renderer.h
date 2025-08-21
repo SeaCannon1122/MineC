@@ -28,6 +28,7 @@ enum _renderer_action_type
 	_RENDERER_ACTION_SET_BACKEND_DEVICE_INDEX,
 	_RENDERER_ACTION_SET_FPS,
 	_RENDERER_ACTION_SET_VSYNC,
+	_RENDERER_ACTION_SET_USE_TRIPLE_BUFFERING,
 	_RENDERER_ACTION_SET_MAX_MIPMAP_LEVEL_COUNT,
 	_RENDERER_ACTION_SET_FOV,
 	_RENDERER_ACTION_SET_RENDER_DISTANCE,
@@ -46,6 +47,7 @@ struct renderer_action
 		uint32_t backend_device_index;
 		uint32_t fps;
 		bool vsync;
+		bool use_triple_buffering;
 		uint32_t max_mipmap_level_count;
 		uint32_t fov;
 		uint32_t render_distance;
@@ -57,6 +59,7 @@ struct renderer_action
 #define RENDERER_ACTION_SET_BACKEND_DEVICE_INDEX(backend_device_index)					&(struct renderer_action){.type = _RENDERER_ACTION_SET_BACKEND_DEVICE_INDEX,			.parameters.backend_device_index = backend_device_index}
 #define RENDERER_ACTION_SET_FPS(fps)													&(struct renderer_action){.type = _RENDERER_ACTION_SET_FPS,								.parameters.fps = fps}
 #define RENDERER_ACTION_SET_VSYNC(vsync)												&(struct renderer_action){.type = _RENDERER_ACTION_SET_VSYNC,							.parameters.vsync = vsync}
+#define RENDERER_ACTION_SET_USE_TRIPLE_BUFFERING(use_triple_buffering)					&(struct renderer_action){.type = _RENDERER_ACTION_SET_USE_TRIPLE_BUFFERING,			.parameters.use_triple_buffering = use_triple_buffering}
 #define RENDERER_ACTION_SET_MAX_MIPMAP_LEVEL_COUNT(max_mipmap_level_count)				&(struct renderer_action){.type = _RENDERER_ACTION_SET_MAX_MIPMAP_LEVEL_COUNT,			.parameters.max_mipmap_level_count = max_mipmap_level_count}
 #define RENDERER_ACTION_SET_FOV(fov)													&(struct renderer_action){.type = _RENDERER_ACTION_SET_FOV,								.parameters.fov = fov}
 #define RENDERER_ACTION_SET_RENDER_DISTANCE(render_distance)							&(struct renderer_action){.type = _RENDERER_ACTION_SET_RENDER_DISTANCE,					.parameters.render_distance = render_distance}
@@ -70,6 +73,7 @@ struct renderer_settings_state
 	uint32_t backend_device_index;
 	uint32_t fps;
 	bool vsync;
+	bool use_triple_buffering;
 	uint32_t max_mipmap_level_count;
 	uint32_t fov;
 	uint32_t render_distance;
@@ -155,6 +159,7 @@ struct renderer_action_state
 	struct { uint32_t value; bool change; } backend_device_index;
 	struct { uint32_t value; bool change; } fps;
 	struct { bool value; bool change; } vsync;
+	struct { bool value; bool change; } use_triple_buffering;
 	struct { uint32_t value; bool change; } max_mipmap_level_count;
 	struct { uint32_t value; bool change; } fov;
 	struct { uint32_t value; bool change; } render_distance;

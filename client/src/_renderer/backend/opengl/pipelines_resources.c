@@ -31,10 +31,10 @@ uint32_t renderer_backend_opengl_pipelines_resources_create(struct minec_client*
 
         uint32_t pixelchar_result;
 
-        if ((pixelchar_result = pixelcharRendererBackendOpenGLInitialize(client->renderer.pixelchar_renderer, pipelines_resources->pixelchar_RENDERER.backend_index, OPENGL_FRAME_COUNT, window_glGetProcAddress, NULL, 0, NULL, 0)) & PIXELCHAR_ERROR_MASK)
+        if ((pixelchar_result = PixelcharManagerBackendOpenGLInitialize(client->renderer.pixelchar_renderer, pipelines_resources->pixelchar_RENDERER.backend_index, OPENGL_FRAME_COUNT, window_glGetProcAddress, NULL, 0, NULL, 0)) & PIXELCHAR_ERROR_MASK)
         {
-            minec_client_log_error(client, "pixelcharRenderer not usable");
-            minec_client_log_debug_l(client, "'pixelcharRendererBackendOpenGLInitialize' failed with '%s'", pixelcharGetResultAsString(pixelchar_result));
+            minec_client_log_error(client, "PixelcharManager not usable");
+            minec_client_log_debug_l(client, "'PixelcharManagerBackendOpenGLInitialize' failed with '%s'", pixelcharGetResultAsString(pixelchar_result));
         }
         else pipelines_resources->pixelchar_renderer.usable = true;
     }
@@ -43,7 +43,7 @@ uint32_t renderer_backend_opengl_pipelines_resources_create(struct minec_client*
     {
         if (pipelines_resources_memory)
         {
-            if (pipelines_resources->pixelchar_renderer.usable == true) pixelcharRendererBackendOpenGLDeinitialize(client->renderer.pixelchar_renderer, pipelines_resources->pixelchar_RENDERER.backend_index);
+            if (pipelines_resources->pixelchar_renderer.usable == true) PixelcharManagerBackendOpenGLDeinitialize(client->renderer.pixelchar_renderer, pipelines_resources->pixelchar_RENDERER.backend_index);
         
             s_free(client->static_alloc, pipelines_resources);;
         }
@@ -74,8 +74,8 @@ void renderer_backend_opengl_pipelines_resources_destroy(struct minec_client* cl
 
     if (pipelines_resources->pixelchar_renderer.usable == true)
     {
-        if (current) pixelcharRendererBackendOpenGLDeinitialize(client->renderer.pixelchar_renderer, pipelines_resources->pixelchar_RENDERER.backend_index);
-        else pixelcharRendererHardResetBackendSlot(client->renderer.pixelchar_renderer, pipelines_resources->pixelchar_RENDERER.backend_index);
+        if (current) PixelcharManagerBackendOpenGLDeinitialize(client->renderer.pixelchar_renderer, pipelines_resources->pixelchar_RENDERER.backend_index);
+        else PixelcharManagerHardResetBackendSlot(client->renderer.pixelchar_renderer, pipelines_resources->pixelchar_RENDERER.backend_index);
     }
 
     s_free(client->static_alloc, pipelines_resources);

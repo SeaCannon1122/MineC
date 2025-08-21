@@ -1,5 +1,3 @@
-#include <pixelchar/pixelchar.h>
-#include <pixelchar/backend/backend_vulkan.h>
 #include <window/window.h>
 #include <utils.h>
 
@@ -7,6 +5,8 @@
 #include <math.h>
 #include <mutex.h>
 #include <malloc.h>
+
+#include <pixelchar/renderers/renderer_vulkan.h>
 
 #if defined(_WIN32)
 
@@ -37,11 +37,6 @@ void* loadFile(uint8_t* src, size_t* size) {
 	fclose(file);
 
 	return buffer;
-}
-
-static void callback(uint32_t type, uint8_t* msg)
-{
-	//printf("%s %s\n", (type == PIXELCHAR_DEBUG_MESSAGE_TYPE_WARNING ? "[WARNING]" : (type == PIXELCHAR_DEBUG_MESSAGE_TYPE_ERROR ? "[ERROR]" : "[CRITICAL ERROR]")), msg);
 }
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL vulkan_debug_callbck(
@@ -519,14 +514,36 @@ int main()
 	free(default_font_data);
 	free(smooth_font_data);
 
-	PixelcharRenderer pcr;
-	res = pixelcharRendererCreate(100, &pcr);
-	res = pixelcharRendererBackendVulkanInitialize(pcr, 0, 3, instance, device, gpu, queue, queue_index, window_render_pass, 0, _vkGetInstanceProcAddr, 0, 0, 0, 0);
-	res = pixelcharRendererBindFont(pcr, default_font, 0);
-	res = pixelcharRendererBindFont(pcr, smooth_font, 1);
+	PixelcharFont fonts[PIXELCHAR_RENDERER_MAX_FONT_COUNT] = { 0 };
+	fonts[0] = default_font;
+	fonts[1] = smooth_font;
 
-	pixelcharFontDestroy(default_font);
-	pixelcharFontDestroy(smooth_font);
+	PixelcharRendererVulkanCreateInfo pcr_info =
+	{
+		.instance = instance,
+		.device = device,
+		.physicalDevice = gpu,
+		.pfnvkGetInstanceProcAddr = _vkGetInstanceProcAddr,
+		.queue = queue,
+		.queueFamilyIndex = queue_index,
+		.renderPassInfoCount = 1,
+		.pRenderPassInfos = &(PixelcharRendererVulkanRenderPassInfo){
+			.renderPass = window_render_pass,
+			.subPassCount = 1,
+			.subPasses[0] = 0
+		},
+		.resourceFrameCount = 3,
+		.maxResourceFrameCharacterCount = 100,
+		.pCustomVertexShaderSource = NULL,
+		.customVertexShaderSourceSize = 0,
+		.pCustomFragmentShaderSource = NULL,
+		.customFragmentShaderSourceSize = 0,
+	};
+
+	PixelcharRendererVulkan pcr;
+	res = PixelcharRendererVulkanCreate(&pcr_info, &pcr);
+	res = PixelcharRendererVulkanUseFont(pcr, default_font, 0);
+	res = PixelcharRendererVulkanUseFont(pcr, smooth_font, 1);
 
 	Pixelchar c[30];
 
@@ -591,7 +608,7 @@ int main()
 				c[i].position[1] = 100;
 
 				if (i == 0) c[i].position[0] = 100;
-				else c[i].position[0] = c[i - 1].position[0] + pixelcharGetCharacterRenderingWidth(pcr, &c[i - 1]) + pixelcharGetCharacterRenderingSpacing(pcr, &c[i - 1], &c[i]);
+				else c[i].position[0] = c[i - 1].position[0] + pixelcharGetCharacterRenderingWidth(&c[i - 1], fonts) + pixelcharGetCharacterRenderingSpacing(&c[i - 1], &c[i], fonts);
 
 				c[i].color[0] = 0xdc;
 				c[i].color[1] = 0xdc;
@@ -603,9 +620,6 @@ int main()
 				c[i].backgroundColor[3] = 255;
 
 			}
-
-			pixelcharRendererResetQueue(pcr);
-			pixelcharRendererEnqueCharacters(pcr, c, 10);
 
 			VKCall(_vkWaitForFences(device, 1, &queue_fences[frame_index], VK_TRUE, UINT64_MAX));
 
@@ -627,7 +641,8 @@ int main()
 
 			VKCall(_vkBeginCommandBuffer(cmds[frame_index], &begin_info));
 
-			pixelcharRendererBackendVulkanUpdateRenderingData(pcr, 0, frame_index, cmds[frame_index]);
+			PixelcharRendererVulkanResetResourceFrame(pcr, frame_index);
+			PixelcharRendererVulkanUpdateRenderingData(pcr, c, 10, frame_index, cmds[frame_index]);
 
 			VkExtent2D screen_size;
 			screen_size.width = width;
@@ -666,7 +681,7 @@ int main()
 
 			//pixel_chars
 			
-			pixelcharRendererBackendVulkanRender(pcr, 0, cmds[frame_index], width, height, 4.f, 4.f, 4.f, 1.4f);
+			PixelcharRendererVulkanRender(pcr, window_render_pass, 0, cmds[frame_index], width, height, 4.f, 4.f, 4.f, 1.4f);
 
 			_vkCmdEndRenderPass(cmds[frame_index]);
 
@@ -705,9 +720,10 @@ int main()
 
 	_vkDeviceWaitIdle(device);
 
-	pixelcharRendererBackendVulkanDeinitialize(pcr, 0);
-	pixelcharRendererDestroy(pcr);
+	PixelcharRendererVulkanDestroy(pcr);
 
+	pixelcharFontDestroy(default_font);
+	pixelcharFontDestroy(smooth_font);
 
 	vulkan_device_swapchain_and_framebuffers_destroy();
 	vulkan_device_renderpasses_destroy();

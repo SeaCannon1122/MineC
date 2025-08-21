@@ -63,7 +63,7 @@ uint32_t renderer_backend_opengl_create(struct minec_client* client)
 
 	if (result == MINEC_CLIENT_SUCCESS)
 	{
-		if (pixelcharRendererBackendOpenGLInitialize(
+		if (PixelcharManagerBackendOpenGLInitialize(
 			RENDERER.components.pixelchar.renderer,
 			RENDERER.backend.pixelchar_slot + RENDERER.backend.pixelchar_slot_offset,
 			OPENGL_RESOURCE_FRAME_COUNT,
@@ -88,7 +88,7 @@ uint32_t renderer_backend_opengl_create(struct minec_client* client)
 
 	if (result != MINEC_CLIENT_SUCCESS)
 	{
-		if (pixelchar_created) pixelcharRendererBackendOpenGLDeinitialize(RENDERER.components.pixelchar.renderer, RENDERER.backend.pixelchar_slot + RENDERER.backend.pixelchar_slot_offset);
+		if (pixelchar_created) PixelcharManagerBackendOpenGLDeinitialize(RENDERER.components.pixelchar.renderer, RENDERER.backend.pixelchar_slot + RENDERER.backend.pixelchar_slot_offset);
 		if (context_created) _context_destroy(client);
 	}
 
@@ -97,7 +97,7 @@ uint32_t renderer_backend_opengl_create(struct minec_client* client)
 
 void renderer_backend_opengl_destroy(struct minec_client* client)
 {
-	pixelcharRendererBackendOpenGLDeinitialize(RENDERER.components.pixelchar.renderer, RENDERER.backend.pixelchar_slot + RENDERER.backend.pixelchar_slot_offset);
+	PixelcharManagerBackendOpenGLDeinitialize(RENDERER.components.pixelchar.renderer, RENDERER.backend.pixelchar_slot + RENDERER.backend.pixelchar_slot_offset);
 	_context_destroy(client);
 }
 
@@ -143,7 +143,7 @@ uint32_t renderer_backend_opengl_frame_begin(struct minec_client* client)
 
 uint32_t renderer_backend_opengl_frame_menu(struct minec_client* client)
 {
-	pixelcharRendererBackendOpenGLRender(
+	PixelcharManagerBackendOpenGLRender(
 		RENDERER.components.pixelchar.renderer,
 		RENDERER.backend.pixelchar_slot + RENDERER.backend.pixelchar_slot_offset,
 		OPENGL.resource_frame_index,

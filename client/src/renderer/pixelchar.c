@@ -18,7 +18,7 @@ static void _load_assets(struct minec_client* client)
 			PixelcharResult presult;
 			if ((presult = pixelcharFontCreate(data, size, &RENDERER.components.pixelchar.fonts[i])) == PIXELCHAR_SUCCESS)
 			{
-				pixelcharRendererBindFont(RENDERER.components.pixelchar.renderer, RENDERER.components.pixelchar.fonts[i], i);
+				PixelcharManagerBindFont(RENDERER.components.pixelchar.renderer, RENDERER.components.pixelchar.fonts[i], i);
 				pixelcharFontGetName(RENDERER.components.pixelchar.fonts[i], RENDERER.components.pixelchar.font_names[i]);
 			}
 			else minec_client_log_debug_l(client, "'pixelcharFontCreate' failed with PixelcharError '%s'", pixelcharGetResultAsString(presult));
@@ -34,7 +34,7 @@ static void _unload_assets(struct minec_client* client)
 	{
 		if (RENDERER.components.pixelchar.fonts[i] != NULL)
 		{
-			pixelcharRendererBindFont(RENDERER.components.pixelchar.renderer, NULL, i);
+			PixelcharManagerBindFont(RENDERER.components.pixelchar.renderer, NULL, i);
 			pixelcharFontDestroy(RENDERER.components.pixelchar.fonts[i]);
 		}
 	}
@@ -44,9 +44,9 @@ uint32_t renderer_component_pixelchar_create(struct minec_client* client)
 {
 	PixelcharResult presult;
 
-	if ((presult = pixelcharRendererCreate(RENDERER_PIXELCHAR_RENDERER_QUEUE_LENGTH, &RENDERER.components.pixelchar.renderer)) != PIXELCHAR_SUCCESS)
+	if ((presult = PixelcharManagerCreate(RENDERER_PIXELCHAR_RENDERER_QUEUE_LENGTH, &RENDERER.components.pixelchar.renderer)) != PIXELCHAR_SUCCESS)
 	{
-		minec_client_log_debug_l(client, "'pixelcharRendererCreate' failed with PixelcharError '%s'", pixelcharGetResultAsString(presult));
+		minec_client_log_debug_l(client, "'PixelcharManagerCreate' failed with PixelcharError '%s'", pixelcharGetResultAsString(presult));
 		return MINEC_CLIENT_ERROR;
 	}
 
@@ -58,7 +58,7 @@ uint32_t renderer_component_pixelchar_create(struct minec_client* client)
 void renderer_component_pixelchar_destroy(struct minec_client* client)
 {
 	_unload_assets(client);
-	pixelcharRendererDestroy(RENDERER.components.pixelchar.renderer);
+	PixelcharManagerDestroy(RENDERER.components.pixelchar.renderer);
 }
 
 void renderer_component_pixelchar_reload_assets(struct minec_client* client)

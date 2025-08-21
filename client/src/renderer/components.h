@@ -40,7 +40,7 @@ struct renderer_components
 {
 	struct
 	{
-		PixelcharRenderer renderer;
+		PixelcharManager renderer;
 		PixelcharFont fonts[PIXELCHAR_RENDERER_MAX_FONT_COUNT];
 		uint8_t font_names[PIXELCHAR_RENDERER_MAX_FONT_COUNT][PIXELCHAR_FONT_NAME_BUFFER_SIZE];
 	} pixelchar;
