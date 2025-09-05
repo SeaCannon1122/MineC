@@ -1,4 +1,4 @@
-#include <window/window.h>
+#include <cwindow/cwindow.h>
 #include <utils.h>
 
 #include <stdio.h>
@@ -58,7 +58,9 @@ do { \
     } \
 } while(0)
 
-void* window;
+cwindow_context* window_context;
+cwindow* window;
+
 uint32_t width;
 uint32_t height;
 uint32_t position_x;
@@ -176,7 +178,6 @@ void load_functions(uint32_t step)
 
 void vulkan_instance_create()
 {
-	_vkGetInstanceProcAddr = window_get_vkGetInstanceProcAddr();
 	load_functions(0);
 
 	VkApplicationInfo app_info = { 0 };
@@ -186,7 +187,7 @@ void vulkan_instance_create()
 	app_info.apiVersion = VK_API_VERSION_1_3;
 
 	char* instance_extensions[] = {
-		window_get_VK_KHR_PLATFORM_SURFACE_EXTENSION_NAME(),
+		CWINDOW_VK_KHR_PLATFORM_SURFACE_EXTENSION_NAME,
 		VK_KHR_SURFACE_EXTENSION_NAME,
 		VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
 		VK_EXT_DEBUG_UTILS_EXTENSION_NAME
@@ -222,7 +223,7 @@ void vulkan_instance_create()
 		vkCreateDebugUtilsMessengerEXT(instance, &debug_info, 0, &debug_messenger);
 	}
 
-	VKCall(window_vkCreateSurfaceKHR(window, instance, &surface));
+	VKCall(cwindow_vkCreateSurfaceKHR(window, instance, &surface));
 }
 
 void vulkan_instance_destroy()
@@ -461,8 +462,8 @@ void vulkan_device_swapchain_and_framebuffers_create()
 
 	VkFramebufferCreateInfo framebuffer_info = { 0 };
 	framebuffer_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-	framebuffer_info.width = width;
-	framebuffer_info.height = height;
+	framebuffer_info.width = surface_capabilities.currentExtent.width;
+	framebuffer_info.height = surface_capabilities.currentExtent.height;
 	framebuffer_info.renderPass = window_render_pass;
 	framebuffer_info.layers = 1;
 	framebuffer_info.attachmentCount = 1;
@@ -486,12 +487,12 @@ void vulkan_device_swapchain_and_framebuffers_destroy()
 
 int main()
 {
-	window_init_context(NULL);
-	window_vulkan_load();
+	window_context = cwindow_context_create("context");
+	cwindow_context_graphics_vulkan_load(window_context, &_vkGetInstanceProcAddr);
 
-	window = window_create(100, 100, 500, 300, "pixelchar vulkan test", true);
+	window = cwindow_create(window_context, 100, 100, 500, 300, "pixelchar vulkan test", true);
 
-	window_get_dimensions(window, &width, &height, &position_x, &position_y);
+	cwindow_get_dimensions(window, &width, &height, &position_x, &position_y);
 
 	vulkan_instance_create();
 	vulkan_device_create();
@@ -499,7 +500,7 @@ int main()
 	vulkan_device_swapchain_and_framebuffers_create();
 
 	size_t default_font_data_size;
-	void* default_font_data = loadFile("../../../../client/assets/minec/fonts/font0.pixelfont", &default_font_data_size);
+	void* default_font_data = loadFile("../../../../client/assets/minec/fonts/default.pixelfont", &default_font_data_size);
 	if (default_font_data == NULL) printf("failed to load pixelfont\n");
 
 	size_t smooth_font_data_size;
@@ -554,37 +555,51 @@ int main()
 	bool leave = false;
 	while (leave == false) {
 
-		struct window_event* event;
-		while (event = window_next_event(window))
+		uint32_t new_width = width, new_height = height;
+
+		cwindow_event* event;
+		while (event = cwindow_next_event(window))
 		{
 			switch (event->type)
 			{
 
-			case WINDOW_EVENT_MOVE_SIZE: {
-				printf(
+			case CWINDOW_EVENT_MOVE_SIZE: {
+				/*printf(
 					"New window dimensions:\n  width: %d\n  height: %d\n  position x: %d\n  position y: %d\n\n",
 					event->info.move_size.width,
 					event->info.move_size.height,
 					event->info.move_size.position_x,
 					event->info.move_size.position_y
-				);
+				);*/
 
-				width = event->info.move_size.width;
-				height = event->info.move_size.height;
-				if (width != 0 && height != 0) {
-					vulkan_device_swapchain_and_framebuffers_destroy();
-					vulkan_device_swapchain_and_framebuffers_create();
-				}
+				new_width = event->info.move_size.width;
+				new_height = event->info.move_size.height;
+				
 				
 				
 			} break;
 
-			case WINDOW_EVENT_DESTROY: {
+			case CWINDOW_EVENT_DESTROY: {
 				leave = true;
 			} break;
 
 			}
 		}
+
+		if (
+			(width != new_width || height != new_height) &&
+			(new_width != 0 && new_height != 0)
+			)
+		{
+			printf("width %d -> %d |height %d -> %d\n", width, new_width, height, new_height);
+			width = new_width;
+			height = new_height;
+			vulkan_device_swapchain_and_framebuffers_destroy();
+			vulkan_device_swapchain_and_framebuffers_create();
+		}
+
+		width = new_width;
+		height = new_height;
 
 
 		if (width != 0 && height != 0)
@@ -730,8 +745,8 @@ int main()
 	vulkan_device_destroy();
 	vulkan_instance_destroy();
 
-	window_destroy(window);
+	cwindow_destroy(window);
 
-	window_vulkan_unload();
-	window_deinit_context();
+	cwindow_context_graphics_vulkan_unload(window_context);
+	cwindow_context_destroy(window_context);
 }

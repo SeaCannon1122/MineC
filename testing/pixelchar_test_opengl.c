@@ -2,8 +2,7 @@
 #include <string.h>
 #include "utils.h"
 
-#include <window/window.h>
-#include <GL/glcorearb.h>
+#include <cwindow/cwindow.h>
 #include <pixelchar/pixelchar.h>
 #include <pixelchar/renderers/renderer_opengl.h>
 
@@ -19,11 +18,6 @@ void DebugCallback(GLenum source, GLenum type, GLuint id, GLenum severity,
 	printf("-----------------------------------------\n\n");
 }
 
-
-static void callback(uint32_t type, uint8_t* msg)
-{
-	//printf("%s %s\n", (type == PIXELCHAR_DEBUG_MESSAGE_TYPE_WARNING ? "[WARNING]" : (type == PIXELCHAR_DEBUG_MESSAGE_TYPE_ERROR ? "[ERROR]" : "[CRITICAL ERROR]")), msg);
-}
 
 void* loadFile(uint8_t* src, size_t* size) {
 
@@ -49,24 +43,24 @@ void* loadFile(uint8_t* src, size_t* size) {
 
 int main(int argc, char* argv[]) {
 
-	window_init_context(NULL);
-	window_opengl_load();
+	cwindow_context* window_context = cwindow_context_create("context");
+	cwindow_context_graphics_opengl_load(window_context);
 
 	bool a;
-	void* window = window_create(100, 100, 200, 200, "window for test", true);
-	if (window_glCreateContext(window, 4, 6, NULL, &a) == false) printf("failed to create opengl context\n");
-	window_glMakeCurrent(window);
+	void* window = cwindow_create(window_context, 100, 100, 200, 200, "window for test", true);
+	if (cwindow_glCreateContext(window, 4, 6, NULL, &a) == false) printf("failed to create opengl context\n");
+	cwindow_glMakeCurrent(window, true);
 
-	window_glSwapIntervalEXT(0);
+	cwindow_glSwapIntervalEXT(window, 0);
 
-	PFNGLENABLEPROC glEnable = window_glGetProcAddress("glEnable");
-	PFNGLDEBUGMESSAGECALLBACKPROC glDebugMessageCallback = window_glGetProcAddress("glDebugMessageCallback");
-	PFNGLDEBUGMESSAGECONTROLPROC glDebugMessageControl = window_glGetProcAddress("glDebugMessageControl");
-	PFNGLGETSTRINGPROC glGetString = window_glGetProcAddress("glGetString");
-	PFNGLBLENDFUNCPROC glBlendFunc = window_glGetProcAddress("glBlendFunc");
-	PFNGLCLEARCOLORPROC glClearColor = window_glGetProcAddress("glClearColor");
-	PFNGLVIEWPORTPROC glViewport = window_glGetProcAddress("glViewport");
-	PFNGLCLEARPROC glClear = window_glGetProcAddress("glClear");
+	PFNGLENABLEPROC glEnable = cwindow_glGetProcAddress(window, "glEnable");
+	PFNGLDEBUGMESSAGECALLBACKPROC glDebugMessageCallback = cwindow_glGetProcAddress(window, "glDebugMessageCallback");
+	PFNGLDEBUGMESSAGECONTROLPROC glDebugMessageControl = cwindow_glGetProcAddress(window, "glDebugMessageControl");
+	PFNGLGETSTRINGPROC glGetString = cwindow_glGetProcAddress(window, "glGetString");
+	PFNGLBLENDFUNCPROC glBlendFunc = cwindow_glGetProcAddress(window, "glBlendFunc");
+	PFNGLCLEARCOLORPROC glClearColor = cwindow_glGetProcAddress(window, "glClearColor");
+	PFNGLVIEWPORTPROC glViewport = cwindow_glGetProcAddress(window, "glViewport");
+	PFNGLCLEARPROC glClear = cwindow_glGetProcAddress(window, "glClear");
 
 	glEnable(GL_DEBUG_OUTPUT);
 	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
@@ -88,7 +82,7 @@ int main(int argc, char* argv[]) {
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
 	size_t default_font_data_size;
-	void* default_font_data = loadFile("../../../../client/assets/minec/fonts/font0.pixelfont", &default_font_data_size);
+	void* default_font_data = loadFile("../../../../client/assets/minec/fonts/default.pixelfont", &default_font_data_size);
 	if (default_font_data == NULL) printf("failed to load pixelfont\n");
 
 	size_t smooth_font_data_size;
@@ -104,7 +98,7 @@ int main(int argc, char* argv[]) {
 	free(smooth_font_data);
 
 	PixelcharRendererOpenGL pcr;;
-	PixelcharRendererOpenGLCreate(window_glGetProcAddress, NULL, 0, NULL, 0, NULL, NULL, 2, 100, &pcr);
+	PixelcharRendererOpenGLCreate(cwindow_glGetProcAddress, window, NULL, 0, NULL, 0, NULL, NULL, 2, 100, &pcr);
 	PixelcharRendererOpenGLUseFont(pcr, default_font, 0);
 	PixelcharRendererOpenGLUseFont(pcr, smooth_font, 1);
 
@@ -129,7 +123,7 @@ int main(int argc, char* argv[]) {
 	uint32_t width;
 	uint32_t height;
 
-	window_get_dimensions(window, &width, &height, &x, &y);
+	cwindow_get_dimensions(window, &width, &height, &x, &y);
 
 	glViewport(0, 0, width, height);
 	
@@ -140,13 +134,13 @@ int main(int argc, char* argv[]) {
 	bool leave = false;
 	while (leave == false)
 	{
-		struct window_event* event;
-		while (event = window_next_event(window))
+		struct cwindow_event* event;
+		while (event = cwindow_next_event(window))
 		{
 			switch (event->type)
 			{
 
-			case WINDOW_EVENT_MOVE_SIZE: {
+			case CWINDOW_EVENT_MOVE_SIZE: {
 				printf(
 					"New window dimensions:\n  width: %d\n  height: %d\n  position x: %d\n  position y: %d\n\n", 
 					event->info.move_size.width, 
@@ -162,7 +156,7 @@ int main(int argc, char* argv[]) {
 
 			} break;
 
-			case WINDOW_EVENT_DESTROY: {
+			case CWINDOW_EVENT_DESTROY: {
 				leave = true;
 			} break;
 
@@ -207,7 +201,7 @@ int main(int argc, char* argv[]) {
 
 		PixelcharRendererVulkanRender(pcr, width, height, 4.f, 4.f, 4.f, 1.4f);
 
-		window_glSwapBuffers(window);
+		cwindow_glSwapBuffers(window);
 
 		frame_index = (frame_index + 1 ) % 2;
 	}
@@ -217,13 +211,13 @@ int main(int argc, char* argv[]) {
 	pixelcharFontDestroy(default_font);
 	pixelcharFontDestroy(smooth_font);
 
-	window_glMakeCurrent(NULL);
+	cwindow_glMakeCurrent(window, false);
 
-	window_glDestroyContext(window);
-	window_destroy(window);
+	cwindow_glDestroyContext(window);
+	cwindow_destroy(window);
 
-	window_opengl_unload();
-	window_deinit_context();
+	cwindow_context_graphics_opengl_unload(window_context);
+	cwindow_context_destroy(window_context);
 
 	return 0;
 }

@@ -7,7 +7,7 @@ uint32_t renderer_backend_opengl_pipelines_resources_create(struct minec_client*
     struct renderer_backend_opengl_base* base = client->RENDERER.backend.base.base;
     struct renderer_backend_opengl_pipelines_resources* pipelines_resources;
 
-    if (window_glMakeCurrent(client->window.window_handle) == false)
+    if (window_glMakeCurrent(client->window.window) == false)
     {
         minec_client_log_debug_l(client, "'window_glMakeCurrent' failed");
         return MINEC_CLIENT_ERROR;
@@ -31,7 +31,7 @@ uint32_t renderer_backend_opengl_pipelines_resources_create(struct minec_client*
 
         uint32_t pixelchar_result;
 
-        if ((pixelchar_result = PixelcharManagerBackendOpenGLInitialize(client->renderer.pixelchar_renderer, pipelines_resources->pixelchar_RENDERER.backend_index, OPENGL_FRAME_COUNT, window_glGetProcAddress, NULL, 0, NULL, 0)) & PIXELCHAR_ERROR_MASK)
+        if ((pixelchar_result = PixelcharManagerBackendOpenGLInitialize(client->renderer.pixelchar_renderer, pipelines_resources->pixelchar_RENDERER.backend_index, OPENGL_FRAME_COUNT, cwindow_glGetProcAddress, NULL, 0, NULL, 0)) & PIXELCHAR_ERROR_MASK)
         {
             minec_client_log_error(client, "PixelcharManager not usable");
             minec_client_log_debug_l(client, "'PixelcharManagerBackendOpenGLInitialize' failed with '%s'", pixelcharGetResultAsString(pixelchar_result));
@@ -66,7 +66,7 @@ void renderer_backend_opengl_pipelines_resources_destroy(struct minec_client* cl
     struct renderer_backend_opengl_pipelines_resources* pipelines_resources = client->RENDERER.backend.pipelines_resources.pipelines_resources;
 
     bool current = true;
-    if (window_glMakeCurrent(client->window.window_handle) == false)
+    if (window_glMakeCurrent(client->window.window) == false)
     {
         minec_client_log_debug_l(client, "'window_glMakeCurrent' failed");
         current = false;

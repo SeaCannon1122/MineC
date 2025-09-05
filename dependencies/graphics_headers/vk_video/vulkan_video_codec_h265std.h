@@ -13,9 +13,6 @@
 */
 
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 
 
@@ -439,8 +436,5 @@ typedef struct StdVideoH265PictureParameterSet {
 } StdVideoH265PictureParameterSet;
 
 
-#ifdef __cplusplus
-}
-#endif
 
 #endif

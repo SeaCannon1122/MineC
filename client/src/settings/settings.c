@@ -21,7 +21,6 @@ uint32_t settings_create(struct minec_client* client)
 	SETTINGS.video.renderer.fps = 0;
 	SETTINGS.video.renderer.vsync = true;
 	SETTINGS.video.renderer.max_mipmap_level_count = 5;
-	SETTINGS.video.renderer.order_create_new_destroy_old = true;
 
 	SETTINGS.active_resourcepack_paths_arraylist = arraylist_string_new(8);
 	SETTINGS.inactive_resourcepack_paths_arraylist = arraylist_string_new(8);
@@ -78,9 +77,6 @@ void settings_load(struct minec_client* client)
 			if (value = hashmap_get_value(hashmap, "max_mipmap_level_count")) if (value->type == HASHMAP_VALUE_INT)
 				SETTINGS.video.renderer.max_mipmap_level_count = (uint32_t) value->data._int;
 
-			if (value = hashmap_get_value(hashmap, "order_create_new_destroy_old")) if (value->type == HASHMAP_VALUE_BOOL)
-				SETTINGS.video.renderer.order_create_new_destroy_old = value->data._bool;
-
 			hashmap_delete(hashmap);
 		}
 		else
@@ -136,7 +132,6 @@ void settings_save(struct minec_client* client)
 		hashmap_set_value(hashmap, "fps",							&SETTINGS.video.renderer.fps,							HASHMAP_VALUE_INT);
 		hashmap_set_value(hashmap, "vsync",							&SETTINGS.video.renderer.vsync,							HASHMAP_VALUE_BOOL);
 		hashmap_set_value(hashmap, "max_mipmap_level_count",		&SETTINGS.video.renderer.max_mipmap_level_count,		HASHMAP_VALUE_INT);
-		hashmap_set_value(hashmap, "order_create_new_destroy_old",	&SETTINGS.video.renderer.order_create_new_destroy_old,	HASHMAP_VALUE_BOOL);
 
 		size_t file_length;
 		uint8_t* yaml_file_data = hashmap_write_yaml(hashmap, &file_length);

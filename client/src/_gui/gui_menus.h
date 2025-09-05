@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef GUI_MENUS_H
-#define GUI_MENUS_H
+#ifndef MENU_GUIS_H
+#define MENU_GUIS_H
 
 #include <stdint.h>
 
@@ -16,7 +16,7 @@ enum menus {
 	MENU_INGAME_MAIN
 };
 
-struct gui_menus_state {
+struct menu_guis_state {
 
 	uint32_t active_menu;
 	
@@ -79,12 +79,12 @@ struct gui_menus_state {
 
 struct minec_client;
 
-uint32_t gui_menus_create(struct minec_client* game);
+uint32_t menu_guis_create(struct minec_client* game);
 
-uint32_t gui_menus_destroy(struct minec_client* game);
+uint32_t menu_guis_destroy(struct minec_client* game);
 
-uint32_t gui_menus_simulation_frame(struct minec_client* game);
+uint32_t menu_guis_simulation_frame(struct minec_client* game);
 
-uint32_t gui_menus_render(struct minec_client* game);
+uint32_t menu_guis_render(struct minec_client* game);
 
-#endif // !GUI_MENUS_H
+#endif // !MENU_GUIS_H

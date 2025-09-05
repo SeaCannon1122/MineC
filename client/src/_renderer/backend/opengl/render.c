@@ -2,7 +2,7 @@
 
 uint32_t renderer_backend_opengl_start_rendering(struct minec_client* client)
 {
-	if (window_glMakeCurrent(client->window.window_handle) == false)
+	if (window_glMakeCurrent(client->window.window) == false)
 	{
 		minec_client_log_debug_l(client, "'window_glMakeCurrent' failed");
 		return MINEC_CLIENT_ERROR;
@@ -61,7 +61,7 @@ uint32_t renderer_backend_opengl_render(struct minec_client* client, bool resize
 
 	if (result == MINEC_CLIENT_SUCCESS)
 	{
-		if (window_glSwapBuffers(client->window.window_handle) == false) 
+		if (window_glSwapBuffers(client->window.window) == false) 
 		{
 			minec_client_log_debug_l(client, "'window_glSwapBuffers' failed");
 			return_result = MINEC_CLIENT_ERROR;

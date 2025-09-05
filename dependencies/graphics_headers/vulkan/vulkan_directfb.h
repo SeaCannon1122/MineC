@@ -13,9 +13,6 @@
 */
 
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 
 
@@ -48,8 +45,5 @@ VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceDirectFBPresentationSupportEXT
     IDirectFB*                                  dfb);
 #endif
 
-#ifdef __cplusplus
-}
-#endif
 
 #endif

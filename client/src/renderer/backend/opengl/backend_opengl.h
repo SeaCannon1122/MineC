@@ -1,13 +1,12 @@
 #pragma once
 
-#ifndef MINEC_CLIENT_RENDERER_BACKEND_VULKAN_BACKEND_OPENGL_H
-#define MINEC_CLIENT_RENDERER_BACKEND_VULKAN_BACKEND_OPENGL_H
+#ifndef MINEC_CLIENT_RENDERER_BACKEND_OPENGL_BACKEND_OPENGL_H
+#define MINEC_CLIENT_RENDERER_BACKEND_OPENGL_BACKEND_OPENGL_H
 
-#include <GL/glcorearb.h>
-#include <pixelchar/backend/backend_opengl.h>
+#include <cwindow/cwindow.h>
 
-#define OPENGL RENDERER.backend.state.opengl
-#define OPENGL_RESOURCE_FRAME_COUNT 2
+#define OPENGL_FUNC base->opengl.func
+#define OPENGL_RESOURCE_FRAME_COUNT 3
 
 #define OPENGL_FUNCTION_LIST_NO_DEBUG \
 	OPENGL_FUNCTION(PFNGLENABLEPROC, glEnable)\
@@ -102,9 +101,8 @@
 
 #endif
 
+struct renderer_backend_opengl_base	{ 
 
-struct renderer_backend_opengl
-{
 	struct
 	{
 #define OPENGL_FUNCTION(signature, name) signature name;
@@ -112,32 +110,83 @@ struct renderer_backend_opengl
 #undef OPENGL_FUNCTION
 	} func;
 
-	GLubyte* extensions[1024];
-	GLint extension_count;
+	cwindow_context* window_context;
+	cwindow* window;
 
-	float last_frame_time;
 	uint32_t resource_frame_index;
 };
 
+struct renderer_backend_opengl_device { 
+	int _empty;
+};
+
+struct renderer_backend_opengl_swapchain {
+	int _empty;
+};
+
 struct minec_client;
+struct renderer_backend_device_infos;
+struct renderer_backend_base;
+struct renderer_backend_device;
+struct renderer_backend_swapchain;
 
-uint32_t renderer_backend_opengl_create(struct minec_client* client);
-void renderer_backend_opengl_destroy(struct minec_client* client);
+struct renderer_backend_info* renderer_backend_opengl_get_info(
+	struct minec_client* client
+);
 
-uint32_t renderer_backend_opengl_reload_assets(struct minec_client* client);
+uint32_t renderer_backend_opengl_base_create(
+	struct minec_client* client,
+	cwindow_context* window_context,
+	cwindow* window,
+	struct renderer_backend_device_infos* device_infos,
+	struct renderer_backend_base* base
+);
+void renderer_backend_opengl_base_destroy(
+	struct minec_client* client,
+	struct renderer_backend_base* base
+);
 
-uint32_t renderer_backend_opengl_switch_device(struct minec_client* client, uint32_t device_index);
-uint32_t renderer_backend_opengl_set_vsync(struct minec_client* client, bool vsync);
-uint32_t renderer_backend_opengl_set_fps(struct minec_client* client, uint32_t fps);
-uint32_t renderer_backend_opengl_set_max_mipmap_level_count(struct minec_client* client, uint32_t max_mipmap_level_count);
+uint32_t renderer_backend_opengl_device_create(
+	struct minec_client* client,
+	uint32_t device_index,
+	struct renderer_backend_device* device
+);
 
-uint32_t renderer_backend_opengl_frame_begin(struct minec_client* client);
-uint32_t renderer_backend_opengl_frame_menu(struct minec_client* client);
-uint32_t renderer_backend_opengl_frame_end(struct minec_client* client);
+void renderer_backend_opengl_device_destroy(
+	struct minec_client* client,
+	struct renderer_backend_device* device
+);
 
-bool _opengl_error_get_log(struct minec_client* client, uint8_t* action, uint8_t* function, uint8_t* file, uint32_t line);
-#define opengl_error_get_log(client, action) _opengl_error_get_log(client, action, __func__, __FILE__, __LINE__)
-uint32_t opengl_errors_clear(struct minec_client* client);
+uint32_t renderer_backend_opengl_swapchain_create(
+	struct minec_client* client,
+	struct renderer_backend_device* device,
+	uint32_t width,
+	uint32_t height,
+	bool vsync,
+	bool triple_buffering,
+	struct renderer_backend_swapchain* swapchain
+);
+
+void renderer_backend_opengl_swapchain_destroy(
+	struct minec_client* client,
+	struct renderer_backend_device* device,
+	struct renderer_backend_swapchain* swapchain
+);
+
+uint32_t renderer_backend_opengl_frame_start(
+	struct minec_client* client,
+	struct renderer_backend_device* device
+);
+
+uint32_t renderer_backend_opengl_frame_submit(
+	struct minec_client* client,
+	struct renderer_backend_device* device
+);
+
+bool _opengl_error_get_log(struct minec_client* client, struct renderer_backend_base* base, uint8_t* action, uint8_t* function, uint8_t* file, uint32_t line);
+#define opengl_error_get_log(client, action) _opengl_error_get_log(client, base, action, __func__, __FILE__, __LINE__)
+uint32_t _opengl_errors_clear(struct minec_client* client, struct renderer_backend_base* base);
+#define opengl_errors_clear(client) _opengl_errors_clear(client, base);
 
 
 #endif

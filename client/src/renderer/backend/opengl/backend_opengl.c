@@ -1,8 +1,8 @@
 #include <minec_client.h>
 
-bool _opengl_error_get_log(struct minec_client* client, uint8_t* action, uint8_t* function, uint8_t* file, uint32_t line)
+bool _opengl_error_get_log(struct minec_client* client, struct renderer_backend_base* base, uint8_t* action, uint8_t* function, uint8_t* file, uint32_t line)
 {
-	GLenum error = OPENGL.func.glGetError();
+	GLenum error = OPENGL_FUNC.glGetError();
 	if (error != GL_NO_ERROR)
 	{
 		uint8_t* error_name = "Unknown";
@@ -22,142 +22,284 @@ bool _opengl_error_get_log(struct minec_client* client, uint8_t* action, uint8_t
 	return (error != GL_NO_ERROR);
 }
 
-uint32_t opengl_errors_clear(struct minec_client* client)
+uint32_t _opengl_errors_clear(struct minec_client* client, struct renderer_backend_base* base)
 {
-	for (uint32_t i = 0; OPENGL.func.glGetError() != GL_NO_ERROR; i++)
+	for (uint32_t i = 0; OPENGL_FUNC.glGetError() != GL_NO_ERROR; i++)
 		if (i > 64) return MINEC_CLIENT_ERROR;
 	return MINEC_CLIENT_SUCCESS;
 }
 
-uint32_t _context_create(struct minec_client* client);
-void _context_destroy(struct minec_client* client);
-uint32_t _context_frame_submit(struct minec_client* client);
-
 #ifdef MINEC_CLIENT_DEBUG_LOG
-uint32_t _debug_messenger_init(struct minec_client* client);
+
+static void DebugCallback(
+    GLenum source,
+    GLenum type,
+    GLuint id,
+    GLenum severity,
+    GLsizei length,
+    const GLchar* message,
+    const void* userParam
+)
+{
+    struct minec_client* client = (struct minec_client*)userParam;
+
+    minec_client_log_debug(client, "--OpenGL-Debug-Message-- Source: %u | Type : %u | ID : %u | Severity : %u | Message : %s", source, type, id, severity, message);
+}
+
 #endif
 
-void pixelchar_shader_error_log_function(struct minec_client* client, uint8_t* message)
+static struct renderer_backend_info opengl_info = { .name = "OpenGL", .description = "Might be unstable" };
+
+struct renderer_backend_info* renderer_backend_opengl_get_info(
+	struct minec_client* client
+)
 {
-	minec_client_log_error(client, "[RENDERER] [OPENGL] ", message);
+	return &opengl_info;
 }
 
-uint32_t renderer_backend_opengl_create(struct minec_client* client)
+uint32_t renderer_backend_opengl_base_create(
+	struct minec_client* client,
+    cwindow_context* window_context,
+    cwindow* window,
+	struct renderer_backend_device_infos* device_infos,
+	struct renderer_backend_base* base
+)
 {
-	uint32_t result = MINEC_CLIENT_SUCCESS;
+    uint32_t result = MINEC_CLIENT_SUCCESS;
 
-	bool
-		context_created = false,
-		pixelchar_created = false
-	;
+    bool
+        opengl_loaded = false,
+        opengl_context_created = false,
+        opengl_context_current = false
+        ;
 
-	if (result == MINEC_CLIENT_SUCCESS)
-	{
-		if ((result = _context_create(client)) != MINEC_CLIENT_SUCCESS) minec_client_log_error(client, "[RENDERER] [OPENGL] Failed to create usable OpenGL context");
-		else context_created = true;
-	}
-	
+    bool glSwapIntervalEXT_support;
+
+    if (result == MINEC_CLIENT_SUCCESS)
+    {
+        if (cwindow_context_graphics_opengl_load(window_context) == true) opengl_loaded = true;
+        else { minec_client_log_debug_l(client, "window_opengl_load() failed"); result = MINEC_CLIENT_ERROR; }
+    }
+
+    if (result == MINEC_CLIENT_SUCCESS)
+    {
+        bool glSwapIntervalEXT_suopport = false;
+
+        if (cwindow_glCreateContext(window, 4, 3, NULL, &glSwapIntervalEXT_suopport) == true) opengl_context_created = true;
+        else { minec_client_log_debug_l(client, "window_glCreateContext() with version 4.3 failed"); result = MINEC_CLIENT_ERROR; }
+
+        if (glSwapIntervalEXT_suopport == false)
+        {
+            minec_client_log_error(client, "[RENDERER] [OPENGL] 'glSwapIntervalEXT' not supported");
+            result = MINEC_CLIENT_ERROR;
+        }
+    }
+
+    if (result == MINEC_CLIENT_SUCCESS)
+    {
+        if (cwindow_glMakeCurrent(window, true)) opengl_context_current = true;
+        else { minec_client_log_debug_l(client, "window_glMakeCurrent failed"); result = MINEC_CLIENT_ERROR; }
+    }
+
+    if (result == MINEC_CLIENT_SUCCESS) {
+
+        struct load_entry { void** load_dst; uint8_t* func_name; };
+
+        struct load_entry load_entries[] =
+        {
+#define OPENGL_FUNCTION(signature, name) {(void**)&OPENGL_FUNC.name, #name},
+        OPENGL_FUNCTION_LIST
+#undef OPENGL_FUNCTION
+        };
+
+        for (uint32_t i = 0; i < sizeof(load_entries) / sizeof(load_entries[0]) && result == MINEC_CLIENT_SUCCESS; i++)
+        {
+            if ((*load_entries[i].load_dst = (void*)cwindow_glGetProcAddress(window, load_entries[i].func_name)) == NULL)
+            {
+                minec_client_log_debug_l(client, "'window_glGetProcAddress(\"%s\")' failed", load_entries[i].func_name);
+                result = MINEC_CLIENT_ERROR;
+            }
+        }
+    }
+
+    GLubyte* extensions[1024];
+    GLint extension_count = 0;
+
+    if (result == MINEC_CLIENT_SUCCESS)
+    {
+        opengl_errors_clear(client);
+        OPENGL_FUNC.glGetIntegerv(GL_NUM_EXTENSIONS, &extension_count);
+
+        if (opengl_error_get_log(client, "glGetIntegerv with GL_NUM_EXTENSIONS")) result = MINEC_CLIENT_ERROR;
+
+        if (extension_count > sizeof(extensions) / sizeof(extensions[0]))
+            extension_count = sizeof(extensions) / sizeof(extensions[0]);
+        if (extension_count < 0)
+            extension_count = 0;
+    }
+
+    for (GLint i = 0; i < extension_count && result == MINEC_CLIENT_SUCCESS; i++)
+    {
+        if ((extensions[i] = (GLubyte*)OPENGL_FUNC.glGetStringi(GL_EXTENSIONS, i)) == NULL)
+        {
+            minec_client_log_debug_l(client, "'glGetStringi(GL_EXTENSIONS, %d)' failed", i);
+            result = MINEC_CLIENT_ERROR;
+        }
+    }
+
+    uint8_t* extension_names[] = {
+        "GL_ARB_bindless_texture"
+    };
+
+    for (uint32_t i = 0; i < sizeof(extension_names) / sizeof(extension_names[0]) && result == MINEC_CLIENT_SUCCESS; i++)
+    {
+        bool extension_support = false;
+        for (GLint j = 0; j < extension_count && extension_support == false; j++) if (strcmp(extension_names[i], extensions[j]) == 0) extension_support = true;
+
+        if (extension_support == false)
+        {
+            minec_client_log_error(client, "[RENDERER] [OPENGL] Extension %s not supported", extension_names[i]);
+            result = MINEC_CLIENT_ERROR;
+        }
+    }
+
 #ifdef MINEC_CLIENT_DEBUG_LOG
-	if (result == MINEC_CLIENT_ERROR) result = _debug_messenger_init(client);
+
+    if (result == MINEC_CLIENT_SUCCESS)
+    {
+        OPENGL_FUNC.glEnable(GL_DEBUG_OUTPUT);
+        OPENGL_FUNC.glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+
+        OPENGL_FUNC.glDebugMessageCallback(DebugCallback, (const void*)client);
+
+        OPENGL_FUNC.glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_HIGH, 0, NULL, GL_TRUE);
+        OPENGL_FUNC.glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_MEDIUM, 0, NULL, GL_TRUE);
+        OPENGL_FUNC.glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_LOW, 0, NULL, GL_FALSE);
+        OPENGL_FUNC.glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_NOTIFICATION, 0, NULL, GL_FALSE);
+
+        if (opengl_error_get_log(client, "Initializing debug messenger")) result = MINEC_CLIENT_ERROR;
+    }
 #endif
 
-	if (result == MINEC_CLIENT_SUCCESS)
-	{
-		if (PixelcharManagerBackendOpenGLInitialize(
-			RENDERER.components.pixelchar.renderer,
-			RENDERER.backend.pixelchar_slot + RENDERER.backend.pixelchar_slot_offset,
-			OPENGL_RESOURCE_FRAME_COUNT,
-			window_glGetProcAddress,
-			NULL, 0, NULL, 0,
-			pixelchar_shader_error_log_function,
-			client
-		) != PIXELCHAR_SUCCESS)
-		{
-			result = MINEC_CLIENT_ERROR;
-		}
-		else pixelchar_created = true;
-	}
+    if (result == MINEC_CLIENT_SUCCESS)
+    {
+        GLubyte* name;
+        GLubyte* version;
 
-	if (result == MINEC_CLIENT_SUCCESS)
-	{
-		OPENGL.func.glEnable(GL_BLEND);
-		OPENGL.func.glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        if ((name = (GLubyte*)OPENGL_FUNC.glGetString(GL_RENDERER)) == NULL || (version = (GLubyte*)OPENGL_FUNC.glGetString(GL_VERSION)) == NULL) result = MINEC_CLIENT_ERROR;
+        else
+        {
+            snprintf(device_infos->infos[0].name, sizeof(device_infos->infos[0].name), name);
+            snprintf(device_infos->infos[0].description, sizeof(device_infos->infos[0].description), version);
+        }
+    }
 
-		OPENGL.func.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-	}
+    if (result == MINEC_CLIENT_SUCCESS) {
 
-	if (result != MINEC_CLIENT_SUCCESS)
-	{
-		if (pixelchar_created) PixelcharManagerBackendOpenGLDeinitialize(RENDERER.components.pixelchar.renderer, RENDERER.backend.pixelchar_slot + RENDERER.backend.pixelchar_slot_offset);
-		if (context_created) _context_destroy(client);
-	}
+        device_infos->count = 1;
+        device_infos->infos[0].usable = true;
+        device_infos->infos[0].disable_vsync_support = true;
+        device_infos->infos[0].triple_buffering_support = false;
+        base->opengl.window_context = window_context;
+        base->opengl.window = window;
+        base->opengl.resource_frame_index = 0;
+    }
 
-	return result;
+    if (result != MINEC_CLIENT_SUCCESS)
+    {
+        if (opengl_context_current) cwindow_glMakeCurrent(window, false);
+        if (opengl_context_created) cwindow_glDestroyContext(window);
+        if (opengl_loaded) cwindow_context_graphics_opengl_unload(window_context);
+    }
+
+    return result;
 }
 
-void renderer_backend_opengl_destroy(struct minec_client* client)
+void renderer_backend_opengl_base_destroy(
+	struct minec_client* client,
+	struct renderer_backend_base* base
+)
 {
-	PixelcharManagerBackendOpenGLDeinitialize(RENDERER.components.pixelchar.renderer, RENDERER.backend.pixelchar_slot + RENDERER.backend.pixelchar_slot_offset);
-	_context_destroy(client);
+    cwindow_glMakeCurrent(base->opengl.window, false);
+    cwindow_glDestroyContext(base->opengl.window);
+    cwindow_context_graphics_opengl_unload(base->opengl.window_context);
 }
 
-uint32_t renderer_backend_opengl_reload_assets(struct minec_client* client)
+uint32_t renderer_backend_opengl_device_create(
+	struct minec_client* client,
+	uint32_t device_index,
+	struct renderer_backend_device* device
+)
+{
+    return MINEC_CLIENT_SUCCESS;
+}
+
+void renderer_backend_opengl_device_destroy(
+	struct minec_client* client,
+	struct renderer_backend_device* device
+)
 {
 
 }
 
-uint32_t renderer_backend_opengl_switch_device(struct minec_client* client, uint32_t device_index)
+uint32_t renderer_backend_opengl_swapchain_create(
+	struct minec_client* client,
+	struct renderer_backend_device* device,
+    uint32_t width,
+    uint32_t height,
+	bool vsync,
+    bool triple_buffering,
+	struct renderer_backend_swapchain* swapchain
+) 
 {
-	return MINEC_CLIENT_SUCCESS;
+    struct renderer_backend_base* base = device->base;
+    OPENGL_FUNC.glViewport(0, 0, width, height);
+    if (opengl_error_get_log(client, "glViewport")) return MINEC_CLIENT_ERROR;
+
+    if (cwindow_glSwapIntervalEXT(base->opengl.window, vsync ? 1 : 0)) return MINEC_CLIENT_SUCCESS;
+    else
+    {
+        minec_client_log_debug_l(client, vsync ? "'window_glSwapIntervalEXT(1)' failed" : "'window_glSwapIntervalEXT(0)' failed");
+        return MINEC_CLIENT_ERROR;
+    }
 }
 
-uint32_t renderer_backend_opengl_reload_resources(struct minec_client* client)
+void renderer_backend_opengl_swapchain_destroy(
+	struct minec_client* client,
+	struct renderer_backend_device* device,
+	struct renderer_backend_swapchain* swapchain
+)
 {
-	return MINEC_CLIENT_SUCCESS;
+
 }
 
-uint32_t renderer_backend_opengl_set_vsync(struct minec_client* client, bool vsync)
+uint32_t renderer_backend_opengl_frame_start(
+    struct minec_client* client,
+    struct renderer_backend_device* device
+)
 {
-	return MINEC_CLIENT_SUCCESS;
+    struct renderer_backend_base* base = device->base;
+
+    OPENGL_FUNC.glClear(GL_COLOR_BUFFER_BIT);
+
+    return MINEC_CLIENT_SUCCESS;
 }
 
-uint32_t renderer_backend_opengl_set_fps(struct minec_client* client, uint32_t fps)
+uint32_t renderer_backend_opengl_frame_submit(
+    struct minec_client* client,
+    struct renderer_backend_device* device
+)
 {
-	RENDERER.backend.settings.fps = fps;
+    struct renderer_backend_base* base = device->base;
 
-	return MINEC_CLIENT_SUCCESS;
-}
+    base->opengl.resource_frame_index = (base->opengl.resource_frame_index + 1) % OPENGL_RESOURCE_FRAME_COUNT;
 
-uint32_t renderer_backend_opengl_set_max_mipmap_level_count(struct minec_client* client, uint32_t max_mipmap_level_count)
-{
-	return MINEC_CLIENT_SUCCESS;
-}
+    if (cwindow_glSwapBuffers(base->opengl.window) == false)
+    {
+        minec_client_log_debug_l(client, "window_glSwapBuffers failed");
+        opengl_errors_clear(client);
+        return MINEC_CLIENT_ERROR;
+    }
 
-uint32_t renderer_backend_opengl_frame_begin(struct minec_client* client)
-{
-	OPENGL.func.glViewport(0, 0, RENDERER.frame_info.width, RENDERER.frame_info.height);
-	OPENGL.func.glClear(GL_COLOR_BUFFER_BIT);
-
-	return MINEC_CLIENT_SUCCESS;
-}
-
-uint32_t renderer_backend_opengl_frame_menu(struct minec_client* client)
-{
-	PixelcharManagerBackendOpenGLRender(
-		RENDERER.components.pixelchar.renderer,
-		RENDERER.backend.pixelchar_slot + RENDERER.backend.pixelchar_slot_offset,
-		OPENGL.resource_frame_index,
-		RENDERER.frame_info.width,
-		RENDERER.frame_info.height,
-		4.f, 4.f, 4.f, 1.4f
-	);
-
-	return MINEC_CLIENT_SUCCESS;
-}
-
-uint32_t renderer_backend_opengl_frame_end(struct minec_client* client)
-{
-	_context_frame_submit(client);
-
-	return MINEC_CLIENT_SUCCESS;
+    return MINEC_CLIENT_SUCCESS;
 }

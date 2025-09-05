@@ -13,9 +13,6 @@
 */
 
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 
 
@@ -219,8 +216,5 @@ typedef struct VkAccelerationStructureTrianglesDisplacementMicromapNV {
 } VkAccelerationStructureTrianglesDisplacementMicromapNV;
 
 
-#ifdef __cplusplus
-}
-#endif
 
 #endif

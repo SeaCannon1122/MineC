@@ -1,9 +1,6 @@
 #ifndef __glx_glxext_h_
 #define __glx_glxext_h_ 1
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /*
 ** Copyright 2013-2020 The Khronos Group Inc.
@@ -947,8 +944,5 @@ Status glXGetTransparentIndexSUN (Display *dpy, Window overlay, Window underlay,
 #endif
 #endif /* GLX_SUN_get_transparent_index */
 
-#ifdef __cplusplus
-}
-#endif
 
 #endif

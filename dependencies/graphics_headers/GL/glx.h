@@ -32,9 +32,6 @@
 #include <GL/gl.h>
 
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 
 #define GLX_VERSION_1_1		1
@@ -364,8 +361,5 @@ typedef union __GLXEvent {
     long pad[24];
 } GLXEvent;
 
-#ifdef __cplusplus
-}
-#endif
 
 #endif

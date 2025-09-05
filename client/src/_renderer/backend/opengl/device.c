@@ -2,7 +2,7 @@
 
 uint32_t renderer_backend_opengl_device_create(struct minec_client* client, void** backend_base, void** backend_device, uint32_t device_index, uint32_t fps, bool vsync)
 {
-	if (window_glMakeCurrent(client->window.window_handle) == false)
+	if (window_glMakeCurrent(client->window.window) == false)
 	{
 		minec_client_log_debug_l(client, "'window_glMakeCurrent' failed");
 		return MINEC_CLIENT_ERROR;
@@ -50,7 +50,7 @@ uint32_t renderer_backend_opengl_device_create(struct minec_client* client, void
 
 void renderer_backend_opengl_device_destroy(struct minec_client* client, void** backend_base, void** backend_device)
 {
-	if (window_glMakeCurrent(client->window.window_handle) == false)
+	if (window_glMakeCurrent(client->window.window) == false)
 	{
 		minec_client_log_debug_l(client, "'window_glMakeCurrent' failed");
 		return;
@@ -71,7 +71,7 @@ void renderer_backend_opengl_device_destroy(struct minec_client* client, void** 
 
 uint32_t renderer_backend_opengl_set_fps(struct minec_client* client, uint32_t fps)
 {
-	if (window_glMakeCurrent(client->window.window_handle) == false)
+	if (window_glMakeCurrent(client->window.window) == false)
 	{
 		minec_client_log_debug_l(client, "'window_glMakeCurrent' failed");
 		return MINEC_CLIENT_ERROR;

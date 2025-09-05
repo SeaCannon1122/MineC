@@ -26,7 +26,7 @@ endif()
 add_executable(MineC_Client)
 
 if(MINEC_CLIENT_CMAKE_DYNAMIC_RENDERER AND WIN32)
-    message(STATUS "Dynamic renderer: true")
+    message(STATUS "    Dynamic renderer")
 
     add_library(MineC_Client_Renderer SHARED)
     set(MINEC_CLIENT_RENDERER_TARGET MineC_Client_Renderer)
@@ -40,8 +40,6 @@ if(MINEC_CLIENT_CMAKE_DYNAMIC_RENDERER AND WIN32)
     target_link_libraries(MineC_Client_Renderer_build_dummy PRIVATE MineC_Client_Renderer)
 
 else()
-    message(STATUS "Dynamic renderer: false")
-
     set(MINEC_CLIENT_RENDERER_TARGET MineC_Client)
 endif()
 
@@ -54,12 +52,10 @@ add_dependencies(MineC_Client MineC_Client_copy_data_files)
 add_dependencies(${MINEC_CLIENT_RENDERER_TARGET} MineC_Client_copy_data_files)
 
 if(MINEC_CLIENT_CMAKE_DEBUG_LOG)
-    message(STATUS "Debug log: true")
+    message(STATUS "    Debug log")
 
     target_compile_definitions(MineC_Client PRIVATE MINEC_CLIENT_DEBUG_LOG)
     target_compile_definitions(${MINEC_CLIENT_RENDERER_TARGET} PRIVATE MINEC_CLIENT_DEBUG_LOG)
-else()
-    message(STATUS "Debug log: false")
 endif()
 
 
@@ -101,6 +97,7 @@ target_sources(MineC_Client PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/settings/settings.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/asset_loader/asset_loader.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/renderer.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/gui/menu_gui.c
 
     ${CMAKE_CURRENT_SOURCE_DIR}/.cerialized_src/assets.c
 )
@@ -112,7 +109,7 @@ target_include_directories(MineC_Client PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/.cerialized_src
 )
 
-target_link_libraries(MineC_Client PRIVATE window utility networking stb_image)
+target_link_libraries(MineC_Client PRIVATE cwindow utility networking stb_image)
 
 
 
@@ -120,8 +117,6 @@ target_sources(${MINEC_CLIENT_RENDERER_TARGET} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/renderer.c
 
     ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/components.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/pixelchar.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/menu.c
 
     ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/backend/backend.c
 )
@@ -130,7 +125,7 @@ target_include_directories(${MINEC_CLIENT_RENDERER_TARGET} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
-target_link_libraries(${MINEC_CLIENT_RENDERER_TARGET} PRIVATE window pixelchar utility stb_image)
+target_link_libraries(${MINEC_CLIENT_RENDERER_TARGET} PRIVATE cwindow utility stb_image)
 
 
 message(STATUS "Renderer backends:")
@@ -146,8 +141,6 @@ if(MINEC_CLIENT_CMAKE_RENDERER_BACKEND_OPENGL)
 
     target_sources(${MINEC_CLIENT_RENDERER_TARGET} PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/backend/opengl/backend_opengl.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/backend/opengl/context.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/backend/opengl/debug_messenger.c
     )
 
     target_compile_definitions(${MINEC_CLIENT_RENDERER_TARGET} PRIVATE MINEC_CLIENT_RENDERER_BACKEND_OPENGL=1)
@@ -155,6 +148,10 @@ endif()
 
 if(MINEC_CLIENT_CMAKE_RENDERER_BACKEND_DIRECT3D11)
     message(STATUS "  Direct3D11")
+
+    target_sources(${MINEC_CLIENT_RENDERER_TARGET} PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/backend/vulkan/backend_vulkan.c
+    )
 
     target_compile_definitions(${MINEC_CLIENT_RENDERER_TARGET} PRIVATE MINEC_CLIENT_RENDERER_BACKEND_DIRECT3D11=1)
 endif()

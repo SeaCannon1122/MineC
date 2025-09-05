@@ -105,7 +105,7 @@ uint32_t _renderer_backend_load_create(
 		else library_loaded = true;
 	}
 
-	struct renderer_backend_interface* (*get_interfaces_function)(void* window_context, uint32_t* count, uint8_t*** names);
+	struct renderer_backend_interface* (*get_interfaces_function)(void* cwindow_context, uint32_t* count, uint8_t*** names);
 
 	if (result == MINEC_CLIENT_SUCCESS)
 	{

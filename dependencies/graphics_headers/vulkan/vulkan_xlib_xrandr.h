@@ -13,9 +13,6 @@
 */
 
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 
 
@@ -39,8 +36,5 @@ VKAPI_ATTR VkResult VKAPI_CALL vkGetRandROutputDisplayEXT(
     VkDisplayKHR*                               pDisplay);
 #endif
 
-#ifdef __cplusplus
-}
-#endif
 
 #endif

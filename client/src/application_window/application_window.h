@@ -4,7 +4,7 @@
 #define MINEC_CLIENT_APPLICATION_WINDOW_APPLICATION_WINDOW_H
 
 #include <stdint.h>
-#include <window/window.h>
+#include <cwindow/cwindow.h>
 
 #define MAX_FRAME_CHAR_INPUTS 16
 
@@ -15,8 +15,8 @@
 
 struct application_window
 {
-	void* window_handle;
-	void* window_context_handle;
+	cwindow_context* context;
+	cwindow* window;
 
 	atomic_uint32_t width;
 	atomic_uint32_t height;
@@ -25,7 +25,7 @@ struct application_window
 		uint32_t characters[MAX_FRAME_CHAR_INPUTS];
 		uint32_t character_count;
 
-		uint8_t keyboard[WINDOW_KEY_TOTAL_COUNT];
+		uint8_t keyboard[CWINDOW_KEY_TOTAL_COUNT];
 
 		uint32_t mouse_x;
 		uint32_t mouse_y;
@@ -42,7 +42,7 @@ struct minec_client;
 uint32_t application_window_create(struct minec_client* client);
 uint32_t application_window_destroy(struct minec_client* client);
 
-uint32_t application_window_handle_events(struct minec_client* client);
+uint32_t application_window_events(struct minec_client* client);
 
 void application_window_get_dimensions(struct minec_client* client, uint32_t* width, uint32_t* height);
 

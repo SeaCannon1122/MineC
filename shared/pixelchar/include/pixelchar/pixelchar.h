@@ -3,9 +3,6 @@
 #ifndef PIXELCHAR_H
 #define PIXELCHAR_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 #include <stdint.h>
 #include <stddef.h>
@@ -57,8 +54,5 @@ void pixelcharFontGetName(PixelcharFont font, uint8_t* buffer);
 uint32_t pixelcharGetCharacterRenderingWidth(Pixelchar* character, PixelcharFont* fonts);
 uint32_t pixelcharGetCharacterRenderingSpacing(Pixelchar* character0, Pixelchar* character1, PixelcharFont* fonts);
 
-#ifdef __cplusplus
-}
-#endif
 
 #endif

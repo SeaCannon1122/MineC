@@ -13,9 +13,6 @@
 */
 
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 
 
@@ -22150,8 +22147,5 @@ VKAPI_ATTR void VKAPI_CALL vkCmdDrawMeshTasksIndirectCountEXT(
     uint32_t                                    stride);
 #endif
 
-#ifdef __cplusplus
-}
-#endif
 
 #endif

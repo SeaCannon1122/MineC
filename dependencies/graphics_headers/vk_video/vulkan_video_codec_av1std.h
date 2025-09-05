@@ -13,9 +13,6 @@
 */
 
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 
 
@@ -387,8 +384,5 @@ typedef struct StdVideoAV1SequenceHeader {
 } StdVideoAV1SequenceHeader;
 
 
-#ifdef __cplusplus
-}
-#endif
 
 #endif

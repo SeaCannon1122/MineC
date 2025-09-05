@@ -13,9 +13,6 @@
 */
 
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 
 
@@ -150,8 +147,5 @@ typedef struct StdVideoEncodeH265ReferenceInfo {
 } StdVideoEncodeH265ReferenceInfo;
 
 
-#ifdef __cplusplus
-}
-#endif
 
 #endif

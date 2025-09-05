@@ -87,7 +87,7 @@ bool PixelcharRendererOpenGLUseFont(PixelcharRendererOpenGL renderer, PixelcharF
 	if (renderer->fonts[fontIndex] != NULL)
 	{
 		renderer->fonts[fontIndex]->reference_count--;
-		if (renderer->fonts[fontIndex]->reference_count == 0) free(renderer->fonts[fontIndex]);
+		if (renderer->fonts[fontIndex]->destroyed && renderer->fonts[fontIndex]->reference_count == 0) free(renderer->fonts[fontIndex]);
 		renderer->func.glDeleteBuffers(1, &renderer->opengl_fonts[fontIndex]);
 	}
 	renderer->fonts[fontIndex] = NULL;
@@ -208,7 +208,8 @@ GLuint _create_program
 }
 
 bool PixelcharRendererOpenGLCreate(
-	void* (*pfnglGetProcAddress)(uint8_t*),
+	void* (*pfnglGetProcAddress)(void* userParam, uint8_t*),
+	void* pfnglGetProcAddressUserParam,
 	uint8_t* customVertexShaderSource,
 	size_t customVertexShaderSourceLength,
 	uint8_t* customFragmentShaderSource,
@@ -244,7 +245,7 @@ bool PixelcharRendererOpenGLCreate(
 #undef OPENGL_FUNCTION
 	};
 
-	for (uint32_t i = 0; i < sizeof(load_entries) / sizeof(load_entries[0]); i++) if ((*load_entries[i].load_dst = (void**)pfnglGetProcAddress(load_entries[i].func_name)) == NULL)
+	for (uint32_t i = 0; i < sizeof(load_entries) / sizeof(load_entries[0]); i++) if ((*load_entries[i].load_dst = (void**)pfnglGetProcAddress(pfnglGetProcAddressUserParam, load_entries[i].func_name)) == NULL)
 	{
 		success = false;
 		break;
@@ -404,7 +405,7 @@ void PixelcharRendererOpenGLDestroy(PixelcharRendererOpenGL renderer)
 	{
 		renderer->func.glDeleteBuffers(1, &renderer->opengl_fonts[i]);
 		renderer->fonts[i]->reference_count--;
-		if (renderer->fonts[i]->reference_count == 0) free(renderer->fonts[i]);
+		if (renderer->fonts[i]->destroyed && renderer->fonts[i]->reference_count == 0) free(renderer->fonts[i]);
 	}
 
 	renderer->func.glDeleteProgram(renderer->shader_program);

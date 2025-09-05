@@ -288,7 +288,7 @@ VkResult PixelcharRendererVulkanUseFont(PixelcharRendererVulkan renderer, Pixelc
 	if (renderer->fonts[fontIndex] != NULL)
 	{
 		renderer->fonts[fontIndex]->reference_count--;
-		if (renderer->fonts[fontIndex]->reference_count == 0) free(renderer->fonts[fontIndex]);
+		if (renderer->fonts[fontIndex]->destroyed && renderer->fonts[fontIndex]->reference_count == 0) free(renderer->fonts[fontIndex]);
 
 		if (renderer->func.vkDeviceWaitIdle(renderer->device) != VK_SUCCESS) return VK_ERROR_DEVICE_LOST;
 		_destroy_buffer_and_memory(renderer, &renderer->vulkan_fonts[fontIndex]);
@@ -811,7 +811,7 @@ void PixelcharRendererVulkanDestroy(PixelcharRendererVulkan renderer)
 	{
 		_destroy_buffer_and_memory(renderer, &renderer->vulkan_fonts[i]);
 		renderer->fonts[i]->reference_count--;
-		if (renderer->fonts[i]->reference_count == 0) free(renderer->fonts[i]);
+		if (renderer->fonts[i]->destroyed && renderer->fonts[i]->reference_count == 0) free(renderer->fonts[i]);
 	}
 			
 

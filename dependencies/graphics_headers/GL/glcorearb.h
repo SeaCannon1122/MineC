@@ -1,9 +1,6 @@
 #ifndef __gl_glcorearb_h_
 #define __gl_glcorearb_h_ 1
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /*
 ** Copyright 2013-2020 The Khronos Group Inc.
@@ -5990,8 +5987,5 @@ GLAPI void APIENTRY glNamedFramebufferTextureMultiviewOVR (GLuint framebuffer, G
 #define GL_OVR_multiview2 1
 #endif /* GL_OVR_multiview2 */
 
-#ifdef __cplusplus
-}
-#endif
 
 #endif

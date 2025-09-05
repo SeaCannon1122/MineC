@@ -4,8 +4,11 @@
 #define MINEC_CLIENT_RENDERER_FRONTEND_FRONTEND_H
 
 #include <stdint.h>
+#include "backend/backend.h"
 
-#define RENDERER_PIXELCHAR_RENDERER_QUEUE_LENGTH 1024
+#define RENDERER_MENU_PIXELCHAR_BUFFER_LENGTH 256
+
+#define RENDERER_PIXELCHAR_BUFFER_LENGTH RENDERER_MENU_PIXELCHAR_BUFFER_LENGTH
 
 struct renderer_rendering_settings
 {
@@ -38,12 +41,12 @@ struct menu_texture
 
 struct renderer_components
 {
-	struct
-	{
-		PixelcharManager renderer;
-		PixelcharFont fonts[PIXELCHAR_RENDERER_MAX_FONT_COUNT];
-		uint8_t font_names[PIXELCHAR_RENDERER_MAX_FONT_COUNT][PIXELCHAR_FONT_NAME_BUFFER_SIZE];
-	} pixelchar;
+	struct renderer_backend_base base;
+	bool base_created;
+	struct renderer_backend_device device;
+	bool device_created;
+	struct renderer_backend_swapchain swapchain;
+	bool swapchain_created;
 
 	struct
 	{
@@ -56,16 +59,7 @@ struct minec_client;
 uint32_t renderer_components_create(struct minec_client* client);
 void renderer_components_destroy(struct minec_client* client);
 
-void renderer_frame(struct minec_client* client);
-
-uint32_t renderer_component_pixelchar_create(struct minec_client* client);
-void renderer_component_pixelchar_destroy(struct minec_client* client);
-void renderer_component_pixelchar_reload_assets(struct minec_client* client);
-
-uint32_t renderer_component_menu_create(struct minec_client* client);
-void renderer_component_menu_destroy(struct minec_client* client);
-void renderer_component_menu_reload_assets(struct minec_client* client);
-void renderer_component_menu_frame(struct minec_client* client);
+uint32_t renderer_frame(struct minec_client* client);
 
 #endif
 

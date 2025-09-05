@@ -52,9 +52,6 @@ typedef void *buffer_handle_t;
 
 #include <vulkan/vulkan.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 #define VK_ANDROID_native_buffer 1
 
@@ -317,8 +314,5 @@ VKAPI_ATTR VkResult VKAPI_CALL vkQueueSignalReleaseImageANDROID(
 #endif
 /* clang-format on */
 
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* __VK_ANDROID_NATIVE_BUFFER_H__ */

@@ -28,9 +28,6 @@
 #ifndef __eglmesaext_h_
 #define __eglmesaext_h_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 #include <EGL/eglplatform.h>
 
@@ -49,8 +46,5 @@ typedef EGLBoolean (EGLAPIENTRYP PFNEGLSWAPBUFFERSREGIONNOK) (EGLDisplay dpy, EG
 #define EGL_DRM_BUFFER_FORMAT_RGB565_MESA       0x3292
 #endif /* EGL_MESA_drm_image_formats */
 
-#ifdef __cplusplus
-}
-#endif
 
 #endif

@@ -2,13 +2,12 @@
 
 void minec_client_run(uint8_t* data_files_path)
 {
-	struct minec_client client_memory;
-	struct minec_client* client = &client_memory;
+	struct minec_client* client = &(struct minec_client) { 0 };
 
 	bool status = MINEC_CLIENT_SUCCESS;
 
 	bool
-		data_files_path_allocated  = false,
+		data_files_path_allocated = false,
 		settings_created = false,
 		asset_loader_created = false,
 		application_window_created = false,
@@ -85,10 +84,10 @@ void minec_client_run(uint8_t* data_files_path)
 		}
 	}
 
-	if (status == MINEC_CLIENT_SUCCESS) while (application_window_handle_events(client) == MINEC_CLIENT_SUCCESS)
+	if (status == MINEC_CLIENT_SUCCESS) while (application_window_events(client) == MINEC_CLIENT_SUCCESS)
 	{
 #ifdef MINEC_CLIENT_DYNAMIC_RENDERER_EXECUTABLE
-		if (client->window.input.keyboard[WINDOW_KEY_R] == (KEY_DOWN_MASK | KEY_CHANGE_MASK))
+		if (client->window.input.keyboard[CWINDOW_KEY_R] == (KEY_DOWN_MASK | KEY_CHANGE_MASK))
 		{
 			minec_client_log_info(client, "[GLOBAL] Reloading Renderer");
 
@@ -132,7 +131,7 @@ void minec_client_run(uint8_t* data_files_path)
 	{
 		settings_save(client);
 		settings_destroy(client);
-		minec_client_log_info(client, "[GLOBAL] Renderer destroyed");
+		minec_client_log_info(client, "[GLOBAL] Settings destroyed");
 	}
 
 	if (data_files_path_allocated) free(client->data_files_path);

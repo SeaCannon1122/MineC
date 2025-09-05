@@ -165,7 +165,7 @@ struct renderer_backend_opengl_pipelines_resources
 
 uint32_t create_framebuffers(struct minec_client* client, struct renderer_backend_opengl_base* base);
 void destroy_framebuffers(struct minec_client* client, struct renderer_backend_opengl_base* base);
-uint32_t create_framebuffer_attachments(struct minec_client* client, struct renderer_backend_opengl_base* base, uint32_t winodw_width, uint32_t window_height);
+uint32_t create_framebuffer_attachments(struct minec_client* client, struct renderer_backend_opengl_base* base, uint32_t winodw_width, uint32_t cwindow_height);
 void destroy_framebuffer_attachments(struct minec_client* client, struct renderer_backend_opengl_base* base);
 
 

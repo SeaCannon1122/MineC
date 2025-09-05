@@ -4,7 +4,6 @@
 
 void rendering_thread_function(struct minec_client* client)
 {
-	RENDERER_CRASHING = false;
 
 	if (renderer_components_create(client) != MINEC_CLIENT_SUCCESS)
 	{
@@ -14,22 +13,17 @@ void rendering_thread_function(struct minec_client* client)
 
 	atomic_bool_store(&RENDERER.public.created, true);
 
-	while (atomic_bool_load(&RENDERER.public.active))
-	{
-
-		renderer_frame(client);
-		if (RENDERER_CRASHING) break;
-	}
+	while (atomic_bool_load(&RENDERER.public.active)) 
+		if (renderer_frame(client) != MINEC_CLIENT_SUCCESS)
+			atomic_bool_store(&RENDERER.public.active, false);
 
 	renderer_components_destroy(client);
-
-	atomic_bool_store(&RENDERER.public.active, false);
 }
 
-uint32_t renderer_create(struct minec_client* client, struct renderer_settings_state* settings)
+uint32_t renderer_create(struct minec_client* client, struct renderer_settings* settings)
 {
-	renderer_read_settings_from_settings_state(settings, &RENDERER.settings);
-	renderer_read_backend_settings_from_settings_state(settings, &RENDERER.backend.settings);
+	RENDERER.settings = *settings;
+
 	renderer_reset_action_state(client);
 	RENDERER.public.state.info_changed = true;
 
@@ -96,7 +90,7 @@ bool renderer_get_info_state(struct minec_client* client, struct renderer_info_s
 	return change;
 }
 
-bool renderer_get_settings_state(struct minec_client* client, struct renderer_settings_state* settings_state)
+bool renderer_get_settings_state(struct minec_client* client, struct renderer_settings* settings_state)
 {
 	bool change;
 
@@ -161,12 +155,6 @@ void renderer_action(struct minec_client* client, struct renderer_action* action
 			RENDERER.public.action.render_distance.change = true;
 		} break;
 
-		case _RENDERER_ACTION_SET_ORDER_CREATE_NEW_DESTROY_OLD:
-		{
-			RENDERER.public.action.order_create_new_destroy_old.value = action->parameters.order_create_new_destroy_old;
-			RENDERER.public.action.order_create_new_destroy_old.change = true;
-		} break;
-
 		case _RENDERER_ACTION_RELOAD_ASSETS:
 		{
 			RENDERER.public.action.reload_assets = true;
@@ -178,38 +166,6 @@ void renderer_action(struct minec_client* client, struct renderer_action* action
 	);
 }
 
-void renderer_read_settings_from_settings_state(struct renderer_settings_state* settings_state, struct renderer_settings* settings)
-{
-	settings->fov									= settings_state->fov;
-	settings->order_create_new_destroy_old			= settings_state->order_create_new_destroy_old;
-	settings->render_distance						= settings_state->render_distance;
-}
-
-void renderer_write_settings_to_settings_state(struct renderer_settings_state* settings_state, struct renderer_settings* settings)
-{
-	settings_state->fov								= settings->fov;
-	settings_state->order_create_new_destroy_old	= settings->order_create_new_destroy_old;
-	settings_state->render_distance					= settings->render_distance;
-}
-
-void renderer_read_backend_settings_from_settings_state(struct renderer_settings_state* settings_state, struct renderer_backend_settings* backend_settings)
-{
-	backend_settings->backend_device_index			= settings_state->backend_device_index;
-	backend_settings->backend_index					= settings_state->backend_index;
-	backend_settings->fps							= settings_state->fps;
-	backend_settings->max_mipmap_level_count		= settings_state->max_mipmap_level_count;
-	backend_settings->vsync							= settings_state->vsync;
-}
-
-void renderer_write_backend_settings_to_settings_state(struct renderer_settings_state* settings_state, struct renderer_backend_settings* backend_settings)
-{
-	settings_state->backend_device_index			= backend_settings->backend_device_index;
-	settings_state->backend_index					= backend_settings->backend_index;
-	settings_state->fps								= backend_settings->fps;
-	settings_state->max_mipmap_level_count			= backend_settings->max_mipmap_level_count;
-	settings_state->vsync							= backend_settings->vsync;
-}
-
 void renderer_reset_action_state(struct minec_client* client)
 {
 	RENDERER.public.action.restart = false;
@@ -219,7 +175,6 @@ void renderer_reset_action_state(struct minec_client* client)
 	RENDERER.public.action.fov.change = false;
 	RENDERER.public.action.fps.change = false;
 	RENDERER.public.action.max_mipmap_level_count.change = false;
-	RENDERER.public.action.order_create_new_destroy_old.change = false;
 	RENDERER.public.action.render_distance.change = false;
 	RENDERER.public.action.vsync.change = false;
 }
@@ -299,8 +254,8 @@ uint32_t renderer_create(struct minec_client* client, struct renderer_settings* 
 			client->renderer.client_renderer_api._log_debug = minec_client_log_debug;
 			client->renderer.client_renderer_api._log_debug_l = _minec_client_log_debug_l;
 #endif
-			client->renderer.client_renderer_api._asset_loader_asset_load = asset_loader_asset_load;
-			client->renderer.client_renderer_api._asset_loader_asset_unload = asset_loader_asset_unload;
+			client->renderer.client_renderer_api._asset_loader_get_asset = asset_loader_get_asset;
+			client->renderer.client_renderer_api._asset_loader_release_asset = asset_loader_release_asset;
 		}
 
 		renderer_get_api_func(&client->renderer.renderer_client_api);
@@ -337,7 +292,7 @@ bool renderer_get_info_state(struct minec_client* client, struct renderer_info_s
 	return client->renderer.renderer_client_api._get_info_state(client, info_state);
 }
 
-bool renderer_get_settings_state(struct minec_client* client, struct renderer_settings_state* settings_state)
+bool renderer_get_settings_state(struct minec_client* client, struct renderer_settings* settings_state)
 {
 	return client->renderer.renderer_client_api._get_settings_state(client, settings_state);
 }
@@ -356,7 +311,7 @@ uint32_t renderer_reload(struct minec_client* client)
 		return MINEC_CLIENT_SUCCESS;
 	}
 
-	struct renderer_settings_state settings = SETTINGS.video.renderer;
+	struct renderer_settings settings = SETTINGS.video.renderer;
 
 	renderer_destroy(client);
 

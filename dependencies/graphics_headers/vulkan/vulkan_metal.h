@@ -13,9 +13,6 @@
 */
 
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 
 
@@ -229,8 +226,5 @@ VKAPI_ATTR VkResult VKAPI_CALL vkGetMemoryMetalHandlePropertiesEXT(
     VkMemoryMetalHandlePropertiesEXT*           pMemoryMetalHandleProperties);
 #endif
 
-#ifdef __cplusplus
-}
-#endif
 
 #endif

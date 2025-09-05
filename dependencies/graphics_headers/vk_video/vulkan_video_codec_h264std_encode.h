@@ -13,9 +13,6 @@
 */
 
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 
 
@@ -140,8 +137,5 @@ typedef struct StdVideoEncodeH264SliceHeader {
 } StdVideoEncodeH264SliceHeader;
 
 
-#ifdef __cplusplus
-}
-#endif
 
 #endif

@@ -3,9 +3,6 @@
 #ifndef PIXELCHAR_BACKEND_VULKANL_H
 #define PIXELCHAR_BACKEND_VULKANL_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 #include <pixelchar/pixelchar.h>
 #include <vulkan/vulkan.h>

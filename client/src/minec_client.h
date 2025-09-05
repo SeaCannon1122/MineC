@@ -23,6 +23,7 @@
 #include "logging.h"
 #include "application_window/application_window.h"
 #include "settings/settings.h"
+#include "gui/gui.h"
 #include "renderer/renderer.h"
 #include "asset_loader/asset_loader.h"
 
@@ -40,6 +41,7 @@ struct minec_client
 	struct settings settings;
 	struct asset_loader asset_loader;
 	struct application_window window;
+	struct gui_state gui_state;
 	struct renderer renderer;
 };
 

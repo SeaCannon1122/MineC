@@ -1,9 +1,6 @@
 #ifndef __eglext_h_
 #define __eglext_h_ 1
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /*
 ** Copyright 2013-2020 The Khronos Group Inc.
@@ -1500,8 +1497,5 @@ EGLAPI struct wl_buffer *EGLAPIENTRY eglCreateWaylandBufferFromImageWL (EGLDispl
 #endif
 #endif /* EGL_WL_create_wayland_buffer_from_image */
 
-#ifdef __cplusplus
-}
-#endif
 
 #endif

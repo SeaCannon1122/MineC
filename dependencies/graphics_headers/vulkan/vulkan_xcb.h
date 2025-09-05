@@ -13,9 +13,6 @@
 */
 
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 
 
@@ -49,8 +46,5 @@ VKAPI_ATTR VkBool32 VKAPI_CALL vkGetPhysicalDeviceXcbPresentationSupportKHR(
     xcb_visualid_t                              visual_id);
 #endif
 
-#ifdef __cplusplus
-}
-#endif
 
 #endif

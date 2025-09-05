@@ -15,7 +15,7 @@ uint32_t renderer_backend_vulkan_base_create(struct minec_client* client, void**
     uint32_t result = MINEC_CLIENT_SUCCESS;
 
     bool 
-        window_context_initialized = false,
+        cwindow_context_initialized = false,
         base_memory = false, 
         vulkan_loaded = false,
         extensions_memory = false,
@@ -74,7 +74,7 @@ uint32_t renderer_backend_vulkan_base_create(struct minec_client* client, void**
     }
 
     uint8_t* instance_extensions[] = {
-        window_get_VK_KHR_PLATFORM_SURFACE_EXTENSION_NAME(),
+        cwindow_get_VK_KHR_PLATFORM_SURFACE_EXTENSION_NAME(),
         VK_KHR_SURFACE_EXTENSION_NAME,
         VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
         VK_EXT_DEBUG_UTILS_EXTENSION_NAME
@@ -266,7 +266,7 @@ uint32_t renderer_backend_vulkan_base_create(struct minec_client* client, void**
 
     if (result == MINEC_CLIENT_SUCCESS)
     {
-        if (window_vkCreateSurfaceKHR(client->window.window_handle, base->instance, &base->surface) != VK_SUCCESS)
+        if (window_vkCreateSurfaceKHR(client->window.window, base->instance, &base->surface) != VK_SUCCESS)
         {
             renderer_backend_vulkan_log(client, "vkCreateSurfaceKHR failed");
             result = MINEC_CLIENT_ERROR;
@@ -345,7 +345,7 @@ uint32_t renderer_backend_vulkan_base_create(struct minec_client* client, void**
 #endif
     if (result != MINEC_CLIENT_SUCCESS && instance_created) base->func.vkDestroyInstance(base->instance, 0);
     if (extensions_memory) s_free(client->dynamic_alloc, extensions);
-    if (result != MINEC_CLIENT_SUCCESS && vulkan_loaded) window_vulkan_unload();
+    if (result != MINEC_CLIENT_SUCCESS && vulkan_loaded) cwindow_vulkan_unload();
     if (result != MINEC_CLIENT_SUCCESS && base_memory) s_free(client->static_alloc, base);
 
     return result;
@@ -368,6 +368,6 @@ void renderer_backend_vulkan_base_destroy(struct minec_client* client, void** ba
 
     base->func.vkDestroyInstance(base->instance, 0);
 
-    window_vulkan_unload();
+    cwindow_vulkan_unload();
     s_free(client->static_alloc, base);
 }

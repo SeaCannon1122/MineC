@@ -13,9 +13,6 @@
 */
 
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 
 
@@ -146,8 +143,5 @@ typedef struct VkAndroidHardwareBufferFormatResolvePropertiesANDROID {
 } VkAndroidHardwareBufferFormatResolvePropertiesANDROID;
 
 
-#ifdef __cplusplus
-}
-#endif
 
 #endif

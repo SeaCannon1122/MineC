@@ -14,7 +14,7 @@ struct settings {
 	struct
 	{
 		struct renderer_info_state renderer_info;
-		struct renderer_settings_state renderer;
+		struct renderer_settings renderer;
 		uint32_t gui_scale;
 	} video;
 

@@ -17,7 +17,7 @@ uint32_t renderer_backend_opengl_base_create(struct minec_client* client, void**
     uint32_t result = MINEC_CLIENT_SUCCESS;
 
     bool
-        window_context_initialized = false,
+        cwindow_context_initialized = false,
         base_memory = false,
         opengl_loaded = false,
         context_created = false,
@@ -26,7 +26,7 @@ uint32_t renderer_backend_opengl_base_create(struct minec_client* client, void**
 
     bool currrent = false;
 
-    window_init_context(renderer_backend_get_window_context());
+    cwindow_init_context(renderer_backend_get_window_context());
 
     struct renderer_backend_opengl_base* base;
 
@@ -48,16 +48,16 @@ uint32_t renderer_backend_opengl_base_create(struct minec_client* client, void**
     }
     if (result == MINEC_CLIENT_SUCCESS)
     {
-        if (window_glCreateContext(client->window.window_handle, 4, 3, NULL, &base->vsync_support) == false)
+        if (window_glCreateContext(client->window.window, 4, 3, NULL, &base->vsync_support) == false)
         {
-            minec_client_log_debug_l(client, "'window_glCreateContext(client->window.window_handle, 4, 3, NULL)' failed");
+            minec_client_log_debug_l(client, "'window_glCreateContext(client->window.window, 4, 3, NULL)' failed");
             result = MINEC_CLIENT_ERROR;
         }
         else context_created = true;
     }
     if (result == MINEC_CLIENT_SUCCESS)
     {
-        if (window_glMakeCurrent(client->window.window_handle) == false)
+        if (window_glMakeCurrent(client->window.window) == false)
         {
             minec_client_log_debug_l(client, "'window_glMakeCurrent' failed");
             result = MINEC_CLIENT_ERROR;
@@ -267,8 +267,8 @@ uint32_t renderer_backend_opengl_base_create(struct minec_client* client, void**
     }
 
     if (extensions_memory) s_free(client->dynamic_alloc, extensions);
-    if (result != MINEC_CLIENT_SUCCESS && context_created) window_glDestroyContext(client->window.window_handle);
-    if (result != MINEC_CLIENT_SUCCESS && opengl_loaded) window_opengl_unload();
+    if (result != MINEC_CLIENT_SUCCESS && context_created) cwindow_glDestroyContext(client->window.window);
+    if (result != MINEC_CLIENT_SUCCESS && opengl_loaded) cwindow_opengl_unload();
     if (result != MINEC_CLIENT_SUCCESS && base_memory) s_free(client->static_alloc, base);
 
     return result;
@@ -278,7 +278,7 @@ void renderer_backend_opengl_base_destroy(struct minec_client* client, void** ba
 {
     struct renderer_backend_opengl_base* base = *backend_base;
 
-    window_glDestroyContext(client->window.window_handle);
-    window_opengl_unload();
+    cwindow_glDestroyContext(client->window.window);
+    cwindow_opengl_unload();
     s_free(client->static_alloc, base);
 }

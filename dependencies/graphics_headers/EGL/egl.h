@@ -1,9 +1,6 @@
 #ifndef __egl_h_
 #define __egl_h_ 1
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /*
 ** Copyright 2013-2020 The Khronos Group Inc.
@@ -335,8 +332,5 @@ EGLAPI EGLBoolean EGLAPIENTRY eglWaitSync (EGLDisplay dpy, EGLSync sync, EGLint 
 #endif
 #endif /* EGL_VERSION_1_5 */
 
-#ifdef __cplusplus
-}
-#endif
 
 #endif

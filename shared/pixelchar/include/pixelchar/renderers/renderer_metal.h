@@ -3,9 +3,6 @@
 #ifndef PIXELCHAR_BACKEND_METAL_H
 #define PIXELCHAR_BACKEND_METAL_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 #include <pixelchar/pixelchar.h>
 
@@ -23,8 +20,5 @@ PixelcharResult PixelcharManagerBackendMetalRender(
 	float shadowDevisorA
 );
 
-#ifdef __cplusplus
-}
-#endif
 
 #endif

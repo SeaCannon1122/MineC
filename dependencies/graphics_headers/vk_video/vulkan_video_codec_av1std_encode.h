@@ -13,9 +13,6 @@
 */
 
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 
 
@@ -136,8 +133,5 @@ typedef struct StdVideoEncodeAV1ReferenceInfo {
 } StdVideoEncodeAV1ReferenceInfo;
 
 
-#ifdef __cplusplus
-}
-#endif
 
 #endif

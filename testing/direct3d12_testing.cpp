@@ -8,7 +8,7 @@
 #include <d3d12sdklayers.h>
 #include <dxgidebug.h>
 
-#include <window/window.h>
+#include <cwindow/cwindow.h>
 
 #include <wrl.h>
 #include <stdio.h>
@@ -121,17 +121,17 @@ void flush()
 
 int main(int argc, char* argv[]) {
 
-	window_init_context(NULL);
-	void* window = window_create(100, 100, 200, 200, (uint8_t*)"window for test", true);
+	cwindow_context* window_context = cwindow_context_create((const uint8_t* )"context");
+	cwindow* window = cwindow_create(window_context, 100, 100, 200, 200, (uint8_t*)"window for test", true);
 
 	int32_t x;
 	int32_t y;
 	uint32_t width;
 	uint32_t height;
 
-	window_get_dimensions(window, &width, &height, &x, &y);
+	cwindow_get_dimensions(window, &width, &height, &x, &y);
 
-	HWND window_handle = window_windows_get_hwnd(window);
+	HWND cwindow = cwindow_impl_windows_get_hwnd(window);
 
 	DX_CHECK_CALL(D3D12GetDebugInterface(IID_PPV_ARGS(&d3d12debug)));
 	d3d12debug->EnableDebugLayer();
@@ -175,7 +175,7 @@ int main(int argc, char* argv[]) {
 
 	IDXGISwapChain1* temp_swapchain;
 
-	DX_CHECK_CALL(factory->CreateSwapChainForHwnd(command_queue, window_handle, &swap_chain_desc, &swap_chain_fullscreen_desc, NULL, &temp_swapchain));
+	DX_CHECK_CALL(factory->CreateSwapChainForHwnd(command_queue, cwindow, &swap_chain_desc, &swap_chain_fullscreen_desc, NULL, &temp_swapchain));
 
 	DX_CHECK_CALL(temp_swapchain->QueryInterface(IID_PPV_ARGS(&swapchain)));
 
@@ -405,13 +405,13 @@ int main(int argc, char* argv[]) {
 	bool leave = false;
 	while (leave == false)
 	{
-		struct window_event* event;
-		while (event = window_next_event(window))
+		const cwindow_event* event;
+		while (event = cwindow_next_event(window))
 		{
 			switch (event->type)
 			{
 
-			case WINDOW_EVENT_MOVE_SIZE: {
+			case CWINDOW_EVENT_MOVE_SIZE: {
 				printf(
 					"New window dimensions:\n  width: %d\n  height: %d\n  position x: %d\n  position y: %d\n\n",
 					event->info.move_size.width,
@@ -437,7 +437,7 @@ int main(int argc, char* argv[]) {
 
 			} break;
 
-			case WINDOW_EVENT_DESTROY: {
+			case CWINDOW_EVENT_DESTROY: {
 				leave = true;
 			} break;
 
@@ -544,8 +544,8 @@ int main(int argc, char* argv[]) {
 	dxgidebug->Release();
 	d3d12debug->Release();
 
-	window_destroy(window);
-	window_deinit_context();
+	cwindow_destroy(window);
+	cwindow_context_destroy(window_context);
 
 	return 0;
 }

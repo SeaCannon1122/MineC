@@ -13,9 +13,6 @@
 */
 
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 
 
@@ -53,8 +50,5 @@ typedef struct VkPresentFrameTokenGGP {
 } VkPresentFrameTokenGGP;
 
 
-#ifdef __cplusplus
-}
-#endif
 
 #endif

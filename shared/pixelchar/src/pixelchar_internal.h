@@ -3,9 +3,6 @@
 #ifndef PIXLECHAR_INTERNAL_H
 #define PIXELCHAR_INTERNAL_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 #include <pixelchar/pixelchar.h>
 
@@ -58,8 +55,5 @@ typedef struct _pixelchar_font_metadata
 
 void _convert_chars_to_render_chars(Pixelchar* chars, uint32_t char_count, PixelcharFont* fonts);
 
-#ifdef __cplusplus
-}
-#endif
 
 #endif

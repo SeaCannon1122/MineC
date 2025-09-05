@@ -51,7 +51,7 @@ struct renderer_backend {
 	VkSemaphore aquire_semaphore;
 	VkFence queue_fence;
 
-	VkRenderPass window_render_pass;
+	VkRenderPass cwindow_render_pass;
 
 	//swapchain
 	VkSwapchainKHR swapchain;

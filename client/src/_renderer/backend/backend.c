@@ -70,7 +70,7 @@ uint8_t* renderer_backend_names[] =
 #endif
 };
 
-EXPORT struct renderer_backend_interface* renderer_backend_get_interfaces(void* window_context, void* window, uint32_t* count, uint8_t*** names)
+EXPORT struct renderer_backend_interface* renderer_backend_get_interfaces(void* cwindow_context, void* window, uint32_t* count, uint8_t*** names)
 {
 	window_init_context(window_context);
 

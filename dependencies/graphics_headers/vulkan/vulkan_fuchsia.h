@@ -13,9 +13,6 @@
 */
 
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 
 
@@ -255,8 +252,5 @@ VKAPI_ATTR VkResult VKAPI_CALL vkGetBufferCollectionPropertiesFUCHSIA(
     VkBufferCollectionPropertiesFUCHSIA*        pProperties);
 #endif
 
-#ifdef __cplusplus
-}
-#endif
 
 #endif

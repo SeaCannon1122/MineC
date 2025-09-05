@@ -3,9 +3,6 @@
 #ifndef PIXELCHAR_BACKEND_OPENGL_H
 #define PIXELCHAR_BACKEND_OPENGL_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 #include <pixelchar/pixelchar.h>
 
@@ -14,7 +11,8 @@ extern "C" {
 typedef struct PixelcharRendererOpenGL_T* PixelcharRendererOpenGL;
 
 bool PixelcharRendererOpenGLCreate(
-	void* (*pfnglGetProcAddress)(uint8_t*),
+	void* (*pfnglGetProcAddress)(void* userParam, uint8_t*),
+	void* pfnglGetProcAddressUserParam,
 	uint8_t* customVertexShaderSource,
 	size_t customVertexShaderSourceLength,
 	uint8_t* customFragmentShaderSource,
@@ -47,8 +45,5 @@ void PixelcharRendererVulkanRender(
 	float shadowDevisorA
 );
 
-#ifdef __cplusplus
-}
-#endif
 
 #endif
