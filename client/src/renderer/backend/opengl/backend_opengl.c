@@ -1,6 +1,6 @@
 #include <minec_client.h>
 
-bool _opengl_error_get_log(struct minec_client* client, struct renderer_backend_base* base, uint8_t* action, uint8_t* function, uint8_t* file, uint32_t line)
+bool _opengl_error_get_log(struct minec_client* client, uint8_t* action, uint8_t* function, uint8_t* file, uint32_t line)
 {
 	GLenum error = OPENGL_FUNC.glGetError();
 	if (error != GL_NO_ERROR)
@@ -22,7 +22,7 @@ bool _opengl_error_get_log(struct minec_client* client, struct renderer_backend_
 	return (error != GL_NO_ERROR);
 }
 
-uint32_t _opengl_errors_clear(struct minec_client* client, struct renderer_backend_base* base)
+uint32_t opengl_errors_clear(struct minec_client* client)
 {
 	for (uint32_t i = 0; OPENGL_FUNC.glGetError() != GL_NO_ERROR; i++)
 		if (i > 64) return MINEC_CLIENT_ERROR;
@@ -61,8 +61,7 @@ uint32_t renderer_backend_opengl_base_create(
 	struct minec_client* client,
     cwindow_context* window_context,
     cwindow* window,
-	struct renderer_backend_device_infos* device_infos,
-	struct renderer_backend_base* base
+	struct renderer_backend_device_infos* device_infos
 )
 {
     uint32_t result = MINEC_CLIENT_SUCCESS;
@@ -71,7 +70,7 @@ uint32_t renderer_backend_opengl_base_create(
         opengl_loaded = false,
         opengl_context_created = false,
         opengl_context_current = false
-        ;
+    ;
 
     bool glSwapIntervalEXT_support;
 
@@ -200,9 +199,9 @@ uint32_t renderer_backend_opengl_base_create(
         device_infos->infos[0].usable = true;
         device_infos->infos[0].disable_vsync_support = true;
         device_infos->infos[0].triple_buffering_support = false;
-        base->opengl.window_context = window_context;
-        base->opengl.window = window;
-        base->opengl.resource_frame_index = 0;
+        OPENGL.window_context = window_context;
+        OPENGL.window = window;
+        OPENGL.resource_frame_index = 0;
     }
 
     if (result != MINEC_CLIENT_SUCCESS)
@@ -216,27 +215,24 @@ uint32_t renderer_backend_opengl_base_create(
 }
 
 void renderer_backend_opengl_base_destroy(
-	struct minec_client* client,
-	struct renderer_backend_base* base
+	struct minec_client* client
 )
 {
-    cwindow_glMakeCurrent(base->opengl.window, false);
-    cwindow_glDestroyContext(base->opengl.window);
-    cwindow_context_graphics_opengl_unload(base->opengl.window_context);
+    cwindow_glMakeCurrent(OPENGL.window, false);
+    cwindow_glDestroyContext(OPENGL.window);
+    cwindow_context_graphics_opengl_unload(OPENGL.window_context);
 }
 
 uint32_t renderer_backend_opengl_device_create(
 	struct minec_client* client,
-	uint32_t device_index,
-	struct renderer_backend_device* device
+	uint32_t device_index
 )
 {
     return MINEC_CLIENT_SUCCESS;
 }
 
 void renderer_backend_opengl_device_destroy(
-	struct minec_client* client,
-	struct renderer_backend_device* device
+	struct minec_client* client
 )
 {
 
@@ -244,19 +240,16 @@ void renderer_backend_opengl_device_destroy(
 
 uint32_t renderer_backend_opengl_swapchain_create(
 	struct minec_client* client,
-	struct renderer_backend_device* device,
     uint32_t width,
     uint32_t height,
 	bool vsync,
-    bool triple_buffering,
-	struct renderer_backend_swapchain* swapchain
+    bool triple_buffering
 ) 
 {
-    struct renderer_backend_base* base = device->base;
     OPENGL_FUNC.glViewport(0, 0, width, height);
     if (opengl_error_get_log(client, "glViewport")) return MINEC_CLIENT_ERROR;
 
-    if (cwindow_glSwapIntervalEXT(base->opengl.window, vsync ? 1 : 0)) return MINEC_CLIENT_SUCCESS;
+    if (cwindow_glSwapIntervalEXT(OPENGL.window, vsync ? 1 : 0)) return MINEC_CLIENT_SUCCESS;
     else
     {
         minec_client_log_debug_l(client, vsync ? "'window_glSwapIntervalEXT(1)' failed" : "'window_glSwapIntervalEXT(0)' failed");
@@ -265,36 +258,28 @@ uint32_t renderer_backend_opengl_swapchain_create(
 }
 
 void renderer_backend_opengl_swapchain_destroy(
-	struct minec_client* client,
-	struct renderer_backend_device* device,
-	struct renderer_backend_swapchain* swapchain
+	struct minec_client* client
 )
 {
 
 }
 
 uint32_t renderer_backend_opengl_frame_start(
-    struct minec_client* client,
-    struct renderer_backend_device* device
+    struct minec_client* client
 )
 {
-    struct renderer_backend_base* base = device->base;
-
     OPENGL_FUNC.glClear(GL_COLOR_BUFFER_BIT);
 
     return MINEC_CLIENT_SUCCESS;
 }
 
 uint32_t renderer_backend_opengl_frame_submit(
-    struct minec_client* client,
-    struct renderer_backend_device* device
+    struct minec_client* client
 )
 {
-    struct renderer_backend_base* base = device->base;
+    OPENGL.resource_frame_index = (OPENGL.resource_frame_index + 1) % OPENGL_RESOURCE_FRAME_COUNT;
 
-    base->opengl.resource_frame_index = (base->opengl.resource_frame_index + 1) % OPENGL_RESOURCE_FRAME_COUNT;
-
-    if (cwindow_glSwapBuffers(base->opengl.window) == false)
+    if (cwindow_glSwapBuffers(OPENGL.window) == false)
     {
         minec_client_log_debug_l(client, "window_glSwapBuffers failed");
         opengl_errors_clear(client);

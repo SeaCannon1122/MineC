@@ -12,50 +12,40 @@ struct renderer_backend_api
 		struct minec_client* client,
 		cwindow_context* window_context,
 		cwindow* window,
-		struct renderer_backend_device_infos* device_infos,
-		struct renderer_backend_base* base
+		struct renderer_backend_device_infos* device_infos
 	);
 
 	void (*base_destroy)(
-		struct minec_client* client,
-		struct renderer_backend_base* base
+		struct minec_client* client
 	);
 
 	uint32_t (*device_create)(
 		struct minec_client* client,
-		uint32_t device_index,
-		struct renderer_backend_device* device
+		uint32_t device_index
 	);
 
 	void (*device_destroy)(
-		struct minec_client* client,
-		struct renderer_backend_device* device
+		struct minec_client* client
 	);
 
 	uint32_t (*swapchain_create)(
 		struct minec_client* client,
-		struct renderer_backend_device* device,
 		uint32_t width,
 		uint32_t height,
 		bool vsync,
-		bool triple_buffering,
-		struct renderer_backend_swapchain* swapchain
+		bool triple_buffering
 	);
 
 	void (*swapchain_destroy)(
-		struct minec_client* client,
-		struct renderer_backend_device* device,
-		struct renderer_backend_swapchain* swapchain
+		struct minec_client* client
 	);
 
 	uint32_t (*frame_start)(
-		struct minec_client* client,
-		struct renderer_backend_device* device
+		struct minec_client* client
 	);
 
 	uint32_t (*frame_submit)(
-		struct minec_client* client,
-		struct renderer_backend_device* device
+		struct minec_client* client
 	);
 };
 
@@ -102,75 +92,63 @@ uint32_t renderer_backend_base_create(
 	uint32_t backend_index,
 	cwindow_context* window_context,
 	cwindow* window,
-	struct renderer_backend_device_infos* device_infos,
-	struct renderer_backend_base* base
+	struct renderer_backend_device_infos* device_infos
 )
 {
-	base->index = backend_index;
-	return renderer_backend_apis[backend_index].base_create(client, window_context, window, device_infos, base);
+	RENDERER.components.backend.index = backend_index;
+	return renderer_backend_apis[RENDERER.components.backend.index].base_create(client, window_context, window, device_infos);
 }
 
 void renderer_backend_base_destroy(
-	struct minec_client* client,
-	struct renderer_backend_base* base
+	struct minec_client* client
 )
 {
-	renderer_backend_apis[base->index].base_destroy(client, base);
+	renderer_backend_apis[RENDERER.components.backend.index].base_destroy(client);
 }
 
 uint32_t renderer_backend_device_create(
 	struct minec_client* client,
-	uint32_t device_index,
-	struct renderer_backend_base* base,
-	struct renderer_backend_device* device
+	uint32_t device_index
 )
 {
-	device->base = base;
-	return renderer_backend_apis[device->base->index].device_create(client, device_index, device);
+	return renderer_backend_apis[RENDERER.components.backend.index].device_create(client, device_index);
 }
 
 void renderer_backend_device_destroy(
-	struct minec_client* client,
-	struct renderer_backend_device* device
+	struct minec_client* client
 )
 {
-	renderer_backend_apis[device->base->index].device_destroy(client, device);
+	renderer_backend_apis[RENDERER.components.backend.index].device_destroy(client);
 }
 
 uint32_t renderer_backend_swapchain_create(
 	struct minec_client* client,
-	struct renderer_backend_device* device,
 	uint32_t width,
 	uint32_t height,
 	bool vsync,
-	bool triple_buffering,
-	struct renderer_backend_swapchain* swapchain
+	bool triple_buffering
 )
 {
-	return renderer_backend_apis[device->base->index].swapchain_create(client, device, width, height, vsync, triple_buffering, swapchain);
+	return renderer_backend_apis[RENDERER.components.backend.index].swapchain_create(client, width, height, vsync, triple_buffering);
 }
 
 void renderer_backend_swapchain_destroy(
-	struct minec_client* client,
-	struct renderer_backend_device* device,
-	struct renderer_backend_swapchain* swapchain
+	struct minec_client* client
 )
 {
-	renderer_backend_apis[device->base->index].swapchain_destroy(client, device, swapchain);
+	renderer_backend_apis[RENDERER.components.backend.index].swapchain_destroy(client);
 }
 
 uint32_t renderer_backend_frame_start(
-	struct minec_client* client,
-	struct renderer_backend_device* device
+	struct minec_client* client
 )
 {
-	return renderer_backend_apis[device->base->index].frame_start(client, device);
+	return renderer_backend_apis[RENDERER.components.backend.index].frame_start(client);
 }
 
 uint32_t renderer_backend_frame_submit(
-	struct minec_client* client,
-	struct renderer_backend_device* device
+	struct minec_client* client
 )
 {
-	return renderer_backend_apis[device->base->index].frame_submit(client, device);
+	return renderer_backend_apis[RENDERER.components.backend.index].frame_submit(client);
 }

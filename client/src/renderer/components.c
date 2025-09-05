@@ -7,7 +7,7 @@ uint32_t _backend_create_device(struct minec_client* client)
 	for (int32_t i = -1, original_i = RENDERER.settings.backend_device_index; i < (int32_t)RENDERER.backend_device_infos.count; i++, RENDERER.settings.backend_device_index = i)
 	{
 		if (i == original_i) continue;
-		if ((result = renderer_backend_device_create(client, RENDERER.settings.backend_device_index, &RENDERER.components.base, &RENDERER.components.device)) == MINEC_CLIENT_SUCCESS)
+		if ((result = renderer_backend_device_create(client, RENDERER.settings.backend_device_index)) == MINEC_CLIENT_SUCCESS)
 			return MINEC_CLIENT_SUCCESS;
 		else if (result == MINEC_CLIENT_ERROR_BACKEND_CRASHED) return MINEC_CLIENT_ERROR;
 	}
@@ -20,10 +20,10 @@ uint32_t _backend_create_base_and_device(struct minec_client* client)
 	for (int32_t i = -1, original_i = RENDERER.settings.backend_index; i < RENDERER_BACKEND_COUNT; i++, RENDERER.settings.backend_index = i)
 	{
 		if (i == original_i) continue;
-		if (renderer_backend_base_create(client, RENDERER.settings.backend_index, APPLICATION_WINDOW.context, APPLICATION_WINDOW.window, &RENDERER.backend_device_infos, &RENDERER.components.base) == MINEC_CLIENT_SUCCESS)
+		if (renderer_backend_base_create(client, RENDERER.settings.backend_index, APPLICATION_WINDOW.context, APPLICATION_WINDOW.window, &RENDERER.backend_device_infos) == MINEC_CLIENT_SUCCESS)
 		{
 			if (_backend_create_device(client) == MINEC_CLIENT_SUCCESS) return MINEC_CLIENT_SUCCESS;
-			renderer_backend_base_destroy(client, &RENDERER.components.base);
+			renderer_backend_base_destroy(client);
 		}
 	}
 
@@ -43,8 +43,8 @@ uint32_t renderer_components_create(struct minec_client* client)
 	{
 		if (_backend_create_base_and_device(client) == MINEC_CLIENT_SUCCESS)
 		{
-			RENDERER.components.base_created = true;
-			RENDERER.components.device_created = true;
+			RENDERER.components.backend_base_created = true;
+			RENDERER.components.backend_device_created = true;
 		}
 		else result = MINEC_CLIENT_ERROR;	
 	}
@@ -54,16 +54,16 @@ uint32_t renderer_components_create(struct minec_client* client)
 		if (RENDERER.backend_device_infos.infos[RENDERER.settings.backend_device_index].disable_vsync_support == false) RENDERER.settings.vsync = true;
 		if (RENDERER.backend_device_infos.infos[RENDERER.settings.backend_device_index].triple_buffering_support == false) RENDERER.settings.triple_buffering = false;
 
-		if (renderer_backend_swapchain_create(client, &RENDERER.components.device, RENDERER.frame_info.width, RENDERER.frame_info.height, RENDERER.settings.vsync, RENDERER.settings.triple_buffering, &RENDERER.components.swapchain) == MINEC_CLIENT_SUCCESS)
-			RENDERER.components.swapchain_created = true;
+		if (renderer_backend_swapchain_create(client, RENDERER.frame_info.width, RENDERER.frame_info.height, RENDERER.settings.vsync, RENDERER.settings.triple_buffering) == MINEC_CLIENT_SUCCESS)
+			RENDERER.components.backend_swapchain_created = true;
 		else result = MINEC_CLIENT_ERROR;
 	}
 		
 	if (result != MINEC_CLIENT_SUCCESS)
 	{
-		if (RENDERER.components.swapchain_created) renderer_backend_swapchain_destroy(client, &RENDERER.components.device, &RENDERER.components.swapchain);
-		if (RENDERER.components.device_created) renderer_backend_device_destroy(client, &RENDERER.components.device);
-		if (RENDERER.components.base_created) renderer_backend_base_destroy(client, &RENDERER.components.base);
+		if (RENDERER.components.backend_swapchain_created) renderer_backend_swapchain_destroy(client);
+		if (RENDERER.components.backend_device_created) renderer_backend_device_destroy(client);
+		if (RENDERER.components.backend_base_created) renderer_backend_base_destroy(client);
 	}
 
 	return result;
@@ -71,9 +71,9 @@ uint32_t renderer_components_create(struct minec_client* client)
 
 void renderer_components_destroy(struct minec_client* client)
 {
-	if (RENDERER.components.swapchain_created) renderer_backend_swapchain_destroy(client, &RENDERER.components.device, &RENDERER.components.swapchain);
-	if (RENDERER.components.device_created) renderer_backend_device_destroy(client, &RENDERER.components.device);
-	if (RENDERER.components.base_created) renderer_backend_base_destroy(client, &RENDERER.components.base);
+	if (RENDERER.components.backend_swapchain_created) renderer_backend_swapchain_destroy(client);
+	if (RENDERER.components.backend_device_created) renderer_backend_device_destroy(client);
+	if (RENDERER.components.backend_base_created) renderer_backend_base_destroy(client);
 }
 
 void renderer_reload_assets(struct minec_client* client)
@@ -144,12 +144,12 @@ uint32_t renderer_frame(struct minec_client* client)
 
 	if (RENDERER.frame_info.width != width )
 
-	if (renderer_backend_frame_start(client, &RENDERER.components.device) != MINEC_CLIENT_SUCCESS)
+	if (renderer_backend_frame_start(client) != MINEC_CLIENT_SUCCESS)
 	{
 
 	}
 
-	renderer_backend_frame_submit(client, &RENDERER.components.device);
+	renderer_backend_frame_submit(client);
 
 	return MINEC_CLIENT_SUCCESS;
 }

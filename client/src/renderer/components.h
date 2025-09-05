@@ -41,12 +41,11 @@ struct menu_texture
 
 struct renderer_components
 {
-	struct renderer_backend_base base;
-	bool base_created;
-	struct renderer_backend_device device;
-	bool device_created;
-	struct renderer_backend_swapchain swapchain;
-	bool swapchain_created;
+	struct renderer_backend backend;
+
+	bool backend_base_created;
+	bool backend_device_created;
+	bool backend_swapchain_created;
 
 	struct
 	{

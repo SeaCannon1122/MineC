@@ -205,18 +205,18 @@ LRESULT CALLBACK cwindow_WinProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 		cwindow_event event;
 
 		if (uMsg == WM_SIZE || uMsg == WM_MOVE) {
-			RECT rect;
-			if (GetClientRect(hwnd, &rect))
-			{
-				EnterCriticalSection(&window->dimension_cr);
-				window->width = rect.right - rect.left;
-				window->height = rect.bottom - rect.top;
-				window->position_x = rect.left;
-				window->position_y = rect.top;
-				LeaveCriticalSection(&window->dimension_cr);
+			RECT client_rect, window_rect;
+			GetClientRect(hwnd, &client_rect);
+			GetWindowRect(hwnd, &window_rect);
 
-				window->move_size = true;
-			}
+			EnterCriticalSection(&window->dimension_cr);
+			window->width = client_rect.right;
+			window->height = client_rect.bottom;
+			window->position_x = window_rect.left;
+			window->position_y = window_rect.top;
+			LeaveCriticalSection(&window->dimension_cr);
+
+			window->move_size = true;
 			result_set = true;
 		}
 		else if (uMsg == WM_CLOSE)
@@ -407,13 +407,15 @@ cwindow* cwindow_create(cwindow_context* __restrict context, int32_t posx, int32
 
 	window->context = context;
 
-	RECT rect;
-	GetClientRect(window->hwnd, &rect);
+	RECT client_rect, window_rect;
+	GetClientRect(window->hwnd, &client_rect);
+	GetWindowRect(window->hwnd, &window_rect);
+
+	window->width = client_rect.right;
+	window->height = client_rect.bottom;
+	window->position_x = window_rect.left;
+	window->position_y = window_rect.top;
 	
-	window->width = rect.right - rect.left;
-	window->height = rect.bottom - rect.top;
-	window->position_x = rect.left;
-	window->position_y = rect.top;
 	window->move_size = false;
 
 	window->selected = false;

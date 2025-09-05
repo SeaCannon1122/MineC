@@ -564,13 +564,13 @@ int main()
 			{
 
 			case CWINDOW_EVENT_MOVE_SIZE: {
-				/*printf(
+				printf(
 					"New window dimensions:\n  width: %d\n  height: %d\n  position x: %d\n  position y: %d\n\n",
 					event->info.move_size.width,
 					event->info.move_size.height,
 					event->info.move_size.position_x,
 					event->info.move_size.position_y
-				);*/
+				);
 
 				new_width = event->info.move_size.width;
 				new_height = event->info.move_size.height;
