@@ -1,9 +1,0 @@
-window_icon.png
-minec/fonts/default.pixelfont
-minec/fonts/font1.pixelfont
-minec/fonts/font2.pixelfont
-minec/fonts/font3.pixelfont
-minec/fonts/font4.pixelfont
-minec/fonts/font5.pixelfont
-minec/fonts/font6.pixelfont
-minec/fonts/font7.pixelfont

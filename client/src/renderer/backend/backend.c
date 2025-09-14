@@ -1,6 +1,6 @@
 #include <minec_client.h>
 
-// return value of MINEC_CLIENT_ERROR means after the function call, no backend exists
+#define RENDERER_BACKEND_COUNT RENDERER_BACKEND_COUNTER_OPENGL + RENDERER_BACKEND_COUNTER_VULKAN
 
 struct renderer_backend_api
 {
@@ -79,12 +79,13 @@ static struct renderer_backend_api renderer_backend_apis[] = {
 
 };
 
-struct renderer_backend_info* renderer_backend_get_info(
+void renderer_backend_get_infos(
 	struct minec_client* client,
-	uint32_t backend_index
+	struct renderer_backend_infos* infos
 )
 {
-	return renderer_backend_apis[backend_index].get_info(client);
+	infos->count = RENDERER_BACKEND_COUNT;
+	for (uint32_t i = 0; i < RENDERER_BACKEND_COUNT; i++) infos->infos[i] = *renderer_backend_apis[i].get_info(client);
 }
 
 uint32_t renderer_backend_base_create(

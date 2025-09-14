@@ -14,10 +14,10 @@
 	VULKAN_FUNCTION(vkEnumerateInstanceExtensionProperties)\
 	VULKAN_FUNCTION(vkEnumerateInstanceLayerProperties)\
 	VULKAN_FUNCTION(vkCreateInstance)\
+	VULKAN_FUNCTION(vkDestroyInstance)\
 
 #define VULKAN_INSTANCE_FUNCTION_LIST_NO_DEBUG \
 	VULKAN_FUNCTION(vkGetDeviceProcAddr)\
-	VULKAN_FUNCTION(vkDestroyInstance)\
 	VULKAN_FUNCTION(vkEnumeratePhysicalDevices)\
 	VULKAN_FUNCTION(vkGetPhysicalDeviceProperties)\
 	VULKAN_FUNCTION(vkGetPhysicalDeviceSurfaceFormatsKHR)\
@@ -28,6 +28,7 @@
 	VULKAN_FUNCTION(vkEnumerateDeviceExtensionProperties)\
 	VULKAN_FUNCTION(vkDestroySurfaceKHR)\
 	VULKAN_FUNCTION(vkCreateDevice)\
+	VULKAN_FUNCTION(vkDestroyDevice)\
 
 #define VULKAN_INSTANCE_FUNCTION_LIST_DEBUG \
 	VULKAN_FUNCTION(vkCreateDebugUtilsMessengerEXT)\
@@ -47,7 +48,6 @@
 #endif
 
 #define VULKAN_DEVICE_FUNCTION_LIST \
-	VULKAN_FUNCTION(vkDestroyDevice)\
 	VULKAN_FUNCTION(vkDeviceWaitIdle)\
 	VULKAN_FUNCTION(vkGetDeviceQueue)\
 	VULKAN_FUNCTION(vkQueueWaitIdle)\
@@ -73,6 +73,9 @@ struct renderer_backend_vulkan
 		VULKAN_DEVICE_FUNCTION_LIST
 #undef VULKAN_FUNCTION
 	} func;
+
+	cwindow_context* window_context;
+	cwindow* window;
 
 	VkInstance instance;
 	VkDebugUtilsMessengerEXT debug_messenger;

@@ -118,27 +118,6 @@ uint8_t* s_alloc_string(void* allocator, uint8_t* string, ...)
 	return str_ptr;
 }
 
-uint8_t* s_alloc_joined_string(void* allocator, uint8_t** strings, uint32_t string_count)
-{
-	size_t joined_string_length = 0;
-	for (uint32_t i = 0; i < string_count; i++) joined_string_length += strlen(strings[i]);
-
-	uint8_t* joined_string = s_alloc(allocator, joined_string_length + 1);
-	if (joined_string == NULL) return NULL;
-
-	size_t offset = 0;
-	for (uint32_t i = 0; i < string_count; i++)
-	{
-		size_t string_length = strlen(strings[i]);
-		memcpy(&joined_string[offset], strings[i], string_length);
-		offset += string_length;
-	}
-
-	joined_string[joined_string_length] = 0;
-
-	return joined_string;
-}
-
 void s_free(void* allocator, void* memory_handle)
 {
 	struct string_allocator* string_allocator = (struct string_allocator*)allocator;

@@ -44,7 +44,6 @@ uint32_t application_window_destroy(struct minec_client* client);
 
 uint32_t application_window_events(struct minec_client* client);
 
-void application_window_get_dimensions(struct minec_client* client, uint32_t* width, uint32_t* height);
 
 #endif
 

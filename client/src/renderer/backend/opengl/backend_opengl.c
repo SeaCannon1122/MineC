@@ -48,6 +48,10 @@ static void DebugCallback(
 
 #endif
 
+struct load_entry { void** load_dst; uint8_t* func_name; };
+
+#define OPENGL_FUNCTION(signature, name) {(void**)&OPENGL_FUNC.name, #name},
+
 static struct renderer_backend_info opengl_info = { .name = "OpenGL", .description = "Might be unstable" };
 
 struct renderer_backend_info* renderer_backend_opengl_get_info(
@@ -77,7 +81,7 @@ uint32_t renderer_backend_opengl_base_create(
     if (result == MINEC_CLIENT_SUCCESS)
     {
         if (cwindow_context_graphics_opengl_load(window_context) == true) opengl_loaded = true;
-        else { minec_client_log_debug_l(client, "window_opengl_load() failed"); result = MINEC_CLIENT_ERROR; }
+        else { minec_client_log_debug_l(client, "cwindow_context_graphics_opengl_load() failed"); result = MINEC_CLIENT_ERROR; }
     }
 
     if (result == MINEC_CLIENT_SUCCESS)
@@ -102,14 +106,7 @@ uint32_t renderer_backend_opengl_base_create(
 
     if (result == MINEC_CLIENT_SUCCESS) {
 
-        struct load_entry { void** load_dst; uint8_t* func_name; };
-
-        struct load_entry load_entries[] =
-        {
-#define OPENGL_FUNCTION(signature, name) {(void**)&OPENGL_FUNC.name, #name},
-        OPENGL_FUNCTION_LIST
-#undef OPENGL_FUNCTION
-        };
+        struct load_entry load_entries[] = { OPENGL_FUNCTION_LIST };
 
         for (uint32_t i = 0; i < sizeof(load_entries) / sizeof(load_entries[0]) && result == MINEC_CLIENT_SUCCESS; i++)
         {
@@ -203,8 +200,7 @@ uint32_t renderer_backend_opengl_base_create(
         OPENGL.window = window;
         OPENGL.resource_frame_index = 0;
     }
-
-    if (result != MINEC_CLIENT_SUCCESS)
+    else
     {
         if (opengl_context_current) cwindow_glMakeCurrent(window, false);
         if (opengl_context_created) cwindow_glDestroyContext(window);
@@ -247,7 +243,9 @@ uint32_t renderer_backend_opengl_swapchain_create(
 ) 
 {
     OPENGL_FUNC.glViewport(0, 0, width, height);
-    if (opengl_error_get_log(client, "glViewport")) return MINEC_CLIENT_ERROR;
+
+    OPENGL.swapchain.width = width;
+    OPENGL.swapchain.height = height;
 
     if (cwindow_glSwapIntervalEXT(OPENGL.window, vsync ? 1 : 0)) return MINEC_CLIENT_SUCCESS;
     else

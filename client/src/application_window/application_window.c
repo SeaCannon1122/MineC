@@ -18,7 +18,7 @@ uint32_t application_window_create(struct minec_client* client)
 	}
 
 	size_t raw_window_icon_data_size;
-	uint8_t* raw_window_icon_data = asset_loader_get_asset(client, "window_icon.png", &raw_window_icon_data_size);
+	uint8_t* raw_window_icon_data = resource_index_query("window_icon.png", &raw_window_icon_data_size);
 	if (raw_window_icon_data != NULL)
 	{
 		uint32_t icon_width, icon_height, comp;
@@ -36,14 +36,10 @@ uint32_t application_window_create(struct minec_client* client)
 		else
 		{
 			minec_client_log_error(client, "[WINDOW] Failed to set window icon");
-			minec_client_log_debug_l(client, "'stbi_load_from_memory' with icon data failed");
-		}	
+			minec_client_log_debug_l(client, "'stbi_load_from_memory' with icon data failed, THIS SHOULD NOT HAPPEN. Check cerialized resources");
+		}
 	}
-	else
-	{
-		minec_client_log_error(client, "[WINDOW] Failed to set window icon");
-		minec_client_log_debug_l(client, "'asset_loader_asset_load(client, \"window_icon.png\", &raw_window_icon_data, &raw_window_icon_data_size)' failed, THIS SHOULD NOT HAPPEN. Check completeness of cerialized assets");
-	}
+	else minec_client_log_debug_l(client, "'minec_client_get_resource(\"window_icon.png\", &raw_window_icon_data_size)' failed, THIS SHOULD NOT HAPPEN. Check cerialized resources");
 
 	atomic_uint32_t_init(&APPLICATION_WINDOW.width, width);
 	atomic_uint32_t_init(&APPLICATION_WINDOW.height, height);
@@ -117,10 +113,4 @@ uint32_t application_window_destroy(struct minec_client* client)
 	cwindow_context_destroy(APPLICATION_WINDOW.context);
 
 	return MINEC_CLIENT_SUCCESS;
-}
-
-void application_window_get_dimensions(struct minec_client* client, uint32_t* width, uint32_t* height)
-{
-	*width = atomic_uint32_t_load(&APPLICATION_WINDOW.width);
-	*height = atomic_uint32_t_load(&APPLICATION_WINDOW.height);
 }

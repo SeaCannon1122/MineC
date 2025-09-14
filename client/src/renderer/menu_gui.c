@@ -29,20 +29,37 @@ static void _unload_assets(struct minec_client* client)
 	for (uint32_t i = 0; i < MENU_TEXTURE_s_COUNT; i++) if (RENDERER.components.menu.tetxures[i].data) free(RENDERER.components.menu.tetxures[i].data);
 }
 
-uint32_t renderer_component_menu_create(struct minec_client* client)
+uint32_t renderer_component_menu_gui_create(struct minec_client* client)
 {
 	_load_assets(client);
 
 	return MINEC_CLIENT_SUCCESS;
 }
 
-void renderer_component_menu_destroy(struct minec_client* client)
+void renderer_component_menu_gui_destroy(struct minec_client* client)
 {
 	_unload_assets(client);
 }
 
-void renderer_component_menu_reload_assets(struct minec_client* client)
+uint32_t renderer_backend_component_menu_gui_create(struct minec_client* client)
+{
+	_load_assets(client);
+
+	return MINEC_CLIENT_SUCCESS;
+}
+
+void renderer_backend_component_menu_gui_destroy(struct minec_client* client)
+{
+	_unload_assets(client);
+}
+
+uint32_t renderer_component_menu_gui_reload_assets(struct minec_client* client)
 {
 	_unload_assets(client);
 	_load_assets(client);
+}
+
+uint32_t renderer_component_menu_gui_frame(struct minec_client* client)
+{
+
 }

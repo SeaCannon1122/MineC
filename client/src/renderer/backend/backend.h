@@ -8,7 +8,7 @@
 
 #define MINEC_CLIENT_ERROR_BACKEND_CRASHED 2
 
-#define RENDRER_MAX_BACKEND_COUNT 8
+#define RENDERER_MAX_BACKEND_COUNT 8
 #define RENDERER_MAX_BACKEND_DEVICE_COUNT 8
 
 struct renderer_backend_info
@@ -29,7 +29,7 @@ struct renderer_backend_device_info
 
 struct renderer_backend_infos
 {
-	struct renderer_backend_info infos[RENDRER_MAX_BACKEND_COUNT];
+	struct renderer_backend_info infos[RENDERER_MAX_BACKEND_COUNT];
 	uint32_t count;
 };
 
@@ -45,6 +45,7 @@ struct renderer_backend_device_infos
 #include "opengl/backend_opengl.h"
 #define RENDERER_BACKEND_COUNTER_OPENGL 1
 #else
+struct renderer_backend_opengl { int _empty; };
 #define RENDERER_BACKEND_COUNTER_OPENGL 0
 #endif
 
@@ -52,10 +53,9 @@ struct renderer_backend_device_infos
 #include "vulkan/backend_vulkan.h"
 #define RENDERER_BACKEND_COUNTER_VULKAN 1
 #else
+struct renderer_backend_vulkan { int _empty; };
 #define RENDERER_BACKEND_COUNTER_VULKAN 0
 #endif
-
-#define RENDERER_BACKEND_COUNT RENDERER_BACKEND_COUNTER_OPENGL + RENDERER_BACKEND_COUNTER_VULKAN
 
 struct renderer_backend
 {
@@ -63,13 +63,13 @@ struct renderer_backend
 	union
 	{
 		struct renderer_backend_opengl opengl;
-		struct renderer_backend_opengl vulkan;
+		struct renderer_backend_vulkan vulkan;
 	};
 };
 
-struct renderer_backend_info* renderer_backend_get_info(
+void renderer_backend_get_infos(
 	struct minec_client* client,
-	uint32_t backend_index
+	struct renderer_backend_infos* infos
 );
 
 uint32_t renderer_backend_base_create(

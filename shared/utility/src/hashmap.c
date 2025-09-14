@@ -6,6 +6,7 @@
 #include <stdarg.h>
 
 #include "string_allocator.h"
+#include "stringutils.h"
 
 uint32_t hash_djb2(const uint8_t* str, uint32_t max) {
 	uint32_t c, hash = 5381;
@@ -120,7 +121,7 @@ void hashmap_delete(void* hashmap)
 			if (map->sub_arrays[i].entries[j].in_use)
 			{
 				s_free(allocator, map->sub_arrays[i].entries[j].key);
-				if (map->sub_arrays[i].entries[j].value.type == HASHMAP_VALUE_STRING) s_free(allocator, map->sub_arrays[i].entries[j].value.data._string);
+				if (map->sub_arrays[i].entries[j].value.type & HASHMAP_VALUE_STRING_class) s_free(allocator, map->sub_arrays[i].entries[j].value.data_string8);
 			}
 		}
 		if (map->sub_arrays[i].entry_count > 0) s_free(allocator, map->sub_arrays[i].entries);
@@ -140,20 +141,54 @@ void hashmap_set_value(void* hashmap, uint8_t* key, void* value, uint32_t value_
 
 	switch (value_type)
 	{
-	case HASHMAP_VALUE_STRING: {
-		resolved_value.data._string = s_alloc_string(map->string_allocator, value);
-	} break;
-	
-	case HASHMAP_VALUE_FLOAT : {
-		resolved_value.data._float = *((float*)value);
+	case HASHMAP_VALUE_STRING8:
+	case HASHMAP_VALUE_STRING16:
+	case HASHMAP_VALUE_STRING32:
+	{
+		size_t size;
+		if (value_type == HASHMAP_VALUE_STRING8) size = (string8_len(value) + 1) * sizeof(uint8_t);
+		else if (value_type == HASHMAP_VALUE_STRING16) size = (string16_len(value) + 1) * sizeof(uint16_t);
+		else if (value_type == HASHMAP_VALUE_STRING32) size = (string32_len(value) + 1) * sizeof(uint32_t);
+
+		resolved_value.data_string32 = s_alloc(map->string_allocator, size);
+		memcpy(resolved_value.data_string32, value, size);
 	} break;
 
-	case HASHMAP_VALUE_INT: {
-		resolved_value.data._int = *((int32_t*)value);
+	case HASHMAP_VALUE_INT8:
+	case HASHMAP_VALUE_UINT8:
+	{
+		resolved_value.data_uint8 = *((uint8_t*)value);
+	} break;
+
+	case HASHMAP_VALUE_INT16:
+	case HASHMAP_VALUE_UINT16:
+	{
+		resolved_value.data_uint16 = *((uint16_t*)value);
+	} break;
+
+	case HASHMAP_VALUE_INT32:
+	case HASHMAP_VALUE_UINT32:
+	{
+		resolved_value.data_uint32 = *((uint32_t*)value);
+	} break;
+
+	case HASHMAP_VALUE_INT64:
+	case HASHMAP_VALUE_UINT64:
+	{
+		resolved_value.data_uint64 = *((uint64_t*)value);
+	} break;
+
+
+	case HASHMAP_VALUE_FLOAT : {
+		resolved_value.data_float = *((float*)value);
+	} break;
+
+	case HASHMAP_VALUE_DOUBLE: {
+		resolved_value.data_double = *((double*)value);
 	} break;
 
 	case HASHMAP_VALUE_BOOL: {
-		resolved_value.data._bool = *((bool*)value);
+		resolved_value.data_bool = *((bool*)value);
 	} break;
 
 	default: return;
@@ -164,8 +199,8 @@ void hashmap_set_value(void* hashmap, uint8_t* key, void* value, uint32_t value_
 	
 	if (_hashmap_key_exists(map, key, index, &sub_index))
 	{
-		if (map->sub_arrays[index].entries[sub_index].value.type == HASHMAP_VALUE_STRING)
-			s_free(map->string_allocator, map->sub_arrays[index].entries[sub_index].value.data._string);
+		if (map->sub_arrays[index].entries[sub_index].value.type == HASHMAP_VALUE_STRING_class)
+			s_free(map->string_allocator, map->sub_arrays[index].entries[sub_index].value.data_string8);
 	}
 	else
 	{
@@ -197,8 +232,8 @@ void hashmap_delete_key(void* hashmap, uint8_t* key)
 
 	if (_hashmap_key_exists(map, key, index, &sub_index))
 	{
-		if (map->sub_arrays[index].entries[sub_index].value.type == HASHMAP_VALUE_STRING)
-			s_free(map->string_allocator, map->sub_arrays[index].entries[sub_index].value.data._string);
+		if (map->sub_arrays[index].entries[sub_index].value.type == HASHMAP_VALUE_STRING_class)
+			s_free(map->string_allocator, map->sub_arrays[index].entries[sub_index].value.data_string8);
 
 		s_free(map->string_allocator, map->sub_arrays[index].entries[sub_index].key);
 		map->sub_arrays[index].entries[sub_index].in_use = false;
@@ -274,7 +309,7 @@ void hashmap_read_yaml(void* hashmap, uint8_t* yaml_data, size_t yaml_data_size)
 		data[key_end] = '\0';
 		skip_spaces;
 
-		uint32_t type = HASHMAP_VALUE_INT;
+		uint32_t type = HASHMAP_VALUE_INT32;
 		uint32_t string_quotes = 0;
 
 		uint32_t value_start = text_i;
@@ -284,9 +319,9 @@ void hashmap_read_yaml(void* hashmap, uint8_t* yaml_data, size_t yaml_data_size)
 		bool bool_string_full = false;
 
 		for (uint32_t value_i = 0; data[text_i] != '\n' && data[text_i] != '\r' && data[text_i] != '\0' && (data[text_i] != ' ' || string_quotes); text_i++, value_i++) {
-			if (data[text_i] == '"') { type = HASHMAP_VALUE_STRING; string_quotes ^= 1; }
-			if (type == HASHMAP_VALUE_STRING) continue;
-			if (data[text_i] == '.' && type == HASHMAP_VALUE_INT) type = HASHMAP_VALUE_FLOAT;
+			if (data[text_i] == '"') { type = HASHMAP_VALUE_STRING8; string_quotes ^= 1; }
+			if (type == HASHMAP_VALUE_STRING8) continue;
+			if (data[text_i] == '.' && type == HASHMAP_VALUE_INT32) type = HASHMAP_VALUE_FLOAT;
 			else if ((data[text_i] < '0' || data[text_i] > '9') && (data[text_i] != '-' || value_i != 0)) {
 				
 				if (value_i == 0)
@@ -301,34 +336,34 @@ void hashmap_read_yaml(void* hashmap, uint8_t* yaml_data, size_t yaml_data_size)
 						type = HASHMAP_VALUE_BOOL;
 						bool_value = true;
 					}
-					else type = HASHMAP_VALUE_STRING;
+					else type = HASHMAP_VALUE_STRING8;
 				}
 				else
 				{
-					if (bool_string_full) type = HASHMAP_VALUE_STRING;
-					else if (bool_strings[bool_value][value_i] != data[text_i]) type = HASHMAP_VALUE_STRING;
+					if (bool_string_full) type = HASHMAP_VALUE_STRING8;
+					else if (bool_strings[bool_value][value_i] != data[text_i]) type = HASHMAP_VALUE_STRING8;
 					else if (value_i == strlen(bool_strings[bool_value]) - 1) bool_string_full = true;
 				}
 			}
 		}
 
-		if (bool_string_full == false && type == HASHMAP_VALUE_BOOL) type = HASHMAP_VALUE_STRING;
+		if (bool_string_full == false && type == HASHMAP_VALUE_BOOL) type = HASHMAP_VALUE_STRING8;
 
 		if (text_i - value_start == 0) { continue_on_next_line; }
 
-		if (type == HASHMAP_VALUE_STRING) {
+		if (type == HASHMAP_VALUE_STRING8) {
 			if (data[text_i - 1] == '"' && string_quotes == 0) {
 				data[text_i - 1] = '\0';
-				hashmap_set_value(map, &data[key_start], &data[value_start + 1], HASHMAP_VALUE_STRING);
+				hashmap_set_value(map, &data[key_start], &data[value_start + 1], HASHMAP_VALUE_STRING8);
 			}
 			else {
 				uint8_t end_val = data[text_i];
 				data[text_i] = '\0';
-				hashmap_set_value(map, &data[key_start], &data[value_start], HASHMAP_VALUE_STRING);
+				hashmap_set_value(map, &data[key_start], &data[value_start], HASHMAP_VALUE_STRING8);
 				data[text_i] = end_val;
 			}
 		}
-		else if (type == HASHMAP_VALUE_INT) {
+		else if (type == HASHMAP_VALUE_INT32) {
 			int32_t int_val = 0;
 			int32_t negative = 1;
 
@@ -338,7 +373,7 @@ void hashmap_read_yaml(void* hashmap, uint8_t* yaml_data, size_t yaml_data_size)
 				int_val += data[_i] - '0';
 			}
 			int_val *= negative;
-			hashmap_set_value(map, &data[key_start], &int_val, HASHMAP_VALUE_INT);
+			hashmap_set_value(map, &data[key_start], &int_val, HASHMAP_VALUE_INT32);
 		}
 		else if (type == HASHMAP_VALUE_FLOAT) {
 			float float_val = 0.f;
@@ -407,20 +442,20 @@ uint8_t* hashmap_write_yaml(void* hashmap, size_t* yaml_data_size)
 	{
 		switch (value->type)
 		{
-		case HASHMAP_VALUE_STRING: {
-			_hashmap_buffer_write(&buffer, &buffer_size, &buffer_filled_size, "%s: \"%s\"\n", key, value->data._string);
+		case HASHMAP_VALUE_STRING8: {
+			_hashmap_buffer_write(&buffer, &buffer_size, &buffer_filled_size, "%s: \"%s\"\n", key, value->data_string8);
 		} break;
 
 		case HASHMAP_VALUE_FLOAT: {
-			_hashmap_buffer_write(&buffer, &buffer_size, &buffer_filled_size, "%s: %f\n", key, value->data._float);
+			_hashmap_buffer_write(&buffer, &buffer_size, &buffer_filled_size, "%s: %f\n", key, value->data_float);
 		} break;
 
-		case HASHMAP_VALUE_INT: {
-			_hashmap_buffer_write(&buffer, &buffer_size, &buffer_filled_size, "%s: %d\n", key, value->data._int);
+		case HASHMAP_VALUE_INT32: {
+			_hashmap_buffer_write(&buffer, &buffer_size, &buffer_filled_size, "%s: %d\n", key, value->data_int32);
 		} break;
 
 		case HASHMAP_VALUE_BOOL: {
-			_hashmap_buffer_write(&buffer, &buffer_size, &buffer_filled_size, "%s: %s\n", key, value->data._bool ? "true" : "false");
+			_hashmap_buffer_write(&buffer, &buffer_size, &buffer_filled_size, "%s: %s\n", key, value->data_bool ? "true" : "false");
 		} break;
 
 		}

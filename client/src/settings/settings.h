@@ -18,6 +18,18 @@ struct settings {
 		uint32_t gui_scale;
 	} video;
 
+	struct
+	{
+		struct
+		{
+			uint32_t count;
+			struct string_index_language_info* infos;
+			uint32_t index;
+		} language;
+
+	} general;
+
+	uint8_t* general_settings_file_path;
 	uint8_t* video_settings_file_path;
 	uint8_t* active_resourcepack_file_path;
 	uint8_t* inactive_resourcepack_file_path;

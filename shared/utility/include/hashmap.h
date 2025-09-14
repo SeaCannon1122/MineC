@@ -9,21 +9,59 @@
 
 enum hashmap_value
 {
-	HASHMAP_VALUE_STRING,
-	HASHMAP_VALUE_FLOAT,
-	HASHMAP_VALUE_INT,
-	HASHMAP_VALUE_BOOL,
+	HASHMAP_VALUE_STRING_class		= 0x10,
+
+	HASHMAP_VALUE_STRING8			= 0x11,
+	HASHMAP_VALUE_STRING16			= 0x12,
+	HASHMAP_VALUE_STRING32			= 0x13,
+
+
+	HASHMAP_VALUE_INTEGER_class		= 0x20,
+
+	HASHMAP_VALUE_INT8				= 0x21,
+	HASHMAP_VALUE_UINT8				= 0x22,
+	HASHMAP_VALUE_INT16				= 0x23,
+	HASHMAP_VALUE_UINT16			= 0x24,
+	HASHMAP_VALUE_INT32				= 0x25,
+	HASHMAP_VALUE_UINT32			= 0x26,
+	HASHMAP_VALUE_INT64				= 0x27,
+	HASHMAP_VALUE_UINT64			= 0x28,
+
+
+	HASHMAP_VALUE_FLOATING_class	= 0x40,
+
+	HASHMAP_VALUE_FLOAT				= 0x41,
+	HASHMAP_VALUE_DOUBLE			= 0x42,
+
+
+	HASHMAP_VALUE_BOOLEAN_class		= 0x80,
+
+	HASHMAP_VALUE_BOOL				= 0x81,
 };
 
 struct hashmap_multi_type
 {
 	union
 	{
-		uint8_t* _string;
-		int32_t _int;
-		float _float;
-		bool _bool;
-	} data;
+		uint8_t* data_string8;
+		uint16_t* data_string16;
+		uint32_t* data_string32;
+
+		int8_t data_int8;
+		uint8_t data_uint8;
+		int16_t data_int16;
+		uint16_t data_uint16;
+		int32_t data_int32;
+		uint32_t data_uint32;
+		int64_t data_int64;
+		uint64_t data_uint64;
+
+		float data_float;
+		double data_double;
+
+		bool data_bool;
+	};
+
 	uint32_t type;
 };
 

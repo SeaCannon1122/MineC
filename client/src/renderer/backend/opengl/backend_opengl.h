@@ -116,6 +116,12 @@ struct renderer_backend_opengl
 	cwindow_context* window_context;
 	cwindow* window;
 
+	struct
+	{
+		uint32_t width;
+		uint32_t height;
+	} swapchain;
+
 	uint32_t resource_frame_index;
 };
 

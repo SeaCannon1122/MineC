@@ -7,7 +7,7 @@ add_executable(pixelchar_test_vulkan pixelchar_test_vulkan.c)
 add_executable(direct3d12_testing direct3d12_testing.cpp)
 add_executable(old_to_new_pixelfont old_to_new_pixelfont.c)
 add_executable(general_testing general_testing.c)
-add_executable(cerialize_test cerialize_test.c ../client/.cerialized_src/assets.c)
+add_executable(cerialize_test cerialize_test.c ../client/.cerialized_src/resources.c)
 target_include_directories(cerialize_test PRIVATE ../client/.cerialized_src/)
 
 target_link_libraries(pixelchar_test_vulkan PRIVATE pixelchar cwindow utility)

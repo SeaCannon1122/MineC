@@ -43,22 +43,60 @@ struct renderer_components
 {
 	struct renderer_backend backend;
 
-	bool backend_base_created;
-	bool backend_device_created;
-	bool backend_swapchain_created;
+	struct
+	{
+		bool base;
+		bool device;
+		bool swapchain;
+	} backend_create_flags;
+	bool frontend_created;
+
+	bool backend_recreate;
 
 	struct
 	{
 		struct menu_texture tetxures[MENU_TEXTURE_s_COUNT];
 	} menu;
-};
 
-struct minec_client;
+	struct
+	{
+		void* data;
+
+		uint32_t resolution;
+
+		uint32_t mappings_count;
+		uint32_t* mappings;
+
+		uint32_t bitmaps_count;
+		uint8_t* widths;
+		void* bitmaps;
+	} pixelfont;
+
+};
 
 uint32_t renderer_components_create(struct minec_client* client);
 void renderer_components_destroy(struct minec_client* client);
 
-uint32_t renderer_frame(struct minec_client* client);
+uint32_t renderer_component_pixelfont_create(struct minec_client* client);
+void renderer_component_pixelfont_destroy(struct minec_client* client);
+uint32_t renderer_backend_component_pixelfont_create(struct minec_client* client);
+void renderer_backend_component_pixelfont_destroy(struct minec_client* client);
+uint32_t renderer_component_pixelfont_frame(struct minec_client* client);
+uint32_t renderer_component_pixelfont_reload_assets(struct minec_client* client);
+
+uint32_t renderer_component_gui_text_create(struct minec_client* client);
+void renderer_component_gui_text_destroy(struct minec_client* client);
+uint32_t renderer_backend_component_gui_text_create(struct minec_client* client);
+void renderer_backend_component_gui_text_destroy(struct minec_client* client);
+uint32_t renderer_component_gui_text_frame(struct minec_client* client);
+uint32_t renderer_component_gui_text_reload_assets(struct minec_client* client);
+
+uint32_t renderer_component_menu_gui_create(struct minec_client* client);
+void renderer_component_menu_gui_destroy(struct minec_client* client);
+uint32_t renderer_backend_component_menu_gui_create(struct minec_client* client);
+void renderer_backend_component_menu_gui_destroy(struct minec_client* client);
+uint32_t renderer_component_menu_gui_frame(struct minec_client* client);
+uint32_t renderer_component_menu_gui_reload_assets(struct minec_client* client);
 
 #endif
 

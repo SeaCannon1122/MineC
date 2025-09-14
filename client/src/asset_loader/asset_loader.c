@@ -1,20 +1,20 @@
 #include "minec_client.h"
 
-#include "assets.h"
-
 uint32_t _asset_loader_load(struct minec_client* client)
 {
-	void* asset_paths_hashmap = hashmap_new(1024, 4);
+	void* asset_hashmap = hashmap_new(1024, 4);
 	void* alloc = s_allocator_new(2048);
 
-	for (int32_t i = -1; i < (int32_t)arraylist_string_get_length(SETTINGS.active_resourcepack_paths_arraylist); i++)
+	uint32_t resource_pack_count = arraylist_string_get_length(SETTINGS.active_resourcepack_paths_arraylist);
+
+	for (uint32_t i = 0; i <= resource_pack_count; i++)
 	{
 		uint8_t* resource_pack_path;
 		
 		size_t index_file_size;
 		void* index_file_data;
 
-		if (i == -1) index_file_data = cerialized_get_file(cerialized_assets_file_system, "index.txt", &index_file_size);
+		if (i == resource_pack_count) index_file_data = resource_index_query("assets/index.txt", &index_file_size);
 		else
 		{
 			resource_pack_path = arraylist_string_get_element(SETTINGS.active_resourcepack_paths_arraylist, i);
@@ -31,61 +31,58 @@ uint32_t _asset_loader_load(struct minec_client* client)
 
 			for (uint32_t j = 0; j < arraylist_string_get_length(indexed_assets_arraylist); j++)
 			{
-				uint8_t* rel_asset_path = arraylist_string_get_element(indexed_assets_arraylist, j);
-
-				if (i == -1)
-				{
-					uint32_t value = 0;
-					hashmap_set_value(asset_paths_hashmap, rel_asset_path, &value, HASHMAP_VALUE_INT);
-				}
-				else
-				{
-					uint8_t* abs_asset_path = s_alloc_string(alloc, "%sassets/%s", resource_pack_path, rel_asset_path);
-					hashmap_set_value(asset_paths_hashmap, rel_asset_path, abs_asset_path, HASHMAP_VALUE_STRING);
-					s_free(alloc, abs_asset_path);
-				}
+				hashmap_set_value(
+					asset_hashmap, 
+					arraylist_string_get_element(indexed_assets_arraylist, j), 
+					&(uint32_t){0}, 
+					HASHMAP_VALUE_INT32
+				);
 			}
 
 			arraylist_string_delete(indexed_assets_arraylist);
-			if (i != -1) free(index_file_data);
+			if (i != resource_pack_count) free(index_file_data);
 		}
 	}
-	s_allocator_delete(alloc);
 
 	ASSET_LOADER.asset_names_hashmap = hashmap_new(1024, 4);
-	ASSET_LOADER.asset_count = 0;
+	ASSET_LOADER.asset_count = hashmap_get_key_count(asset_hashmap);
+	ASSET_LOADER.assets = calloc(ASSET_LOADER.asset_count, sizeof(struct asset_loader_asset));
 
 	struct hashmap_iterator it;
 	uint8_t* key;
-	struct hashmap_multi_type* value;
 
-	hashmap_iterator_start(&it, asset_paths_hashmap);
-	while (value = hashmap_iterator_next_key_value_pair(&it, &key)) ASSET_LOADER.asset_count++;
-	ASSET_LOADER.assets = calloc(ASSET_LOADER.asset_count, sizeof(struct asset_loader_asset));
-
-	hashmap_iterator_start(&it, asset_paths_hashmap);
-	for (uint32_t i = 0; value = hashmap_iterator_next_key_value_pair(&it, &key); i++)
+	hashmap_iterator_start(&it, asset_hashmap);
+	for (uint32_t i = 0; hashmap_iterator_next_key_value_pair(&it, &key); i++)
 	{
-		if (value->type == HASHMAP_VALUE_STRING)
-			ASSET_LOADER.assets[i].data = file_load(value, &ASSET_LOADER.assets[i].size);
-		else
-			ASSET_LOADER.assets[i].data = cerialized_get_file(cerialized_assets_file_system, key, &ASSET_LOADER.assets[i].size);
-
-		if (ASSET_LOADER.assets[i].data)
+		for (uint32_t j = 0; j < resource_pack_count && ASSET_LOADER.assets[i].data == NULL; j++)
 		{
-			hashmap_set_value(ASSET_LOADER.asset_names_hashmap, key, &i, HASHMAP_VALUE_INT);
-			if (value->type == HASHMAP_VALUE_STRING) ASSET_LOADER.assets[i].is_external = true;
+			const uint8_t* resource_pack_path = arraylist_string_get_element(SETTINGS.active_resourcepack_paths_arraylist, j);
+
+			uint8_t* asset_path = s_alloc_string(alloc, "%sassets/%s", resource_pack_path, key);
+			ASSET_LOADER.assets[i].data = file_load(asset_path, &ASSET_LOADER.assets[i].size);
+			s_free(alloc, asset_path);
 		}
+
+		if (ASSET_LOADER.assets[i].data) ASSET_LOADER.assets[i].external = true;
+		else
+		{
+			uint8_t* asset_path = s_alloc_string(alloc, "assets/%s", key);
+			ASSET_LOADER.assets[i].data = resource_index_query(asset_path, &ASSET_LOADER.assets[i].size);
+			s_free(alloc, asset_path);
+		}
+
+		if (ASSET_LOADER.assets[i].data) hashmap_set_value(ASSET_LOADER.asset_names_hashmap, key, &i, HASHMAP_VALUE_INT32);
 	}
 
-	hashmap_delete(asset_paths_hashmap);
+	s_allocator_delete(alloc);
+	hashmap_delete(asset_hashmap);
 
 	return MINEC_CLIENT_SUCCESS;
 }
 
 void _asset_loader_unload(struct minec_client* client)
 {
-	for (uint32_t i = 0; i < ASSET_LOADER.asset_count; i++) if (ASSET_LOADER.assets[i].is_external) free(ASSET_LOADER.assets[i].data);
+	for (uint32_t i = 0; i < ASSET_LOADER.asset_count; i++) if (ASSET_LOADER.assets[i].external) free(ASSET_LOADER.assets[i].data);
 	free(ASSET_LOADER.assets);
 	hashmap_delete(ASSET_LOADER.asset_names_hashmap);
 }
@@ -126,8 +123,8 @@ void* asset_loader_get_asset(struct minec_client* client, uint8_t* name, size_t*
 	struct hashmap_multi_type* value;
 	if (value = hashmap_get_value(ASSET_LOADER.asset_names_hashmap, name))
 	{
-		data = ASSET_LOADER.assets[value->data._int].data;
-		*size = ASSET_LOADER.assets[value->data._int].size;
+		data = ASSET_LOADER.assets[value->data_int32].data;
+		*size = ASSET_LOADER.assets[value->data_int32].size;
 		atomic_uint32_t_store(&ASSET_LOADER.borrowed_asset_count, atomic_uint32_t_load(&ASSET_LOADER.borrowed_asset_count) + 1);
 	}
 

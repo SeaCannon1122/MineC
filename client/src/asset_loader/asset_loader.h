@@ -15,7 +15,7 @@ struct asset_loader_asset
 {
 	void* data;
 	size_t size;
-	bool is_external;
+	bool external;
 };
 
 struct asset_loader

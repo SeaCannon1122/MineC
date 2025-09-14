@@ -116,43 +116,43 @@ void renderer_action(struct minec_client* client, struct renderer_action* action
 		case _RENDERER_ACTION_SET_BACKEND_INDEX:
 		{
 			RENDERER.public.action.backend_index.value = action->parameters.backend_index;
-			RENDERER.public.action.backend_index.change = true;
+			RENDERER.public.action.backend_index.set = true;
 		} break;
 
 		case _RENDERER_ACTION_SET_BACKEND_DEVICE_INDEX:
 		{
 			RENDERER.public.action.backend_device_index.value = action->parameters.backend_device_index;
-			RENDERER.public.action.backend_device_index.change = true;
+			RENDERER.public.action.backend_device_index.set = true;
 		} break;
 
 		case _RENDERER_ACTION_SET_FPS:
 		{
 			RENDERER.public.action.fps.value = action->parameters.fps;
-			RENDERER.public.action.fps.change = true;
+			RENDERER.public.action.fps.set = true;
 		} break;
 
 		case _RENDERER_ACTION_SET_VSYNC:
 		{
 			RENDERER.public.action.vsync.value = action->parameters.vsync;
-			RENDERER.public.action.vsync.change = true;
+			RENDERER.public.action.vsync.set = true;
 		} break;
 
 		case _RENDERER_ACTION_SET_MAX_MIPMAP_LEVEL_COUNT:
 		{
 			RENDERER.public.action.max_mipmap_level_count.value = action->parameters.max_mipmap_level_count;
-			RENDERER.public.action.max_mipmap_level_count.change = true;
+			RENDERER.public.action.max_mipmap_level_count.set = true;
 		} break;
 
 		case _RENDERER_ACTION_SET_FOV:
 		{
 			RENDERER.public.action.fov.value = action->parameters.fov;
-			RENDERER.public.action.fov.change = true;
+			RENDERER.public.action.fov.set = true;
 		} break;
 
 		case _RENDERER_ACTION_SET_RENDER_DISTANCE:
 		{
 			RENDERER.public.action.render_distance.value = action->parameters.render_distance;
-			RENDERER.public.action.render_distance.change = true;
+			RENDERER.public.action.render_distance.set = true;
 		} break;
 
 		case _RENDERER_ACTION_RELOAD_ASSETS:
@@ -168,15 +168,14 @@ void renderer_action(struct minec_client* client, struct renderer_action* action
 
 void renderer_reset_action_state(struct minec_client* client)
 {
-	RENDERER.public.action.restart = false;
 	RENDERER.public.action.reload_assets = false;
-	RENDERER.public.action.backend_device_index.change = false;
-	RENDERER.public.action.backend_index.change = false;
-	RENDERER.public.action.fov.change = false;
-	RENDERER.public.action.fps.change = false;
-	RENDERER.public.action.max_mipmap_level_count.change = false;
-	RENDERER.public.action.render_distance.change = false;
-	RENDERER.public.action.vsync.change = false;
+	RENDERER.public.action.backend_device_index.set = false;
+	RENDERER.public.action.backend_index.set = false;
+	RENDERER.public.action.fov.set = false;
+	RENDERER.public.action.fps.set = false;
+	RENDERER.public.action.max_mipmap_level_count.set = false;
+	RENDERER.public.action.render_distance.set = false;
+	RENDERER.public.action.vsync.set = false;
 }
 
 #ifdef MINEC_CLIENT_DYNAMIC_RENDERER_LIBRARY

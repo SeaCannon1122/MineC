@@ -132,11 +132,12 @@ void arraylist_string_swap_elements(void* arraylist_string, uint32_t index0, uin
 	struct _arraylist_string* arraylist = arraylist_string;
 	if (index0 + element_count > arraylist->length || index1 + element_count > arraylist->length) return;
 
-	uint8_t** temp_elements = malloc(element_count * sizeof(uint8_t*));
-	memcpy(temp_elements, &arraylist->elements[index0], element_count * sizeof(uint8_t*));
-	memcpy(&arraylist->elements[index0], &arraylist->elements[index1], element_count * sizeof(uint8_t*));
-	memcpy(&arraylist->elements[index1], temp_elements, element_count * sizeof(uint8_t*));
-	free(temp_elements);
+	for (uint32_t i = 0; i < element_count; i++)
+	{
+		uint8_t* temp = arraylist->elements[index0 + i];
+		arraylist->elements[index0 + i] = arraylist->elements[index1 + i];
+		arraylist->elements[index1 + i] = temp;
+	}
 }
 
 void arraylist_string_remove_elements(void* arraylist_string, uint32_t start_index_inc, uint32_t end_index_inc)
@@ -146,7 +147,8 @@ void arraylist_string_remove_elements(void* arraylist_string, uint32_t start_ind
 
 	for (uint32_t i = start_index_inc; i <= end_index_inc; i++) s_free(arraylist->string_allocator, arraylist->elements[i]);
 
-	if (arraylist->length > end_index_inc + 1) memmove(&arraylist->elements[start_index_inc], &arraylist->elements[end_index_inc + 1], (arraylist->length - end_index_inc - 1) * sizeof(uint8_t*));
+	if (arraylist->length != end_index_inc + 1) memmove(&arraylist->elements[start_index_inc], &arraylist->elements[end_index_inc + 1], (arraylist->length - end_index_inc - 1) * sizeof(uint8_t*));
+	arraylist->length -= end_index_inc - start_index_inc + 1;
 }
 
 void arraylist_string_read_file_data(void* arraylist_string, const uint8_t* file_data, size_t file_data_size)
