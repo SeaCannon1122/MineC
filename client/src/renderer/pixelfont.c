@@ -5,13 +5,8 @@ static void load_font(struct minec_client* client)
 	size_t raw_data_size;
 	uint8_t* raw_data = asset_loader_get_asset(client, "minec/font.pixelfont", &raw_data_size);
 
-	if (raw_data)
-	{
 
-	}
-	else
-	{
-	}
+
 }
 
 uint32_t renderer_component_pixelfont_create(struct minec_client* client)

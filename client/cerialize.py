@@ -10,7 +10,7 @@ def cerialize_hash(name, table_len):
     return h % table_len
 
 def to_c_symbol(path):
-    return path.replace('\\', '___').replace('/', '___').replace('.', '__')
+    return path.replace('\\', '_').replace('/', '_').replace('.', '_')
 
 def make_c_array(data, line_len=LINE_LEN):
     lines = []
@@ -33,8 +33,8 @@ def process_files(cerialize_dir):
             
             print(f"[Cerialize] Processing file: {rel_path}")
 
-            name_sym = to_c_symbol(rel_path) + "__name"
-            data_sym = to_c_symbol(rel_path) + "__data"
+            name_sym = to_c_symbol(rel_path) + "_name"
+            data_sym = to_c_symbol(rel_path) + "_data"
             c_path = rel_path.replace("\\", "/")
             file_data.append({
                 'rel_path': rel_path,

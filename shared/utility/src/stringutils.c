@@ -4,6 +4,8 @@
 #include <utils.h>
 #include <stdlib.h>
 
+#define ARRAY_LENGTH(arr) (sizeof(arr) / sizeof(arr[0]))
+
 uint32_t string8_len(const uint8_t* s)
 {
 	for (uint32_t length = 0; ; length++) if (s[length] == 0) return length;
@@ -74,7 +76,7 @@ uint32_t string8_vsnprintf(uint8_t* RESTRICT buffer, uint32_t buffer_length, con
         {
             int32_t val = va_arg(args, int32_t);
             uint8_t tmp[12];
-            uint8_t* t = tmp + sizeof(tmp) - 1;
+            uint8_t* t = tmp + ARRAY_LENGTH(tmp) - 1;
             *t = '\0';
             int32_t neg = val < 0;
             uint32_t u = neg ? -val : val;
@@ -86,7 +88,7 @@ uint32_t string8_vsnprintf(uint8_t* RESTRICT buffer, uint32_t buffer_length, con
         {
             uint32_t u = va_arg(args, uint32_t);
             uint8_t tmp[11];
-            uint8_t* t = tmp + sizeof(tmp) - 1;
+            uint8_t* t = tmp + ARRAY_LENGTH(tmp) - 1;
             *t = '\0';
             do { *--t = '0' + u % 10; u /= 10; } while (u);
             while (*t) { if (rem > 1) { *buf = *t; rem--; } buf++;  t++; }
@@ -99,7 +101,7 @@ uint32_t string8_vsnprintf(uint8_t* RESTRICT buffer, uint32_t buffer_length, con
             double frac = d - whole;
 
             uint8_t tmp[12];
-            uint8_t* t = tmp + sizeof(tmp) - 1;
+            uint8_t* t = tmp + ARRAY_LENGTH(tmp) - 1;
             *t = '\0';
             uint32_t u = whole;
             do { *--t = '0' + u % 10; u /= 10; } while (u);
@@ -152,7 +154,8 @@ uint32_t string16_vsnprintf(uint16_t* RESTRICT buffer, uint32_t buffer_length, c
     {
         if (*format != '%')
         {
-            if (rem > 1) { *buf++ = *format; rem--; }
+            if (rem > 1) { *buf = *format; rem--; }
+            buf++;
             continue;
         }
 
@@ -172,59 +175,57 @@ uint32_t string16_vsnprintf(uint16_t* RESTRICT buffer, uint32_t buffer_length, c
         {
             int32_t val = va_arg(args, int32_t);
             uint16_t tmp[12];
-            uint16_t* t = tmp + sizeof(tmp) - 1;
+            uint16_t* t = tmp + ARRAY_LENGTH(tmp) - 1;
             *t = '\0';
             int32_t neg = val < 0;
             uint32_t u = neg ? -val : val;
             do { *--t = '0' + u % 10; u /= 10; } while (u);
             if (neg) *--t = '-';
-            while (*t) if (rem > 1) { *buf++ = *t++; rem--; }
-            else t++;
+            while (*t) { if (rem > 1) { *buf = *t; rem--; } buf++;  t++; }
         } break;
         case 'u':
         {
             uint32_t u = va_arg(args, uint32_t);
             uint16_t tmp[11];
-            uint16_t* t = tmp + sizeof(tmp) - 1;
+            uint16_t* t = tmp + ARRAY_LENGTH(tmp) - 1;
             *t = '\0';
             do { *--t = '0' + u % 10; u /= 10; } while (u);
-            while (*t) if (rem > 1) { *buf++ = *t++; rem--; }
-            else t++;
+            while (*t) { if (rem > 1) { *buf = *t; rem--; } buf++;  t++; }
         } break;
         case 'f':
         {
             double d = va_arg(args, double);
-            if (d < 0) { if (rem > 1) { *buf++ = '-'; rem--; } d = -d; }
+            if (d < 0) { if (rem > 1) { *buf = '-'; rem--; } d = -d; buf++; }
             int32_t whole = (int32_t)d;
             double frac = d - whole;
 
             uint16_t tmp[12];
-            uint16_t* t = tmp + sizeof(tmp) - 1;
+            uint16_t* t = tmp + ARRAY_LENGTH(tmp) - 1;
             *t = '\0';
             uint32_t u = whole;
             do { *--t = '0' + u % 10; u /= 10; } while (u);
-            while (*t) if (rem > 1) { *buf++ = *t++; rem--; }
-            else t++;
+            while (*t) { if (rem > 1) { *buf = *t; rem--; } buf++;  t++; }
 
-            if (rem > 1) { *buf++ = '.'; rem--; }
+            if (rem > 1) { *buf = '.'; rem--; }
+            buf++;
 
             for (uint32_t i = 0; i < precision; i++)
             {
                 frac *= 10;
                 uint32_t digit = (uint32_t)frac;
-                if (rem > 1) { *buf++ = '0' + digit; rem--; }
+                if (rem > 1) { *buf = '0' + digit; rem--; }
+                buf++;
                 frac -= digit;
             }
         } break;
         case 's':
         {
             const uint16_t* s = va_arg(args, const uint16_t*);
-            while (*s) if (rem > 1) { *buf++ = *s++; rem--; }
-            else s++;
+            while (*s) { if (rem > 1) { *buf = *s; rem--; } buf++;  s++; }
         } break;
         case '%':
         {
-            if (rem > 1) { *buf++ = '%'; rem--; }
+            if (rem > 1) { *buf = '%'; rem--; buf++; }
 
         } break;
         }
@@ -252,7 +253,8 @@ uint32_t string32_vsnprintf(uint32_t* RESTRICT buffer, uint32_t buffer_length, c
     {
         if (*format != '%')
         {
-            if (rem > 1) { *buf++ = *format; rem--; }
+            if (rem > 1) { *buf = *format; rem--; }
+            buf++;
             continue;
         }
 
@@ -272,59 +274,57 @@ uint32_t string32_vsnprintf(uint32_t* RESTRICT buffer, uint32_t buffer_length, c
         {
             int32_t val = va_arg(args, int32_t);
             uint32_t tmp[12];
-            uint32_t* t = tmp + sizeof(tmp) - 1;
+            uint32_t* t = tmp + ARRAY_LENGTH(tmp) - 1;
             *t = '\0';
             int32_t neg = val < 0;
             uint32_t u = neg ? -val : val;
             do { *--t = '0' + u % 10; u /= 10; } while (u);
             if (neg) *--t = '-';
-            while (*t) if (rem > 1) { *buf++ = *t++; rem--; }
-            else t++;
+            while (*t) { if (rem > 1) { *buf = *t; rem--; } buf++;  t++; }
         } break;
         case 'u':
         {
             uint32_t u = va_arg(args, uint32_t);
             uint32_t tmp[11];
-            uint32_t* t = tmp + sizeof(tmp) - 1;
+            uint32_t* t = tmp + ARRAY_LENGTH(tmp) - 1;
             *t = '\0';
             do { *--t = '0' + u % 10; u /= 10; } while (u);
-            while (*t) if (rem > 1) { *buf++ = *t++; rem--; }
-            else t++;
+            while (*t) { if (rem > 1) { *buf = *t; rem--; } buf++;  t++; }
         } break;
         case 'f':
         {
             double d = va_arg(args, double);
-            if (d < 0) { if (rem > 1) { *buf++ = '-'; rem--; } d = -d; }
+            if (d < 0) { if (rem > 1) { *buf = '-'; rem--; } d = -d; buf++; }
             int32_t whole = (int32_t)d;
             double frac = d - whole;
 
             uint32_t tmp[12];
-            uint32_t* t = tmp + sizeof(tmp) - 1;
+            uint32_t* t = tmp + ARRAY_LENGTH(tmp) - 1;
             *t = '\0';
             uint32_t u = whole;
             do { *--t = '0' + u % 10; u /= 10; } while (u);
-            while (*t) if (rem > 1) { *buf++ = *t++; rem--; }
-            else t++;
+            while (*t) { if (rem > 1) { *buf = *t; rem--; } buf++;  t++; }
 
-            if (rem > 1) { *buf++ = '.'; rem--; }
+            if (rem > 1) { *buf = '.'; rem--; }
+            buf++;
 
             for (uint32_t i = 0; i < precision; i++)
             {
                 frac *= 10;
                 uint32_t digit = (uint32_t)frac;
-                if (rem > 1) { *buf++ = '0' + digit; rem--; }
+                if (rem > 1) { *buf = '0' + digit; rem--; }
+                buf++;
                 frac -= digit;
             }
         } break;
         case 's':
         {
             const uint32_t* s = va_arg(args, const uint32_t*);
-            while (*s) if (rem > 1) { *buf++ = *s++; rem--; }
-            else s++;
+            while (*s) { if (rem > 1) { *buf = *s; rem--; } buf++;  s++; }
         } break;
         case '%':
         {
-            if (rem > 1) { *buf++ = '%'; rem--; }
+            if (rem > 1) { *buf = '%'; rem--; buf++; }
 
         } break;
         }

@@ -1,0 +1,14 @@
+name: "Debug"
+resolution: 16
+default_bitmap_index: 0
+
+mappings_files:
+  - "mappings/ascii.txt"
+
+bitmap_metadata_files:
+  - "metadata/ascii.txt"
+
+bitmap_image_files:
+  - "bitmaps/ascii.png"
+
+output_file: "debug.pixelfont"

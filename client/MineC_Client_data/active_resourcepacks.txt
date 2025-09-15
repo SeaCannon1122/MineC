@@ -1,2 +1,1 @@
-path0/
-path1/
+MineC_Client_data/resourcepacks/development_pack
