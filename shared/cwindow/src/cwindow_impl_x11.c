@@ -1,6 +1,4 @@
-#define VK_USE_PLATFORM_XLIB_KHR
-
-#include <window/window.h>
+#include <cwindow/cwindow.h>
 
 #include <unistd.h>
 #include <X11/Xlib.h>
@@ -18,31 +16,7 @@
 #include <GL/glx.h>
 #include <GL/glxext.h>
 
-
-struct cwindow_data_x11
-{
-	Window window;
-	XIC ic;
-	Colormap colormap;
-	XVisualInfo* visual_info;
-	Visual* visual;
-	VisualID visualid;
-
-	GLXContext glx_context;
-
-	struct cwindow_event dispatched_event;
-
-	uint32_t width;
-	uint32_t height;
-	uint32_t position_x;
-	uint32_t position_y;
-
-	bool selected;
-
-	void (*glXSwapIntervalEXT)(Display* dpy, GLXDrawable drawable, int interval);
-};
-
-struct cwindow_context_x11
+struct cwindow_context
 {
 	Display* display;
 	int screen;
@@ -73,50 +47,96 @@ struct cwindow_context_x11
 			Bool (*glXMakeCurrent)(Display* dpy, GLXDrawable drawable, GLXContext ctx);
 			void (*glXSwapBuffers)(Display*, GLXDrawable);
 		} func;
-
-		struct cwindow_data_x11* current_window;
 	} opengl;
 };
 
-struct cwindow_context_x11 context_memory;
-struct cwindow_context_x11* context = &context_memory;
-
-bool cwindow_init_context(void* transfered_context)
+struct cwindow
 {
-	if (transfered_context == NULL)
-	{
-		XInitThreads();
+	cwindow_context* context;
 
-		context->display = XOpenDisplay(NULL);
-		context->screen = DefaultScreen(context->display);
-		context->wm_delete_window = XInternAtom(context->display, "WM_DELETE_WINDOW", False);
-		context->_net_wm_icon = XInternAtom(context->display, "_NET_WM_ICON", False);
-		context->xim = XOpenIM(context->display, NULL, NULL, NULL);
-	}
+	Window window;
+	XIC ic;
+	Colormap colormap;
+	XVisualInfo* visual_info;
+	Visual* visual;
+	VisualID visualid;
+
+	GLXContext glx_context;
+
+	struct cwindow_event dispatched_event;
+
+	uint32_t width;
+	uint32_t height;
+	uint32_t posx;
+	uint32_t posy;
+
+	bool selected;
+
+	void (*glXSwapIntervalEXT)(Display* dpy, GLXDrawable drawable, int interval);
+};
+
+cwindow_context* cwindow_context_create(const uint8_t* name)
+{
+	bool
+		success = true,
+		context_memory_allocated = false,
+		display_opened = false,
+		im_opened = false
+	;
+
+	cwindow_context* context = malloc(sizeof(cwindow_context));
+	if (context == NULL) success = false;
+	else context_memory_allocated = true;
+
+	if (XInitThreads() == 0) success = false;
+
+	if ((context->display = XOpenDisplay(NULL)) == NULL) success = false;
+	else display_opened = true;
+
+	context->screen = DefaultScreen(context->display);
+	context->wm_delete_window = XInternAtom(context->display, "WM_DELETE_WINDOW", False);
+	context->_net_wm_icon = XInternAtom(context->display, "_NET_WM_ICON", False);
+
+	if ((context->xim = XOpenIM(context->display, NULL, NULL, NULL)) == NULL) success = false;
+	else im_opened = true;
+
+	if (success) return context;
 	else
-		context = transfered_context;
-
-	return true;
-}
-
-void cwindow_deinit_context()
-{
-	if (context == &context_memory)
 	{
-		XCloseIM(context->xim);
-		XCloseDisplay(context->display);
+		if (im_opened) XCloseIM(context->xim);
+		if (display_opened) XCloseDisplay(context->display);
+		if (context_memory_allocated) free(context);
+
+		return NULL;
 	}
 }
 
-void* cwindow_get_context()
+void cwindow_context_destroy(cwindow_context* context)
 {
-	return context;
+	XCloseIM(context->xim);
+	XCloseDisplay(context->display);
+	free(context);
 }
 
-void* cwindow_create(int32_t posx, int32_t posy, uint32_t width, uint32_t height, uint8_t* name, bool visible)
+void cwindow_context_get_display_dimensions(cwindow_context* context, uint32_t* width, uint32_t* height)
 {
-	struct cwindow_data_x11* cwindow_data;
-	if ((window_data = malloc(sizeof(struct cwindow_data_x11))) == NULL) return NULL;
+
+}
+
+cwindow* cwindow_create(cwindow_context* context, int32_t posx, int32_t posy, uint32_t width, uint32_t height, const uint8_t* name, bool visible)
+{
+	bool
+		success = true,
+		window_memory_allocated = false,
+		got_visual_info = false,
+		created_colormap = false,
+		created_window = false,
+		created_ic = false
+	;
+
+	cwindow* window;
+	if ((window = malloc(sizeof(struct cwindow))) == NULL) success = false;
+	else window_memory_allocated = true;
 
 	XVisualInfo vinfo_template;
 	vinfo_template.screen = context->screen;
@@ -125,23 +145,23 @@ void* cwindow_create(int32_t posx, int32_t posy, uint32_t width, uint32_t height
 	int vinfo_mask = VisualScreenMask | VisualClassMask;
 
 	int nitems;
-	window_data->visual_info = XGetVisualInfo(context->display, vinfo_mask, &vinfo_template, &nitems);
-	if (!window_data->visual_info || nitems == 0) {
-		free(window_data);
+	window->visual_info = XGetVisualInfo(context->display, vinfo_mask, &vinfo_template, &nitems);
+	if (!window->visual_info || nitems == 0) {
+		free(window);
 		return NULL;
 	}
 
-	window_data->visual = cwindow_data->visual_info[0].visual;
-	window_data->visualid = cwindow_data->visual_info[0].visualid;
-	int depth = cwindow_data->visual_info[0].depth;
+	window->visual = window->visual_info[0].visual;
+	window->visualid = window->visual_info[0].visualid;
+	int depth = window->visual_info[0].depth;
 
-	window_data->colormap = XCreateColormap(context->display, RootWindow(context->display, context->screen), cwindow_data->visual, AllocNone);
+	window->colormap = XCreateColormap(context->display, RootWindow(context->display, context->screen), window->visual, AllocNone);
 
 	XSetWindowAttributes swa = { 0 };
-	swa.colormap = cwindow_data->colormap;
+	swa.colormap = window->colormap;
 	swa.event_mask = ExposureMask | KeyPressMask | KeyReleaseMask | StructureNotifyMask | ButtonPressMask;
 
-	window_data->window = XCreateWindow(
+	window->window = XCreateWindow(
 		context->display, 
 		RootWindow(context->display, context->screen),
 		posx, posy, 
@@ -149,43 +169,49 @@ void* cwindow_create(int32_t posx, int32_t posy, uint32_t width, uint32_t height
 		0, 
 		depth, 
 		InputOutput,
-		window_data->visual,
+		window->visual,
 		CWColormap | CWEventMask, 
 		&swa
 	);
 
-	window_data->ic = XCreateIC(context->xim, XNInputStyle, XIMPreeditNothing | XIMStatusNothing, XNClientWindow, cwindow_data->window, NULL);
+	window->ic = XCreateIC(context->xim, XNInputStyle, XIMPreeditNothing | XIMStatusNothing, XNClientWindow, window->window, NULL);
 
-	XStoreName(context->display, cwindow_data->window, name);
-	XSetWMProtocols(context->display, cwindow_data->window, &context->wm_delete_window, 1);
-	if (visible) XMapWindow(context->display, cwindow_data->window);
+	XStoreName(context->display, window->window, name);
+	XSetWMProtocols(context->display, window->window, &context->wm_delete_window, 1);
+	if (visible) XMapWindow(context->display, window->window);
 
-	window_data->width = width;
-	window_data->height = height;
-	window_data->position_x = posx;
-	window_data->position_y = posy;
-	window_data->selected = false;
+	if (success)
+	{
+		window->context = context;
+		window->width = width;
+		window->height = height;
+		window->posx = posx;
+		window->posy = posy;
+		window->selected = false;
 
-	return cwindow_data;
+		return window;
+	}
+	else
+	{
+		if (window_memory_allocated) free(window);
+
+		return NULL;
+	}
 }
 
-void cwindow_destroy(void* window)
-{
-	struct cwindow_data_x11* cwindow_data = window;
-	
-	XFree(window_data->visual_info);
+void cwindow_destroy(cwindow* window)
+{	
+	XFree(window->visual_info);
 
-	XDestroyIC(window_data->ic);
-	XDestroyWindow(context->display, cwindow_data->window);
-	XFreeColormap(context->display, cwindow_data->colormap);
+	XDestroyIC(window->ic);
+	XDestroyWindow(window->context->display, window->window);
+	XFreeColormap(window->context->display, window->colormap);
 
-	free(window_data);
+	free(window);
 }
 
-bool cwindow_set_icon(void* window, uint32_t* icon_rgba_pixel_data, uint32_t icon_width, uint32_t icon_height)
+bool cwindow_set_icon(cwindow* window, const uint32_t* icon_rgba_pixel_data, uint32_t icon_width, uint32_t icon_height)
 {
-	struct cwindow_data_x11* cwindow_data = window;
-
 	size_t data_len = 2 + (icon_width * icon_height);
 	uint32_t* data = malloc(sizeof(uint32_t) * data_len);
 	if (data == NULL) return false;
@@ -198,35 +224,32 @@ bool cwindow_set_icon(void* window, uint32_t* icon_rgba_pixel_data, uint32_t ico
 		data[2 + i] = (icon_rgba_pixel_data[i] & 0xff00ff00) | ((icon_rgba_pixel_data[i] & 0xff) << 16) | ((icon_rgba_pixel_data[i] & 0xff0000) >> 16);
 	}
 
-	XChangeProperty(context->display, cwindow_data->window, context->_net_wm_icon, XA_CARDINAL, 32, PropModeReplace, (unsigned char*)data, data_len);
-	XFlush(context->display);
+	XChangeProperty(window->context->display, window->window, window->context->_net_wm_icon, XA_CARDINAL, 32, PropModeReplace, (unsigned char*)data, data_len);
+	XFlush(window->context->display);
 	free(data);
 
 	return true;
 }
 
-void cwindow_get_dimensions(void* window, uint32_t* width, uint32_t* height, int32_t* screen_position_x, int32_t* screen_position_y)
+void cwindow_get_dimensions(cwindow* window, uint32_t* width, uint32_t* height, int32_t* posx, int32_t* posy)
 {
-	struct cwindow_data_x11* cwindow_data = window;
-
-	*width = cwindow_data->width;
-	*height = cwindow_data->height;
-	*screen_position_x = cwindow_data->position_x;
-	*screen_position_y = cwindow_data->position_y;
+	*width = window->width;
+	*height = window->height;
+	*posx = window->posx;
+	*posy = window->posy;
 }
 
-bool cwindow_is_selected(void* window)
+bool cwindow_is_selected(cwindow* window)
 {
-	struct cwindow_data_x11* cwindow_data = window;
-	return cwindow_data->selected;
+	return window->selected;
 }
 
-void cwindow_get_mouse_cursor_position(void* window, int32_t* position_x, int32_t* position_y)
+void cwindow_get_mouse_cursor_position(cwindow* window, int32_t* posx, int32_t* posy)
 {
 
 }
 
-void cwindow_set_mouse_cursor_position(void* window, int32_t x, int32_t y)
+void cwindow_set_mouse_cursor_position(cwindow* window, int32_t posx, int32_t posy)
 {
 
 }
@@ -236,46 +259,44 @@ int match_window(Display* dpy, XEvent* event, XPointer arg) {
 	return (event->xany.window == target);
 }
 
-struct cwindow_event* cwindow_next_event(void* window)
+const cwindow_event* cwindow_next_event(cwindow* window)
 {
-	struct cwindow_data_x11* cwindow_data = window;
-
 	XEvent xevent;
 
-	while (XCheckIfEvent(context->display, &xevent, match_window, (XPointer)&window_data->window))
+	while (XCheckIfEvent(window->context->display, &xevent, match_window, (XPointer)&window->window))
 	{
 		switch (xevent.type) {
 
 		case ConfigureNotify: {
 
 			if (
-				xevent.xconfigure.width != cwindow_data->width |
-				xevent.xconfigure.height != cwindow_data->height |
-				xevent.xconfigure.x != cwindow_data->position_x |
-				xevent.xconfigure.y != cwindow_data->position_y
+				xevent.xconfigure.width != window->width |
+				xevent.xconfigure.height != window->height |
+				xevent.xconfigure.x != window->posx |
+				xevent.xconfigure.y != window->posy
 				)
 			{
-				window_data->width = xevent.xconfigure.width;
-				window_data->height = xevent.xconfigure.height;
-				window_data->position_x = xevent.xconfigure.x;
-				window_data->position_y = xevent.xconfigure.y;
+				window->width = xevent.xconfigure.width;
+				window->height = xevent.xconfigure.height;
+				window->posx = xevent.xconfigure.x;
+				window->posy = xevent.xconfigure.y;
 
-				window_data->dispatched_event.type = WINDOW_EVENT_MOVE_SIZE;
-				window_data->dispatched_event.info.move_size.width = xevent.xconfigure.width;
-				window_data->dispatched_event.info.move_size.height = xevent.xconfigure.height;
-				window_data->dispatched_event.info.move_size.position_x = xevent.xconfigure.x;
-				window_data->dispatched_event.info.move_size.position_y = xevent.xconfigure.y;
+				window->dispatched_event.type = CWINDOW_EVENT_MOVE_SIZE;
+				window->dispatched_event.info.move_size.width = xevent.xconfigure.width;
+				window->dispatched_event.info.move_size.height = xevent.xconfigure.height;
+				window->dispatched_event.info.move_size.position_x = xevent.xconfigure.x;
+				window->dispatched_event.info.move_size.position_y = xevent.xconfigure.y;
 
-				return &window_data->dispatched_event;
+				return &window->dispatched_event;
 			}
 		} break;
 
 		case ClientMessage: {
-			if ((Atom)xevent.xclient.data.l[0] == context->wm_delete_window)
+			if ((Atom)xevent.xclient.data.l[0] == window->context->wm_delete_window)
 			{
-				window_data->dispatched_event.type = WINDOW_EVENT_DESTROY;
+				window->dispatched_event.type = CWINDOW_EVENT_DESTROY;
 
-				return &window_data->dispatched_event;
+				return &window->dispatched_event;
 			}
 		} break;
 
@@ -285,7 +306,27 @@ struct cwindow_event* cwindow_next_event(void* window)
 	return NULL;
 }
 
-bool cwindow_vulkan_load()
+void cwindow_freeze_event_queue(cwindow* window)
+{
+
+}
+
+void cwindow_unfreeze_event_queue(cwindow* window)
+{
+
+}
+
+Display* window_impl_x11_context_get_display(cwindow_context* context)
+{
+
+}
+
+Window window_impl_x11_get_window(cwindow* window)
+{
+
+}
+
+bool cwindow_context_graphics_vulkan_load(cwindow_context* context, PFN_vkGetInstanceProcAddr* gpa)
 {
 	if ((context->vulkan.library = dlopen("libvulkan.so.1", RTLD_NOW)) == NULL) return false;
 
@@ -295,43 +336,31 @@ bool cwindow_vulkan_load()
 		return false;
 	}
 
+	*gpa = context->vulkan.func.vkGetInstanceProcAddr;
 	return true;
 }
 
-void cwindow_vulkan_unload()
+void cwindow_context_graphics_vulkan_unload(cwindow_context* context)
 {
 	dlclose(context->vulkan.library);
 }
 
-PFN_vkGetInstanceProcAddr cwindow_get_vkGetInstanceProcAddr()
+VkResult cwindow_vkCreateSurfaceKHR(cwindow* window, VkInstance instance, VkSurfaceKHR* surface)
 {
-	return context->vulkan.func.vkGetInstanceProcAddr;
-}
-
-VkResult cwindow_vkCreateSurfaceKHR(void* window, VkInstance instance, VkSurfaceKHR* surface)
-{
-	struct cwindow_data_x11* cwindow_data = window;
-
-	PFN_vkCreateXlibSurfaceKHR vkCreateXlibSurfaceKHR_func = (PFN_vkCreateXlibSurfaceKHR)context->vulkan.func.vkGetInstanceProcAddr(instance, "vkCreateXlibSurfaceKHR");
+	PFN_vkCreateXlibSurfaceKHR vkCreateXlibSurfaceKHR_func = (PFN_vkCreateXlibSurfaceKHR)window->context->vulkan.func.vkGetInstanceProcAddr(instance, "vkCreateXlibSurfaceKHR");
 	if (vkCreateXlibSurfaceKHR_func == NULL) return VK_ERROR_INITIALIZATION_FAILED;
 
 	VkXlibSurfaceCreateInfoKHR create_info = { 0 };
 	create_info.sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
-	create_info.window = cwindow_data->window;
-	create_info.dpy = context->display;
+	create_info.window = window->window;
+	create_info.dpy = window->context->display;
 
 	return vkCreateXlibSurfaceKHR_func(instance, &create_info, ((void*)0), surface);
 }
 
-uint8_t* cwindow_get_VK_KHR_PLATFORM_SURFACE_EXTENSION_NAME()
-{
-	return VK_KHR_XLIB_SURFACE_EXTENSION_NAME;
-}
-
-
 //opengl
 
-bool cwindow_opengl_load()
+bool cwindow_context_graphics_opengl_load(cwindow_context* context)
 {
 	if ((context->opengl.library = dlopen("libGL.so.1", RTLD_NOW | RTLD_NODELETE)) == NULL) return false;
 
@@ -388,16 +417,13 @@ bool cwindow_opengl_load()
 	return true;
 }
 
-void cwindow_opengl_unload()
+void cwindow_context_graphics_opengl_unload(cwindow_context* context)
 {
 	dlclose(context->opengl.library);
 }
 
-bool cwindow_glCreateContext(void* window, int32_t version_major, int32_t version_minor, void* share_window, bool* glSwapIntervalEXT_support)
+bool cwindow_glCreateContext(cwindow* window, int32_t version_major, int32_t version_minor, cwindow* share_window, bool* glSwapIntervalEXT_support)
 {
-	struct cwindow_data_x11* cwindow_data = window;
-	struct cwindow_data_x11* share_window_data = share_window;
-
 	int fbcount = 0;
 	int fb_attribs[] = {
 		GLX_X_RENDERABLE, True,
@@ -410,14 +436,14 @@ bool cwindow_glCreateContext(void* window, int32_t version_major, int32_t versio
 		None
 	};
 
-	GLXFBConfig* fbc = context->opengl.func.glXChooseFBConfig(context->display, context->screen, fb_attribs, &fbcount);
+	GLXFBConfig* fbc = window->context->opengl.func.glXChooseFBConfig(window->context->display, window->context->screen, fb_attribs, &fbcount);
 	if (!fbc || fbcount == 0) return false;
 
 	GLXFBConfig bestFbc = NULL;
 	for (int i = 0; i < fbcount; i++) {
-		XVisualInfo* vi = context->opengl.func.glXGetVisualFromFBConfig(context->display, fbc[i]);
+		XVisualInfo* vi = window->context->opengl.func.glXGetVisualFromFBConfig(window->context->display, fbc[i]);
 		if (vi) {
-			if (vi->visualid == cwindow_data->visualid) {
+			if (vi->visualid == window->visualid) {
 				bestFbc = fbc[i];
 				XFree(vi);
 				break;
@@ -431,7 +457,7 @@ bool cwindow_glCreateContext(void* window, int32_t version_major, int32_t versio
 
 
 	PFNGLXCREATECONTEXTATTRIBSARBPROC glXCreateContextAttribsARB_func;
-	if ((glXCreateContextAttribsARB_func = (PFNGLXCREATECONTEXTATTRIBSARBPROC)context->opengl.func.glXGetProcAddress("glXCreateContextAttribsARB")) == NULL) return false;
+	if ((glXCreateContextAttribsARB_func = (PFNGLXCREATECONTEXTATTRIBSARBPROC)window->context->opengl.func.glXGetProcAddress("glXCreateContextAttribsARB")) == NULL) return false;
 
 	int context_attribs[] = {
 		GLX_CONTEXT_MAJOR_VERSION_ARB, version_major,
@@ -442,57 +468,49 @@ bool cwindow_glCreateContext(void* window, int32_t version_major, int32_t versio
 		None
 	};
 
-	if ((window_data->glx_context = glXCreateContextAttribsARB_func(context->display, bestFbc, share_window ? share_window_data->glx_context : NULL, True, context_attribs)) == NULL) return false;
-	if (context->opengl.func.glXMakeCurrent(context->display, cwindow_data->window, cwindow_data->glx_context) != True)
+	if ((window->glx_context = glXCreateContextAttribsARB_func(window->context->display, bestFbc, share_window ? share_window->glx_context : NULL, True, context_attribs)) == NULL) return false;
+	if (window->context->opengl.func.glXMakeCurrent(window->context->display, window->window, window->glx_context) != True)
 	{
-		context->opengl.func.glXDestroyContext(context->display, cwindow_data->glx_context);
+		window->context->opengl.func.glXDestroyContext(window->context->display, window->glx_context);
 		return false;
 	}
 
-	if ((window_data->glXSwapIntervalEXT = (void (*)(Display * dpy, GLXDrawable drawable, int interval))context->opengl.func.glXGetProcAddress("glXSwapIntervalEXT")) == NULL) *glSwapIntervalEXT_support = false;
+	if ((window->glXSwapIntervalEXT = (void (*)(Display * dpy, GLXDrawable drawable, int interval))window->context->opengl.func.glXGetProcAddress("glXSwapIntervalEXT")) == NULL) *glSwapIntervalEXT_support = false;
 	else *glSwapIntervalEXT_support = true;
 
-	context->opengl.func.glXMakeCurrent(context->display, None, NULL);
+	window->context->opengl.func.glXMakeCurrent(window->context->display, None, NULL);
 	return true;
 }
 
-bool cwindow_glDestroyContext(void* window)
+void cwindow_glDestroyContext(cwindow* window)
 {
-	struct cwindow_data_x11* cwindow_data = window;
-
-	context->opengl.func.glXDestroyContext(context->display, cwindow_data->glx_context);
+	window->context->opengl.func.glXDestroyContext(window->context->display, window->glx_context);
 
 	return true;
 }
 
-bool cwindow_glMakeCurrent(void* window)
+bool cwindow_glMakeCurrent(cwindow* window, bool current)
 {
-	struct cwindow_data_x11* cwindow_data = window;
-
-	bool result = true;
-
-	if (window_data == NULL) result = (context->opengl.func.glXMakeCurrent(context->display, None, NULL) == True);
-	else if ((result = (context->opengl.func.glXMakeCurrent(context->display, cwindow_data->window, cwindow_data->glx_context) == True)) == true) context->opengl.current_window = window;
-	return result;
+	return (window->context->opengl.func.glXMakeCurrent(window->context->display, current ? window->window : None, current ? window->glx_context : NULL) == True);
 }
 
-bool cwindow_glSwapIntervalEXT(int interval)
+bool cwindow_glSwapIntervalEXT(cwindow* window, int interval)
 {
-	if (context->opengl.current_window->glXSwapIntervalEXT == NULL) return false;
+	if (window->glXSwapIntervalEXT == NULL) return false;
 
-	context->opengl.current_window->glXSwapIntervalEXT(context->display, context->opengl.current_window->window, interval);
+	window->glXSwapIntervalEXT(window->context->display, window->window, interval);
 	return true;
 }
 
-void (*window_glGetProcAddress(uint8_t* name)) (void)
+void (*cwindow_glGetProcAddress(cwindow* window, const uint8_t* name)) (void)
 {
 	void (*function)(void);
 
-	if ((function = context->opengl.func.glXGetProcAddress(name)) != NULL) return function;
-	else return dlsym(context->opengl.library, name);
+	if ((function = window->context->opengl.func.glXGetProcAddress(name)) != NULL) return function;
+	else return dlsym(window->context->opengl.library, name);
 }
 
-bool cwindow_glSwapBuffers(void* window)
+bool cwindow_glSwapBuffers(cwindow* window)
 {
-	context->opengl.func.glXSwapBuffers(context->display, ((struct cwindow_data_x11*)(window))->window);
+	window->context->opengl.func.glXSwapBuffers(window->context->display, window->window);
 }
