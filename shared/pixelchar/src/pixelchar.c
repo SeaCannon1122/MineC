@@ -111,5 +111,5 @@ void pixelcharFill(int32_t posX, int32_t posY, uint32_t character, uint32_t scal
 	pChar->bitmapWidth = pFont->pBitmapMetadata[pChar->bitmapIndex].width;
 	pChar->bitmapThickness = pFont->pBitmapMetadata[pChar->bitmapIndex].thickness;
 
-	pChar->width = scale * 8 * pChar->bitmapWidth / pFont->resolution + scale;
+	pChar->width = scale * 8 * (modifiers & PIXELCHAR_MODIFIER_BOLD_BIT ? pChar->bitmapWidth + pChar->bitmapThickness : pChar->bitmapWidth) / pFont->resolution + scale;
 }

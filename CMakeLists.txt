@@ -8,10 +8,10 @@ include_directories(dependencies/graphics_headers)
 
 add_subdirectory(dependencies/stb_image)
 
+add_subdirectory(shared/utility)
 add_subdirectory(shared/cwindow)
 add_subdirectory(shared/pixelchar)
-add_subdirectory(shared/utility)
 add_subdirectory(shared/networking)
 
-add_subdirectory(testing)
 add_subdirectory(client)
+add_subdirectory(testing)

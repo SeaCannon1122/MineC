@@ -4,8 +4,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "opengl_vertex_shader.h"
-#include "opengl_fragment_shader.h"
+#include "pixelchar_impl_opengl_shaders.h"
 
 GLuint _compile_shader(
 	PixelcharImplOpenGLRenderer* renderer,
@@ -178,8 +177,8 @@ bool PixelcharImplOpenGLRendererCreate(
 	if ((vertex_shader = _compile_shader(
 		pRenderer,
 		GL_VERTEX_SHADER,
-		pCustomVertexShaderSource ? pCustomVertexShaderSource : vertex_shader_source,
-		pCustomVertexShaderSource ? customVertexShaderSourceLength : sizeof(vertex_shader_source) - 1,
+		pCustomVertexShaderSource ? pCustomVertexShaderSource : pixelchar_gl_vert,
+		pCustomVertexShaderSource ? customVertexShaderSourceLength : sizeof(pixelchar_gl_vert),
 		logCallback,
 		logCallbackUserParam
 	)) != 0)
@@ -187,8 +186,8 @@ bool PixelcharImplOpenGLRendererCreate(
 		if ((fragment_shader = _compile_shader(
 			pRenderer,
 			GL_FRAGMENT_SHADER,
-			pCustomFragmentShaderSource ? pCustomFragmentShaderSource : fragment_shader_source,
-			pCustomFragmentShaderSource ? customFragmentShaderSourceLength : sizeof(fragment_shader_source) - 1,
+			pCustomFragmentShaderSource ? pCustomFragmentShaderSource : pixelchar_gl_frag,
+			pCustomFragmentShaderSource ? customFragmentShaderSourceLength : sizeof(pixelchar_gl_frag),
 			logCallback,
 			logCallbackUserParam
 		)) != 0)

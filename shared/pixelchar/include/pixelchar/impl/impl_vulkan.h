@@ -56,8 +56,7 @@
 	PIXELCHAR_IMPL_VULKAN_INTERNAL_DEVICE_FUNCTION(vkCmdBindVertexBuffers)\
 	PIXELCHAR_IMPL_VULKAN_INTERNAL_DEVICE_FUNCTION(vkCmdBindIndexBuffer)\
 	PIXELCHAR_IMPL_VULKAN_INTERNAL_DEVICE_FUNCTION(vkCmdPushConstants)\
-	PIXELCHAR_IMPL_VULKAN_INTERNAL_DEVICE_FUNCTION(vkCmdDrawIndexed)\
-	PIXELCHAR_IMPL_VULKAN_INTERNAL_DEVICE_FUNCTION(vkCmdUpdateBuffer)
+	PIXELCHAR_IMPL_VULKAN_INTERNAL_DEVICE_FUNCTION(vkCmdDrawIndexed)
 
 #define PIXELCHAR_IMPL_VULKAN_MAX_RENDERPASS_COUNT 8
 #define PIXELCHAR_IMPL_VULKAN_MAX_SUBPASS_COUNT 8
@@ -115,6 +114,9 @@ typedef struct PixelcharImplVulkanFont
 {
 	PixelcharImplVulkanFactory* pFactory;
 
+	uint32_t bitmapCount;
+	uint32_t resolution;
+
 	VkDescriptorPool descriptorPool;
 	VkDescriptorSet descriptorSet;
 	PixelcharImplVulkanInternalBufferAndMemory bufferAndMemory;
@@ -161,10 +163,10 @@ void PixelcharImplVulkanFontDestroy(PixelcharImplVulkanFont* pFont);
 
 void PixelcharImplVulkanRender(
 	PixelcharImplVulkanRenderer* pRenderer,
-	PixelcharImplVulkanFont* pFont,
 	uint32_t characterCount,
 	VkBuffer vertexBuffer,
 	uint32_t vertexBufferOffset,
+	PixelcharImplVulkanFont* pFont,
 	VkCommandBuffer commandBuffer,
 	uint32_t width,
 	uint32_t height,

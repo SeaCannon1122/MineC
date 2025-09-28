@@ -1,7 +1,6 @@
 #include <pixelchar/impl/impl_vulkan.h>
 
-#include "vulkan_vertex_shader.h"
-#include "vulkan_fragment_shader.h"
+#include <pixelchar_impl_vulkan_shaders.h>
 
 #include <stdlib.h>
 #include <string.h>
@@ -17,25 +16,12 @@ struct memory_property_property_flags
 
 struct _push_constants
 {
-	struct
-	{
-		int32_t width;
-		int32_t height;
-	} screen_size;
-
-	uint32_t _padding_0[2];
-
-	struct
-	{
-		float r;
-		float g;
-		float b;
-		float a;
-	} shadow_color_devisor;
-
-	uint32_t draw_mode;
-
-	uint32_t _padding_1[3];
+	float screen_to_ndc[16];
+	float shadow_color_devisor[4];
+	int32_t font_resolution;
+	int32_t bitmap_count;
+	int32_t draw_mode;
+	int32_t _padding;
 };
 
 VkResult _allocate_best_memory(
@@ -116,7 +102,7 @@ void _destroy_buffer_and_memory(PixelcharImplVulkanFactory* factory, PixelcharIm
 	factory->func.vkFreeMemory(factory->device, buffer_and_memory->memory, 0);
 }
 
-VkResult _cmd_copy_data(PixelcharImplVulkanFactory* factory, void* data, size_t data_size, VkBuffer buffer, uint32_t offset)
+VkResult _cmd_copy_data(PixelcharImplVulkanFactory* factory, void* data, size_t data_size, VkBuffer buffer)
 {
 	VkResult result;
 	VkDeviceSize chunk_size;
@@ -142,13 +128,11 @@ VkResult _cmd_copy_data(PixelcharImplVulkanFactory* factory, void* data, size_t 
 			range.memory = factory->staging.memory;
 			range.size = factory->staging.memorySize;
 
-			if ((result = vkFlushMappedMemoryRanges(factory->device, 1, &range)) != VK_SUCCESS) return result;
+			if ((result = factory->func.vkFlushMappedMemoryRanges(factory->device, 1, &range)) != VK_SUCCESS) return result;
 		}
 
 		VkBufferCopy copy = { 0 };
-		copy.srcOffset = 0;
 		copy.size = chunk_size;
-		copy.dstOffset = offset;
 
 		factory->func.vkCmdCopyBuffer(factory->cmd, factory->staging.buffer, buffer, 1, &copy);
 
@@ -387,15 +371,15 @@ VkResult PixelcharImplVulkanRendererCreate(
 
 	if (result == VK_SUCCESS)
 	{
-		shader_info.pCode = (uint32_t*)(pCustomVertexShaderSource == 0 ? vertex_shader_code : pCustomVertexShaderSource);
-		shader_info.codeSize = (pCustomVertexShaderSource == 0 ? vertex_shader_code_len : customVertexShaderSourceSize);
+		shader_info.pCode = (uint32_t*)(pCustomVertexShaderSource ? pCustomVertexShaderSource : pixelchar_vk_vert_spv);
+		shader_info.codeSize = (pCustomVertexShaderSource ? customVertexShaderSourceSize : sizeof(pixelchar_vk_vert_spv));
 
 		if ((result = pRenderer->pFactory->func.vkCreateShaderModule(pRenderer->pFactory->device, &shader_info, 0, &vertex_shader)) == VK_SUCCESS) vertex_shader_module_created = true;
 	}
 	if (result == VK_SUCCESS)
 	{
-		shader_info.pCode = (uint32_t*)(pCustomFragmentShaderSource == 0 ? fragment_shader_code : pCustomFragmentShaderSource);
-		shader_info.codeSize = (pCustomFragmentShaderSource == 0 ? fragment_shader_code_len : customFragmentShaderSourceSize);
+		shader_info.pCode = (uint32_t*)(pCustomFragmentShaderSource ? pCustomFragmentShaderSource : pixelchar_vk_frag_spv);
+		shader_info.codeSize = (pCustomFragmentShaderSource ? customFragmentShaderSourceSize : sizeof(pixelchar_vk_frag_spv));
 
 		if ((result = pRenderer->pFactory->func.vkCreateShaderModule(pRenderer->pFactory->device, &shader_info, 0, &fragment_shader)) == VK_SUCCESS) fragment_shader_module_created = true;
 	}
@@ -411,14 +395,14 @@ VkResult PixelcharImplVulkanRendererCreate(
 			{
 				.binding = 0,
 				.location = 0,
-				.format = VK_FORMAT_R32G32B32A32_UINT,
+				.format = VK_FORMAT_R32G32B32A32_SINT,
 				.offset = 0
 			},
 
 			{
 				.binding = 0,
 				.location = 1,
-				.format = VK_FORMAT_R32G32B32A32_UINT,
+				.format = VK_FORMAT_R32G32B32A32_SINT,
 				.offset = offsetof(Pixelchar, bitmapIndex)
 			},
 
@@ -569,6 +553,8 @@ VkResult PixelcharImplVulkanFontCreate(
 	;
 
 	pFont->pFactory = pFactory;
+	pFont->resolution = pSourceFont->resolution;
+	pFont->bitmapCount = pSourceFont->bitmapCount;
 
 	if (result == VK_SUCCESS)
 	{
@@ -594,12 +580,11 @@ VkResult PixelcharImplVulkanFontCreate(
 
 		result = pFont->pFactory->func.vkAllocateDescriptorSets(pFont->pFactory->device, &descriptor_set_info, &pFont->descriptorSet);
 	}
-	uint32_t resolution_bitmap_count[2] = { pSourceFont->resolution, pSourceFont->bitmapCount };
 	if (result == VK_SUCCESS)
 	{
 		if ((result = _create_buffer_and_memory(
 			pFont->pFactory,
-			pSourceFont->bitmapCount * pSourceFont->resolution * pSourceFont->resolution / 8 + sizeof(resolution_bitmap_count),
+			pSourceFont->bitmapCount * pSourceFont->resolution * pSourceFont->resolution / 8,
 			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 			&(struct memory_property_property_flags) {
 			.count = 3,
@@ -609,8 +594,7 @@ VkResult PixelcharImplVulkanFontCreate(
 			&pFont->bufferAndMemory
 		)) == VK_SUCCESS) buffer_and_memory_created = true;
 	}
-	if (result == VK_SUCCESS) result = _cmd_copy_data(pFont->pFactory, resolution_bitmap_count, sizeof(resolution_bitmap_count), pFont->bufferAndMemory.buffer, 0);
-	if (result == VK_SUCCESS) result = _cmd_copy_data(pFont->pFactory, pSourceFont->pBitmaps, pFont->bufferAndMemory.bufferSize - sizeof(resolution_bitmap_count), pFont->bufferAndMemory.buffer, sizeof(resolution_bitmap_count));
+	if (result == VK_SUCCESS) result = _cmd_copy_data(pFont->pFactory, pSourceFont->pBitmaps, pFont->bufferAndMemory.bufferSize, pFont->bufferAndMemory.buffer);
 	if (result == VK_SUCCESS)
 	{
 		VkDescriptorBufferInfo desc_buffer_info = { 0 };
@@ -644,10 +628,10 @@ void PixelcharImplVulkanFontDestroy(PixelcharImplVulkanFont* pFont)
 
 void PixelcharImplVulkanRender(
 	PixelcharImplVulkanRenderer* pRenderer,
-	PixelcharImplVulkanFont* pFont,
 	uint32_t characterCount,
 	VkBuffer vertexBuffer,
 	uint32_t vertexBufferOffset,
+	PixelcharImplVulkanFont* pFont,
 	VkCommandBuffer commandBuffer,
 	uint32_t width,
 	uint32_t height,
@@ -675,12 +659,16 @@ void PixelcharImplVulkanRender(
 
 	struct _push_constants push_constants =
 	{
-		.screen_size.width = width,
-		.screen_size.height = height,
-		.shadow_color_devisor.r = shadowDevisorR,
-		.shadow_color_devisor.g = shadowDevisorG,
-		.shadow_color_devisor.b = shadowDevisorB,
-		.shadow_color_devisor.a = shadowDevisorA
+		.screen_to_ndc = 
+		{
+			2.f / width,	0.f,				0.f,	0.f,
+			0.f,			2.f / height,		0.f,	0.f,
+			0.f,			0.f,				1.f,	0.f,
+			-1.f,			-1.f,				0.f,	1.f
+		},
+		.shadow_color_devisor = {shadowDevisorR, shadowDevisorG, shadowDevisorB, shadowDevisorA},
+		.font_resolution = pFont->resolution,
+		.bitmap_count = pFont->bitmapCount,
 	};
 
 	for (uint32_t char_render_mode = 0; char_render_mode < 3; char_render_mode++)
