@@ -3,7 +3,6 @@
 void minec_client_reload_assets(struct minec_client* client)
 {
 	asset_loader_reload(client);
-	renderer_action(client, RENDERER_ACTION_RELOAD_ASSETS);
 }
 
 void minec_client_run(uint8_t* data_files_path)
@@ -18,6 +17,7 @@ void minec_client_run(uint8_t* data_files_path)
 		string_index_created = false,
 		asset_loader_created = false,
 		application_window_created = false,
+		gui_state_created = false,
 		renderer_created = false
 	;
 
@@ -96,6 +96,20 @@ void minec_client_run(uint8_t* data_files_path)
 
 	if (status == MINEC_CLIENT_SUCCESS)
 	{
+		if (gui_state_create(client) != MINEC_CLIENT_SUCCESS)
+		{
+			status = MINEC_CLIENT_ERROR;
+			minec_client_log_error(client, "[GLOBAL] Failed to create GUI State");
+		}
+		else
+		{
+			gui_state_created = true;
+			minec_client_log_info(client, "[GLOBAL] GUI State created");
+		}
+	}
+
+	if (status == MINEC_CLIENT_SUCCESS)
+	{
 		if (renderer_create(client, &client->settings.video.renderer) != MINEC_CLIENT_SUCCESS)
 		{
 			status = MINEC_CLIENT_ERROR;
@@ -145,6 +159,12 @@ void minec_client_run(uint8_t* data_files_path)
 	{
 		renderer_destroy(client);
 		minec_client_log_info(client, "[GLOBAL] Renderer destroyed");
+	}
+
+	if (gui_state_created)
+	{
+		gui_state_destroy(client);
+		minec_client_log_info(client, "[GLOBAL] GUI State destroyed");
 	}
 
 	if (application_window_created)

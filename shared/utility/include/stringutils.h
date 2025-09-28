@@ -4,6 +4,7 @@
 #define STRINGUITLS_H
 
 #include <stdint.h>
+#include <stdarg.h>
 
 uint32_t string8_len(const uint8_t* s);
 uint32_t string16_len(const uint16_t* s);

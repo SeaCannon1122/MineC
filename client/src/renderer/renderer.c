@@ -92,19 +92,12 @@ bool renderer_get_info_state(struct minec_client* client, struct renderer_info_s
 
 bool renderer_get_settings_state(struct minec_client* client, struct renderer_settings* settings_state)
 {
-	bool change;
-
 	RENDERER_ACCESS_PUBLIC_STATE
 	(
-		if ((change = RENDERER.public.state.settings_changed) == true)
-		{
-			RENDERER.public.state.settings_changed = false;
-
-			*settings_state = RENDERER.public.state.settings;
-		}
+		*settings_state = RENDERER.public.state.settings;
 	);
 
-	return change;
+	return true;
 }
 
 void renderer_action(struct minec_client* client, struct renderer_action* action)
@@ -155,11 +148,6 @@ void renderer_action(struct minec_client* client, struct renderer_action* action
 			RENDERER.public.action.render_distance.set = true;
 		} break;
 
-		case _RENDERER_ACTION_RELOAD_ASSETS:
-		{
-			RENDERER.public.action.reload_assets = true;
-		} break;
-
 		default:
 			break;
 		}
@@ -168,7 +156,6 @@ void renderer_action(struct minec_client* client, struct renderer_action* action
 
 void renderer_reset_action_state(struct minec_client* client)
 {
-	RENDERER.public.action.reload_assets = false;
 	RENDERER.public.action.backend_device_index.set = false;
 	RENDERER.public.action.backend_index.set = false;
 	RENDERER.public.action.fov.set = false;
@@ -254,7 +241,6 @@ uint32_t renderer_create(struct minec_client* client, struct renderer_settings* 
 			client->renderer.client_renderer_api._log_debug_l = _minec_client_log_debug_l;
 #endif
 			client->renderer.client_renderer_api._asset_loader_get_asset = asset_loader_get_asset;
-			client->renderer.client_renderer_api._asset_loader_release_asset = asset_loader_release_asset;
 		}
 
 		renderer_get_api_func(&client->renderer.renderer_client_api);

@@ -123,7 +123,9 @@ target_sources(MineC_Client PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/settings/settings.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/asset_loader/asset_loader.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/renderer/renderer.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/gui/gui.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/gui/menu_gui.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/gui/pixelfont.c
 )
 
 target_include_directories(MineC_Client PRIVATE

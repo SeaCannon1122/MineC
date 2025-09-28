@@ -12,31 +12,15 @@ target_include_directories(pixelchar
 )
 
 target_sources(pixelchar PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/renderers/renderer_vulkan.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/impl/impl_vulkan.c
 )
 target_compile_definitions(pixelchar 
-    PUBLIC _PIXELCHAR_BACKEND_VULKAN=1
-)
+    PUBLIC PIXELCHAR_IMPLEMENTATION_VULKAN=1
+ )
 
 target_sources(pixelchar PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/renderers/renderer_opengl.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/impl/impl_opengl.c
 )
 target_compile_definitions(pixelchar 
-    PUBLIC _PIXELCHAR_BACKEND_OPENGL=1
+    PUBLIC PIXELCHAR_IMPLEMENTATION_OPENGL=1
 )
-
-
-if(WIN32)
-
-    target_sources(pixelchar PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderers/renderer_direct3d12.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/renderers/renderer_direct3d11.cpp
-    )
-
-    target_compile_definitions(pixelchar 
-        PUBLIC 
-            _PIXELCHAR_BACKEND_DIRECT3D11=1
-            _PIXELCHAR_BACKEND_DIRECT3D12=1
-    )
-
-endif()

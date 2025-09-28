@@ -1,2 +1,0 @@
-window_icon.png
-minec/font.pixelfont

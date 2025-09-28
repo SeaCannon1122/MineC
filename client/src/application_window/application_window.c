@@ -1,5 +1,45 @@
 #include <minec_client.h>
 
+void window_event_callback(cwindow* window, cwindow_event* const event, struct minec_client* client)
+{
+	switch (event->type) {
+
+	case CWINDOW_EVENT_DESTROY: {
+		APPLICATION_WINDOW.should_close = true;
+	} break;
+
+	case CWINDOW_EVENT_SIZE: {
+
+		atomic_uint32_t_store(&APPLICATION_WINDOW.width, event->info.size.width);
+		atomic_uint32_t_store(&APPLICATION_WINDOW.height, event->info.size.height);
+
+	} break;
+
+	case CWINDOW_EVENT_CHARACTER: {
+		if (APPLICATION_WINDOW.input.character_count < MAX_FRAME_CHAR_INPUTS) {
+			APPLICATION_WINDOW.input.characters[APPLICATION_WINDOW.input.character_count] = event->info.character.character;
+		}
+		APPLICATION_WINDOW.input.character_count++;
+	} break;
+
+	case CWINDOW_EVENT_KEY_DOWN: {
+		if (!(APPLICATION_WINDOW.input.keyboard[event->info.key_down_up.key] & KEY_DOWN_MASK))
+			APPLICATION_WINDOW.input.keyboard[event->info.key_down_up.key] = KEY_CHANGE_MASK | KEY_DOWN_MASK;
+	} break;
+
+	case CWINDOW_EVENT_KEY_UP: {
+		APPLICATION_WINDOW.input.keyboard[event->info.key_down_up.key] = KEY_CHANGE_MASK;
+	} break;
+
+	case CWINDOW_EVENT_MOUSE_SCROLL: {
+		APPLICATION_WINDOW.input.mouse_scroll_steps = event->info.mouse_scroll.scroll_steps;
+	} break;
+
+	default:
+		break;
+	}
+}
+
 uint32_t application_window_create(struct minec_client* client)
 {
 	uint32_t width = 700, height = 500;
@@ -10,12 +50,14 @@ uint32_t application_window_create(struct minec_client* client)
 		return MINEC_CLIENT_ERROR;
 	}
 
-	if ((APPLICATION_WINDOW.window = cwindow_create(APPLICATION_WINDOW.context, 100, 100, width, height, "MineC", true)) == NULL)
+	if ((APPLICATION_WINDOW.window = cwindow_create(APPLICATION_WINDOW.context, 100, 100, width, height, "MineC", true, window_event_callback)) == NULL)
 	{
 		minec_client_log_error(client, "[WINDOW] Failed to create window");
 		minec_client_log_debug_l(client, "'cwindow_create' failed");
 		return MINEC_CLIENT_ERROR;
 	}
+
+	cwindow_set_event_callback_user_parameter(APPLICATION_WINDOW.window, client);
 
 	size_t raw_window_icon_data_size;
 	uint8_t* raw_window_icon_data = resource_index_query("window_icon.png", &raw_window_icon_data_size);
@@ -23,7 +65,6 @@ uint32_t application_window_create(struct minec_client* client)
 	{
 		uint32_t icon_width, icon_height, comp;
 		uint32_t* icon_data = (uint32_t*)stbi_load_from_memory((const stbi_uc*)raw_window_icon_data, raw_window_icon_data_size, &icon_width, &icon_height, &comp, 4);
-		asset_loader_release_asset(client);
 		if (icon_data != NULL)
 		{
 			if (cwindow_set_icon(APPLICATION_WINDOW.window, icon_data, icon_width, icon_height) == false)
@@ -46,6 +87,8 @@ uint32_t application_window_create(struct minec_client* client)
 
 	memset(&APPLICATION_WINDOW.input, 0, sizeof(APPLICATION_WINDOW.input));
 
+	APPLICATION_WINDOW.should_close = false;
+
 	return MINEC_CLIENT_SUCCESS;
 }
 
@@ -54,53 +97,14 @@ uint32_t application_window_events(struct minec_client* client)
 	APPLICATION_WINDOW.input.character_count = 0;
 	APPLICATION_WINDOW.input.mouse_scroll_steps = 0;
 
-	for (uint32_t i = 0; i < CWINDOW_KEY_TOTAL_COUNT; i++) APPLICATION_WINDOW.input.keyboard[i] &= ~KEY_CHANGE_MASK;
+	for (uint32_t i = 0; i < CWINDOW_KEY_s_COUNT; i++) APPLICATION_WINDOW.input.keyboard[i] &= ~KEY_CHANGE_MASK;
 
-	struct cwindow_event* event;
-	while (event = cwindow_next_event(APPLICATION_WINDOW.window)) {
-
-		switch (event->type) {
-
-		case CWINDOW_EVENT_DESTROY: {
-			return MINEC_CLIENT_ERROR;
-		} break;
-
-		case CWINDOW_EVENT_MOVE_SIZE: {
-
-			atomic_uint32_t_store(&APPLICATION_WINDOW.width, event->info.move_size.width);
-			atomic_uint32_t_store(&APPLICATION_WINDOW.height, event->info.move_size.height);
-
-		} break;
-
-		case CWINDOW_EVENT_CHARACTER: {
-			if (APPLICATION_WINDOW.input.character_count < MAX_FRAME_CHAR_INPUTS) {
-				APPLICATION_WINDOW.input.characters[APPLICATION_WINDOW.input.character_count] = event->info.character.code_point;
-			}
-			APPLICATION_WINDOW.input.character_count++;
-		} break;
-
-		case CWINDOW_EVENT_KEY_DOWN: {
-			if (!(APPLICATION_WINDOW.input.keyboard[event->info.key_down.key] & KEY_DOWN_MASK))
-				APPLICATION_WINDOW.input.keyboard[event->info.key_down.key] = KEY_CHANGE_MASK | KEY_DOWN_MASK;
-		} break;
-
-		case CWINDOW_EVENT_KEY_UP: {
-			APPLICATION_WINDOW.input.keyboard[event->info.key_up.key] = KEY_CHANGE_MASK;
-		} break;
-
-		case CWINDOW_EVENT_MOUSE_SCROLL: {
-			APPLICATION_WINDOW.input.mouse_scroll_steps = event->info.mouse_scroll.scroll_steps;
-		} break;
-
-		default:
-			break;
-		}
-
-	}
+	cwindow_handle_events(APPLICATION_WINDOW.window);
 
 	cwindow_get_mouse_cursor_position(APPLICATION_WINDOW.window, &APPLICATION_WINDOW.input.mouse_x, &APPLICATION_WINDOW.input.mouse_y);
 
-	return MINEC_CLIENT_SUCCESS;
+	if (APPLICATION_WINDOW.should_close) return MINEC_CLIENT_ERROR;
+	else return MINEC_CLIENT_SUCCESS; 
 }
 
 uint32_t application_window_destroy(struct minec_client* client)

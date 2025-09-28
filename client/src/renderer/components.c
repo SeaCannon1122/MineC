@@ -195,12 +195,6 @@ uint32_t renderer_frame_process_actions(struct minec_client* client)
 		}
 	}
 
-	if (action_state.reload_assets) if (renderer_reload_assets(client) == MINEC_CLIENT_ERROR_BACKEND_CRASHED)
-	{
-		RENDERER.components.backend_recreate = true;
-		return MINEC_CLIENT_ERROR;
-	}
-
 	if ((action_state.vsync.set && RENDERER.backend_device_infos.infos[RENDERER.settings.backend_device_index].disable_vsync_support) || (action_state.triple_buffering.set && RENDERER.backend_device_infos.infos[RENDERER.settings.backend_device_index].triple_buffering_support))
 	{
 		if (action_state.vsync.set) RENDERER.settings.vsync = action_state.vsync.value;

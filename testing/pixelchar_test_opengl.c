@@ -3,8 +3,41 @@
 #include "utils.h"
 
 #include <cwindow/cwindow.h>
-#include <pixelchar/pixelchar.h>
-#include <pixelchar/renderers/renderer_opengl.h>
+#include <pixelchar/impl/impl_opengl.h>
+
+#define FRAME_COUNT 3
+#define VERTEX_BUFFER_LENGTH 128
+
+struct app
+{
+	cwindow_context* window_context;
+	cwindow* window;
+	uint32_t width;
+	uint32_t height;
+
+	bool leave;
+
+	PFNGLENABLEPROC glEnable;
+	PFNGLDEBUGMESSAGECALLBACKPROC glDebugMessageCallback;
+	PFNGLDEBUGMESSAGECONTROLPROC glDebugMessageControl;
+	PFNGLGETSTRINGPROC glGetString;
+	PFNGLBLENDFUNCPROC glBlendFunc;
+	PFNGLCLEARCOLORPROC glClearColor;
+	PFNGLVIEWPORTPROC glViewport;
+	PFNGLCLEARPROC glClear;
+	PFNGLGENBUFFERSPROC glGenBuffers;
+	PFNGLDELETEBUFFERSPROC glDeleteBuffers;
+	PFNGLBINDBUFFERPROC glBindBuffer;
+	PFNGLBUFFERDATAPROC glBufferData;
+	PFNGLBUFFERSUBDATAPROC glBufferSubData;
+
+	GLuint vertex_buffer;
+
+	PixelcharImplOpenGLFactory factory;
+	PixelcharImplOpenGLRenderer renderer;
+	PixelcharImplOpenGLFont font;
+
+};
 
 void DebugCallback(GLenum source, GLenum type, GLuint id, GLenum severity,
 	GLsizei length, const GLchar* message, const void* userParam) {
@@ -18,8 +51,34 @@ void DebugCallback(GLenum source, GLenum type, GLuint id, GLenum severity,
 	printf("-----------------------------------------\n\n");
 }
 
+void event_callback(cwindow* window, const cwindow_event* event, struct app* app)
+{
+	switch (event->type)
+	{
 
-void* loadFile(uint8_t* src, size_t* size) {
+	case CWINDOW_EVENT_SIZE: {
+		printf(
+			"New window dimensions:\n  width: %d\n  height: %d\n  position x: %d\n  position y: %d\n\n",
+			event->info.size.width,
+			event->info.size.height
+		);
+
+		app->width = event->info.size.width;
+		app->height = event->info.size.height;
+
+		app->glViewport(0, 0, app->width, app->height);
+
+	} break;
+
+	case CWINDOW_EVENT_DESTROY: {
+		app->leave = true;
+	} break;
+	
+	}
+}
+
+void* loadFile(uint8_t* src, size_t* size)
+{
 
 	FILE* file = fopen(src, "rb");
 	if (file == NULL) return NULL;
@@ -41,183 +100,149 @@ void* loadFile(uint8_t* src, size_t* size) {
 	return buffer;
 }
 
-int main(int argc, char* argv[]) {
+void pixelchar_callback(uint8_t* message, void* userparam)
+{
+	printf("%s\n", message);
+}
 
-	cwindow_context* window_context = cwindow_context_create("context");
-	cwindow_context_graphics_opengl_load(window_context);
+int main(int argc, char* argv[])
+{
+	struct app app;
+	app.width = 200;
+	app.height = 200;
+
+	app.window_context = cwindow_context_create("context");
+	cwindow_context_graphics_opengl_load(app.window_context);
 
 	bool a;
-	void* window = cwindow_create(window_context, 100, 100, 200, 200, "window for test", true);
-	if (cwindow_glCreateContext(window, 4, 6, NULL, &a) == false) printf("failed to create opengl context\n");
-	cwindow_glMakeCurrent(window, true);
+	app.window = cwindow_create(app.window_context, 100, 100, app.width, app.height, "window for test", true, event_callback);
+	cwindow_set_event_callback_user_parameter(app.window, &app);
 
-	cwindow_glSwapIntervalEXT(window, 0);
+	if (cwindow_glCreateContext(app.window, 4, 6, NULL, &a) == false) printf("failed to create opengl context\n");
+	cwindow_glMakeCurrent(app.window_context, app.window);
 
-	PFNGLENABLEPROC glEnable = cwindow_glGetProcAddress(window, "glEnable");
-	PFNGLDEBUGMESSAGECALLBACKPROC glDebugMessageCallback = cwindow_glGetProcAddress(window, "glDebugMessageCallback");
-	PFNGLDEBUGMESSAGECONTROLPROC glDebugMessageControl = cwindow_glGetProcAddress(window, "glDebugMessageControl");
-	PFNGLGETSTRINGPROC glGetString = cwindow_glGetProcAddress(window, "glGetString");
-	PFNGLBLENDFUNCPROC glBlendFunc = cwindow_glGetProcAddress(window, "glBlendFunc");
-	PFNGLCLEARCOLORPROC glClearColor = cwindow_glGetProcAddress(window, "glClearColor");
-	PFNGLVIEWPORTPROC glViewport = cwindow_glGetProcAddress(window, "glViewport");
-	PFNGLCLEARPROC glClear = cwindow_glGetProcAddress(window, "glClear");
+	cwindow_glSwapIntervalEXT(app.window, 0);
 
-	glEnable(GL_DEBUG_OUTPUT);
-	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+	app.glEnable = cwindow_glGetProcAddress(app.window, "glEnable");
+	app.glDebugMessageCallback = cwindow_glGetProcAddress(app.window, "glDebugMessageCallback");
+	app.glDebugMessageControl = cwindow_glGetProcAddress(app.window, "glDebugMessageControl");
+	app.glGetString = cwindow_glGetProcAddress(app.window, "glGetString");
+	app.glBlendFunc = cwindow_glGetProcAddress(app.window, "glBlendFunc");
+	app.glClearColor = cwindow_glGetProcAddress(app.window, "glClearColor");
+	app.glViewport = cwindow_glGetProcAddress(app.window, "glViewport");
+	app.glClear = cwindow_glGetProcAddress(app.window, "glClear");
+	app.glGenBuffers = cwindow_glGetProcAddress(app.window, "glGenBuffers");
+	app.glDeleteBuffers = cwindow_glGetProcAddress(app.window, "glDeleteBuffers");
+	app.glBindBuffer = cwindow_glGetProcAddress(app.window, "glBindBuffer");
+	app.glBufferSubData = cwindow_glGetProcAddress(app.window, "glBufferSubData");
+	app.glBufferData = cwindow_glGetProcAddress(app.window, "glBufferData");
 
-	glDebugMessageCallback(DebugCallback, NULL);
+	app.glEnable(GL_DEBUG_OUTPUT);
+	app.glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 
-	glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_HIGH, 0, NULL, GL_TRUE);
-	glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_MEDIUM, 0, NULL, GL_TRUE);
-	glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_LOW, 0, NULL, GL_FALSE);
-	glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_NOTIFICATION, 0, NULL, GL_FALSE);
+	app.glDebugMessageCallback(DebugCallback, NULL);
 
-	printf("%s\n", glGetString(GL_RENDERER));
-	printf("%s\n", glGetString(GL_VENDOR));
-	printf("%s\n", glGetString(GL_VERSION));
+	app.glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_HIGH, 0, NULL, GL_TRUE);
+	app.glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_MEDIUM, 0, NULL, GL_TRUE);
+	app.glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_LOW, 0, NULL, GL_FALSE);
+	app.glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_NOTIFICATION, 0, NULL, GL_FALSE);
 
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	printf("%s\n", app.glGetString(GL_RENDERER));
+	printf("%s\n", app.glGetString(GL_VENDOR));
+	printf("%s\n", app.glGetString(GL_VERSION));
 
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	app.glEnable(GL_BLEND);
+	app.glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	app.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
 	size_t default_font_data_size;
-	void* default_font_data = loadFile("../../../../client/assets/minec/fonts/default.pixelfont", &default_font_data_size);
+	void* default_font_data = loadFile("../../../../shared/pixelchar/pixelfonts/debug_font/debug.pixelfont", &default_font_data_size);
 	if (default_font_data == NULL) printf("failed to load pixelfont\n");
 
-	size_t smooth_font_data_size;
-	void* smooth_font_data = loadFile("../../../../client/assets/minec/fonts/font1.pixelfont", &smooth_font_data_size);
-	if (smooth_font_data == NULL) printf("failed to load pixelfont\n");
+	size_t vertex_shader_size, fragment_shader_size;
+	void* vertex_shader = loadFile("../../../../client/resources/shaders/gui_text/gui_text_gl.vert", &vertex_shader_size);
+	void* fragment_shader = loadFile("../../../../client/resources/shaders/gui_text/gui_text_gl.frag", &fragment_shader_size);
 
-	PixelcharFont default_font;
-	PixelcharResult res = pixelcharFontCreate(default_font_data, default_font_data_size, &default_font);
-	PixelcharFont smooth_font;
-	res = pixelcharFontCreate(smooth_font_data, smooth_font_data_size, &smooth_font);
+	PixelcharFont* default_font;
+	PixelcharResult res = pixelcharFontLoadFromFileData(default_font_data, default_font_data_size, &default_font, pixelchar_callback, NULL);
+
+	app.glGenBuffers(1, &app.vertex_buffer);
+	app.glBindBuffer(GL_ARRAY_BUFFER, app.vertex_buffer);
+	app.glBufferData(GL_ARRAY_BUFFER, sizeof(Pixelchar) * VERTEX_BUFFER_LENGTH * FRAME_COUNT, NULL, GL_DYNAMIC_DRAW);
+
+	PixelcharImplOpenGLFactoryCreate(cwindow_glGetProcAddress, app.window, &app.factory, pixelchar_callback, NULL);
+	PixelcharImplOpenGLRendererCreate(&app.factory, vertex_shader, vertex_shader_size, fragment_shader, fragment_shader_size, &app.renderer, pixelchar_callback, NULL);
+	PixelcharImplOpenGLFontCreate(&app.factory, default_font, &app.font, pixelchar_callback, NULL);
 
 	free(default_font_data);
-	free(smooth_font_data);
+	free(vertex_shader);
+	free(fragment_shader);
 
-	PixelcharRendererOpenGL pcr;;
-	PixelcharRendererOpenGLCreate(cwindow_glGetProcAddress, window, NULL, 0, NULL, 0, NULL, NULL, 2, 100, &pcr);
-	PixelcharRendererOpenGLUseFont(pcr, default_font, 0);
-	PixelcharRendererOpenGLUseFont(pcr, smooth_font, 1);
+	Pixelchar c[VERTEX_BUFFER_LENGTH];
 
-	PixelcharFont fonts[PIXELCHAR_RENDERER_MAX_FONT_COUNT] = { 0 };
-	fonts[0] = default_font;
-	fonts[1] = smooth_font;
-
-	uint8_t name_default[PIXELCHAR_FONT_NAME_BUFFER_SIZE];
-	uint8_t name_smooth[PIXELCHAR_FONT_NAME_BUFFER_SIZE];
-
-	pixelcharFontGetName(default_font, name_default);
-	pixelcharFontGetName(smooth_font, name_smooth);
-
-	Pixelchar c[100];
-
-	uint32_t scale = 2;
-
-	
-
-	uint32_t x;
-	uint32_t y;
-	uint32_t width;
-	uint32_t height;
-
-	cwindow_get_dimensions(window, &width, &height, &x, &y);
-
-	glViewport(0, 0, width, height);
+	uint32_t scale = 2;	
 	
 	double time = time_get();
 
 	uint32_t frame_index = 0;
 
-	bool leave = false;
-	while (leave == false)
+	app.leave = false;
+	while (app.leave == false)
 	{
-		struct cwindow_event* event;
-		while (event = cwindow_next_event(window))
-		{
-			switch (event->type)
-			{
-
-			case CWINDOW_EVENT_MOVE_SIZE: {
-				printf(
-					"New window dimensions:\n  width: %d\n  height: %d\n  position x: %d\n  position y: %d\n\n", 
-					event->info.move_size.width, 
-					event->info.move_size.height, 
-					event->info.move_size.position_x, 
-					event->info.move_size.position_y
-				);
-
-				width = event->info.move_size.width;
-				height = event->info.move_size.height;
-
-				glViewport(0, 0, width, height);
-
-			} break;
-
-			case CWINDOW_EVENT_DESTROY: {
-				leave = true;
-			} break;
-
-			}
-		}
-
-		glClear(GL_COLOR_BUFFER_BIT);
+		cwindow_handle_events(app.window);
+		app.glViewport(0, 0, app.width, app.height);
+		app.glClear(GL_COLOR_BUFFER_BIT);
 
 		double time_now = time_get();
 
-		uint8_t buffer[11];
-		snprintf(buffer, sizeof(buffer), "%.10f", time_now - time);
+		uint8_t buffer[VERTEX_BUFFER_LENGTH];
+		//snprintf(buffer, sizeof(buffer), "  %.10f", time_now - time);
+
 
 		time = time_now;
 
-		for (uint32_t i = 0; i < 10; i++)
+		for (uint32_t i = 0; i < VERTEX_BUFFER_LENGTH; i++)
 		{
-			c[i].character = buffer[i];
-			c[i].flags = PIXELCHAR_BACKGROUND_BIT | PIXELCHAR_UNDERLINE_BIT | PIXELCHAR_SHADOW_BIT;
-			c[i].fontIndex = i % 2;
-			c[i].scale = scale;
-
-			c[i].position[1] = 100;
-
-			if (i == 0) c[i].position[0] = 100;
-			else c[i].position[0] = c[i - 1].position[0] + pixelcharGetCharacterRenderingWidth(&c[i - 1], fonts) + pixelcharGetCharacterRenderingSpacing(&c[i - 1], &c[i], fonts);
-
-			c[i].color[0] = 0xdc;
-			c[i].color[1] = 0xdc;
-			c[i].color[2] = 0xdc;
-			c[i].color[3] = 255;
-			c[i].backgroundColor[0] = 255;
-			c[i].backgroundColor[1] = 0;
-			c[i].backgroundColor[2] = 0;
-			c[i].backgroundColor[3] = 255;
-
+			pixelcharFill(
+				(i % 32 == 0 ? 100 : c[i - 1].position[0] + c[i - 1].width),
+				(i == 0 ? 100 : (i % 32 == 0 ? c[i - 1].position[1] + 100 : c[i - 1].position[1])),
+				i,
+				3,
+				PIXELCHAR_MODIFIER_BACKGROUND_BIT | PIXELCHAR_MODIFIER_UNDERLINE_BIT | PIXELCHAR_MODIFIER_SHADOW_BIT,
+				0xffdcdcdc,
+				i%2 ? 0xff00ffff : 0xff0000ff,
+				default_font,
+				&c[i]
+			);
 		}
 
 
-		PixelcharRendererVulkanResetResourceFrame(pcr, frame_index);
-		PixelcharRendererVulkanUpdateRenderingData(pcr, c, 10, frame_index);
+		app.glBindBuffer(GL_ARRAY_BUFFER, app.vertex_buffer);
+		app.glBufferSubData(GL_ARRAY_BUFFER, sizeof(Pixelchar) * VERTEX_BUFFER_LENGTH * frame_index, sizeof(Pixelchar) * VERTEX_BUFFER_LENGTH, c);
 
-		PixelcharRendererVulkanRender(pcr, width, height, 4.f, 4.f, 4.f, 1.4f);
+		PixelcharImplOpenGLRender(&app.renderer, VERTEX_BUFFER_LENGTH, app.vertex_buffer, sizeof(Pixelchar) * VERTEX_BUFFER_LENGTH * frame_index, &app.font, app.width, app.height, 4.f, 4.f, 4.f, 1.4f);
 
-		cwindow_glSwapBuffers(window);
+		cwindow_glSwapBuffers(app.window);
 
 		frame_index = (frame_index + 1 ) % 2;
 	}
 
-	PixelcharRendererOpenGLDestroy(pcr);
+	PixelcharImplOpenGLFontDestroy(&app.font);
+	PixelcharImplOpenGLRendererDestroy(&app.renderer);
+	PixelcharImplOpenGLFactoryDestroy(&app.factory);
 
-	pixelcharFontDestroy(default_font);
-	pixelcharFontDestroy(smooth_font);
+	app.glDeleteBuffers(1, &app.vertex_buffer);
 
-	cwindow_glMakeCurrent(window, false);
+	free(default_font);
 
-	cwindow_glDestroyContext(window);
-	cwindow_destroy(window);
+	cwindow_glMakeCurrent(app.window_context, app.window);
 
-	cwindow_context_graphics_opengl_unload(window_context);
-	cwindow_context_destroy(window_context);
+	cwindow_glDestroyContext(app.window);
+	cwindow_destroy(app.window);
+
+	cwindow_context_graphics_opengl_unload(app.window_context);
+	cwindow_context_destroy(app.window_context);
 
 	return 0;
 }

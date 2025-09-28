@@ -25,7 +25,7 @@ struct application_window
 		uint32_t characters[MAX_FRAME_CHAR_INPUTS];
 		uint32_t character_count;
 
-		uint8_t keyboard[CWINDOW_KEY_TOTAL_COUNT];
+		uint8_t keyboard[CWINDOW_KEY_s_COUNT];
 
 		uint32_t mouse_x;
 		uint32_t mouse_y;
@@ -33,6 +33,8 @@ struct application_window
 		int32_t mouse_scroll_steps;
 
 	} input;
+
+	bool should_close;
 };
 
 #ifndef MINEC_CLIENT_INCLUDE_ONLY_STRUCTURE

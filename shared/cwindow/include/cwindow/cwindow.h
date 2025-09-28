@@ -10,7 +10,9 @@ extern "C" {
 #include <stdint.h>
 #include <stdbool.h>
 
-enum cwindow_key {
+typedef enum cwindow_key
+{
+	CWINDOW_KEY_UNKNOWN = 0,
 
 	CWINDOW_KEY_1,
 	CWINDOW_KEY_2,
@@ -88,10 +90,13 @@ enum cwindow_key {
 	CWINDOW_KEY_MOUSE_MIDDLE,
 	CWINDOW_KEY_MOUSE_RIGHT,
 
-	CWINDOW_KEY_TOTAL_COUNT,
-};
+	CWINDOW_KEY_s_COUNT
+} cwindow_key;
 
-enum cwindow_event_type {
+typedef enum cwindow_event_type
+{
+	CWINDOW_EVENT_UNKNOWN = 0,
+
 	CWINDOW_EVENT_DESTROY,
 	CWINDOW_EVENT_FOCUS,
 	CWINDOW_EVENT_UNFOCUS,
@@ -99,51 +104,59 @@ enum cwindow_event_type {
 	CWINDOW_EVENT_CHARACTER,
 	CWINDOW_EVENT_KEY_UP,
 	CWINDOW_EVENT_KEY_DOWN,
-	CWINDOW_EVENT_MOVE_SIZE,
-};
+	CWINDOW_EVENT_SIZE,
+	CWINDOW_EVENT_MOVE,
+} cwindow_event_type;
 
 typedef struct cwindow_context cwindow_context;
 typedef struct cwindow cwindow;
 
-typedef struct cwindow_event {
-	uint32_t type;
-	union {
-		struct {
+typedef struct cwindow_event
+{
+	cwindow_event_type type;
+	union
+	{
+		struct
+		{
 			int32_t scroll_steps;
 		} mouse_scroll;
-		struct {
-			uint32_t code_point;
+		struct
+		{
+			uint32_t character;
 		} character;
-		struct {
-			uint32_t key;
-		} key_down;
-		struct {
-			uint32_t key;
-		} key_up;
-		struct {
+		struct
+		{
+			cwindow_key key;
+		} key_down_up;
+		struct
+		{
 			uint32_t width;
 			uint32_t height;
-			int32_t position_x;
-			int32_t position_y;
-		} move_size;
+		} size;
+		struct
+		{
+			uint32_t posx;
+			uint32_t posy;
+		} move;
 	} info;
 } cwindow_event;
+
+typedef void (*pfn_cwindow_event_callback)(cwindow* window, const cwindow_event* event, void* user_parameter);
 
 cwindow_context* cwindow_context_create(const uint8_t* name);
 void cwindow_context_destroy(cwindow_context* context);
 void cwindow_context_get_display_dimensions(cwindow_context* context, uint32_t* width, uint32_t* height);
 
-cwindow* cwindow_create(cwindow_context* context, int32_t posx, int32_t posy, uint32_t width, uint32_t height, const uint8_t* name, bool visible);
+cwindow* cwindow_create(cwindow_context* context, int32_t posx, int32_t posy, uint32_t width, uint32_t height, const uint8_t* name, bool visible, pfn_cwindow_event_callback event_callback);
 void cwindow_destroy(cwindow* window);
 
+void cwindow_set_event_callback_user_parameter(cwindow* window, void* user_parameter);
 bool cwindow_set_icon(cwindow* window, const uint32_t* icon_rgba_pixel_data, uint32_t icon_width, uint32_t icon_height);
 void cwindow_get_dimensions(cwindow* window, uint32_t* width, uint32_t* height, int32_t* posx, int32_t* posy);
 bool cwindow_is_selected(cwindow* window);
 void cwindow_get_mouse_cursor_position(cwindow* window, int32_t* posx, int32_t* posy);
 void cwindow_set_mouse_cursor_position(cwindow* window, int32_t posx, int32_t posy);
-const cwindow_event* cwindow_next_event(cwindow* window);
-void cwindow_freeze_event_queue(cwindow* window);
-void cwindow_unfreeze_event_queue(cwindow* window);
+void cwindow_handle_events(cwindow* window);
 
 #ifdef CWINDOW_IMPLEMENTATION_WINDOWS
 
@@ -195,7 +208,7 @@ void cwindow_context_graphics_opengl_unload(cwindow_context* context);
 bool cwindow_glCreateContext(cwindow* window, int32_t version_major, int32_t version_minor, cwindow* share_window, bool* glSwapIntervalEXT_support);
 void cwindow_glDestroyContext(cwindow* window);
 
-bool cwindow_glMakeCurrent(cwindow* window, bool current);
+bool cwindow_glMakeCurrent(cwindow_context* context, cwindow* window);
 bool cwindow_glSwapIntervalEXT(cwindow* window, int interval);
 void (*cwindow_glGetProcAddress(cwindow* window, const uint8_t* name)) (void);
 bool cwindow_glSwapBuffers(cwindow* window);

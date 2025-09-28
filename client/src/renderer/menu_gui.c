@@ -17,8 +17,6 @@ static void _load_assets(struct minec_client* client)
 				&RENDERER.components.menu.tetxures[i].original_channels,
 				4
 			);
-
-			asset_loader_release_asset(client);
 		}
 		else RENDERER.components.menu.tetxures[i].data = NULL;
 	}

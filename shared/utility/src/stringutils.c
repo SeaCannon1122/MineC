@@ -1,6 +1,5 @@
 #include <stringutils.h>
 
-#include <stdarg.h>
 #include <utils.h>
 #include <stdlib.h>
 

@@ -11,7 +11,7 @@ if (WIN32)
 elseif(UNIX AND NOT APPLE)
     find_package(X11 REQUIRED)
 
-    target_sources(cwindow ${CMAKE_CURRENT_SOURCE_DIR}/src/cwindow_impl_x11.c)
+    target_sources(cwindow PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/cwindow_impl_x11.c)
     target_compile_definitions(cwindow PUBLIC CWINDOW_IMPLEMENTATION_X11)
     target_link_libraries(cwindow PUBLIC ${X11_LIBRARIES})
 

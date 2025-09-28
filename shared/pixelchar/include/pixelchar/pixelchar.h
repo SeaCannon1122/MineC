@@ -1,58 +1,96 @@
 #pragma once 
 
-#ifndef PIXELCHAR_H
-#define PIXELCHAR_H
-
+#ifndef LIB_PIXELCHAR_H
+#define LIB_PIXELCHAR_H
 
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
 
-#define PIXELCHAR_RENDERER_MAX_FONT_COUNT 8
-#define PIXELCHAR_FONT_NAME_BUFFER_SIZE 32
+//Library
 
 typedef enum PixelcharResult
 {
-	PIXELCHAR_SUCCESS								= 0x0000,
-	PIXELCHAR_INFO_MASK								= 0x0100,
-	PIXELCHAR_INFO_FULL_QUEUE						= 0x0101,
-	PIXELCHAR_ERROR_MASK							= 0x0200,
-	PIXELCHAR_ERROR_OUT_OF_MEMORY					= 0x0201,
-	PIXELCHAR_ERROR_INVALID_ARGUMENTS				= 0x0202,
-	PIXELCHAR_ERROR_INVALID_FONT_DATA				= 0x0203
+	PIXELCHAR_SUCCESS = 0x0000,
+	PIXELCHAR_ERROR_MASK = 0x0200,
+	PIXELCHAR_ERROR_OUT_OF_MEMORY = 0x0201,
+	PIXELCHAR_ERROR_INVALID_ARGUMENTS = 0x0202,
+	PIXELCHAR_ERROR_INVALID_FONT_DATA = 0x0203
 } PixelcharResult;
 
-typedef enum PixelcharFlagBits
+//Pixelfont
+
+#define PIXELCHAR_FONT_NAME_BUFFER_SIZE 32
+
+typedef struct PixelcharBitmapMetadata
 {
-	PIXELCHAR_UNDERLINE_BIT     =      0b1,
-	PIXELCHAR_ITALIC_BIT        =     0b10,
-	PIXELCHAR_SHADOW_BIT        =    0b100,
-	PIXELCHAR_BACKGROUND_BIT    =   0b1000,
-	PIXELCHAR_STRIKETHROUGH_BIT =  0b10000,
-	PIXELCHAR_BOLD_BIT          = 0b100000,
-} PixelcharFlagBits;
+	uint32_t width;
+	uint32_t thickness;
+} PixelcharBitmapMetadata;
+
+typedef struct PixelcharFontFileHeader
+{
+	uint64_t headerSectionSize;
+	uint64_t mappingSectionSize;
+	uint64_t bitmapMetadataSectionSize;
+	uint64_t bitmapDataSectionSize;
+
+	uint8_t name[PIXELCHAR_FONT_NAME_BUFFER_SIZE];
+	uint32_t mappingCount;
+	uint32_t defaultBitmapIndex;
+	uint32_t resolution;
+	uint32_t bitmapCount;
+} PixelcharFontFileHeader;
+
+typedef struct PixelcharFont
+{
+	uint32_t resolution;
+
+	uint32_t mappingCount;
+	uint32_t* pMappings;
+	uint32_t defaultBitmapIndex;
+
+	uint32_t bitmapCount;
+	PixelcharBitmapMetadata* pBitmapMetadata;
+	uint32_t* pBitmaps;
+} PixelcharFont;
+
+typedef void (*PixelcharLogCallback)(uint8_t* message, void* userParameter);
+
+//Pixelchar
+
+typedef enum PixelcharModifierBits
+{
+	PIXELCHAR_MODIFIER_BOLD_BIT = 1,
+	PIXELCHAR_MODIFIER_ITALIC_BIT = 2,
+	PIXELCHAR_MODIFIER_UNDERLINE_BIT = 4,
+	PIXELCHAR_MODIFIER_STRIKETHROUGH_BIT = 8,
+	PIXELCHAR_MODIFIER_SHADOW_BIT = 16,
+	PIXELCHAR_MODIFIER_BACKGROUND_BIT = 32,
+} PixelcharModifierBits;
+
 
 typedef struct Pixelchar
 {
-	uint32_t character;
-	uint32_t flags;
-	uint32_t fontIndex;
-	uint32_t scale;
 	int32_t position[2];
-	uint8_t color[4];
-	uint8_t backgroundColor[4];
+	uint32_t width;
+	uint32_t scale;
+	uint32_t bitmapIndex;
+	uint32_t bitmapWidth;
+	uint32_t bitmapThickness;
+	uint32_t modifiers;
+	uint32_t color;
+	uint32_t backgroundColor;
 } Pixelchar;
 
-typedef struct PixelcharFont_T* PixelcharFont;
+PixelcharResult pixelcharFontLoadFromFileData(
+	const void* fontFileData, 
+	size_t fontFileDataSize, 
+	PixelcharFont** ppFont, 
+	PixelcharLogCallback logCallback,
+	void* logCallbackUserParameter
+);
 
-const uint8_t* pixelcharGetResultAsString(PixelcharResult result);
-
-PixelcharResult pixelcharFontCreate(const void* fontData, size_t dataSize, PixelcharFont* pFont);
-void pixelcharFontDestroy(PixelcharFont font);
-void pixelcharFontGetName(PixelcharFont font, uint8_t* buffer);
-
-uint32_t pixelcharGetCharacterRenderingWidth(Pixelchar* character, PixelcharFont* fonts);
-uint32_t pixelcharGetCharacterRenderingSpacing(Pixelchar* character0, Pixelchar* character1, PixelcharFont* fonts);
-
+void pixelcharFill(int32_t posX, int32_t posY, uint32_t character, uint32_t scale, uint32_t modifiers, uint32_t color, uint32_t backgroundColor, PixelcharFont* pFont, Pixelchar* pChar);
 
 #endif

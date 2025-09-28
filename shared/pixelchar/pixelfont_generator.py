@@ -21,8 +21,8 @@ def bitmap_to_uint32(bitmap, resolution):
     uint32_array = []
     for i in range(0, len(flat_bits), 32):
         val = 0
-        for bit in flat_bits[i:i+32]:
-            val = (val << 1) | bit
+        for j in range(32):
+            val |= flat_bits[i+j] << j
         uint32_array.append(val)
     return uint32_array
 
@@ -172,7 +172,7 @@ def main():
         print("Building header...")
     header_struct = bytearray()
     # placeholder header section size
-    header_struct += struct.pack("<IIII", 0, len(mappings_bytes), len(metadata_bytes), len(bitmap_bytes))
+    header_struct += struct.pack("<QQQQ", 0, len(mappings_bytes), len(metadata_bytes), len(bitmap_bytes))
     header_struct += name
     header_struct += struct.pack("<IIII", mapping_count, default_bitmap_index, resolution, bitmap_count)
     header_bytes = pad32(header_struct)

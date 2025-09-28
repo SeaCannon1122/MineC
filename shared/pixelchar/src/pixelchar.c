@@ -1,154 +1,115 @@
-#include <pixelchar_internal.h>
+#include <pixelchar/pixelchar.h>
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
-const uint8_t* pixelcharGetResultAsString(PixelcharResult result)
+#define LOG_RETURN(message, ...) \
+{ \
+	if (logCallback)\
+	{\
+		snprintf(callback_message_buffer, sizeof(callback_message_buffer), message, ##__VA_ARGS__);\
+		logCallback(callback_message_buffer, logCallbackUserParameter);\
+	}\
+	return PIXELCHAR_ERROR_INVALID_FONT_DATA;\
+} \
+
+#define PAD(size, pad_size) (((size) + (pad_size) - 1) / (pad_size) * (pad_size))
+
+PixelcharResult pixelcharFontLoadFromFileData(
+	const void* fontFileData,
+	size_t fontFileDataSize,
+	PixelcharFont** ppFont,
+	PixelcharLogCallback logCallback,
+	void* logCallbackUserParameter
+)
 {
-	switch (result)
+	PixelcharFontFileHeader* header = fontFileData;
+
+	uint8_t callback_message_buffer[4096];
+
+	if (fontFileDataSize <= sizeof(PixelcharFontFileHeader))
+		LOG_RETURN("ERROR: 'fontFileDataSize' (0x%x) <= 'sizeof(PixelcharFontFileHeader)' (0x%x)", fontFileDataSize, sizeof(PixelcharFontFileHeader));
+
+	if (fontFileDataSize < header->headerSectionSize + header->mappingSectionSize + header->bitmapMetadataSectionSize + header->bitmapDataSectionSize)
+		LOG_RETURN(
+			"ERROR: 'fontFileDataSize' (0x%x) < '"
+			"'PixelcharFontFileHeader::headerSectionSize' (0x%x) + "
+			"'PixelcharFontFileHeader::mappingSectionSize' (0x%x) + "
+			"'PixelcharFontFileHeader::bitmapMetadataSectionSize' (0x%x) + "
+			"'PixelcharFontFileHeader::bitmapDataSectionSize' (0x%x)",
+			fontFileDataSize,
+			header->headerSectionSize,
+			header->mappingSectionSize,
+			header->bitmapMetadataSectionSize,
+			header->bitmapDataSectionSize
+		);
+
+	if (header->mappingCount == 0) LOG_RETURN("ERROR: 'PixelcharFontFileHeader::mappingCount' (0x0) is 0x0");
+	if (header->mappingSectionSize < header->mappingCount * sizeof(uint32_t)) LOG_RETURN("ERROR: 'PixelcharFontFileHeader::mappingSectionSize' (0x%x) < 'PixelcharFontFileHeader::mappingCount' (0x%x) * 'sizeof(uint32_t)' (0x%x)", header->mappingSectionSize, header->mappingCount, sizeof(uint32_t));
+	if (header->bitmapCount == 0) LOG_RETURN("'ERROR: PixelcharFontFileHeader::mappingCount' (0x0) is 0");
+	if (header->bitmapMetadataSectionSize < header->bitmapCount * sizeof(PixelcharBitmapMetadata)) LOG_RETURN("ERROR: 'PixelcharFontFileHeader::bitmapMetadataSectionSize' (0x%x) < 'PixelcharFontFileHeader::bitmapCount' (0x%x) * 'sizeof(PixelcharBitmapMetadata)' (0x%x)", header->bitmapMetadataSectionSize, header->bitmapCount, sizeof(PixelcharBitmapMetadata));
+	if (header->bitmapDataSectionSize < header->bitmapCount * header->resolution * header->resolution / 8) LOG_RETURN("ERROR: 'PixelcharFontFileHeader::bitmapDataSectionSize' (0x%x) < 'PixelcharFontFileHeader::bitmapCount' (0x%x) * 'PixelcharFontFileHeader::resolution' (0x%x)^2 / 8", header->bitmapDataSectionSize, header->bitmapCount, header->resolution);
+	if (header->resolution == 0) LOG_RETURN("ERROR: 'PixelcharFontFileHeader::resolution' (0x0) is 0");
+	if (header->resolution % 8) LOG_RETURN("ERROR: 'PixelcharFontFileHeader::resolution' (0x%x) % 8 is not 0", header->resolution);
+	if (header->defaultBitmapIndex >= header->bitmapCount) LOG_RETURN("ERROR: 'PixelcharFontFileHeader::defaultBitmapIndex' (0x%x) >= 'PixelcharFontFileHeader::bitmapCount' (0x%x)", header->defaultBitmapIndex, header->bitmapCount);
+
+	uint32_t* mappings = (uintptr_t)header + (uintptr_t)header->headerSectionSize;
+	PixelcharBitmapMetadata* metadata = (uintptr_t)mappings + (uintptr_t)header->mappingSectionSize;
+	uint32_t* bitmaps = (uintptr_t)metadata + (uintptr_t)header->bitmapMetadataSectionSize;
+
+	for (uint32_t i = 0; i < header->mappingCount; i++) if (mappings[i] >= header->bitmapCount) LOG_RETURN("ERROR: Mapping[0x%x] (0x%x) >= 'PixelcharFontFileHeader::bitmapCount' (0x%x)", mappings[i], header->bitmapCount);
+
+	for (uint32_t i = 0; i < header->bitmapCount; i++)
 	{
-	case PIXELCHAR_SUCCESS:								return (const uint8_t*)"PIXELCHAR_SUCCESS";
-	case PIXELCHAR_INFO_FULL_QUEUE:						return (const uint8_t*)"PIXELCHAR_INFO_FULL_QUEUE";
-	case PIXELCHAR_ERROR_OUT_OF_MEMORY:					return (const uint8_t*)"PIXELCHAR_ERROR_OUT_OF_MEMORY";
-	case PIXELCHAR_ERROR_INVALID_ARGUMENTS:				return (const uint8_t*)"PIXELCHAR_ERROR_INVALID_ARGUMENTS";
-	case PIXELCHAR_ERROR_INVALID_FONT_DATA:				return (const uint8_t*)"PIXELCHAR_ERROR_INVALID_FONT_DATA";
+		if (metadata[i].width == 0) LOG_RETURN("ERROR: PixelcharBitmapMetadata[0x%x]::width (0x0) == 0", i);
+		if (metadata[i].width > header->resolution) LOG_RETURN("ERROR: PixelcharBitmapMetadata[0x%x]::width (0x%x) > 'PixelcharFontFileHeader::resolution' (0x%x)", i, metadata[i].width, header->resolution);
+		if (metadata[i].thickness == 0) LOG_RETURN("ERROR: PixelcharBitmapMetadata[0x%x]::thickness (0x0) == 0", i);
+		if (metadata[i].thickness > header->resolution) LOG_RETURN("ERROR: PixelcharBitmapMetadata[0x%x]::thickness (0x%x) > 'PixelcharFontFileHeader::resolution' (0x%x)", i, metadata[i].thickness, header->resolution);
+	}
+	
+	PixelcharFont* font;
+
+	if ((font = malloc(
+		PAD(sizeof(PixelcharFont), 32) +
+		PAD(header->mappingCount * sizeof(uint32_t), 32) +
+		PAD(header->bitmapCount * sizeof(PixelcharBitmapMetadata), 32) +
+		PAD(header->bitmapCount * header->resolution * header->resolution / 8, 32)
+	)) == NULL) return PIXELCHAR_ERROR_OUT_OF_MEMORY;
+	else
+	{
+		font->mappingCount = header->mappingCount;
+		font->bitmapCount = header->bitmapCount;
+		font->resolution = header->resolution;
+		font->defaultBitmapIndex = header->defaultBitmapIndex;
+
+		font->pMappings = (uintptr_t)font + (uintptr_t)PAD(sizeof(PixelcharFont), 32);
+		font->pBitmapMetadata = (uintptr_t)font->pMappings + (uintptr_t)PAD(header->mappingCount * sizeof(uint32_t), 32);
+		font->pBitmaps = (uintptr_t)font->pBitmapMetadata + (uintptr_t)PAD(header->bitmapCount * sizeof(PixelcharBitmapMetadata), 32);
+
+		memcpy(font->pMappings, mappings, header->mappingCount * sizeof(uint32_t));
+		memcpy(font->pBitmapMetadata, metadata, header->bitmapCount * sizeof(PixelcharBitmapMetadata));
+		memcpy(font->pBitmaps, bitmaps, header->bitmapCount * header->resolution * header->resolution / 8);
 	}
 
-	return (const uint8_t*)"PIXELCHAR_ERROR_UNKNOWN";
-}
-
-PixelcharResult pixelcharFontCreate(const void* fontData, size_t dataSize, PixelcharFont* pFont)
-{
-	if (dataSize < sizeof(_pixelchar_font_metadata)) return PIXELCHAR_ERROR_INVALID_ARGUMENTS;
-	
-	const _pixelchar_font_metadata* metadata = (const _pixelchar_font_metadata*)fontData;
-
-	size_t bitmap_size = metadata->resolution * metadata->resolution / 8;
-
-	PixelcharFont font = malloc(
-		(size_t)PIXELCHAR_PAD(sizeof(PixelcharFont_T), 8)                     +
-		(size_t)PIXELCHAR_PAD(metadata->mappings_count * sizeof(uint32_t), 8) + 
-		(size_t)PIXELCHAR_PAD(metadata->bitmaps_count * sizeof(uint8_t), 8)   +
-		(size_t)PIXELCHAR_PAD(metadata->bitmaps_count * bitmap_size, 8)
-	);
-	if (font == NULL) return PIXELCHAR_ERROR_OUT_OF_MEMORY;
-
-	memset(font, 0, sizeof(PixelcharFont_T));
-
-	font->resolution = metadata->resolution;
-
-	font->mappings_count = metadata->mappings_count;
-	font->mappings = (uint32_t*)(
-		(size_t)font + 
-		(size_t)PIXELCHAR_PAD(sizeof(PixelcharFont_T), 8)
-	);
-	memcpy(
-		font->mappings, 
-		(uint32_t*)((size_t)fontData + metadata->metadata_section_size), 
-		metadata->mappings_count * sizeof(uint32_t)
-	);
-
-	font->bitmaps_count = metadata->bitmaps_count;
-	font->widths = (uint8_t*)(
-		(size_t)font + 
-		(size_t)PIXELCHAR_PAD(sizeof(PixelcharFont_T), 8) + 
-		(size_t)PIXELCHAR_PAD(metadata->mappings_count * sizeof(uint32_t), 8)
-	);
-	memcpy(
-		font->widths, 
-		(uint8_t*)((size_t)fontData + metadata->metadata_section_size + metadata->mappings_section_size),
-		metadata->bitmaps_count * sizeof(uint8_t)
-	);
-	font->bitmaps = (void*)(
-		(size_t)font + 
-		(size_t)PIXELCHAR_PAD(sizeof(PixelcharFont_T), 8) + 
-		(size_t)PIXELCHAR_PAD(metadata->mappings_count * sizeof(uint32_t), 8) + 
-		(size_t)PIXELCHAR_PAD(metadata->bitmaps_count * sizeof(uint8_t), 8)
-	);
-	memcpy(
-		font->bitmaps,
-		(void*)((size_t)fontData + metadata->metadata_section_size + metadata->mappings_section_size + metadata->widths_section_size), 
-		metadata->bitmaps_count * bitmap_size
-	);
-
-	memcpy(font->name, metadata->name, sizeof(font->name));
-
-	*pFont = font;
+	*ppFont = font;
 	return PIXELCHAR_SUCCESS;
 }
 
-void pixelcharFontDestroy(PixelcharFont font)
+void pixelcharFill(int32_t posX, int32_t posY, uint32_t character, uint32_t scale, uint32_t modifiers, uint32_t color, uint32_t backgroundColor, PixelcharFont* pFont, Pixelchar* pChar)
 {
-	font->destroyed = true;
-	if (font->reference_count == 0) free(font);
-}
+	pChar->position[0] = posX;
+	pChar->position[1] = posY;
+	pChar->color = color;
+	pChar->backgroundColor = backgroundColor;
+	pChar->scale = scale;
+	pChar->modifiers = modifiers;
 
-void pixelcharFontGetName(PixelcharFont font, uint8_t* buffer)
-{
-	memcpy(buffer, font->name, sizeof(font->name));
-}
+	if (character < pFont->mappingCount) pChar->bitmapIndex = pFont->pMappings[character];
+	else pChar->bitmapIndex = pFont->defaultBitmapIndex;
 
-void _convert_chars_to_render_chars(Pixelchar* chars, uint32_t char_count, PixelcharFont* fonts)
-{
-	_pixelchar_renderer_char* r_chars = chars;
+	pChar->bitmapWidth = pFont->pBitmapMetadata[pChar->bitmapIndex].width;
+	pChar->bitmapThickness = pFont->pBitmapMetadata[pChar->bitmapIndex].thickness;
 
-	for (uint32_t i = 0; i < char_count; i++)
-	{
-		if (chars[i].scale == 0) chars[i].scale = 1;
-
-		if (chars[i].fontIndex >= PIXELCHAR_RENDERER_MAX_FONT_COUNT)
-		{
-			r_chars[i].fontIndex = PIXELFONT_INVALID;
-			r_chars[i].bitmapWidth = 8;
-			r_chars[i].fontResolution = 8;
-		}
-		else if (fonts[chars[i].fontIndex] == NULL)
-		{
-			r_chars[i].fontIndex = PIXELFONT_INVALID;
-			r_chars[i].bitmapWidth = 8;
-			r_chars[i].fontResolution = 8;
-		}
-		else
-		{
-			if (chars[i].character >= fonts[chars[i].fontIndex]->mappings_count)
-				r_chars[i].bitmapIndex = 0;
-			else
-				r_chars[i].bitmapIndex = fonts[r_chars[i].fontIndex]->mappings[chars[i].character];
-
-			r_chars[i].bitmapWidth = fonts[r_chars[i].fontIndex]->widths[r_chars[i].bitmapIndex];
-			r_chars[i].fontResolution = (uint16_t)fonts[r_chars[i].fontIndex]->resolution;
-		}
-	}
-}
-
-uint32_t pixelcharGetCharacterRenderingWidth(Pixelchar* character, PixelcharFont* fonts)
-{
-	uint32_t scale = (character->scale > 0 ? character->scale : 1);
-
-	if (character->fontIndex >= PIXELCHAR_RENDERER_MAX_FONT_COUNT) return scale * 8;
-	if (fonts[character->fontIndex] == NULL) return scale * 8;
-
-	uint32_t bitmap_index =
-		(
-			character->character >= fonts[character->fontIndex]->mappings_count ?
-			0 :
-			fonts[character->fontIndex]->mappings[character->character]
-		);
-
-	uint32_t width =
-		(
-			(uint32_t)fonts[character->fontIndex]->widths[bitmap_index] * scale * 8 +
-			fonts[character->fontIndex]->resolution
-			- 1
-		) / fonts[character->fontIndex]->resolution;
-
-	return width;
-}
-
-uint32_t pixelcharGetCharacterRenderingSpacing(Pixelchar* character0, Pixelchar* character1, PixelcharFont* fonts)
-{
-	uint32_t scale0 = (character0->scale > 0 ? character0->scale : 1);
-	uint32_t scale1 = (character1->scale > 0 ? character1->scale : 1);
-
-	return (scale0 * 8 + 15) / 16 + (scale1 * 8) / 16;
+	pChar->width = scale * 8 * pChar->bitmapWidth / pFont->resolution + scale;
 }

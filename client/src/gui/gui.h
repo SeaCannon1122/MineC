@@ -8,21 +8,22 @@
 
 #include <stdint.h>
 
-enum gui_char_flag_bit
+
+
+enum guichar_modifier
 {
-	GUI_CHAR_FLAG_BIT_SHADOW,
-	GUI_CHAR_FLAG_BIT_BACKGROUND,
-	GUI_CHAR_FLAG_BIT_BOLD,
-	GUI_CHAR_FLAG_BIT_ITALIC,
-	GUI_CHAR_FLAG_BIT_UNDERLINE,
-	GUI_CHAR_FLAG_BIT_STRIKETHROUGH,
-	GUI_CHAR_FLAG_BIT_OBFUSCATED
+	GUICHAR_MODIFIER_BOLD_BIT = 1,
+	GUICHAR_MODIFIER_ITALIC_BIT = 2,
+	GUICHAR_MODIFIER_UNDERLINE_BIT = 4,
+	GUICHAR_MODIFIER_STRIKETHROUGH_BIT = 8,
+	GUICHAR_MODIFIER_SHADOW_BIT = 16,
+	GUICHAR_MODIFIER_BACKGROUND_BIT = 32,
 };
 
-struct gui_char
+struct guichar
 {
 	uint32_t character;
-	uint32_t flags;
+	uint32_t modifiers;
 	uint32_t color;
 	uint32_t background_color;
 };
@@ -49,7 +50,7 @@ enum menu_gui_item_type
 struct menu_gui_item_button_create_imfo
 {
 	bool disabled;
-	struct gui_char text[MENU_GUI_LABEL_MAX_TEXT_BUFFER_LENGTH];
+	struct guichar text[MENU_GUI_LABEL_MAX_TEXT_BUFFER_LENGTH];
 };
 
 struct menu_gui_item_icon_button_create_imfo
@@ -60,7 +61,7 @@ struct menu_gui_item_icon_button_create_imfo
 
 struct menu_gui_item_label_create_imfo
 {
-	struct gui_char text[MENU_GUI_LABEL_MAX_TEXT_BUFFER_LENGTH];
+	struct guichar text[MENU_GUI_LABEL_MAX_TEXT_BUFFER_LENGTH];
 };
 
 struct menu_gui_item_textfield_create_imfo
@@ -131,9 +132,31 @@ struct menu_gui
 	struct menu_gui_item* items;
 };
 
+void pixelfont_load(struct minec_client* client);
+
+//pixelfont
+
+#define GUI_STATE client->gui_state
+
 struct gui_state
 {
-	int a;
+	struct
+	{
+		void* data;
+		
+		uint32_t resolution;
+
+		uint32_t mapping_count;
+		uint32_t* mappings;
+
+		uint32_t bitmap_count;
+		struct bitmap_metadata* metadata;
+		uint32_t* bitmap_data;
+	} font;
 };
+
+void gui_state_reload_assets(struct minec_client* client);
+uint32_t gui_state_create(struct minec_client* client);
+void gui_state_destroy(struct minec_client* client);
 
 #endif

@@ -35,6 +35,8 @@ struct cwindow_context
 struct cwindow
 {
 	cwindow_context* context;
+	pfn_cwindow_event_callback event_callback;
+	void* user_paramerter;
 
 	HWND hwnd;
 	HICON icon;
@@ -43,66 +45,18 @@ struct cwindow
 	HGLRC hglrc;
 	PFNWGLSWAPINTERVALEXTPROC wglSwapIntervalEXT;
 
-	struct cwindow_event dispatched_event;
-	bool move_size;
-
 	CRITICAL_SECTION dimension_cr;
 	uint32_t width;
 	uint32_t height;
-	uint32_t position_x;
-	uint32_t position_y;
+	int32_t posx;
+	int32_t posy;
 
 	bool selected;
-
-	struct cwindow_event* event_queue;
-	uint32_t event_queue_length;
-	uint32_t free_event_queue_index;
-	uint32_t last_event_queue_index;
-
-	bool on_get_next_event;
-
-	struct
-	{
-		CRITICAL_SECTION in_cr;
-		bool freeze;
-		bool frozen;
-		CRITICAL_SECTION freeze_cr;
-	} freeze_queue_state;
 
 	USHORT name[];
 };
 
-void _cwindow_event_queue_add(struct cwindow* __restrict window, struct cwindow_event* __restrict event)
-{
-	if ((window->free_event_queue_index + 1) % window->event_queue_length == window->last_event_queue_index)
-	{
-		void* new_event_queue = realloc(window->event_queue, (window->event_queue_length + WINDOW_QUEUE_EXTENSION_EVENTS_COUNT) * sizeof(struct cwindow_event));
-		if (new_event_queue == NULL)
-		{
-			window->event_queue[window->last_event_queue_index].type = CWINDOW_EVENT_DESTROY;
-			return;
-		}
-
-		window->event_queue = new_event_queue;
-
-		if (window->free_event_queue_index != window->event_queue_length - 1)
-		{
-			memmove(
-				&window->event_queue[window->last_event_queue_index + WINDOW_QUEUE_EXTENSION_EVENTS_COUNT],
-				&window->event_queue[window->last_event_queue_index],
-				(window->event_queue_length - window->last_event_queue_index) * sizeof(struct cwindow_event)
-			);
-			window->last_event_queue_index += WINDOW_QUEUE_EXTENSION_EVENTS_COUNT;
-		}
-
-		window->event_queue_length += WINDOW_QUEUE_EXTENSION_EVENTS_COUNT;
-	}
-
-	window->event_queue[window->free_event_queue_index] = *event;
-	window->free_event_queue_index = (window->free_event_queue_index + 1) % window->event_queue_length;
-}
-
-int32_t _map_key(int32_t key) 
+uint32_t _map_key(uint32_t key) 
 {
 
 	switch (key) {
@@ -183,15 +137,14 @@ int32_t _map_key(int32_t key)
 	case VK_MBUTTON: return CWINDOW_KEY_MOUSE_MIDDLE;
 	case VK_RBUTTON: return CWINDOW_KEY_MOUSE_RIGHT;
 
-	default: return -1;
+	default: return CWINDOW_KEY_UNKNOWN;
 	}
 
 }
 
 LRESULT CALLBACK cwindow_WinProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-	bool result_set = false;
-	LRESULT result = 0;
+	bool handled_event = false;
 
 	if (uMsg == WM_CREATE)
 	{
@@ -200,120 +153,70 @@ LRESULT CALLBACK cwindow_WinProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 	}
 
 	cwindow* window = (cwindow*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+	cwindow_event event;
+
 	if (window != NULL) if (window->hwnd != NULL)
 	{
-		cwindow_event event;
+		event.type = CWINDOW_EVENT_UNKNOWN;
 
-		if (uMsg == WM_SIZE || uMsg == WM_MOVE) {
-			RECT client_rect, window_rect;
-			GetClientRect(hwnd, &client_rect);
-			GetWindowRect(hwnd, &window_rect);
+		switch (uMsg)
+		{
+		case WM_SIZE:
+			window->width = LOWORD(lParam);
+			window->height = HIWORD(lParam);
+			event.type = CWINDOW_EVENT_SIZE;
+			event.info.size.width = window->width;
+			event.info.size.height = window->height;
 
-			EnterCriticalSection(&window->dimension_cr);
-			window->width = client_rect.right;
-			window->height = client_rect.bottom;
-			window->position_x = window_rect.left;
-			window->position_y = window_rect.top;
-			LeaveCriticalSection(&window->dimension_cr);
+			window->event_callback(window, &event, window->user_paramerter); return 0;
 
-			window->move_size = true;
-			result_set = true;
-		}
-		else if (uMsg == WM_CLOSE)
-		{
-			event.type = CWINDOW_EVENT_DESTROY;
-			_cwindow_event_queue_add(window, &event);
-			result_set = true;
-		}
-		else if (uMsg == WM_SETFOCUS)
-		{
-			event.type = CWINDOW_EVENT_FOCUS;
-			_cwindow_event_queue_add(window, &event);
-			result_set = true;
-		}
-		else if (uMsg == WM_KILLFOCUS)
-		{
-			event.type = CWINDOW_EVENT_UNFOCUS;
-			_cwindow_event_queue_add(window, &event);
-			result_set = true;
-		}
-		else if (uMsg == WM_MOUSEWHEEL)
-		{
+		case WM_MOVE:
+			window->posx = (int16_t)LOWORD(lParam);
+			window->posy = (int16_t)HIWORD(lParam);
+			event.type = CWINDOW_EVENT_MOVE;
+			event.info.move.posx = window->posx;
+			event.info.move.posy = window->posy;
+			
+			window->event_callback(window, &event, window->user_paramerter); return 0;
+
+		case WM_MOUSEWHEEL:
 			event.type = CWINDOW_EVENT_MOUSE_SCROLL;
 			event.info.mouse_scroll.scroll_steps = GET_WHEEL_DELTA_WPARAM(wParam) / 120;
-			_cwindow_event_queue_add(window, &event);
-			result_set = true;
-		}
-		else if (uMsg == WM_KEYDOWN || uMsg == WM_LBUTTONDOWN || uMsg == WM_MBUTTONDOWN || uMsg == WM_RBUTTONDOWN)
-		{
-			uint32_t key_code;
+		case WM_CLOSE:
+			if (event.type == CWINDOW_EVENT_UNKNOWN) event.type = CWINDOW_EVENT_DESTROY;
+		case WM_SETFOCUS:
+			if (event.type == CWINDOW_EVENT_UNKNOWN) event.type = CWINDOW_EVENT_FOCUS;
+		case WM_KILLFOCUS:
+			if (event.type == CWINDOW_EVENT_UNKNOWN) event.type = CWINDOW_EVENT_UNFOCUS;
 
-			if (uMsg == WM_KEYDOWN) key_code = wParam;
-			else if (uMsg == WM_LBUTTONDOWN) key_code = VK_LBUTTON;
-			else if (uMsg == WM_MBUTTONDOWN) key_code = VK_MBUTTON;
-			else if (uMsg == WM_RBUTTONDOWN) key_code = VK_RBUTTON;
+			window->event_callback(window, &event, window->user_paramerter); return 0;
 
-			int32_t key = _map_key(key_code);
-			if (key != -1)
-			{
-				event.type = CWINDOW_EVENT_KEY_DOWN;
-				event.info.key_down.key = key;
-				_cwindow_event_queue_add(window, &event);
-			}
-			result_set = true;
-		}
-		else if (uMsg == WM_KEYUP || uMsg == WM_LBUTTONUP || uMsg == WM_MBUTTONUP || uMsg == WM_RBUTTONUP)
-		{
-			uint32_t key_code;
+		case WM_KEYDOWN:
+		case WM_LBUTTONDOWN:
+		case WM_MBUTTONDOWN:
+		case WM_RBUTTONDOWN:
+			event.type = CWINDOW_EVENT_KEY_DOWN;
+		case WM_KEYUP:
+		case WM_LBUTTONUP:
+		case WM_MBUTTONUP:
+		case WM_RBUTTONUP:
+			if (event.type == CWINDOW_EVENT_UNKNOWN) event.type = CWINDOW_EVENT_KEY_UP;
+			if (uMsg == WM_KEYDOWN || uMsg == WM_KEYDOWN)		event.info.key_down_up.key = _map_key(wParam);
+			if (uMsg == WM_LBUTTONDOWN || uMsg == WM_KEYDOWN)	event.info.key_down_up.key = CWINDOW_KEY_MOUSE_LEFT;
+			if (uMsg == WM_MBUTTONDOWN || uMsg == WM_KEYDOWN)	event.info.key_down_up.key = CWINDOW_KEY_MOUSE_MIDDLE;
+			if (uMsg == WM_RBUTTONDOWN || uMsg == WM_KEYDOWN)	event.info.key_down_up.key = CWINDOW_KEY_MOUSE_RIGHT;
+			
+			window->event_callback(window, &event, window->user_paramerter); return 0;
 
-			if (uMsg == WM_KEYUP) key_code = wParam;
-			else if (uMsg == WM_LBUTTONUP) key_code = VK_LBUTTON;
-			else if (uMsg == WM_MBUTTONUP) key_code = VK_MBUTTON;
-			else if (uMsg == WM_RBUTTONUP) key_code = VK_RBUTTON;
-
-			int32_t key = _map_key(key_code);
-			if (key != -1)
-			{
-				event.type = CWINDOW_EVENT_KEY_UP;
-				event.info.key_down.key = key;
-				_cwindow_event_queue_add(window, &event);
-			}
-			result_set = true;
-		}
-		else if (uMsg == WM_CHAR) {
+		case WM_CHAR:
 			event.type = CWINDOW_EVENT_CHARACTER;
-			event.info.character.code_point = wParam;
-			_cwindow_event_queue_add(window, &event);
-			result_set = true;
-		}
-	
-		if (window->on_get_next_event)
-		{
-			LeaveCriticalSection(&window->freeze_queue_state.in_cr);
+			event.info.character.character = wParam;
 
-			EnterCriticalSection(&window->freeze_queue_state.freeze_cr);
-			bool freeze = window->freeze_queue_state.freeze;
-			window->freeze_queue_state.freeze = false;
-			LeaveCriticalSection(&window->freeze_queue_state.freeze_cr);
-
-			if (freeze)
-			{
-				bool frozen = false;
-				while (frozen == false)
-				{
-					EnterCriticalSection(&window->freeze_queue_state.freeze_cr);
-					frozen = window->freeze_queue_state.frozen;
-					window->freeze_queue_state.frozen = false;
-					LeaveCriticalSection(&window->freeze_queue_state.freeze_cr);
-				}
-			}
-
-			EnterCriticalSection(&window->freeze_queue_state.in_cr);
+			window->event_callback(window, &event, window->user_paramerter); return 0;
 		}
 	}
 
-	if (result_set == false) result = DefWindowProcW(hwnd, uMsg, wParam, lParam);
-	return result;
+	return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 }
 
 cwindow_context* cwindow_context_create(const uint8_t* name)
@@ -359,7 +262,7 @@ void cwindow_context_get_display_dimensions(cwindow_context* __restrict context,
 
 }
 
-cwindow* cwindow_create(cwindow_context* __restrict context, int32_t posx, int32_t posy, uint32_t width, uint32_t height, const uint8_t* __restrict name, bool visible)
+cwindow* cwindow_create(cwindow_context* context, int32_t posx, int32_t posy, uint32_t width, uint32_t height, const uint8_t* name, bool visible, pfn_cwindow_event_callback event_callback)
 {
 	uint32_t name_length = strlen(name) + 1;
 
@@ -367,19 +270,8 @@ cwindow* cwindow_create(cwindow_context* __restrict context, int32_t posx, int32
 	if (window == NULL) return NULL;
 
 	for (int32_t i = 0; i < name_length; i++) window->name[i] = name[i];
-	
-	if ((window->event_queue = malloc(WINDOW_QUEUE_EXTENSION_EVENTS_COUNT * sizeof(cwindow_event))) == NULL)
-	{
-		free(window);
-		return NULL;
-	}
-	window->event_queue_length = WINDOW_QUEUE_EXTENSION_EVENTS_COUNT;
-	window->last_event_queue_index = 0;
-	window->free_event_queue_index = 0;
 
 	InitializeCriticalSection(&window->dimension_cr);
-	InitializeCriticalSection(&window->freeze_queue_state.in_cr);
-	InitializeCriticalSection(&window->freeze_queue_state.freeze_cr);
 
 	window->hwnd = NULL;
 
@@ -399,30 +291,22 @@ cwindow* cwindow_create(cwindow_context* __restrict context, int32_t posx, int32
 	)) == NULL)
 	{
 		DeleteCriticalSection(&window->dimension_cr);
-		DeleteCriticalSection(&window->freeze_queue_state.in_cr);
-		DeleteCriticalSection(&window->freeze_queue_state.freeze_cr);
-		free(window->event_queue);
 		free(window);
 	}
 
 	window->context = context;
+	window->event_callback = event_callback;
+	window->user_paramerter = NULL;
 
-	RECT client_rect, window_rect;
+	RECT client_rect;
 	GetClientRect(window->hwnd, &client_rect);
-	GetWindowRect(window->hwnd, &window_rect);
 
 	window->width = client_rect.right;
 	window->height = client_rect.bottom;
-	window->position_x = window_rect.left;
-	window->position_y = window_rect.top;
+	window->posx = client_rect.left;
+	window->posy = client_rect.top;
 	
-	window->move_size = false;
-
 	window->selected = false;
-
-	window->freeze_queue_state.freeze = false;
-	window->freeze_queue_state.frozen = false;
-	window->on_get_next_event = false;
 
 	return window;
 }
@@ -431,14 +315,16 @@ void cwindow_destroy(cwindow* window)
 {
 	DestroyWindow(window->hwnd);
 
-	DeleteCriticalSection(&window->freeze_queue_state.freeze_cr);
-	DeleteCriticalSection(&window->freeze_queue_state.in_cr);
 	DeleteCriticalSection(&window->dimension_cr);
 
 	if (window->icon) DestroyIcon(window->icon);
 
-	free(window->event_queue);
 	free(window);
+}
+
+void cwindow_set_event_callback_user_parameter(cwindow* window, void* user_parameter)
+{
+	window->user_paramerter = user_parameter;
 }
 
 bool cwindow_set_icon(cwindow* __restrict window, const uint32_t* __restrict icon_rgba_pixel_data, uint32_t icon_width, uint32_t icon_height)
@@ -509,8 +395,8 @@ void cwindow_get_dimensions(cwindow* __restrict window, uint32_t* __restrict wid
 	EnterCriticalSection(&window->dimension_cr);
 	*width = window->width;
 	*height = window->height;
-	*posx = window->position_x;
-	*posy = window->position_y;
+	*posx = window->posx;
+	*posy = window->posy;
 	LeaveCriticalSection(&window->dimension_cr);
 }
 
@@ -529,86 +415,15 @@ void cwindow_set_mouse_cursor_position(cwindow* window, int32_t posx, int32_t po
 
 }
 
-const cwindow_event* cwindow_next_event(cwindow* window)
+void cwindow_handle_events(cwindow* window)
 {
-	EnterCriticalSection(&window->freeze_queue_state.freeze_cr);
-	bool freeze = window->freeze_queue_state.freeze;
-	window->freeze_queue_state.freeze = false;
-	LeaveCriticalSection(&window->freeze_queue_state.freeze_cr);
+	MSG message;
 
-	if (freeze)
+	while (PeekMessageW(&message, window->hwnd, 0, 0, PM_REMOVE))
 	{
-		bool frozen = false;
-		while (frozen == false)
-		{
-			EnterCriticalSection(&window->freeze_queue_state.freeze_cr);
-			frozen = window->freeze_queue_state.frozen;
-			window->freeze_queue_state.frozen = false;
-			LeaveCriticalSection(&window->freeze_queue_state.freeze_cr);
-		}
+		TranslateMessage(&message);
+		DispatchMessageW(&message);
 	}
-
-	window->on_get_next_event = true;
-	EnterCriticalSection(&window->freeze_queue_state.in_cr);
-
-	const cwindow_event* event = NULL;
-
-	while (true)
-	{
-		MSG message;
-
-		if (window->last_event_queue_index != window->free_event_queue_index)
-		{
-			window->dispatched_event = window->event_queue[window->last_event_queue_index];
-			window->last_event_queue_index = (window->last_event_queue_index + 1) % window->event_queue_length;
-
-			event = &window->dispatched_event;
-			break;
-		}
-		else if (PeekMessageW(&message, window->hwnd, 0, 0, PM_REMOVE))
-		{
-			TranslateMessage(&message);
-			DispatchMessageW(&message);
-
-			if (window->move_size)
-			{
-				window->move_size = false;
-
-				window->dispatched_event.type = CWINDOW_EVENT_MOVE_SIZE;
-				window->dispatched_event.info.move_size.width = window->width;
-				window->dispatched_event.info.move_size.height = window->height;
-				window->dispatched_event.info.move_size.position_x = window->position_x;
-				window->dispatched_event.info.move_size.position_y = window->position_y;
-
-				event = &window->dispatched_event;
-				break;
-			}
-		}
-		else break;
-	}
-
-	LeaveCriticalSection(&window->freeze_queue_state.in_cr);
-	window->on_get_next_event = false;
-
-	return event;
-}
-
-void cwindow_freeze_event_queue(cwindow* window)
-{
-	EnterCriticalSection(&window->freeze_queue_state.freeze_cr);
-	window->freeze_queue_state.freeze = true;
-	LeaveCriticalSection(&window->freeze_queue_state.freeze_cr);
-
-	EnterCriticalSection(&window->freeze_queue_state.in_cr);
-
-	EnterCriticalSection(&window->freeze_queue_state.freeze_cr);
-	window->freeze_queue_state.frozen = true;
-	LeaveCriticalSection(&window->freeze_queue_state.freeze_cr);
-}
-
-void cwindow_unfreeze_event_queue(cwindow* window)
-{
-	LeaveCriticalSection(&window->freeze_queue_state.in_cr);
 }
 
 HWND cwindow_impl_windows_get_hwnd(cwindow* window)
@@ -823,11 +638,11 @@ void cwindow_glDestroyContext(cwindow* window)
 	ReleaseDC(window->hwnd, window->hdc);
 }
 
-bool cwindow_glMakeCurrent(cwindow* window, bool current)
+bool cwindow_glMakeCurrent(cwindow_context* context, cwindow* window)
 {
-	if (current) return (window->context->opengl.func.wglMakeCurrent(window->hdc, window->hglrc) == TRUE);
+	if (window) return (context->opengl.func.wglMakeCurrent(window->hdc, window->hglrc) == TRUE);
 
-	window->context->opengl.func.wglMakeCurrent(NULL, NULL);
+	context->opengl.func.wglMakeCurrent(NULL, NULL);
 	return true;
 }
 
@@ -836,7 +651,7 @@ bool cwindow_glSwapIntervalEXT(cwindow* window, int interval)
 	 return (window->wglSwapIntervalEXT(interval) == TRUE);
 }
 
-void (*cwindow_glGetProcAddress(cwindow* __restrict window, const uint8_t* __restrict name)) (void)
+void (*cwindow_glGetProcAddress(cwindow* window, const uint8_t* name)) (void)
 {
 	void (*function)(void);
 

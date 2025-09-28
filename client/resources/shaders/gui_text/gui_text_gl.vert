@@ -9,56 +9,62 @@ const int MODIFIER_STRIKETHROUGH_BIT = 8;
 const int MODIFIER_SHADOW_BIT = 16;
 const int MODIFIER_BACKGROUND_BIT = 32;
 
-uniform mat4 screen_to_ndc;
-uniform int scale;
 uniform int font_resolution;
-uniform uint draw_mode;
+uniform int bitmap_count;
+uniform mat4 screen_to_ndc;
+uniform int draw_mode;
 
-layout(location = 0) in ivec4 in_position_I_extent;
+layout(location = 0) in ivec4 in_position_I_width_I_scale;
 layout(location = 1) in ivec4 in_bitmap_index_I_bitmap_width_I_bitmap_thickness_I_modifiers;
 layout(location = 2) in vec4 in_color;
 layout(location = 3) in vec4 in_background_color;
 
-flat out ivec4 bitmap_index_I_bitmap_width_I_bitmap_thickness_I_modifiers;;
+flat out ivec4 bitmap_index_I_bitmap_thickness_I_modifiers_I_scale;
 out vec2 fragment_position;
 out vec4 color;
 out vec4 background_color;
 
 void main()
 {
-    bitmap_index_I_bitmap_width_I_bitmap_thickness_I_modifiers = in_bitmap_index_I_bitmap_width_I_bitmap_thickness_I_modifiers;
+    if (in_bitmap_index_I_bitmap_width_I_bitmap_thickness_I_modifiers.x < bitmap_count)
+        bitmap_index_I_bitmap_thickness_I_modifiers_I_scale.x = in_bitmap_index_I_bitmap_width_I_bitmap_thickness_I_modifiers.x;
+    else 
+        bitmap_index_I_bitmap_thickness_I_modifiers_I_scale.x = 0;
+    bitmap_index_I_bitmap_thickness_I_modifiers_I_scale.y = in_bitmap_index_I_bitmap_width_I_bitmap_thickness_I_modifiers.z;
+    bitmap_index_I_bitmap_thickness_I_modifiers_I_scale.z = in_bitmap_index_I_bitmap_width_I_bitmap_thickness_I_modifiers.w;
+    bitmap_index_I_bitmap_thickness_I_modifiers_I_scale.w = in_position_I_width_I_scale.w;
     color = in_color;
     background_color = in_background_color;
     
-    int bitmap_index = in_bitmap_index_I_bitmap_width_I_bitmap_thickness_I_modifiers.x;
+    int bitmap_width = in_bitmap_index_I_bitmap_width_I_bitmap_thickness_I_modifiers.y;
+    int bitmap_thickness = in_bitmap_index_I_bitmap_width_I_bitmap_thickness_I_modifiers.z;
     int modifiers = in_bitmap_index_I_bitmap_width_I_bitmap_thickness_I_modifiers.w;
+    int width = in_position_I_width_I_scale.z;
+    int scale = in_position_I_width_I_scale.w;
     
     if ((draw_mode == 0 && (modifiers & MODIFIER_BACKGROUND_BIT) == 0) || (draw_mode == 1 && (modifiers & MODIFIER_SHADOW_BIT) == 0))
         gl_Position = vec4(2.0, 2.0, 0.0, 1.0);
     else
     {
-        ivec2 vertex_position = ivec2(0, 0);
+        ivec2 vertex_position = ivec2(0, -((scale + 1) / 2));
     
         if (gl_VertexID / 2 == 1)
-            vertex_position.x = in_position_I_extent.z;
+            vertex_position.x += width;
         if (gl_VertexID % 2 == 1)
-            vertex_position.y = in_position_I_extent.w;
-        
-        int bitmap_width = bitmap_index_I_bitmap_width_I_bitmap_thickness_I_modifiers.y;
+            vertex_position.y += scale * 10;
         
         if ((modifiers & MODIFIER_BOLD_BIT) == MODIFIER_BOLD_BIT)
-            bitmap_width += bitmap_index_I_bitmap_width_I_bitmap_thickness_I_modifiers.z;
+            bitmap_width += bitmap_thickness;
         
-        ivec2 underlined_bitmap_draw_extent = ivec2((bitmap_width * scale * 8 + font_resolution - 1) / font_resolution, 9 * scale);
-
-        fragment_position = vec2(vertex_position - ivec2());
-        
-        vertex_position += in_position_I_extent.xy;
+        fragment_position = vec2(vertex_position - ivec2((width - bitmap_width * scale * 8 / font_resolution) / 2, 0));
         
         vec2 vertex_position_f = vec2(vertex_position);
         
         if ((modifiers & MODIFIER_ITALIC_BIT) != 0)
             vertex_position_f.x -= float(vertex_position.y - int(scale) * 7) / 2.0;
+        
+        vertex_position_f += vec2(in_position_I_width_I_scale.xy);
+        vertex_position_f.y -= float(scale * 4);
         
         if (draw_mode == 1)
             vertex_position_f += float(scale);

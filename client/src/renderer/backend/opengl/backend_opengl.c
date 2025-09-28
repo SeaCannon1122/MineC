@@ -166,7 +166,7 @@ uint32_t renderer_backend_opengl_base_create(
         OPENGL_FUNC.glEnable(GL_DEBUG_OUTPUT);
         OPENGL_FUNC.glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 
-        OPENGL_FUNC.glDebugMessageCallback(DebugCallback, (const void*)client);
+        OPENGL_FUNC.glDebugMessageCallback((GLDEBUGPROC)DebugCallback, (const void*)client);
 
         OPENGL_FUNC.glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_HIGH, 0, NULL, GL_TRUE);
         OPENGL_FUNC.glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_MEDIUM, 0, NULL, GL_TRUE);

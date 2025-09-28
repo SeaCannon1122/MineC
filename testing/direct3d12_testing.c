@@ -2,6 +2,9 @@
 #include <string.h>
 #include <stdlib.h>
 
+#define CINTERFACE
+#define COBJMACROS
+
 #include <d3d12.h>
 #include <dxgi1_6.h>
 #include <d3dcompiler.h>
@@ -10,7 +13,6 @@
 
 #include <cwindow/cwindow.h>
 
-#include <wrl.h>
 #include <stdio.h>
 
 #define DX_CHECK_CALL(call)                                                  \
@@ -82,11 +84,20 @@ ID3D12PipelineState* pipeline_state;
 ID3D12Resource* upload_buffer;
 ID3D12Resource* vertex_buffer;
 
+bool leave = false;
+int32_t x;
+int32_t y;
+uint32_t width;
+uint32_t height;
+
+
+
+
 void signal_and_wait_fence()
 {
-	DX_CHECK_CALL(command_queue->Signal(fence, ++fence_value));
+	DX_CHECK_CALL(command_queue->lpVtbl->Signal(command_queue, fence, ++fence_value));
 
-	DX_CHECK_CALL(fence->SetEventOnCompletion(fence_value, fence_event));
+	DX_CHECK_CALL(fence->lpVtbl->SetEventOnCompletion(fence, fence_value, fence_event));
 	DX_CHECK_NULL_PTR(WaitForSingleObject(fence_event, 20000) == WAIT_OBJECT_0);
 }
 
@@ -94,15 +105,15 @@ void get_swapchain_buffers()
 {
 	for (uint32_t i = 0; i < BUFFER_COUNT; i++)
 	{
-		DX_CHECK_CALL(swapchain->GetBuffer(i, IID_PPV_ARGS(&swapchain_buffers[i])));
+		DX_CHECK_CALL(swapchain->lpVtbl->GetBuffer(swapchain, i, &IID_ID3D12Resource, &swapchain_buffers[i]));
 
-		D3D12_RENDER_TARGET_VIEW_DESC rtv_desc = {};
+		D3D12_RENDER_TARGET_VIEW_DESC rtv_desc = { 0 };
 		rtv_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		rtv_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
 		rtv_desc.Texture2D.MipSlice = 0;
 		rtv_desc.Texture2D.PlaneSlice = 0;
 
-		device->CreateRenderTargetView(swapchain_buffers[i], &rtv_desc, rtv_handles[i]);
+		device->lpVtbl->CreateRenderTargetView(device, swapchain_buffers[i], &rtv_desc, rtv_handles[i]);
 	}
 }
 
@@ -110,8 +121,8 @@ void release_swapchain_buffers()
 {
 	for (uint32_t i = 0; i < BUFFER_COUNT; i++)
 	{
-		swapchain_buffers[i]->Release();
-	}	
+		swapchain_buffers[i]->lpVtbl->Release(swapchain_buffers[i]);
+	}
 }
 
 void flush()
@@ -119,44 +130,77 @@ void flush()
 	for (uint32_t i = 0; i < BUFFER_COUNT; i++) signal_and_wait_fence();
 }
 
+void window_event_callback(cwindow* window, const cwindow_event* event, void* user_handle)
+{
+	switch (event->type)
+	{
+
+	case CWINDOW_EVENT_MOVE_SIZE: {
+		printf(
+			"New window dimensions:\n  width: %d\n  height: %d\n  position x: %d\n  position y: %d\n\n",
+			event->info.move_size.width,
+			event->info.move_size.height,
+			event->info.move_size.position_x,
+			event->info.move_size.position_y
+		);
+
+		width = event->info.move_size.width;
+		height = event->info.move_size.height;
+
+		flush();
+
+		if (width != 0 && height != 0)
+		{
+			release_swapchain_buffers();
+
+			DX_CHECK_CALL(swapchain->lpVtbl->ResizeBuffers(swapchain, BUFFER_COUNT, width, height, DXGI_FORMAT_UNKNOWN, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH | DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING));
+
+			get_swapchain_buffers();
+		}
+
+
+	} break;
+
+	case CWINDOW_EVENT_DESTROY: {
+		leave = true;
+	} break;
+
+	}
+}
+
 int main(int argc, char* argv[]) {
 
-	cwindow_context* window_context = cwindow_context_create((const uint8_t* )"context");
-	cwindow* window = cwindow_create(window_context, 100, 100, 200, 200, (uint8_t*)"window for test", true);
-
-	int32_t x;
-	int32_t y;
-	uint32_t width;
-	uint32_t height;
+	cwindow_context* window_context = cwindow_context_create((const uint8_t*)"context");
+	cwindow* window = cwindow_create(window_context, 100, 100, 200, 200, (uint8_t*)"window for test", true, window_event_callback);
 
 	cwindow_get_dimensions(window, &width, &height, &x, &y);
 
 	HWND cwindow = cwindow_impl_windows_get_hwnd(window);
 
-	DX_CHECK_CALL(D3D12GetDebugInterface(IID_PPV_ARGS(&d3d12debug)));
-	d3d12debug->EnableDebugLayer();
-	DX_CHECK_CALL(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgidebug)));
-	dxgidebug->EnableLeakTrackingForThread();
+	DX_CHECK_CALL(D3D12GetDebugInterface(&IID_ID3D12Debug, &d3d12debug));
+	d3d12debug->lpVtbl->EnableDebugLayer(d3d12debug);
+	DX_CHECK_CALL(DXGIGetDebugInterface1(0, &IID_IDXGIDebug, &dxgidebug));
+	dxgidebug->lpVtbl->EnableLeakTrackingForThread(dxgidebug);
 
-	DX_CHECK_CALL(CreateDXGIFactory(IID_PPV_ARGS(&factory)));
+	DX_CHECK_CALL(CreateDXGIFactory(&IID_IDXGIFactory2, &factory));
 
-	DX_CHECK_CALL(D3D12CreateDevice(NULL, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&device)));
+	DX_CHECK_CALL(D3D12CreateDevice(NULL, D3D_FEATURE_LEVEL_11_0, &IID_ID3D12Device4, &device));
 
-	D3D12_COMMAND_QUEUE_DESC command_queue_desc = {};
+	D3D12_COMMAND_QUEUE_DESC command_queue_desc = { 0 };
 	command_queue_desc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
 	command_queue_desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_HIGH;
 	command_queue_desc.NodeMask = 0;
 	command_queue_desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 
-	DX_CHECK_CALL(device->CreateCommandQueue(&command_queue_desc, IID_PPV_ARGS(&command_queue)));
+	DX_CHECK_CALL(device->lpVtbl->CreateCommandQueue(device, &command_queue_desc, &IID_ID3D12CommandQueue, &command_queue));
 
-	DX_CHECK_CALL(device->CreateFence(fence_value, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence)));
+	DX_CHECK_CALL(device->lpVtbl->CreateFence(device, fence_value, D3D12_FENCE_FLAG_NONE, &IID_ID3D12Fence, &fence));
 	DX_CHECK_NULL_PTR(fence_event = CreateEventA(NULL, false, false, NULL));
 
-	DX_CHECK_CALL(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&command_allocator)));
-	DX_CHECK_CALL(device->CreateCommandList1(0, D3D12_COMMAND_LIST_TYPE_DIRECT, D3D12_COMMAND_LIST_FLAG_NONE, IID_PPV_ARGS(&command_list)));
+	DX_CHECK_CALL(device->lpVtbl->CreateCommandAllocator(device, D3D12_COMMAND_LIST_TYPE_DIRECT, &IID_ID3D12CommandAllocator, &command_allocator));
+	DX_CHECK_CALL(device->lpVtbl->CreateCommandList1(device, 0, D3D12_COMMAND_LIST_TYPE_DIRECT, D3D12_COMMAND_LIST_FLAG_NONE, &IID_ID3D12GraphicsCommandList, &command_list));
 
-	DXGI_SWAP_CHAIN_DESC1 swap_chain_desc = {};
+	DXGI_SWAP_CHAIN_DESC1 swap_chain_desc = { 0 };
 	swap_chain_desc.Width = width;
 	swap_chain_desc.Height = height;
 	swap_chain_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -170,28 +214,29 @@ int main(int argc, char* argv[]) {
 	swap_chain_desc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
 	swap_chain_desc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH | DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
 
-	DXGI_SWAP_CHAIN_FULLSCREEN_DESC swap_chain_fullscreen_desc = {};
+	DXGI_SWAP_CHAIN_FULLSCREEN_DESC swap_chain_fullscreen_desc = { 0 };
 	swap_chain_fullscreen_desc.Windowed = true;
 
 	IDXGISwapChain1* temp_swapchain;
 
-	DX_CHECK_CALL(factory->CreateSwapChainForHwnd(command_queue, cwindow, &swap_chain_desc, &swap_chain_fullscreen_desc, NULL, &temp_swapchain));
+	DX_CHECK_CALL(factory->lpVtbl->CreateSwapChainForHwnd(factory, command_queue, cwindow, &swap_chain_desc, &swap_chain_fullscreen_desc, NULL, &temp_swapchain));
 
-	DX_CHECK_CALL(temp_swapchain->QueryInterface(IID_PPV_ARGS(&swapchain)));
+	DX_CHECK_CALL(temp_swapchain->lpVtbl->QueryInterface(temp_swapchain, &IID_IDXGISwapChain3, &swapchain));
 
-	temp_swapchain->Release();
+	temp_swapchain->lpVtbl->Release(temp_swapchain);
 
-	D3D12_DESCRIPTOR_HEAP_DESC descriptor_heap_desc = {};
+	D3D12_DESCRIPTOR_HEAP_DESC descriptor_heap_desc = { 0 };
 	descriptor_heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 	descriptor_heap_desc.NumDescriptors = BUFFER_COUNT;
 	descriptor_heap_desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 	descriptor_heap_desc.NodeMask = 0;
 
-	DX_CHECK_CALL(device->CreateDescriptorHeap(&descriptor_heap_desc, IID_PPV_ARGS(&rtv_descriptor_heap)));
+	DX_CHECK_CALL(device->lpVtbl->CreateDescriptorHeap(device, &descriptor_heap_desc, &IID_ID3D12DescriptorHeap, &rtv_descriptor_heap));
 
 
-	D3D12_CPU_DESCRIPTOR_HANDLE first_rtv_handle = rtv_descriptor_heap->GetCPUDescriptorHandleForHeapStart();
-	uint32_t rtv_handle_increment = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	D3D12_CPU_DESCRIPTOR_HANDLE first_rtv_handle;
+	rtv_descriptor_heap->lpVtbl->GetCPUDescriptorHandleForHeapStart(rtv_descriptor_heap, &first_rtv_handle);
+	uint32_t rtv_handle_increment = device->lpVtbl->GetDescriptorHandleIncrementSize(device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
 	for (uint32_t i = 0; i < BUFFER_COUNT; i++)
 	{
@@ -201,13 +246,13 @@ int main(int argc, char* argv[]) {
 
 	get_swapchain_buffers();
 
-	D3D12_INPUT_ELEMENT_DESC vertex_layout[] = 
+	D3D12_INPUT_ELEMENT_DESC vertex_layout[] =
 	{
 		{
 			"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0
 		},
 		{
-			"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 2*sizeof(float), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0
+			"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 2 * sizeof(float), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0
 		}
 	};
 
@@ -223,8 +268,8 @@ int main(int argc, char* argv[]) {
 
 	if (FAILED(hr)) {
 		if (error_blob) {
-			OutputDebugStringA((char*)error_blob->GetBufferPointer());
-			error_blob->Release();
+			OutputDebugStringA((char*)error_blob->lpVtbl->GetBufferPointer(error_blob));
+			error_blob->lpVtbl->Release(error_blob);
 			error_blob = NULL;
 		}
 	}
@@ -235,36 +280,35 @@ int main(int argc, char* argv[]) {
 
 	if (FAILED(hr)) {
 		if (error_blob) {
-			// Log the error (e.g., OutputDebugString or print to console)
-			OutputDebugStringA((char*)error_blob->GetBufferPointer());
-			error_blob->Release();
+			OutputDebugStringA((char*)error_blob->lpVtbl->GetBufferPointer(error_blob));
+			error_blob->lpVtbl->Release(error_blob);
 			error_blob = NULL;
 		}
 	}
 
-	D3D12_ROOT_SIGNATURE_DESC root_sig_desc = {};
+	D3D12_ROOT_SIGNATURE_DESC root_sig_desc = { 0 };
 	root_sig_desc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
 	ID3DBlob* serialized_root_sig;
 	hr = D3D12SerializeRootSignature(&root_sig_desc, D3D_ROOT_SIGNATURE_VERSION_1, &serialized_root_sig, &error_blob);
 	if (FAILED(hr)) {
-		OutputDebugStringA((char*)error_blob->GetBufferPointer());
-		error_blob->Release();
+		OutputDebugStringA((char*)error_blob->lpVtbl->GetBufferPointer(error_blob));
+		error_blob->lpVtbl->Release(error_blob);
 		error_blob = NULL;
 	}
 
-	DX_CHECK_CALL(device->CreateRootSignature(0, serialized_root_sig->GetBufferPointer(), serialized_root_sig->GetBufferSize(), IID_PPV_ARGS(&root_signature)));
+	DX_CHECK_CALL(device->lpVtbl->CreateRootSignature(device, 0, serialized_root_sig->lpVtbl->GetBufferPointer(serialized_root_sig), serialized_root_sig->lpVtbl->GetBufferSize(serialized_root_sig), &IID_ID3D12RootSignature, &root_signature));
 
-	serialized_root_sig->Release();
+	serialized_root_sig->lpVtbl->Release(serialized_root_sig);
 
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC pipeline_state_desc = {};
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC pipeline_state_desc = { 0 };
 	pipeline_state_desc.InputLayout.NumElements = sizeof(vertex_layout) / sizeof(vertex_layout[0]);
 	pipeline_state_desc.InputLayout.pInputElementDescs = vertex_layout;
 	pipeline_state_desc.IBStripCutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;
-	pipeline_state_desc.VS.pShaderBytecode = vertex_shader_blob->GetBufferPointer();
-	pipeline_state_desc.VS.BytecodeLength = vertex_shader_blob->GetBufferSize();
-	pipeline_state_desc.PS.pShaderBytecode = pixel_shader_blob->GetBufferPointer();
-	pipeline_state_desc.PS.BytecodeLength = pixel_shader_blob->GetBufferSize();
+	pipeline_state_desc.VS.pShaderBytecode = vertex_shader_blob->lpVtbl->GetBufferPointer(vertex_shader_blob);
+	pipeline_state_desc.VS.BytecodeLength = vertex_shader_blob->lpVtbl->GetBufferSize(vertex_shader_blob);
+	pipeline_state_desc.PS.pShaderBytecode = pixel_shader_blob->lpVtbl->GetBufferPointer(pixel_shader_blob);
+	pipeline_state_desc.PS.BytecodeLength = pixel_shader_blob->lpVtbl->GetBufferSize(pixel_shader_blob);
 	pipeline_state_desc.DS.pShaderBytecode = NULL;
 	pipeline_state_desc.DS.BytecodeLength = 0;
 	pipeline_state_desc.HS.pShaderBytecode = NULL;
@@ -324,20 +368,20 @@ int main(int argc, char* argv[]) {
 	pipeline_state_desc.CachedPSO.CachedBlobSizeInBytes = 0;
 	pipeline_state_desc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
 
-	DX_CHECK_CALL(device->CreateGraphicsPipelineState(&pipeline_state_desc, IID_PPV_ARGS(&pipeline_state)));
+	DX_CHECK_CALL(device->lpVtbl->CreateGraphicsPipelineState(device, &pipeline_state_desc, &IID_ID3D12PipelineState, &pipeline_state));
 
-	vertex_shader_blob->Release();
-	pixel_shader_blob->Release();
+	vertex_shader_blob->lpVtbl->Release(vertex_shader_blob);
+	pixel_shader_blob->lpVtbl->Release(pixel_shader_blob);
 
 
-	D3D12_HEAP_PROPERTIES upload_heap_props = {};
+	D3D12_HEAP_PROPERTIES upload_heap_props = { 0 };
 	upload_heap_props.Type = D3D12_HEAP_TYPE_UPLOAD;
 	upload_heap_props.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
 	upload_heap_props.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
 	upload_heap_props.CreationNodeMask = 0;
 	upload_heap_props.VisibleNodeMask = 0;
 
-	D3D12_RESOURCE_DESC upload_resource_desc = {};
+	D3D12_RESOURCE_DESC upload_resource_desc = { 0 };
 	upload_resource_desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
 	upload_resource_desc.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
 	upload_resource_desc.Width = 1024;
@@ -350,16 +394,16 @@ int main(int argc, char* argv[]) {
 	upload_resource_desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 	upload_resource_desc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
-	DX_CHECK_CALL(device->CreateCommittedResource(&upload_heap_props, D3D12_HEAP_FLAG_NONE, &upload_resource_desc, D3D12_RESOURCE_STATE_COMMON, NULL, IID_PPV_ARGS(&upload_buffer)));
+	DX_CHECK_CALL(device->lpVtbl->CreateCommittedResource(device, &upload_heap_props, D3D12_HEAP_FLAG_NONE, &upload_resource_desc, D3D12_RESOURCE_STATE_COMMON, NULL, &IID_ID3D12Resource, &upload_buffer));
 
-	D3D12_HEAP_PROPERTIES vertex_heap_props = {};
+	D3D12_HEAP_PROPERTIES vertex_heap_props = { 0 };
 	vertex_heap_props.Type = D3D12_HEAP_TYPE_DEFAULT;
 	vertex_heap_props.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
 	vertex_heap_props.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
 	vertex_heap_props.CreationNodeMask = 0;
 	vertex_heap_props.VisibleNodeMask = 0;
 
-	D3D12_RESOURCE_DESC vertex_resource_desc = {};
+	D3D12_RESOURCE_DESC vertex_resource_desc = { 0 };
 	vertex_resource_desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
 	vertex_resource_desc.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
 	vertex_resource_desc.Width = 1024;
@@ -372,14 +416,14 @@ int main(int argc, char* argv[]) {
 	vertex_resource_desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 	vertex_resource_desc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
-	DX_CHECK_CALL(device->CreateCommittedResource(&vertex_heap_props, D3D12_HEAP_FLAG_NONE, &vertex_resource_desc, D3D12_RESOURCE_STATE_COMMON, NULL, IID_PPV_ARGS(&vertex_buffer)));
+	DX_CHECK_CALL(device->lpVtbl->CreateCommittedResource(device, &vertex_heap_props, D3D12_HEAP_FLAG_NONE, &vertex_resource_desc, D3D12_RESOURCE_STATE_COMMON, NULL, &IID_ID3D12Resource, &vertex_buffer));
 
 	void* upload_buffer_host_handle;
-	D3D12_RANGE upload_mapping_range = {};
+	D3D12_RANGE upload_mapping_range = { 0 };
 	upload_mapping_range.Begin = 0;
 	upload_mapping_range.End = 1024;
 
-	DX_CHECK_CALL(upload_buffer->Map(0, &upload_mapping_range, &upload_buffer_host_handle));
+	DX_CHECK_CALL(upload_buffer->lpVtbl->Map(upload_buffer, 0, &upload_mapping_range, &upload_buffer_host_handle));
 
 	float vertices[] = {
 		0.f, 0.5f, 1.f, 0.f, 0.f, 1.f,
@@ -389,67 +433,30 @@ int main(int argc, char* argv[]) {
 
 	memcpy(upload_buffer_host_handle, vertices, sizeof(vertices));
 
-	upload_buffer->Unmap(0, &upload_mapping_range);
+	upload_buffer->lpVtbl->Unmap(upload_buffer, 0, &upload_mapping_range);
 
-	DX_CHECK_CALL(command_allocator->Reset());
-	DX_CHECK_CALL(command_list->Reset(command_allocator, NULL));
+	DX_CHECK_CALL(command_allocator->lpVtbl->Reset(command_allocator));
+	DX_CHECK_CALL(command_list->lpVtbl->Reset(command_list, command_allocator, NULL));
 
-	command_list->CopyBufferRegion(vertex_buffer, 0, upload_buffer, 0, sizeof(vertices));
+	command_list->lpVtbl->CopyBufferRegion(command_list, vertex_buffer, 0, upload_buffer, 0, sizeof(vertices));
 
-	DX_CHECK_CALL(command_list->Close());
+	DX_CHECK_CALL(command_list->lpVtbl->Close(command_list));
 
 	ID3D12CommandList* lists[] = { command_list };
-	command_queue->ExecuteCommandLists(1, lists);
+	command_queue->lpVtbl->ExecuteCommandLists(command_queue, 1, lists);
 	signal_and_wait_fence();
 
-	bool leave = false;
-	while (leave == false)
+	while (1)
 	{
-		const cwindow_event* event;
-		while (event = cwindow_next_event(window))
-		{
-			switch (event->type)
-			{
+		cwindow_handle_events(window);
+		if (leave == true) break;
 
-			case CWINDOW_EVENT_MOVE_SIZE: {
-				printf(
-					"New window dimensions:\n  width: %d\n  height: %d\n  position x: %d\n  position y: %d\n\n",
-					event->info.move_size.width,
-					event->info.move_size.height,
-					event->info.move_size.position_x,
-					event->info.move_size.position_y
-				);
+		DX_CHECK_CALL(command_allocator->lpVtbl->Reset(command_allocator));
+		DX_CHECK_CALL(command_list->lpVtbl->Reset(command_list, command_allocator, NULL));
 
-				width = event->info.move_size.width;
-				height = event->info.move_size.height;
+		uint32_t backbuffer_index = swapchain->lpVtbl->GetCurrentBackBufferIndex(swapchain);
 
-				flush();
-
-				if (width != 0 && height != 0)
-				{
-					release_swapchain_buffers();
-
-					DX_CHECK_CALL(swapchain->ResizeBuffers(BUFFER_COUNT, width, height, DXGI_FORMAT_UNKNOWN, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH | DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING));
-
-					get_swapchain_buffers();
-				}
-				
-
-			} break;
-
-			case CWINDOW_EVENT_DESTROY: {
-				leave = true;
-			} break;
-
-			}
-		}
-
-		DX_CHECK_CALL(command_allocator->Reset());
-		DX_CHECK_CALL(command_list->Reset(command_allocator, NULL));
-
-		uint32_t backbuffer_index = swapchain->GetCurrentBackBufferIndex();
-
-		D3D12_RESOURCE_BARRIER begin_barrier = {};
+		D3D12_RESOURCE_BARRIER begin_barrier = { 0 };
 		begin_barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 		begin_barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
 		begin_barrier.Transition.pResource = swapchain_buffers[backbuffer_index];
@@ -457,43 +464,43 @@ int main(int argc, char* argv[]) {
 		begin_barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
 		begin_barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
 
-		command_list->ResourceBarrier(1, &begin_barrier);
+		command_list->lpVtbl->ResourceBarrier(command_list, 1, &begin_barrier);
 
 		float clear_color[4] = { 1.f, 1.f, 1.f, 1.f };
-		command_list->ClearRenderTargetView(rtv_handles[backbuffer_index], clear_color, 0, NULL);
-		
-		command_list->OMSetRenderTargets(1, &rtv_handles[backbuffer_index], false, NULL);
+		command_list->lpVtbl->ClearRenderTargetView(command_list, rtv_handles[backbuffer_index], clear_color, 0, NULL);
 
-		D3D12_VERTEX_BUFFER_VIEW vertex_view = {};
+		command_list->lpVtbl->OMSetRenderTargets(command_list, 1, &rtv_handles[backbuffer_index], false, NULL);
+
+		D3D12_VERTEX_BUFFER_VIEW vertex_view = { 0 };
 		vertex_view.SizeInBytes = sizeof(vertices);
 		vertex_view.StrideInBytes = 6 * sizeof(float);
-		vertex_view.BufferLocation = vertex_buffer->GetGPUVirtualAddress();
+		vertex_view.BufferLocation = vertex_buffer->lpVtbl->GetGPUVirtualAddress(vertex_buffer);
 
-		command_list->SetPipelineState(pipeline_state);
-		command_list->SetGraphicsRootSignature(root_signature);
+		command_list->lpVtbl->SetPipelineState(command_list, pipeline_state);
+		command_list->lpVtbl->SetGraphicsRootSignature(command_list, root_signature);
 
-		command_list->IASetVertexBuffers(0, 1, &vertex_view);
-		command_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		command_list->lpVtbl->IASetVertexBuffers(command_list, 0, 1, &vertex_view);
+		command_list->lpVtbl->IASetPrimitiveTopology(command_list, D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-		D3D12_VIEWPORT view_port = {};
+		D3D12_VIEWPORT view_port = { 0 };
 		view_port.TopLeftX = 0;
 		view_port.TopLeftY = 0;
 		view_port.Width = width;
 		view_port.Height = height;
 		view_port.MinDepth = 1.f;
 		view_port.MaxDepth = 0.f;
-		command_list->RSSetViewports(1, &view_port);
+		command_list->lpVtbl->RSSetViewports(command_list, 1, &view_port);
 
-		RECT scissor_rect = {};
+		RECT scissor_rect = { 0 };
 		scissor_rect.left = 0;
 		scissor_rect.top = 0;
 		scissor_rect.right = width;
 		scissor_rect.bottom = height;
-		command_list->RSSetScissorRects(1, &scissor_rect);
+		command_list->lpVtbl->RSSetScissorRects(command_list, 1, &scissor_rect);
 
-		command_list->DrawInstanced(3, 1, 0, 0);
+		command_list->lpVtbl->DrawInstanced(command_list, 3, 1, 0, 0);
 
-		D3D12_RESOURCE_BARRIER end_barrier = {};
+		D3D12_RESOURCE_BARRIER end_barrier = { 0 };
 		end_barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 		end_barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
 		end_barrier.Transition.pResource = swapchain_buffers[backbuffer_index];
@@ -501,48 +508,48 @@ int main(int argc, char* argv[]) {
 		end_barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
 		end_barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
 
-		command_list->ResourceBarrier(1, &end_barrier);
+		command_list->lpVtbl->ResourceBarrier(command_list, 1, &end_barrier);
 
-		DX_CHECK_CALL(command_list->Close());
+		DX_CHECK_CALL(command_list->lpVtbl->Close(command_list));
 
 		ID3D12CommandList* lists[] = { command_list };
-		command_queue->ExecuteCommandLists(1, lists);
+		command_queue->lpVtbl->ExecuteCommandLists(command_queue, 1, lists);
 		signal_and_wait_fence();
 
-		DX_CHECK_CALL(swapchain->Present(1, 0));
+		DX_CHECK_CALL(swapchain->lpVtbl->Present(swapchain, 1, 0));
 	}
 
 	flush();
 
-	vertex_buffer->Release();
-	upload_buffer->Release();
+	vertex_buffer->lpVtbl->Release(vertex_buffer);
+	upload_buffer->lpVtbl->Release(upload_buffer);
 
-	pipeline_state->Release();
+	pipeline_state->lpVtbl->Release(pipeline_state);
 
-	root_signature->Release();
+	root_signature->lpVtbl->Release(root_signature);
 
 	release_swapchain_buffers();
-	
-	rtv_descriptor_heap->Release();
 
-	swapchain->Release();
+	rtv_descriptor_heap->lpVtbl->Release(rtv_descriptor_heap);
 
-	command_list->Release();
-	command_allocator->Release();
+	swapchain->lpVtbl->Release(swapchain);
 
-	fence->Release();
+	command_list->lpVtbl->Release(command_list);
+	command_allocator->lpVtbl->Release(command_allocator);
+
+	fence->lpVtbl->Release(fence);
 	CloseHandle(fence_event);
 
-	command_queue->Release();
-	device->Release();
+	command_queue->lpVtbl->Release(command_queue);
+	device->lpVtbl->Release(device);
 
-	factory->Release();
+	factory->lpVtbl->Release(factory);
 
 	OutputDebugStringA("\n\n\nDEBUG INFO\n\n\n");
 
-	DX_CHECK_CALL(dxgidebug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_FLAGS(DXGI_DEBUG_RLO_DETAIL)));
-	dxgidebug->Release();
-	d3d12debug->Release();
+	DX_CHECK_CALL(dxgidebug->lpVtbl->ReportLiveObjects(dxgidebug, DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_DETAIL));
+	dxgidebug->lpVtbl->Release(dxgidebug);
+	d3d12debug->lpVtbl->Release(d3d12debug);
 
 	cwindow_destroy(window);
 	cwindow_context_destroy(window_context);

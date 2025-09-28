@@ -21,17 +21,20 @@
 
 #endif
 
-enum _renderer_action_type
+enum _renderer_message_type
 {
-	_RENDERER_ACTION_SET_BACKEND_INDEX,
-	_RENDERER_ACTION_SET_BACKEND_DEVICE_INDEX,
-	_RENDERER_ACTION_SET_FPS,
-	_RENDERER_ACTION_SET_VSYNC,
-	_RENDERER_ACTION_SET_TRIPLE_BUFFERING,
-	_RENDERER_ACTION_SET_MAX_MIPMAP_LEVEL_COUNT,
-	_RENDERER_ACTION_SET_FOV,
-	_RENDERER_ACTION_SET_RENDER_DISTANCE,
-	_RENDERER_ACTION_RELOAD_ASSETS
+	_RENDERER_MSG_REQUEST_SYNC,
+	_RENDERER_MSG_SYNC_REPAIR,
+	_RENDERER_MSG_SYNC_RELOAD_ASSETS,
+	_RENDERER_MSG_SYNC_SET_BACKEND_INDEX,
+	_RENDERER_MSG_SYNC_SET_BACKEND_DEVICE_INDEX,
+	_RENDERER_MSG_SET_FPS,
+	_RENDERER_MSG_SET_VSYNC,
+	_RENDERER_MSG_SET_TRIPLE_BUFFERING,
+	_RENDERER_MSG_SET_MAX_MIPMAP_LEVEL_COUNT,
+	_RENDERER_MSG_SET_FOV,
+	_RENDERER_MSG_SET_RENDER_DISTANCE,
+	
 };
 
 struct renderer_action
@@ -52,15 +55,16 @@ struct renderer_action
 	} parameters;
 };
 
-#define RENDERER_ACTION_SET_BACKEND_INDEX(backend_index)								&(struct renderer_action){.type = _RENDERER_ACTION_SET_BACKEND_INDEX,					.parameters.bakend_index = backend_index}
-#define RENDERER_ACTION_SET_BACKEND_DEVICE_INDEX(backend_device_index)					&(struct renderer_action){.type = _RENDERER_ACTION_SET_BACKEND_DEVICE_INDEX,			.parameters.backend_device_index = backend_device_index}
-#define RENDERER_ACTION_SET_FPS(fps)													&(struct renderer_action){.type = _RENDERER_ACTION_SET_FPS,								.parameters.fps = fps}
-#define RENDERER_ACTION_SET_VSYNC(vsync)												&(struct renderer_action){.type = _RENDERER_ACTION_SET_VSYNC,							.parameters.vsync = vsync}
-#define RENDERER_ACTION_SET_TRIPLE_BUFFERING(triple_buffering)							&(struct renderer_action){.type = _RENDERER_ACTION_SET_TRIPLE_BUFFERING,				.parameters.triple_buffering = triple_buffering}
-#define RENDERER_ACTION_SET_MAX_MIPMAP_LEVEL_COUNT(max_mipmap_level_count)				&(struct renderer_action){.type = _RENDERER_ACTION_SET_MAX_MIPMAP_LEVEL_COUNT,			.parameters.max_mipmap_level_count = max_mipmap_level_count}
-#define RENDERER_ACTION_SET_FOV(fov)													&(struct renderer_action){.type = _RENDERER_ACTION_SET_FOV,								.parameters.fov = fov}
-#define RENDERER_ACTION_SET_RENDER_DISTANCE(render_distance)							&(struct renderer_action){.type = _RENDERER_ACTION_SET_RENDER_DISTANCE,					.parameters.render_distance = render_distance}
-#define RENDERER_ACTION_RELOAD_ASSETS													&(struct renderer_action){.type = _RENDERER_ACTION_RELOAD_ASSETS}
+#define RENDERER_MSG_REQUEST_SYNC										&(struct renderer_action){.type = _RENDERER_MSG_SET_BACKEND_INDEX,			.parameters.bakend_index = backend_index}
+#define RENDERER_MSG_SET_BACKEND_INDEX(backend_index)					&(struct renderer_action){.type = _RENDERER_MSG_SET_BACKEND_INDEX,			.parameters.bakend_index = backend_index}
+#define RENDERER_MSG_SET_BACKEND_DEVICE_INDEX(backend_device_index)		&(struct renderer_action){.type = _RENDERER_MSG_SET_BACKEND_DEVICE_INDEX,	.parameters.backend_device_index = backend_device_index}
+#define RENDERER_MSG_SET_FPS(fps)										&(struct renderer_action){.type = _RENDERER_MSG_SET_FPS,						.parameters.fps = fps}
+#define RENDERER_MSG_SET_VSYNC(vsync)									&(struct renderer_action){.type = _RENDERER_MSG_SET_VSYNC,					.parameters.vsync = vsync}
+#define RENDERER_MSG_SET_TRIPLE_BUFFERING(triple_buffering)				&(struct renderer_action){.type = _RENDERER_MSG_SET_TRIPLE_BUFFERING,		.parameters.triple_buffering = triple_buffering}
+#define RENDERER_MSG_SET_MAX_MIPMAP_LEVEL_COUNT(max_mipmap_level_count)	&(struct renderer_action){.type = _RENDERER_MSG_SET_MAX_MIPMAP_LEVEL_COUNT,	.parameters.max_mipmap_level_count = max_mipmap_level_count}
+#define RENDERER_MSG_SET_FOV(fov)										&(struct renderer_action){.type = _RENDERER_MSG_SET_FOV,						.parameters.fov = fov}
+#define RENDERER_MSG_SET_RENDER_DISTANCE(render_distance)				&(struct renderer_action){.type = _RENDERER_MSG_SET_RENDER_DISTANCE,			.parameters.render_distance = render_distance}
+#define RENDERER_MSG_RELOAD_ASSETS										&(struct renderer_action){.type = _RENDERER_MSG_RELOAD_ASSETS}
 
 struct renderer_settings
 {
@@ -93,7 +97,6 @@ struct renderer_info_state
 #endif
 
 #define asset_loader_get_asset client->renderer.client_renderer_api._asset_loader_get_asset
-#define asset_loader_release_asset client->renderer.client_renderer_api._asset_loader_release_asset
 
 #define RENDERER (*client->renderer._renderer)
 #elif !defined(MINEC_CLIENT_DYNAMIC_RENDERER_EXECUTABLE)
@@ -126,7 +129,6 @@ struct renderer
 		void (*_log_debug_l)(struct minec_client* client, uint8_t* function, uint8_t* file, uint32_t line, uint8_t* message, ...);
 
 		const void*(*_asset_loader_get_asset)(struct minec_client* client, uint8_t* name, size_t* size);
-		void (*_asset_loader_release_asset)(struct minec_client* client);
 	} client_renderer_api;
 
 	struct _renderer* _renderer;
@@ -135,22 +137,6 @@ struct renderer
 #endif
 
 #ifndef MINEC_CLIENT_DYNAMIC_RENDERER_EXECUTABLE
-
-struct renderer_action_state
-{
-	mutex_t mutex;
-
-	struct { uint32_t value; bool set; } backend_index;
-	struct { uint32_t value; bool set; } backend_device_index;
-	struct { uint32_t value; bool set; } fps;
-	struct { bool value; bool set; } vsync;
-	struct { bool value; bool set; } triple_buffering;
-	struct { uint32_t value; bool set; } max_mipmap_level_count;
-	struct { uint32_t value; bool set; } fov;
-	struct { uint32_t value; bool set; } render_distance;
-
-	bool reload_assets;
-};
 
 struct renderer_public_state
 {
@@ -189,8 +175,29 @@ struct renderer
 
 	struct
 	{
-		struct renderer_action_state action;
+		struct renderer_action_state {
+
+			atomic_bool halt_for_asset_reload;
+			atomic_bool unhalt_for_asset_reload;
+			mutex_t asset_reload_mutex;
+
+
+			mutex_t mutex;
+
+			struct { uint32_t value; bool set; } backend_index;
+			struct { uint32_t value; bool set; } backend_device_index;
+			struct { uint32_t value; bool set; } fps;
+			struct { bool value; bool set; } vsync;
+			struct { bool value; bool set; } triple_buffering;
+			struct { uint32_t value; bool set; } max_mipmap_level_count;
+			struct { uint32_t value; bool set; } fov;
+			struct { uint32_t value; bool set; } render_distance;
+		
+		} action;
 		struct renderer_public_state state;
+
+		atomic_bool sync_request;
+		atomic_bool sync_requested;
 
 		atomic_bool active;
 		atomic_bool created;

@@ -4,7 +4,7 @@ project(Testing)
 
 add_executable(pixelchar_test_opengl pixelchar_test_opengl.c)
 add_executable(pixelchar_test_vulkan pixelchar_test_vulkan.c)
-add_executable(direct3d12_testing direct3d12_testing.cpp)
+add_executable(direct3d12_testing "direct3d12_testing.c")
 add_executable(old_to_new_pixelfont old_to_new_pixelfont.c)
 add_executable(general_testing general_testing.c)
 add_executable(cerialize_test cerialize_test.c ../client/.cerialized_src/resources.c)
